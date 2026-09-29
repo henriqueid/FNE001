@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build outputs and caches
+.next/
+.vinext/
+.wrangler/
+dist/
+build/
+.playwright-cli/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local generated output
+output/

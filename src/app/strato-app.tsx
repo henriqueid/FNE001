@@ -24,6 +24,7 @@ import { seedCommercial } from "@/src/domain/commercial/seed";
 import { type CommercialState } from "@/src/domain/commercial/types";
 import { initialCedents } from "@/src/domain/core/demo/cedents";
 import { initialDebtors } from "@/src/domain/core/demo/debtors";
+import { destinations } from "@/src/domain/core/demo/companies";
 import { initialOperations } from "@/src/domain/core/demo/operations";
 import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { type Effect } from "@/src/domain/finance/ledger";
@@ -40,6 +41,8 @@ import { ModuleRoadmap } from "@/src/features/shell/module-roadmap";
 import { Shell } from "@/src/features/shell/shell";
 import { type AppView, ShellContext } from "@/src/features/shell/shell-context";
 import { RegistryContext, type RegistryValue } from "./registry-context";
+
+const COMPANY_SCOPE_KEY = "strato-company-scope";
 
 export default function StratoApp() {
   const [operations, setOperations] = useState(initialOperations);
@@ -142,6 +145,16 @@ export default function StratoApp() {
     if (stored.commercial) setCommercial(stored.commercial);
     if (stored.parties) setSavedParties(stored.parties);
     if (stored.guidance !== undefined) setShowGuidance(stored.guidance);
+    try {
+      const savedScope = window.localStorage.getItem(COMPANY_SCOPE_KEY);
+      if (
+        savedScope &&
+        (savedScope === "Consolidado" || destinations.some(destination => destination.name === savedScope))
+      )
+        setCompanyScope(savedScope);
+    } catch {
+      /* ignora armazenamento indisponível */
+    }
     setStorageReady(true);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
@@ -153,6 +166,15 @@ export default function StratoApp() {
   useEffect(() => {
     if (storageReady) saveGuidance(showGuidance);
   }, [showGuidance, storageReady]);
+
+  useEffect(() => {
+    if (!storageReady) return;
+    try {
+      window.localStorage.setItem(COMPANY_SCOPE_KEY, companyScope);
+    } catch {
+      /* ignora armazenamento indisponível */
+    }
+  }, [companyScope, storageReady]);
 
   function updateOperation(updated: Operation) {
     setOperations(current => current.map(operation => (operation.id === updated.id ? updated : operation)));
@@ -258,6 +280,7 @@ export default function StratoApp() {
       active={active}
       operationCount={activeCount}
       companyScope={companyScope}
+      onCompanyScopeChange={setCompanyScope}
       onOpenSettings={openSettings}
       onNavigate={navigate}
     >
@@ -277,6 +300,10 @@ export default function StratoApp() {
         onUpdate={updateOperation}
         showGuidance={showGuidance}
         onOpenSettings={openSettings}
+        onCompanyScopeChange={scope => {
+          setCompanyScope(scope);
+          setSelected(null);
+        }}
         onNavigate={navigate}
       />
     );

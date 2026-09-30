@@ -41,7 +41,12 @@ export function OperationsList({
   const { inProgressOperations, releasedOperations } = metrics;
   const kanbanColumns = kanbanColumnsFor(inProgressOperations, releasedOperations);
   return (
-    <Shell companyScope={companyScope} onOpenSettings={onOpenSettings} onNavigate={onNavigate}>
+    <Shell
+      companyScope={companyScope}
+      onCompanyScopeChange={onCompanyScopeChange}
+      onOpenSettings={onOpenSettings}
+      onNavigate={onNavigate}
+    >
       <div className="page-wrap">
         <CentralHeader companyScope={companyScope} onCompanyScopeChange={onCompanyScopeChange} onNew={onNew} />
         <CentralMetrics metrics={metrics} filterContext={filters.filterContext} />

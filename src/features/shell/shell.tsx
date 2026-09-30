@@ -10,8 +10,21 @@ import { type AppView, ShellContext } from "./shell-context";
 import { useTheme } from "./use-theme";
 
 import { destinations } from "@/src/domain/core/demo/companies";
-import { BellIcon, LayersIcon, MenuIcon, MoonIcon, PanelIcon, SearchIcon, SunIcon } from "@/src/ui/icons";
-import { type ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import {
+  BellIcon,
+  CheckIcon,
+  GridIcon,
+  LayersIcon,
+  MenuIcon,
+  MoonIcon,
+  PanelIcon,
+  SearchIcon,
+  SlidersIcon,
+  SunIcon,
+  UndoIcon,
+  UsersIcon,
+} from "@/src/ui/icons";
+import { type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 export const SIDEBAR_KEY = "strato-sidebar-collapsed";
 
@@ -30,6 +43,7 @@ export function Shell({
   active = "Operações",
   operationCount,
   companyScope = "Consolidado",
+  onCompanyScopeChange,
   onOpenSettings,
   onNavigate,
 }: {
@@ -37,6 +51,7 @@ export function Shell({
   active?: string;
   operationCount?: number;
   companyScope?: string;
+  onCompanyScopeChange?: (scope: string) => void;
   onOpenSettings: () => void;
   onNavigate?: (target: AppView) => void;
 }) {
@@ -44,8 +59,12 @@ export function Shell({
   const { preference, resolved, setPreference } = useTheme();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [tenantOpen, setTenantOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
+  const tenantRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
   const operations = useMemo(() => context?.operations ?? [], [context?.operations]);
   const openCount = operationCount ?? operations.filter(isOpen).length;
   const signals = useMemo(() => operationSignals(operations), [operations]);
@@ -58,6 +77,27 @@ export function Shell({
       /* ignora */
     }
   }, []);
+  useEffect(() => {
+    if (!tenantOpen && !profileOpen) return;
+    const onDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (tenantOpen && tenantRef.current && !tenantRef.current.contains(target)) setTenantOpen(false);
+      if (profileOpen && profileRef.current && !profileRef.current.contains(target)) setProfileOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setTenantOpen(false);
+        setProfileOpen(false);
+      }
+    };
+    const timer = window.setTimeout(() => window.addEventListener("mousedown", onDown), 0);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [profileOpen, tenantOpen]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -98,6 +138,11 @@ export function Shell({
   };
   const cycleTheme = () => setPreference(resolved === "dark" ? "light" : "dark");
   const scopeLabel = companyScope === "Consolidado" ? "Visão consolidada" : companyScope;
+  const chooseCompany = (scope: string) => {
+    onCompanyScopeChange?.(scope);
+    setTenantOpen(false);
+    setMobileMenu(false);
+  };
 
   return (
     <div className={`sx-shell ${collapsed ? "is-collapsed" : ""}`}>
@@ -129,21 +174,151 @@ export function Shell({
           ))}
         </nav>
         <div className="sx-sidebar-foot">
-          <div className="sx-tenant" title={scopeLabel}>
-            <span>{companyScope === "Consolidado" ? <LayersIcon /> : initials(companyScope)}</span>
-            <div>
-              <strong>{scopeLabel}</strong>
-              <small>
-                {companyScope === "Consolidado" ? `${destinations.length} empresas e veículos` : "Empresa ativa"}
-              </small>
-            </div>
+          <div className="sx-sidebar-control" ref={tenantRef}>
+            <button
+              type="button"
+              className="sx-tenant sx-sidebar-trigger"
+              title={scopeLabel}
+              aria-haspopup="dialog"
+              aria-expanded={tenantOpen}
+              onClick={() => {
+                setTenantOpen(open => !open);
+                setProfileOpen(false);
+              }}
+            >
+              <span>{companyScope === "Consolidado" ? <LayersIcon /> : initials(companyScope)}</span>
+              <div>
+                <strong>{scopeLabel}</strong>
+                <small>
+                  {companyScope === "Consolidado" ? `${destinations.length} empresas e veículos` : "Empresa ativa"}
+                </small>
+              </div>
+              <i className="sx-trigger-caret" aria-hidden="true" />
+            </button>
+            {tenantOpen && (
+              <div className="sx-sidebar-popover sx-company-popover" role="dialog" aria-label="Trocar empresa">
+                <header>
+                  <strong>Empresa de trabalho</strong>
+                  <small>O recorte será aplicado em todos os módulos.</small>
+                </header>
+                <div className="sx-company-options" role="listbox" aria-label="Empresas e veículos">
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={companyScope === "Consolidado"}
+                    className={companyScope === "Consolidado" ? "is-selected" : ""}
+                    onClick={() => chooseCompany("Consolidado")}
+                  >
+                    <span className="sx-menu-symbol">
+                      <LayersIcon />
+                    </span>
+                    <span>
+                      <b>Visão consolidada</b>
+                      <small>Todas as empresas e veículos</small>
+                    </span>
+                    {companyScope === "Consolidado" && <CheckIcon />}
+                  </button>
+                  {destinations.map(destination => (
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={companyScope === destination.name}
+                      className={companyScope === destination.name ? "is-selected" : ""}
+                      key={destination.name}
+                      onClick={() => chooseCompany(destination.name)}
+                    >
+                      <span className="sx-menu-symbol sx-company-initials">{initials(destination.name)}</span>
+                      <span>
+                        <b>{destination.name}</b>
+                        <small>
+                          {destination.institution} · {destination.detail}
+                        </small>
+                      </span>
+                      {companyScope === destination.name && <CheckIcon />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          <div className="sx-profile">
-            <span>HF</span>
-            <div>
-              <strong>Henrique</strong>
-              <small>Administrador</small>
-            </div>
+          <div className="sx-sidebar-control" ref={profileRef}>
+            <button
+              type="button"
+              className="sx-profile sx-sidebar-trigger"
+              aria-haspopup="menu"
+              aria-expanded={profileOpen}
+              onClick={() => {
+                setProfileOpen(open => !open);
+                setTenantOpen(false);
+              }}
+            >
+              <span>HF</span>
+              <div>
+                <strong>Henrique</strong>
+                <small>Administrador</small>
+              </div>
+              <i className="sx-trigger-caret" aria-hidden="true" />
+            </button>
+            {profileOpen && (
+              <div className="sx-sidebar-popover sx-profile-popover" role="menu" aria-label="Menu do usuário">
+                <header className="sx-profile-head">
+                  <span>HF</span>
+                  <div>
+                    <strong>Henrique</strong>
+                    <small>Administrador · sessão de demonstração</small>
+                  </div>
+                </header>
+                <div className="sx-profile-actions">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      onOpenSettings();
+                    }}
+                  >
+                    <SlidersIcon />
+                    <span>
+                      <b>Preferências de interface</b>
+                      <small>Tema e orientação das telas</small>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      setMobileMenu(false);
+                      (onNavigate ?? context?.navigate)?.("registry");
+                    }}
+                  >
+                    <UsersIcon />
+                    <span>
+                      <b>Cadastros</b>
+                      <small>Pessoas, empresas e responsáveis</small>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      context?.resetDemo();
+                    }}
+                  >
+                    <UndoIcon />
+                    <span>
+                      <b>Restaurar demonstração</b>
+                      <small>Voltar aos dados iniciais</small>
+                    </span>
+                  </button>
+                </div>
+                <footer>
+                  <GridIcon />
+                  <span>STRATO Receivables OS · v0.7</span>
+                </footer>
+              </div>
+            )}
           </div>
           <button
             type="button"

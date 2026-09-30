@@ -38,6 +38,7 @@ export function OperationWorkspace({
   onUpdate,
   showGuidance,
   onOpenSettings,
+  onCompanyScopeChange,
   onNavigate,
 }: {
   operation: Operation;
@@ -48,6 +49,7 @@ export function OperationWorkspace({
   onUpdate: (operation: Operation) => void;
   showGuidance: boolean;
   onOpenSettings: () => void;
+  onCompanyScopeChange?: (scope: string) => void;
   onNavigate?: (target: AppView) => void;
 }) {
   const registryCedents = useCedents();
@@ -115,6 +117,7 @@ export function OperationWorkspace({
     <Shell
       operationCount={operationCount}
       companyScope={operation.vehicle}
+      onCompanyScopeChange={onCompanyScopeChange}
       onOpenSettings={onOpenSettings}
       onNavigate={onNavigate}
     >

@@ -1,8 +1,13 @@
+/**
+ * Layout raiz do Next: fontes, metadados e o script que aplica o tema salvo antes da primeira pintura.
+ */
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
+import { themeBootScript } from "@/src/features/shell/theme";
 import "./globals.css";
 
 const geist = Geist({ variable: "--font-geist", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "STRATO · Receivables OS",
@@ -11,5 +16,13 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="pt-BR"><body className={geist.variable}>{children}</body></html>;
+  return (
+    <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        {/* Aplica o tema salvo (claro/escuro/sistema) antes da primeira pintura. */}
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
+      <body className={`${geist.variable} ${geistMono.variable}`}>{children}</body>
+    </html>
+  );
 }

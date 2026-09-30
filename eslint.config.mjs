@@ -14,6 +14,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "_backup-v5/**",
+    "tools/**",
+    "worker/**",
+    ".preview/dist/**",
   ]),
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
@@ -22,6 +26,18 @@ const eslintConfig = defineConfig([
   reactHooks.configs.flat["recommended-latest"],
   jsxA11y.flatConfigs.recommended,
   next.configs["core-web-vitals"],
+  {
+    rules: {
+      // Props são tipadas pelo TypeScript; prop-types é redundante.
+      "react/prop-types": "off",
+      // Imagens da marca são pequenas e servidas estáticas (sem otimizador de imagens no deploy Cloudflare).
+      "@next/next/no-img-element": "off",
+      "@typescript-eslint/consistent-type-imports": ["error", { fixStyle: "inline-type-imports" }],
+      // Rótulos com o campo e o texto aninhados em até 3 níveis (padrão do layout de formulários).
+      "jsx-a11y/label-has-associated-control": ["error", { depth: 4 }],
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+    },
+  },
   {
     languageOptions: {
       globals: {

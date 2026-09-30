@@ -28,3 +28,6 @@ Thumbs.db
 
 # Local generated output
 output/
+.preview/dist/
+tsconfig.tsbuildinfo
+.preview/dist-artifact/

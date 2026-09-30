@@ -1,0 +1,40 @@
+﻿Código;Descrição;Natureza;Tipo
+1;ATIVO;Ativo;S
+1.01;Circulante;;S
+1.01.01;Disponível;;S
+1.01.01.001;Caixa geral;;A
+1.01.01.002;Banco Itaú c/c;;A
+1.01.01.003;Banco Sicredi cobrança;;A
+1.01.01.004;Bradesco;;A
+1.01.01.005;BTG fundo;;A
+1.01.01.006;BB fundo;;A
+1.01.02;Carteira;;S
+1.01.02.001;Títulos adquiridos a vencer;;A
+1.01.03.001;Clientes a receber;;A
+1.01.03.002;Valores a recuperar;;A
+2;PASSIVO;Passivo;S
+2.01.001;Fornecedores;;A
+2.01.002;Cedentes a pagar;;A
+2.01.003;Retenções de cedentes;;A
+2.01.004;Deságio a apropriar;;A
+2.01.005;Créditos a identificar;;A
+2.01.006;Tributos a recolher;;A
+3;PL;PL;S
+3.01;Capital social;;A
+4;RECEITAS;Receita;S
+4.01;Receita de deságio;;A
+4.02;Receita de tarifas;;A
+4.03;Juros recebidos;;A
+4.04;Rendimentos;;A
+4.05;Descontos obtidos;;A
+5;DESPESAS;Despesa;S
+5.01;Pessoal;;A
+5.02;Aluguel;;A
+5.03;Sistemas;;A
+5.04;Serviços de terceiros;;A
+5.05;Tarifas bancárias;;A
+5.06;Cartório;;A
+5.07;Tributos sobre receitas;;A
+5.08;Gerais;;A
+5.09;Juros e multas pagos;;A
+5.10;Descontos concedidos;;A

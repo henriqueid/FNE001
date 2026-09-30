@@ -1,5 +1,6 @@
-import OperationsMvp from "./components/operations-mvp";
+import StratoApp from "@/src/app/strato-app";
 
+/** Rota única: toda a navegação entre módulos acontece no cliente (ver src/app/strato-app.tsx). */
 export default function Home() {
-  return <OperationsMvp />;
+  return <StratoApp />;
 }

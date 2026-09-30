@@ -1,0 +1,5 @@
+node_modules
+.preview/dist*
+public/lastro.html
+package-lock.json
+app/styles/tokens.generated.css

@@ -7,21 +7,27 @@
  */
 import { useRegistry } from "@/src/app/registry-context";
 import { digits } from "@/src/domain/commercial/calendar";
-import { type Operation } from "@/src/domain/core/types";
 import { type AppView } from "@/src/features/shell/shell-context";
 import { useMemo, useState } from "react";
 import { repAt } from "@/src/domain/commercial/rules";
 import { todayIso } from "@/src/domain/finance/ledger";
-import { aging, daysBetween, portfolioTitles } from "@/src/domain/home/metrics";
+import { aging, daysBetween } from "@/src/domain/home/metrics";
 import { portfolioByRep } from "@/src/domain/registry/registry";
+import { portfolioBalance, portfolioDisplayStatus, type PortfolioState } from "@/src/domain/portfolio/model";
 import { ArrowIcon, SearchIcon, WalletIcon } from "@/src/ui/icons";
-import { br, compact, money } from "@/src/features/finance/finance-ui";
+import { compact } from "@/src/features/finance/finance-ui";
+import { PortfolioTitleGrid } from "./portfolio-title-grid";
 
 type Tab = "titulos" | "cedentes" | "comerciais" | "aging";
 type Situation = "todos" | "avencer" | "vencidos" | "d30";
-type Props = { operations: Operation[]; onNavigate: (view: AppView) => void };
+type Props = {
+  portfolio: PortfolioState;
+  onPortfolio: (state: PortfolioState) => void;
+  companyScope: string;
+  onNavigate: (view: AppView) => void;
+};
 
-export default function PortfolioModule({ operations, onNavigate }: Props) {
+export default function PortfolioModule({ portfolio, onPortfolio, companyScope, onNavigate }: Props) {
   const { commercial, cedents } = useRegistry();
   const today = todayIso();
   const [tab, setTab] = useState<Tab>("titulos");
@@ -29,38 +35,59 @@ export default function PortfolioModule({ operations, onNavigate }: Props) {
   const [repFilter, setRepFilter] = useState("");
   const [q, setQ] = useState("");
 
-  const all = useMemo(() => portfolioTitles(operations), [operations]);
+  const all = useMemo(
+    () =>
+      portfolio.titles
+        .filter(title => companyScope === "Consolidado" || title.company === companyScope)
+        .map(title => ({
+          ...title,
+          amount: portfolioBalance(title),
+          reference: title.documentNumber,
+          source: title.source === "Operação liberada" ? ("Operação liberada" as const) : ("Carteira" as const),
+          originLabel: title.importSource ?? title.source,
+          vehicle: title.company,
+          displayStatus: portfolioDisplayStatus(title, today),
+        })),
+    [companyScope, portfolio, today],
+  );
   const withRep = useMemo(
     () =>
       all.map(t => ({ ...t, late: daysBetween(t.dueDate, today), repId: repAt(commercial, t.ownerDocument, today) })),
     [all, commercial, today],
   );
   const scoped = withRep.filter(t => !repFilter || t.repId === repFilter);
+  const openScoped = scoped.filter(
+    t => t.status !== "Pago" && t.status !== "Recomprado" && t.status !== "Cancelado" && t.amount > 0,
+  );
   const shown = scoped
     .filter(
       t =>
         (situation === "todos" ||
-          (situation === "avencer" ? t.late <= 0 : situation === "vencidos" ? t.late > 0 : t.late > 30)) &&
+          (situation === "avencer"
+            ? openScoped.includes(t) && t.late <= 0
+            : situation === "vencidos"
+              ? openScoped.includes(t) && t.late > 0
+              : openScoped.includes(t) && t.late > 30)) &&
         (!q ||
-          `${t.ownerName} ${t.debtorName} ${t.reference} ${t.ownerDocument} ${t.debtorDocument}`
+          `${t.ownerName} ${t.debtorName} ${t.reference} ${t.ownerDocument} ${t.debtorDocument} ${t.proposal ?? ""} ${t.aditivoNumber ?? ""} ${t.borderoNumber ?? ""}`
             .toLowerCase()
             .includes(q.toLowerCase())),
     )
     .sort((a, b) => b.late - a.late || a.dueDate.localeCompare(b.dueDate));
   const sum = (list: { amount: number }[]) => list.reduce((s, t) => s + t.amount, 0);
-  const open = sum(scoped);
-  const overdue = sum(scoped.filter(t => t.late > 0));
-  const overdue30 = sum(scoped.filter(t => t.late > 30));
-  const next7 = sum(scoped.filter(t => t.late <= 0 && t.late >= -7));
+  const open = sum(openScoped);
+  const overdue = sum(openScoped.filter(t => t.late > 0));
+  const overdue30 = sum(openScoped.filter(t => t.late > 30));
+  const next7 = sum(openScoped.filter(t => t.late <= 0 && t.late >= -7));
   const events = (commercial.carteiraEvents ?? []).filter(
     e => !repFilter || repAt(commercial, e.document, e.date) === repFilter,
   );
   const repName = (id?: string) => commercial.reps.find(r => r.id === id)?.name ?? "Sem comercial";
-  const buckets = aging(scoped, today);
+  const buckets = aging(openScoped, today);
   const maxBucket = Math.max(1, ...buckets.map(b => b.amount));
 
   const byCedent = Object.values(
-    scoped.reduce<
+    openScoped.reduce<
       Record<string, { document: string; name: string; repId?: string; open: number; overdue: number; count: number }>
     >((acc, t) => {
       const key = digits(t.ownerDocument);
@@ -71,7 +98,11 @@ export default function PortfolioModule({ operations, onNavigate }: Props) {
       return acc;
     }, {}),
   ).sort((a, b) => b.open - a.open);
-  const byRep = portfolioByRep(all, commercial, today)
+  const byRep = portfolioByRep(
+    openScoped.map(title => ({ ...title, source: title.source })),
+    commercial,
+    today,
+  )
     .filter(r => !repFilter || r.repId === repFilter)
     .sort((a, b) => b.open - a.open);
 
@@ -84,8 +115,8 @@ export default function PortfolioModule({ operations, onNavigate }: Props) {
           </span>
           <h1>Carteira</h1>
           <p>
-            Títulos adquiridos, vencimentos e atraso por cedente, sacado e comercial. Operações liberadas entram aqui
-            automaticamente.
+            Central operacional dos títulos adquiridos. Liberações entram automaticamente, preservam a origem e
+            permanecem disponíveis após recarregar a página.
           </p>
         </div>
         <div className="fn-heading-actions">
@@ -116,16 +147,35 @@ export default function PortfolioModule({ operations, onNavigate }: Props) {
           </button>
         ))}
       </nav>
+      <section className="pf-foundation" aria-label="Estado da carteira">
+        <div>
+          <span>BASE OPERACIONAL</span>
+          <b>{portfolio.titles.length} títulos controlados</b>
+          <small>Dados históricos e novas operações na mesma estrutura</small>
+        </div>
+        <div>
+          <span>EMPRESA ATIVA</span>
+          <b>{companyScope}</b>
+          <small>
+            {openScoped.length} título(s) em aberto · {scoped.length} no histórico
+          </small>
+        </div>
+        <div>
+          <span>RASTREABILIDADE</span>
+          <b>Origem preservada</b>
+          <small>Proposta, aditivo, borderô e campos importados</small>
+        </div>
+      </section>
       <div className="fn-kpis">
         <div>
           <span>Carteira em aberto</span>
           <strong>{compact(open)}</strong>
-          <small>{scoped.length} título(s)</small>
+          <small>{openScoped.length} título(s)</small>
         </div>
         <div>
           <span>Vence em 7 dias</span>
           <strong>{compact(next7)}</strong>
-          <small>{scoped.filter(t => t.late <= 0 && t.late >= -7).length} título(s)</small>
+          <small>{openScoped.filter(t => t.late <= 0 && t.late >= -7).length} título(s)</small>
         </div>
         <div>
           <span>Vencido</span>
@@ -153,8 +203,8 @@ export default function PortfolioModule({ operations, onNavigate }: Props) {
         <section className="fn-card">
           <header className="fn-card-head">
             <div>
-              <h2>Títulos em aberto</h2>
-              <p>Mais atrasados primeiro · o comercial é o dono atual do cliente</p>
+              <h2>Central de títulos</h2>
+              <p>Posição operacional em aberto · mais atrasados primeiro</p>
             </div>
             <div className="fn-head-actions">
               <div className="fn-seg" role="group" aria-label="Situação">
@@ -182,62 +232,12 @@ export default function PortfolioModule({ operations, onNavigate }: Props) {
               </label>
             </div>
           </header>
-          <div className="fn-table-scroll">
-            <table className="fn-table">
-              <thead>
-                <tr>
-                  <th>Título</th>
-                  <th>Cedente</th>
-                  <th>Sacado</th>
-                  <th>Comercial</th>
-                  <th className="num">Vencimento</th>
-                  <th className="num">Valor</th>
-                  <th>Situação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shown.slice(0, 200).map(t => (
-                  <tr key={t.id}>
-                    <td>
-                      <b>{t.reference}</b>
-                      <small>{t.source}</small>
-                    </td>
-                    <td>
-                      {t.ownerName}
-                      <small>{t.ownerDocument}</small>
-                    </td>
-                    <td>
-                      {t.debtorName}
-                      <small>{t.debtorDocument}</small>
-                    </td>
-                    <td>{repName(t.repId)}</td>
-                    <td className="num">
-                      {br(t.dueDate)}
-                      <small>
-                        {t.late > 0
-                          ? `${t.late} dia(s) de atraso`
-                          : t.late === 0
-                            ? "vence hoje"
-                            : `em ${-t.late} dia(s)`}
-                      </small>
-                    </td>
-                    <td className="num">
-                      <b>{money(t.amount)}</b>
-                    </td>
-                    <td>
-                      {t.late > 30 ? (
-                        <span className="fn-chip bad">Vencido &gt; 30d</span>
-                      ) : t.late > 0 ? (
-                        <span className="fn-chip warn">Vencido</span>
-                      ) : (
-                        <span className="fn-chip ok">A vencer</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PortfolioTitleGrid
+            rows={shown.slice(0, 200)}
+            repName={repName}
+            portfolio={portfolio}
+            onPortfolio={onPortfolio}
+          />
           {shown.length === 0 && <p className="fn-note">Nenhum título neste filtro.</p>}
         </section>
       )}

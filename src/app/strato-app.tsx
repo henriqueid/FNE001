@@ -35,6 +35,7 @@ import { portfolioTitles } from "@/src/domain/home/metrics";
 import { mergeParties, type Party, partyToCedent, seedParties } from "@/src/domain/registry/parties";
 import { saveParty as savePartyRecord } from "@/src/domain/registry/party-save";
 import { buildRegistry, effectiveCedents, repurchaseEvents } from "@/src/domain/registry/registry";
+import { seedPortfolio, syncPortfolio } from "@/src/domain/portfolio/model";
 import PortfolioModule from "@/src/features/portfolio/portfolio-module";
 import RegistryModule from "@/src/features/registry/registry-module";
 import { ModuleRoadmap } from "@/src/features/shell/module-roadmap";
@@ -60,6 +61,7 @@ export default function StratoApp() {
     setView(target);
   };
   const [finance, setFinance] = useState<FinanceState>(() => seedFinance());
+  const [portfolio, setPortfolio] = useState(() => seedPortfolio(initialOperations));
   // Vínculo comercial do cliente (carteira, comitês, comissões): compartilhado por Cadastro, Operação, Carteira e Comercial.
   const [commercial, setCommercial] = useState<CommercialState>(() => seedCommercial());
   // Cadastro de pessoas (cedentes, sacados, fornecedores, representantes, investidores...).
@@ -94,6 +96,10 @@ export default function StratoApp() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza liberações com o financeiro sempre que as operações mudam
     setFinance(current => syncReleases(current, operations, homeFinancials));
   }, [operations, homeFinancials]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- novas liberações entram na carteira sem apagar manutenções
+    setPortfolio(current => syncPortfolio(current, operations));
+  }, [operations]);
   function applyFinanceEffects(effects: Effect[]) {
     setOperations(current =>
       current.map(operation => {
@@ -144,6 +150,7 @@ export default function StratoApp() {
     if (stored.finance) setFinance(stored.finance);
     if (stored.commercial) setCommercial(stored.commercial);
     if (stored.parties) setSavedParties(stored.parties);
+    if (stored.portfolio) setPortfolio(stored.portfolio);
     if (stored.guidance !== undefined) setShowGuidance(stored.guidance);
     try {
       const savedScope = window.localStorage.getItem(COMPANY_SCOPE_KEY);
@@ -160,8 +167,9 @@ export default function StratoApp() {
   }, []);
 
   useEffect(() => {
-    if (storageReady) savePersistedState({ operations, debtors, finance, commercial, parties: savedParties });
-  }, [operations, debtors, finance, commercial, savedParties, storageReady]);
+    if (storageReady)
+      savePersistedState({ operations, debtors, finance, commercial, parties: savedParties, portfolio });
+  }, [operations, debtors, finance, commercial, savedParties, portfolio, storageReady]);
 
   useEffect(() => {
     if (storageReady) saveGuidance(showGuidance);
@@ -200,6 +208,7 @@ export default function StratoApp() {
     setFinance(seedFinance());
     setCommercial(seedCommercial());
     setSavedParties(seedParties());
+    setPortfolio(seedPortfolio(initialOperations));
     setSelected(null);
   }
   function createOperation(input: NewOperationInput) {
@@ -359,7 +368,15 @@ export default function StratoApp() {
       <RegistryModule debtors={debtors} operations={operations} onOpenOperation={setSelected} onNavigate={navigate} />,
     );
   else if (view === "portfolio")
-    page = shellFor("Carteira", <PortfolioModule operations={operations} onNavigate={navigate} />);
+    page = shellFor(
+      "Carteira",
+      <PortfolioModule
+        portfolio={portfolio}
+        onPortfolio={setPortfolio}
+        companyScope={companyScope}
+        onNavigate={navigate}
+      />,
+    );
   else if (view in roadmapViews)
     page = shellFor(
       roadmapViews[view as keyof typeof roadmapViews],

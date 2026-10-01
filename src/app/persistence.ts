@@ -12,6 +12,7 @@ import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { type FinanceState } from "@/src/domain/finance/model";
 import { ensureChart } from "@/src/domain/finance/setup";
 import { datePrefix } from "@/src/domain/operations/dates";
+import { migratePortfolioState, type PortfolioState, type StoredPortfolioState } from "@/src/domain/portfolio/model";
 import { type Party } from "@/src/domain/registry/parties";
 
 export const STORAGE_KEYS = {
@@ -20,6 +21,7 @@ export const STORAGE_KEYS = {
   finance: "strato-finance-v2",
   commercial: "strato-commercial-v1",
   parties: "strato-parties-v1",
+  portfolio: "strato-portfolio-v1",
   guidance: "lastro-interface-guidance-v1",
 } as const;
 
@@ -29,6 +31,7 @@ export type PersistedState = {
   finance: FinanceState;
   commercial: CommercialState;
   parties: Party[];
+  portfolio: PortfolioState;
 };
 
 /** Mescla operações salvas com a versão atual dos dados de demonstração. */
@@ -120,13 +123,19 @@ export function loadPersistedState(): Partial<PersistedState> & { guidance?: boo
     const finance = read<FinanceState>(STORAGE_KEYS.finance);
     const commercial = read<CommercialState>(STORAGE_KEYS.commercial);
     const parties = read<Party[]>(STORAGE_KEYS.parties);
+    const portfolio = read<StoredPortfolioState>(STORAGE_KEYS.portfolio);
     const guidance = window.localStorage.getItem(STORAGE_KEYS.guidance);
+    const migratedOperations = operations ? migrateStoredOperations(operations) : undefined;
     return {
-      operations: operations ? migrateStoredOperations(operations) : undefined,
+      operations: migratedOperations,
       debtors: debtors ? migrateStoredDebtors(debtors) : undefined,
       finance: finance?.version === 1 && Array.isArray(finance.accounts) ? ensureChart(finance) : undefined,
       commercial: commercial?.version === 1 && Array.isArray(commercial.reps) ? commercial : undefined,
       parties: Array.isArray(parties) ? parties : undefined,
+      portfolio:
+        portfolio && [1, 2, 3].includes(portfolio.version) && Array.isArray(portfolio.titles)
+          ? migratePortfolioState(portfolio, migratedOperations ?? initialOperations)
+          : undefined,
       guidance: guidance === null ? undefined : guidance === "true",
     };
   } catch {
@@ -143,6 +152,7 @@ export function savePersistedState(state: PersistedState) {
     window.localStorage.setItem(STORAGE_KEYS.finance, JSON.stringify(state.finance));
     window.localStorage.setItem(STORAGE_KEYS.commercial, JSON.stringify(commercial));
     window.localStorage.setItem(STORAGE_KEYS.parties, JSON.stringify(state.parties));
+    window.localStorage.setItem(STORAGE_KEYS.portfolio, JSON.stringify(state.portfolio));
   } catch {
     /* sem armazenamento: a demonstração segue só na memória */
   }
@@ -165,6 +175,7 @@ export function clearPersistedState() {
       STORAGE_KEYS.finance,
       STORAGE_KEYS.commercial,
       STORAGE_KEYS.parties,
+      STORAGE_KEYS.portfolio,
     ].forEach(key => window.localStorage.removeItem(key));
   } catch {
     /* sem armazenamento */

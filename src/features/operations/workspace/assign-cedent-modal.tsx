@@ -9,6 +9,7 @@ import { type Cedent, type Operation } from "@/src/domain/core/types";
 import { Badge } from "@/src/features/operations/components/status";
 import { ShieldIcon, UsersIcon } from "@/src/ui/icons";
 import { useState } from "react";
+import { scoreBand } from "@/src/domain/eligibility/operational-parameters";
 
 export function AssignCedentModal({
   operation,
@@ -55,7 +56,11 @@ export function AssignCedentModal({
               <span>SCORE</span>
               <strong>{cedent.score}</strong>
               <small>
-                {cedent.score >= 700 ? "Faixa positiva" : cedent.score >= 600 ? "Faixa de atenção" : "Faixa crítica"}
+                {scoreBand(cedent.score) === "Positivo"
+                  ? "Faixa positiva"
+                  : scoreBand(cedent.score) === "Atenção"
+                    ? "Faixa de atenção"
+                    : "Faixa crítica"}
               </small>
             </div>
             <div>

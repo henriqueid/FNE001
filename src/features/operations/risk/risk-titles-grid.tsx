@@ -4,23 +4,20 @@
  */
 import { preciseMoney } from "@/src/domain/core/format";
 import { type ManualEntry } from "@/src/domain/core/types";
-import {
-  MINIMUM_TERM_DAYS,
-  type RiskDecision,
-  cfopMonitoring,
-  isCirculationCfop,
-  noteMonitoring,
-  termFor,
-} from "./risk-model";
+import { type RiskDecision, cfopMonitoring, isCirculationCfop, noteMonitoring, termFor } from "./risk-model";
 
 export function RiskTitlesGrid({
   titles,
   titleDecisions,
+  minimumTermDays,
+  cfopPrefixes,
   onAnalyze,
   onDecide,
 }: {
   titles: ManualEntry[];
   titleDecisions: Record<string, RiskDecision>;
+  minimumTermDays: number;
+  cfopPrefixes: string[];
   onAnalyze: (title: ManualEntry) => void;
   onDecide: (id: string, decision: RiskDecision) => void;
 }) {
@@ -31,7 +28,7 @@ export function RiskTitlesGrid({
           <span>TÍTULOS DO SACADO SELECIONADO</span>
           <strong>Prazo, documento fiscal, monitoramento e decisão</strong>
         </div>
-        <small>Prazo mínimo configurado: {MINIMUM_TERM_DAYS} dias</small>
+        <small>Prazo mínimo configurado: {minimumTermDays} dias</small>
       </div>
       <div className="risk-title-scroll">
         <div className="risk-title-head">
@@ -45,7 +42,7 @@ export function RiskTitlesGrid({
         </div>
         {titles.map(title => {
           const term = termFor(title);
-          const withinTerm = term != null && term >= MINIMUM_TERM_DAYS;
+          const withinTerm = term != null && term >= minimumTermDays;
           return (
             <div className="risk-title-row" key={title.id}>
               <strong>{title.documentNumber}</strong>
@@ -57,7 +54,7 @@ export function RiskTitlesGrid({
                     ? "Sem prazo calculado"
                     : withinTerm
                       ? `${term} dias · dentro da política`
-                      : `${term} dias · mínimo ${MINIMUM_TERM_DAYS}`}
+                      : `${term} dias · mínimo ${minimumTermDays}`}
                 </small>
               </span>
               <span className="tax-key" title={title.nfeKey}>
@@ -65,7 +62,9 @@ export function RiskTitlesGrid({
               </span>
               <span className="cfop-cell compact">
                 <b>{title.cfop || "—"}</b>
-                <em className={isCirculationCfop(title.cfop) ? "positive" : "warning-text"}>{cfopMonitoring(title)}</em>
+                <em className={isCirculationCfop(title.cfop, cfopPrefixes) ? "positive" : "warning-text"}>
+                  {cfopMonitoring(title, cfopPrefixes)}
+                </em>
               </span>
               <span>
                 <b className={title.nfeKey ? "positive" : "warning-text"}>{title.nfeKey ? "Monitorada" : "Pendente"}</b>

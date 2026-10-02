@@ -12,6 +12,7 @@ import {
   type RiskReview,
   eligibleApproval,
   findDebtorProfile,
+  riskParametersFor,
   groupEntriesByDebtor,
   groupKey,
   titlesOfGroup,
@@ -31,6 +32,7 @@ export function useRiskReview({
   const cedent = registryCedents.find(
     item => item.document.replace(/\D/g, "") === operation.document.replace(/\D/g, ""),
   );
+  const parameters = riskParametersFor(operation);
   const grouped = groupEntriesByDebtor(entries);
   const [selectedKey, setSelectedKey] = useState(grouped[0]?.id || grouped[0]?.document || "");
   const [detail, setDetail] = useState<RiskDetailKind | null>(null);
@@ -78,7 +80,14 @@ export function useRiskReview({
     updateReview({ cedentDecision: "Reprovado", audit: auditDecision("operacao", "Reprovado") });
   const approveEligible = () =>
     updateReview({
-      ...eligibleApproval({ review: operation.riskReview, grouped, entries, debtors, cedentScore: cedent?.score }),
+      ...eligibleApproval({
+        review: operation.riskReview,
+        grouped,
+        entries,
+        debtors,
+        cedentScore: cedent?.score,
+        parameters,
+      }),
       audit: auditDecision("operacao", "Aprovado"),
     });
   const markConsulted = (key: string) => setConsulted(current => [...new Set([...current, key])]);
@@ -90,6 +99,8 @@ export function useRiskReview({
   );
 
   return {
+    minimumTermDays: parameters.minimumTermDays,
+    cfopPrefixes: parameters.cfopPrefixes,
     cedent,
     grouped,
     selectedGroup,

@@ -6,6 +6,7 @@ import { type Operation } from "@/src/domain/core/types";
 import { type AutomationBreakdown } from "./automation";
 import { operationDateISO } from "./dates";
 import { formatFlowMoney } from "./format";
+import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
 import { lastroAssessmentFor } from "./lastro";
 import {
   normalizedPricing,
@@ -42,6 +43,8 @@ export function stageInsightFor(operation: Operation, stageId: number, automatio
         }, 0) / entries.length,
       )
     : 0;
+  const parameters = operationalParametersFor(operation.institution);
+  const concentrationLimit = parameters.riskConcentrationReference;
   const stageState =
     stageId < operation.stage ? "Concluída" : stageId === operation.stage ? "Etapa atual" : "Prévia calculada";
   const common = {
@@ -69,12 +72,12 @@ export function stageInsightFor(operation: Operation, stageId: number, automatio
         { label: "PRAZO MÉDIO", value: entries.length ? `${averageTerm} dias` : "—", detail: "Emissão até vencimento" },
       ],
       result:
-        concentration > 20
-          ? "Intervenção: concentração acima da referência de 20%."
+        concentration > concentrationLimit
+          ? `Intervenção: concentração acima da referência de ${String(concentrationLimit).replace(".", ",")}%.`
           : entries.length
             ? "Sem alerta de concentração pela referência atual."
             : "Inclua títulos para calcular o risco.",
-      tone: concentration > 20 ? "warning" : "positive",
+      tone: concentration > concentrationLimit ? "warning" : "positive",
     };
   if (stageId === 3) {
     const lastro = lastroAssessmentFor(operation);
@@ -146,7 +149,7 @@ export function stageInsightFor(operation: Operation, stageId: number, automatio
       entries.length > 0,
       operation.blockers === 0,
       evidenceCount === entries.length,
-      automation.score >= 70,
+      automation.score >= parameters.readinessMinAutomation,
     ];
     const done = ready.filter(Boolean).length;
     return {

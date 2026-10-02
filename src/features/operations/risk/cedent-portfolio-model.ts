@@ -3,6 +3,7 @@
  */
 import { initialOperations } from "@/src/domain/core/demo/operations";
 import { type Cedent, type PortfolioPosition } from "@/src/domain/core/types";
+import { scoreBand } from "@/src/domain/eligibility/operational-parameters";
 
 export type CedentDebtorRanking = {
   name: string;
@@ -64,8 +65,8 @@ export function buildCedentPortfolio(cedent: Cedent) {
     { label: "Recomprados", value: repurchased, tone: repurchased.count ? "negative" : "neutral" },
     { label: "Protestados", value: protested, tone: protested.count ? "negative" : "neutral" },
   ];
-  const healthyProfile = cedent.score >= 700;
-  const criticalProfile = cedent.score < 600;
+  const healthyProfile = scoreBand(cedent.score) === "Positivo";
+  const criticalProfile = scoreBand(cedent.score) === "Crítico";
   const confirmationRate = criticalProfile ? 78.4 : healthyProfile ? 96.8 : 89.6;
   const repurchaseRate = cedent.settlements ? (cedent.repurchases / cedent.settlements) * 100 : 0;
   const frequencyDays = criticalProfile ? 14 : healthyProfile ? 7 : 11;
@@ -151,8 +152,8 @@ export function buildCedentPortfolio(cedent: Cedent) {
             ? "Liquidada com ressalva"
             : "Liquidada",
   }));
-  const positiveDebtors = topDebtors.filter(item => item.score >= 700).length;
-  const attentionDebtors = topDebtors.filter(item => item.score >= 600 && item.score < 700).length;
+  const positiveDebtors = topDebtors.filter(item => scoreBand(item.score) === "Positivo").length;
+  const attentionDebtors = topDebtors.filter(item => scoreBand(item.score) === "Atenção").length;
   const criticalDebtors = topDebtors.length - positiveDebtors - attentionDebtors;
 
   return {

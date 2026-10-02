@@ -7,7 +7,6 @@ import { type ManualEntry } from "@/src/domain/core/types";
 import { Badge } from "@/src/features/operations/components/status";
 import { CloseIcon } from "@/src/ui/icons";
 import {
-  MINIMUM_TERM_DAYS,
   type RiskDecision,
   cfopDescription,
   cfopMonitoring,
@@ -19,11 +18,15 @@ import {
 export function TitleAnalysisModal({
   title,
   debtorName,
+  minimumTermDays,
+  cfopPrefixes,
   onClose,
   onDecide,
 }: {
   title: ManualEntry;
   debtorName?: string;
+  minimumTermDays: number;
+  cfopPrefixes: string[];
   onClose: () => void;
   onDecide: (id: string, decision: RiskDecision) => void;
 }) {
@@ -51,20 +54,20 @@ export function TitleAnalysisModal({
           </button>
         </div>
         <div className="title-monitor-summary">
-          <div className={termFor(title) != null && termFor(title)! >= MINIMUM_TERM_DAYS ? "ok" : "fail"}>
+          <div className={termFor(title) != null && termFor(title)! >= minimumTermDays ? "ok" : "fail"}>
             <span>PRAZO DA POLÍTICA</span>
             <strong>{termFor(title) == null ? "Não calculado" : `${termFor(title)} dias`}</strong>
-            <small>Mínimo configurado: {MINIMUM_TERM_DAYS} dias</small>
+            <small>Mínimo configurado: {minimumTermDays} dias</small>
           </div>
           <div className={title.nfeKey ? "ok" : "fail"}>
             <span>MONITORAMENTO NF-e</span>
             <strong>{title.nfeKey ? "Ativo" : "Pendente"}</strong>
             <small>{noteMonitoring(title)}</small>
           </div>
-          <div className={isCirculationCfop(title.cfop) ? "ok" : "fail"}>
+          <div className={isCirculationCfop(title.cfop, cfopPrefixes) ? "ok" : "fail"}>
             <span>CFOP {title.cfop || "não informado"}</span>
             <strong>{cfopDescription(title.cfop)}</strong>
-            <small>{cfopMonitoring(title)}</small>
+            <small>{cfopMonitoring(title, cfopPrefixes)}</small>
           </div>
         </div>
         <div className="title-detail-list">

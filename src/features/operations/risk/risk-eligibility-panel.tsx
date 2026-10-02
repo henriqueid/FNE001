@@ -73,6 +73,8 @@ export function RiskEligibilityPanel({
         <RiskTitlesGrid
           titles={review.selectedTitles}
           titleDecisions={review.titleDecisions}
+          minimumTermDays={review.minimumTermDays}
+          cfopPrefixes={review.cfopPrefixes}
           onAnalyze={review.setSelectedTitle}
           onDecide={review.decideTitle}
         />
@@ -98,6 +100,8 @@ export function RiskEligibilityPanel({
         <TitleAnalysisModal
           title={review.selectedTitle}
           debtorName={selectedGroup?.name}
+          minimumTermDays={review.minimumTermDays}
+          cfopPrefixes={review.cfopPrefixes}
           onClose={() => review.setSelectedTitle(null)}
           onDecide={review.decideTitle}
         />

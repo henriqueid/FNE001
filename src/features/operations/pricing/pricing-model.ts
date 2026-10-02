@@ -12,6 +12,7 @@ import {
   type repurchaseCalculation,
   type settlementAdjustmentCalculation,
 } from "@/src/domain/operations/pricing";
+import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
 
 export type PricingCalculation = ReturnType<typeof pricingCalculation>;
 export type RepurchaseResult = ReturnType<typeof repurchaseCalculation>;
@@ -40,9 +41,9 @@ export function formatRate(value: number, digits = 2) {
   return value.toFixed(digits).replace(".", ",");
 }
 
-/** Piso de taxa mensal da política comercial conforme o risco da operação. */
-export function policyMinimumFor(risk: Operation["risk"]) {
-  return risk === "Alto" ? 2.4 : risk === "Médio" ? 1.8 : 1.4;
+/** Piso de taxa mensal (% a.m.) da modalidade da operação conforme o risco. */
+export function policyMinimumFor(operation: Pick<Operation, "institution" | "risk">) {
+  return operationalParametersFor(operation.institution).rateFloorByRisk[operation.risk];
 }
 
 /** Texto da regra tributária aplicada, conforme o tipo de instituição. */

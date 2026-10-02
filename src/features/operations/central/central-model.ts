@@ -3,6 +3,7 @@
  * financeiros/da fila e colunas do kanban.
  */
 import { type Operation } from "@/src/domain/core/types";
+import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
 import { eligibilityRouteFor } from "@/src/domain/eligibility/orchestration";
 import { needsIntervention } from "@/src/domain/operations/pace";
 import { normalizedPricing, pricingCalculation } from "@/src/domain/operations/pricing";
@@ -15,9 +16,13 @@ export type ScreenFilters = { query: string; stageFilter: string; statusFilter: 
 export type CentralMetrics = ReturnType<typeof centralMetricsFor>;
 export type KanbanColumn = ReturnType<typeof kanbanColumnsFor>[number];
 
+/** Automação igual ou acima do corte de fila da modalidade da operação. */
+const highAutomation = (op: Operation) =>
+  op.automation >= operationalParametersFor(op.institution).queueAutomationThreshold;
+
 /** Pronta para formalização: sem bloqueios, na etapa 4 e com automação alta. */
 function readyForFormalization(op: Operation) {
-  return op.status !== "Cancelada" && op.blockers === 0 && op.stage === 4 && op.automation >= 80;
+  return op.status !== "Cancelada" && op.blockers === 0 && op.stage === 4 && highAutomation(op);
 }
 
 /** Filtros de etapa, status, origem e busca textual aplicados à tela. */
@@ -131,7 +136,7 @@ export function kanbanColumnsFor(inProgressOperations: Operation[], releasedOper
       description: "Condição sendo consolidada",
       tone: "automatic",
       operations: inProgressOperations.filter(
-        op => !needsIntervention(op) && op.stage === 4 && !(op.blockers === 0 && op.automation >= 80),
+        op => !needsIntervention(op) && op.stage === 4 && !(op.blockers === 0 && highAutomation(op)),
       ),
     },
     {
@@ -140,8 +145,7 @@ export function kanbanColumnsFor(inProgressOperations: Operation[], releasedOper
       description: "Pacote pronto para conferência",
       tone: "formalization",
       operations: inProgressOperations.filter(
-        op =>
-          !needsIntervention(op) && ((op.stage === 4 && op.blockers === 0 && op.automation >= 80) || op.stage === 5),
+        op => !needsIntervention(op) && ((op.stage === 4 && op.blockers === 0 && highAutomation(op)) || op.stage === 5),
       ),
     },
     {

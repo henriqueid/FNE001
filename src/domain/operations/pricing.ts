@@ -4,32 +4,34 @@
  */
 import { cedentPortfolioTitles, cedentSettlementAdjustments } from "@/src/domain/core/demo/portfolio";
 import { type Operation } from "@/src/domain/core/types";
+import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
 
 export type PricingDraft = NonNullable<Operation["pricingReview"]>;
 
+/** Condição comercial sugerida: vem dos parâmetros operacionais da modalidade. */
 export function defaultPricing(operation: Operation): PricingDraft {
-  const factoring = operation.institution === "Factoring";
+  const defaults = operationalParametersFor(operation.institution).pricingDefaults;
   return {
     method: "Composta Mista",
     vaEnabled: false,
-    monthlyRate: factoring ? 2.8 : 2.1,
+    monthlyRate: defaults.monthlyRate,
     targetFinalRateMonthly: 0,
-    fundingCostMonthly: factoring ? 1.45 : 1.2,
-    floatDays: 1,
-    minimumTermDays: 5,
-    operationFee: factoring ? 150 : 0,
-    feePerTitle: 12,
-    adValoremPercent: factoring ? 0.5 : 0,
-    guaranteePercent: operation.risk === "Alto" ? 5 : operation.risk === "Médio" ? 2 : 0,
+    fundingCostMonthly: defaults.fundingCostMonthly,
+    floatDays: defaults.floatDays,
+    minimumTermDays: defaults.minimumTermDays,
+    operationFee: defaults.operationFee,
+    feePerTitle: defaults.feePerTitle,
+    adValoremPercent: defaults.adValoremPercent,
+    guaranteePercent: defaults.guaranteePercentByRisk[operation.risk],
     manualRetention: 0,
     manualFees: [],
     repurchaseTitleIds: [],
     settlementAdjustmentIds: [],
     repurchaseTerms: {},
     feeAllocation: "Por valor × prazo",
-    regress: factoring ? "Com regresso" : "Sem regresso",
-    regressDays: factoring ? 5 : 0,
-    coobligation: factoring,
+    regress: defaults.regress,
+    regressDays: defaults.regressDays,
+    coobligation: defaults.coobligation,
     status: "Simulação",
     version: 0,
     locked: false,

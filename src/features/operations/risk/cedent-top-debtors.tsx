@@ -4,6 +4,7 @@
  */
 import { preciseMoney } from "@/src/domain/core/format";
 import { type CedentDebtorRanking, confirmationTone, percent } from "./cedent-portfolio-model";
+import { scoreBand } from "@/src/domain/eligibility/operational-parameters";
 
 export function CedentTopDebtors({
   debtors,
@@ -44,7 +45,9 @@ export function CedentTopDebtors({
             <i style={{ width: `${Math.min(100, item.share * 3.2)}%` }} />
             {percent(item.share)}%
           </span>
-          <em className={item.score >= 700 ? "good" : item.score >= 600 ? "watch" : "bad"}>{item.score}</em>
+          <em className={{ Positivo: "good", Atenção: "watch", Crítico: "bad", Novo: "bad" }[scoreBand(item.score)]}>
+            {item.score}
+          </em>
           <strong className={confirmationTone(item.confirmation)}>{percent(item.confirmation)}%</strong>
         </button>
       ))}
@@ -66,9 +69,9 @@ export function CedentTopDebtors({
               {selected.score} · {percent(selected.confirmation)}%
             </strong>
             <small>
-              {selected.score >= 700
+              {scoreBand(selected.score) === "Positivo"
                 ? "Relacionamento positivo"
-                : selected.score >= 600
+                : scoreBand(selected.score) === "Atenção"
                   ? "Relacionamento em atenção"
                   : "Relacionamento crítico"}
             </small>

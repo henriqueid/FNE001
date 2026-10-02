@@ -60,7 +60,7 @@ export function usePricingDraft(operation: Operation, onChange: (operation: Oper
   );
   const totalOffsets = roundPricing(repurchase.total + settlementAdjustments.total);
   const netAfterRepurchase = roundPricing(calculated.net - totalOffsets);
-  const policyMinimum = policyMinimumFor(operation.risk);
+  const policyMinimum = policyMinimumFor(operation);
   const rateBelowPolicy = pricing.monthlyRate < policyMinimum;
   const positiveEconomics = netAfterRepurchase > 0 && calculated.spread > 0;
   const pricingSourceReady =

@@ -1,5 +1,13 @@
 # Changelog
 
+## Não lançado — 02/10/2026 · Parâmetros operacionais fora das telas
+
+- Novo `src/domain/eligibility/operational-parameters.ts`: fonte única, por modalidade, dos números que as etapas atuais usavam fixos no código (faixas de score 600/700, prazo mínimo de 15 dias, CFOP 5xxx/6xxx, referência de concentração de 20%, amostra de lastro 25/50/100%, participação relevante de 25%, piso de taxa 1,4/1,8/2,4% a.m., automação 70 e 80, condição comercial padrão e garantia por risco). Mesmos valores, mesmo comportamento; são configuração de demonstração, não referência de mercado.
+- Risco, Lastro, Preço, Aprovação, Central, Cadastros e Visão geral passam a ler essa fonte.
+- Prazo do título em dias de calendário (antes somava um dia por arredondamento de fuso).
+- Teste comercial deixou de depender da data fixa 30/09/2026.
+- `tests/operational-parameters.test.ts`: paridade com a v7 para "Aprovar elegíveis", amostra de lastro, piso de taxa e condição padrão.
+
 ## 0.7.0 — 30/09/2026
 
 **Código**

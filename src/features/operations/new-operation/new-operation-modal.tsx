@@ -10,6 +10,7 @@ import { type Cedent, type Destination, type OperationSource } from "@/src/domai
 import { Badge } from "@/src/features/operations/components/status";
 import { ArrowIcon, CheckIcon, CloseIcon, SparkIcon } from "@/src/ui/icons";
 import { useContext, useState } from "react";
+import { scoreBand } from "@/src/domain/eligibility/operational-parameters";
 
 export type NewOperationInput = {
   source: OperationSource;
@@ -129,7 +130,11 @@ export function NewOperationModal({
               <span>
                 <b>Score {cedent.score}</b>
                 <small>
-                  {cedent.score >= 700 ? "Faixa positiva" : cedent.score >= 600 ? "Faixa de atenção" : "Faixa crítica"}
+                  {scoreBand(cedent.score) === "Positivo"
+                    ? "Faixa positiva"
+                    : scoreBand(cedent.score) === "Atenção"
+                      ? "Faixa de atenção"
+                      : "Faixa crítica"}
                 </small>
               </span>
               <span>

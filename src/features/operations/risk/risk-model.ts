@@ -1,9 +1,16 @@
 /**
  * Regras puras da etapa de Risco e elegibilidade: agrupamento de títulos por sacado,
  * faixas de score, prazo da política, monitoramento de NF-e/CFOP, extrato do sacado,
- * recomendação assistida e a regra de "Aprovar elegíveis".
+ * recomendação assistida e a regra de "Aprovar elegíveis". Cortes vêm de `operational-parameters.ts`.
  */
 import { type Debtor, type ManualEntry, type Operation, type PortfolioPosition } from "@/src/domain/core/types";
+import {
+  type OperationalParameters,
+  operationalParametersFor,
+  scoreBand,
+  termDays,
+} from "@/src/domain/eligibility/operational-parameters";
+import { todayIso } from "@/src/domain/finance/ledger";
 
 export type RiskDecision = "Aprovado" | "Reprovado";
 export type RiskReview = NonNullable<Operation["riskReview"]>;
@@ -17,8 +24,9 @@ export type LedgerRow = { label: string; data: PortfolioPosition; tone: string }
 
 export type DebtorRecommendation = { tone: string; label: string; reason: string };
 
-/** Prazo mínimo (em dias) exigido pela política para aprovar um título. */
-export const MINIMUM_TERM_DAYS = 15;
+/** Parâmetros operacionais (faixas de score, prazo mínimo, CFOP) da modalidade da operação. */
+export const riskParametersFor = (operation: Pick<Operation, "institution">) =>
+  operationalParametersFor(operation.institution);
 
 const digits = (value: string) => value.replace(/\D/g, "");
 
@@ -50,27 +58,25 @@ export const findDebtorProfile = (debtors: Debtor[], group?: DebtorGroup) =>
 export const titlesOfGroup = (entries: ManualEntry[], group?: DebtorGroup) =>
   entries.filter(entry => (entry.debtorId || entry.debtorDocument) === (group?.id || group?.document));
 
-export const scoreLabel = (score?: number) =>
-  score == null ? "Novo" : score >= 700 ? "Positivo" : score >= 600 ? "Atenção" : "Crítico";
+/** Faixa de score (Novo, Crítico, Atenção, Positivo) pelas faixas configuradas. */
+export const scoreLabel = (score?: number, bands?: OperationalParameters["scoreBands"]) => scoreBand(score, bands);
 
-export const scoreTone = (score?: number) =>
-  score == null ? "new" : score >= 700 ? "good" : score >= 600 ? "watch" : "bad";
+export const scoreTone = (score?: number, bands?: OperationalParameters["scoreBands"]) =>
+  ({ Novo: "new", Positivo: "good", Atenção: "watch", Crítico: "bad" })[scoreBand(score, bands)];
 
-/** Dias corridos entre hoje e o vencimento do título; `null` quando não há vencimento. */
-export const termFor = (title: ManualEntry) =>
-  title.dueDate
-    ? Math.ceil((new Date(`${title.dueDate}T12:00:00`).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000)
-    : null;
+/** Dias corridos de calendário entre hoje e o vencimento do título; `null` quando não há vencimento. */
+export const termFor = (title: ManualEntry, today = todayIso()) => termDays(title.dueDate, today);
 
 export const noteMonitoring = (title: ManualEntry) =>
   title.nfeKey ? "NF-e autorizada · monitoramento ativo" : "Sem chave NF-e · monitoramento pendente";
 
-/** CFOP de saída (5xxx/6xxx) compatível com circulação de mercadoria. */
-export const isCirculationCfop = (cfop?: string) => Boolean(cfop && /^[56]/.test(cfop));
+/** CFOP começa por um dos prefixos aceitos (ex.: saídas 5xxx/6xxx). */
+export const isCirculationCfop = (cfop: string | undefined, prefixes: string[]) =>
+  Boolean(cfop && prefixes.some(prefix => cfop.startsWith(prefix)));
 
-export const cfopMonitoring = (title: ManualEntry) =>
+export const cfopMonitoring = (title: ManualEntry, prefixes: string[]) =>
   title.cfop
-    ? /^[56]/.test(title.cfop)
+    ? isCirculationCfop(title.cfop, prefixes)
       ? "CFOP compatível com circulação"
       : "CFOP exige revisão"
     : "CFOP não informado";
@@ -133,20 +139,23 @@ export function debtorLedger(debtor?: Debtor) {
   };
 }
 
-export function debtorRecommendation(debtor?: Debtor): DebtorRecommendation {
+export function debtorRecommendation(
+  debtor?: Debtor,
+  bands: OperationalParameters["scoreBands"] = operationalParametersFor().scoreBands,
+): DebtorRecommendation {
   return debtor?.score == null
     ? {
         tone: "attention",
         label: "Análise manual necessária",
         reason: "Sacado novo: consulte cadastro, bureau e documentos antes da decisão.",
       }
-    : debtor.score < 600 || (debtor.portfolioOverdue ?? 0) > 0
+    : debtor.score < bands.attention || (debtor.portfolioOverdue ?? 0) > 0
       ? {
           tone: "negative",
           label: "Recomendação: revisar ou reprovar",
           reason: debtor.scoreReasons?.[0] ?? "Há indicadores de risco que exigem decisão humana.",
         }
-      : debtor.score < 700
+      : debtor.score < bands.positive
         ? {
             tone: "attention",
             label: "Recomendação: aprovar com atenção",
@@ -161,8 +170,8 @@ export function debtorRecommendation(debtor?: Debtor): DebtorRecommendation {
 
 /**
  * Regra de "Aprovar elegíveis": respeita a política e as decisões manuais já registradas —
- * nada é aprovado às cegas. Aprova sacados com score ≥ 600 ainda sem decisão e, deles,
- * os títulos sem decisão com prazo ≥ mínimo. O cedente é aprovado se score ≥ 600 e sem decisão prévia.
+ * nada é aprovado às cegas. Aprova sacados com score na faixa mínima ainda sem decisão e, deles,
+ * os títulos sem decisão com prazo ≥ mínimo. O cedente é aprovado se o score atinge a faixa mínima.
  */
 export function eligibleApproval({
   review,
@@ -170,12 +179,16 @@ export function eligibleApproval({
   entries,
   debtors,
   cedentScore,
+  parameters = operationalParametersFor(),
+  today = todayIso(),
 }: {
   review: Operation["riskReview"];
   grouped: DebtorGroup[];
   entries: ManualEntry[];
   debtors: Debtor[];
   cedentScore?: number;
+  parameters?: OperationalParameters;
+  today?: string;
 }): Pick<RiskReview, "cedentDecision" | "debtorDecisions" | "titleDecisions"> {
   const previousDebtors = review?.debtorDecisions ?? {};
   const previousTitles = review?.titleDecisions ?? {};
@@ -184,16 +197,16 @@ export function eligibleApproval({
   const decisions: Record<string, RiskDecision> = { ...previousDebtors };
   grouped.forEach(item => {
     const key = groupKey(item);
-    if (!decisions[key] && debtorScore(key) >= 600) decisions[key] = "Aprovado";
+    if (!decisions[key] && debtorScore(key) >= parameters.scoreBands.attention) decisions[key] = "Aprovado";
   });
   const titles: Record<string, RiskDecision> = { ...previousTitles };
   entries.forEach(item => {
     const key = item.debtorId || item.debtorDocument;
-    const term = termFor(item);
-    if (!titles[item.id] && decisions[key] === "Aprovado" && term !== null && term >= MINIMUM_TERM_DAYS)
+    const term = termFor(item, today);
+    if (!titles[item.id] && decisions[key] === "Aprovado" && term !== null && term >= parameters.minimumTermDays)
       titles[item.id] = "Aprovado";
   });
-  const cedentOk = (cedentScore ?? 0) >= 600;
+  const cedentOk = (cedentScore ?? 0) >= parameters.scoreBands.attention;
   return {
     cedentDecision: review?.cedentDecision ?? (cedentOk ? "Aprovado" : undefined),
     debtorDecisions: decisions,

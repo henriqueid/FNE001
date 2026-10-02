@@ -7,6 +7,7 @@ import { repAt } from "@/src/domain/commercial/rules";
 import { type CommercialState } from "@/src/domain/commercial/types";
 import { initialOperations } from "@/src/domain/core/demo/operations";
 import { type Cedent, type Destination, type Operation, type OperationSource } from "@/src/domain/core/types";
+import { operationalParametersFor, riskFromScore } from "@/src/domain/eligibility/operational-parameters";
 import { datePrefix } from "./dates";
 
 export type NewOperationRequest = {
@@ -53,7 +54,7 @@ export function buildNewOperation(
     operationType,
     cedent: cedent.name,
     document: cedent.document,
-    risk: cedent.score >= 700 ? "Baixo" : cedent.score >= 600 ? "Médio" : "Alto",
+    risk: riskFromScore(cedent.score, operationalParametersFor(destination.institution).scoreBands),
     amount: 0,
     netAmount: 0,
     titleCount: 0,

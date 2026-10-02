@@ -16,6 +16,7 @@ import {
 } from "@/src/domain/operations/pricing";
 import { operationNeedsCedent } from "@/src/domain/operations/queries";
 import { stageInsightFor } from "@/src/domain/operations/stage-insight";
+import { operationalParametersFor, riskFromScore } from "@/src/domain/eligibility/operational-parameters";
 
 export type WorkspaceFeedback = { tone: "success" | "warning"; message: string };
 export type WorkspaceView = "summary" | "stages";
@@ -230,7 +231,7 @@ export function withCedent(operation: Operation, cedent: Cedent): Operation {
     ...operation,
     cedent: cedent.name,
     document: cedent.document,
-    risk: (cedent.score >= 700 ? "Baixo" : cedent.score >= 600 ? "Médio" : "Alto") as Operation["risk"],
+    risk: riskFromScore(cedent.score, operationalParametersFor(operation.institution).scoreBands),
     alerts: Math.max(operation.alerts, cedent.incidents),
     nextAction: operation.stage === 1 ? operation.nextAction : "Revisar risco com o cedente vinculado",
   };

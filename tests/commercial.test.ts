@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { transferClient } from "@/src/domain/commercial/actions";
 import { computeCommission, repAt, tierRate } from "@/src/domain/commercial/rules";
 import { seedCommercial } from "@/src/domain/commercial/seed";
+import { todayIso } from "@/src/domain/finance/ledger";
 
 const TODAY = "2026-09-30";
 
@@ -19,7 +20,8 @@ describe("regras comerciais", () => {
     const other = state.reps.find(r => r.id !== link.repId)!;
     const moved = transferClient(state, link.id, other.id, "teste", "Teste").state;
     expect(repAt(moved, link.document, "2020-01-01")).toBe(link.repId);
-    expect(repAt(moved, link.document, TODAY)).toBe(other.id);
+    // A transferência vale a partir da data real do sistema (todayIso), não da data fixa do seed.
+    expect(repAt(moved, link.document, todayIso())).toBe(other.id);
   });
   it("comissão = base × faixa + bônus − estorno", () => {
     const month = TODAY.slice(0, 7);

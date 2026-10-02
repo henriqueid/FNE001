@@ -3,6 +3,7 @@
  */
 import { initialDebtors } from "@/src/domain/core/demo/debtors";
 import { type Debtor, type ManualEntry, type Operation } from "@/src/domain/core/types";
+import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
 
 export type LastroAssessmentRow = {
   title: ManualEntry;
@@ -26,7 +27,13 @@ export type LastroReviewItem = NonNullable<NonNullable<Operation["lastroReview"]
 
 export function lastroAssessmentFor(operation: Operation, debtorCatalog: Debtor[] = initialDebtors) {
   const entries = operation.manualEntry?.entries ?? [];
-  const ratio = operation.risk === "Alto" ? 1 : operation.risk === "Médio" ? 0.5 : 0.25;
+  const { lastroSampleRatio, lastroRelevantShare, scoreBands, cfopPrefixes } = operationalParametersFor(
+    operation.institution,
+  );
+  const cfopAccepted = (cfop?: string) => Boolean(cfop && cfopPrefixes.some(prefix => cfop.startsWith(prefix)));
+  /** Sem score, o sacado é tratado como fora da faixa crítica (mesmo comportamento da v7). */
+  const critical = (debtor?: Debtor) => (debtor?.score ?? scoreBands.positive) < scoreBands.attention;
+  const ratio = lastroSampleRatio[operation.risk];
   const sampleSize = entries.length ? Math.max(1, Math.ceil(entries.length * ratio)) : 0;
   const ranked = entries
     .map((title, index) => {
@@ -38,13 +45,15 @@ export function lastroAssessmentFor(operation: Operation, debtorCatalog: Debtor[
         operation.manualEntry?.receivableType === "Cheque"
           ? Boolean(title.cmc7 && title.bank && title.account)
           : operation.manualEntry?.receivableType === "Duplicata"
-            ? Boolean(title.nfeKey && title.cfop && /^[56]/.test(title.cfop))
+            ? Boolean(title.nfeKey && cfopAccepted(title.cfop))
             : Boolean(title.documentNumber);
       const reasons = [
         !automaticEvidence ? "Evidência documental incompleta" : "",
-        (debtor?.score ?? 700) < 600 ? "Sacado em faixa crítica" : "",
-        operation.amount > 0 && title.amount / operation.amount >= 0.25 ? "Concentração relevante na operação" : "",
-        title.cfop && !/^[56]/.test(title.cfop) ? "CFOP exige revisão" : "",
+        critical(debtor) ? "Sacado em faixa crítica" : "",
+        operation.amount > 0 && title.amount / operation.amount >= lastroRelevantShare
+          ? "Concentração relevante na operação"
+          : "",
+        title.cfop && !cfopAccepted(title.cfop) ? "CFOP exige revisão" : "",
       ].filter(Boolean);
       return {
         title,
@@ -53,8 +62,8 @@ export function lastroAssessmentFor(operation: Operation, debtorCatalog: Debtor[
         reasons,
         priority:
           (automaticEvidence ? 0 : 100) +
-          ((debtor?.score ?? 700) < 600 ? 60 : 0) +
-          (title.amount / Math.max(1, operation.amount) >= 0.25 ? 30 : 0) +
+          (critical(debtor) ? 60 : 0) +
+          (title.amount / Math.max(1, operation.amount) >= lastroRelevantShare ? 30 : 0) +
           index / 100,
       };
     })

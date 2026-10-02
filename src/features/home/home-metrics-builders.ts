@@ -23,6 +23,7 @@ import {
   type OpFinancial,
 } from "@/src/domain/home/metrics";
 import { homeSettings, type HomeProfile } from "@/src/domain/home/settings";
+import { scoreBand } from "@/src/domain/eligibility/operational-parameters";
 
 export type PortfolioTitle = ReturnType<typeof portfolioTitles>[number];
 export type CedentExposure = ReturnType<typeof cedentExposure>[number];
@@ -92,7 +93,7 @@ export function buildRiskAlerts({
         profiles: ["gestao", "risco"],
         action: "Ver enquadramento",
       });
-    if (d.score !== undefined && d.score < 600)
+    if (d.score !== undefined && scoreBand(d.score) === "Crítico")
       alerts.push({
         id: `score-${d.document}`,
         severity: "watch",

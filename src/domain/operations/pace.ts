@@ -2,6 +2,7 @@
  * Ritmo da operação comparado ao padrão histórico do cliente (mais rápida, no padrão, mais lenta, aprendendo).
  */
 import { type Operation } from "@/src/domain/core/types";
+import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
 import { eligibilityRouteFor } from "@/src/domain/eligibility/orchestration";
 import { formatDuration } from "./format";
 
@@ -40,6 +41,7 @@ export function needsIntervention(operation: Operation) {
     operation.blockers > 0 ||
     operation.alerts > 1 ||
     paceFor(operation).tone === "slower" ||
-    (operation.stage <= 3 && operation.automation < 80)
+    (operation.stage <= 3 &&
+      operation.automation < operationalParametersFor(operation.institution).queueAutomationThreshold)
   );
 }

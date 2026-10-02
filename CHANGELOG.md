@@ -11,6 +11,15 @@
 - Saem o resumo em texto e o cartão "Caixa e capacidade de compra" (o caixa subiu para o bloco principal).
 - Indicadores com rótulo em caixa alta e atalho para o módulo; originação em barras finas pareadas (realizado × ritmo da meta); composição da receita e carteira por atraso em gauge semicircular; legendas em bolinhas.
 
+**Ajustes da revisão**
+- Demonstração com datas relativas (`src/domain/core/demo/relative-dates.ts`): operações, carteira e pagamentos das sementes andam junto com o dia de hoje; as operações em andamento entram "hoje". Nos testes o deslocamento é zero.
+- Bloco de caixa: número grande fixo = saldo em bancos hoje; o fim do intervalo selecionado aparece embaixo, com variação "vs. hoje". Barras = entradas (para cima) e saídas (para baixo) por dia; linhas = saldo dos cenários. A queda de hoje vem marcada (liberações prontas e em formalização).
+- Empresa escolhida só na barra superior (saíram os seletores repetidos da Visão geral, Operações e Financeiro).
+- Mais contraste nos textos secundários e rótulos; em telas largas (≥ 1720 px) todos os módulos aparecem com nome.
+
+**Módulos**
+- Operações, Carteira, Comercial, Financeiro, Cadastros, Configurações e Integrações no mesmo padrão: título grande com trilha ao lado, filtros em pílula, abas de texto, primeiro indicador como número de destaque, cartões sem borda, tabelas com cabeçalho em caixa alta, filas da Central com a ativa em preto, receita do Comercial em barras finas pareadas.
+
 **Visual**
 - Paleta monocromática com verde-menta para destaque positivo, fonte Urbanist auto-hospedada, cartões sem borda sobre fundo cinza, sem gradientes, brilhos e sombras decorativas (`app/styles/ledger.css`, `tools/ledger_palette.py`).
 

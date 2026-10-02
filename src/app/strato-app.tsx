@@ -328,7 +328,6 @@ export default function StratoApp() {
         operations={operations}
         carteira={carteiraFlows}
         companyScope={companyScope}
-        onCompanyScopeChange={setCompanyScope}
         onOpenOperation={setSelected}
       />
     );
@@ -355,7 +354,6 @@ export default function StratoApp() {
         carteira={carteiraFlows}
         onGoFinance={() => navigate("finance")}
         companyScope={companyScope}
-        onCompanyScopeChange={setCompanyScope}
         onOpen={setSelected}
         onGoOperations={() => navigate("operations")}
         onNew={() => setShowNew(true)}
@@ -389,7 +387,6 @@ export default function StratoApp() {
       <OperationsList
         operations={operations}
         companyScope={companyScope}
-        onCompanyScopeChange={setCompanyScope}
         onOpen={setSelected}
         onNew={() => setShowNew(true)}
         onReset={resetDemo}

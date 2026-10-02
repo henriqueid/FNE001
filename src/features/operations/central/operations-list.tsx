@@ -19,14 +19,12 @@ import { AuthorityQueueBar } from "./authority-queue-bar";
 export function OperationsList({
   operations,
   companyScope,
-  onCompanyScopeChange,
   onOpen,
   onNew,
   onReset,
 }: {
   operations: Operation[];
   companyScope: string;
-  onCompanyScopeChange: (scope: string) => void;
   onOpen: (op: Operation) => void;
   onNew: () => void;
   onReset: () => void;
@@ -38,7 +36,7 @@ export function OperationsList({
   const kanbanColumns = kanbanColumnsFor(inProgressOperations, releasedOperations);
   return (
     <div className="page-wrap">
-      <CentralHeader companyScope={companyScope} onCompanyScopeChange={onCompanyScopeChange} onNew={onNew} />
+      <CentralHeader companyScope={companyScope} onNew={onNew} />
       <CentralMetrics metrics={metrics} filterContext={filters.filterContext} />
       <StagePipeline operations={inProgressOperations} />
       <section className="operations-card">

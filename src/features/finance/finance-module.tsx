@@ -3,7 +3,6 @@
 /**
  * Módulo Financeiro: escolhe a empresa e a aba e aplica os resultados do motor (toast e efeitos na operação).
  */
-import { destinations } from "@/src/domain/core/demo/companies";
 import { type Operation } from "@/src/domain/core/types";
 import { inScope, scopedAccounts } from "@/src/domain/finance/banking";
 import { todayIso, type Effect, type Result } from "@/src/domain/finance/ledger";
@@ -32,7 +31,6 @@ export type Props = {
   operations: Operation[];
   carteira: CarteiraFlow[];
   companyScope: string;
-  onCompanyScopeChange: (s: string) => void;
   onOpenOperation: (op: Operation) => void;
 };
 
@@ -44,7 +42,6 @@ export default function FinanceModule({
   operations,
   carteira,
   companyScope,
-  onCompanyScopeChange,
   onOpenOperation,
 }: Props) {
   const [tab, setTab] = useState<Tab>("caixa");
@@ -100,17 +97,6 @@ export default function FinanceModule({
           <p>Caixa, contas a pagar e a receber, conta corrente, conciliação e contabilidade.</p>
         </div>
         <div className="fn-heading-actions">
-          <label className="company-scope">
-            <span>EMPRESA</span>
-            <select value={companyScope} onChange={e => onCompanyScopeChange(e.target.value)}>
-              <option value="Consolidado">Consolidado · todas as empresas</option>
-              {destinations.map(d => (
-                <option key={d.name} value={d.name}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          </label>
           <button className="fn-btn primary" onClick={() => setNewTitle(true)}>
             <PlusIcon /> Novo lançamento
           </button>

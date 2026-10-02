@@ -35,7 +35,8 @@
 
 ## Estilos
 
-- Estilos novos em `app/styles/design-system.css`, usando os tokens `--ds-*` (valem nos dois temas).
+- Tokens em `app/styles/design-system.css` (`--ds-*`, valem nos dois temas); componentes e telas no padrão visual atual em `app/styles/ledger.css` (prefixo `lx-` para peças novas: abas de texto, quadrados, gauge, bloco de caixa).
+- Visual Ledger: preto/branco para ação e seleção, cinzas para estrutura, verde-menta só para destaque positivo, verde/âmbar/vermelho só para estado. Sem gradientes, brilhos ou sombras decorativas. Cor literal nova em CSS legado: rode `python3 tools/ledger_palette.py <arquivo>`.
 - Prefixo por área: `sx-` shell, `ds-` componentes base, `vg-` Visão geral, `fn-` Financeiro, `cm-` Comercial, `rg-` Cadastros, `pf-` Carteira.
 - Não escreva cores literais em CSS legado; se precisar, gere o par claro/escuro com `tools/theme_tokens.py` (uso no cabeçalho do script).
 

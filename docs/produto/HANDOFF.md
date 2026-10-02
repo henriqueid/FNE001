@@ -70,7 +70,7 @@ Recebíveis a cobrir: duplicata mercantil e de serviço, **cheque**, CCB e contr
 
 ### Visão geral (página inicial) · 29/09/2026
 
-- A aplicação abre na **Visão geral** (menu lateral). "Operações" leva à Central; qualquer pendência ou alerta abre a operação no workspace.
+- A aplicação abre na **Visão geral** (módulos na barra superior). "Operações" leva à Central; qualquer pendência ou alerta abre a operação no workspace.
 - **Três perfis** (Gestão, Operação, Risco e cobrança), **período Hoje / Semana / Mês** com comparação ao período anterior equivalente e recorte **consolidado ou por empresa/veículo**.
 - **Tudo é calculado a partir dos dados do sistema** (`src/domain/home/metrics.ts`):
   - originação, receita e taxa: operações do período pela data do aditivo, com a mesma precificação da etapa Preço (deságio + tarifas, taxa all-in);

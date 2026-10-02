@@ -4,6 +4,7 @@
 import { initialOperations } from "@/src/domain/core/demo/operations";
 import { type Cedent, type PortfolioPosition } from "@/src/domain/core/types";
 import { scoreBand } from "@/src/domain/eligibility/operational-parameters";
+import { shiftDateText } from "@/src/domain/core/demo/relative-dates";
 
 export type CedentDebtorRanking = {
   name: string;
@@ -126,10 +127,28 @@ export function buildCedentPortfolio(cedent: Cedent) {
     item => item.document.replace(/\D/g, "") === cedent.document.replace(/\D/g, ""),
   );
   const dates = criticalProfile
-    ? ["25/09/2026", "10/09/2026", "27/08/2026", "12/08/2026", "30/07/2026"]
+    ? [
+        shiftDateText("25/09/2026"),
+        shiftDateText("10/09/2026"),
+        shiftDateText("27/08/2026"),
+        shiftDateText("12/08/2026"),
+        shiftDateText("30/07/2026"),
+      ]
     : healthyProfile
-      ? ["25/09/2026", "18/09/2026", "11/09/2026", "04/09/2026", "28/08/2026"]
-      : ["25/09/2026", "15/09/2026", "03/09/2026", "22/08/2026", "09/08/2026"];
+      ? [
+          shiftDateText("25/09/2026"),
+          shiftDateText("18/09/2026"),
+          shiftDateText("11/09/2026"),
+          shiftDateText("04/09/2026"),
+          shiftDateText("28/08/2026"),
+        ]
+      : [
+          shiftDateText("25/09/2026"),
+          shiftDateText("15/09/2026"),
+          shiftDateText("03/09/2026"),
+          shiftDateText("22/08/2026"),
+          shiftDateText("09/08/2026"),
+        ];
   const recentOperations: CedentRecentOperation[] = dates.map((date, index) => ({
     aditivo:
       index === 0 && currentOperation

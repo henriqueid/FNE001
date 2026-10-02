@@ -1,6 +1,7 @@
 import { cedentPortfolioTitles } from "@/src/domain/core/demo/portfolio";
 import { type ManualEntry, type Operation, type OperationSource } from "@/src/domain/core/types";
 import { isReleased } from "@/src/domain/home/metrics";
+import { shiftDateText } from "@/src/domain/core/demo/relative-dates";
 
 export type PortfolioTitleStatus =
   | "Em aberto"
@@ -224,14 +225,14 @@ function legacyScenario(id: string, amount: number): Partial<PortfolioTitleRecor
       payments: [
         {
           id: "pay-car-gz-002",
-          date: "2026-09-25",
+          date: shiftDateText("2026-09-25"),
           amount,
           bank: "Banco Itaú",
           agency: "0642",
           account: "11839-8",
           method: "TED",
           reference: "LIQ-2026-10428",
-          createdAt: "25/09/2026, 15:42",
+          createdAt: shiftDateText("25/09/2026, 15:42"),
           createdBy: "Henrique",
         },
       ],
@@ -243,14 +244,14 @@ function legacyScenario(id: string, amount: number): Partial<PortfolioTitleRecor
       payments: [
         {
           id: "pay-car-mc-001",
-          date: "2026-09-28",
+          date: shiftDateText("2026-09-28"),
           amount: 6000,
           bank: "Banco Santander",
           agency: "3319",
           account: "88420-1",
           method: "PIX",
           reference: "PIX-E2E-DEMO-88420",
-          createdAt: "28/09/2026, 10:18",
+          createdAt: shiftDateText("28/09/2026, 10:18"),
           createdBy: "Conciliação",
         },
       ],
@@ -287,7 +288,7 @@ function legacyTitles(ops: Operation[]): PortfolioTitleRecord[] {
       ? [
           {
             id: `scenario-${title.id}`,
-            at: "30/09/2026, 09:30",
+            at: shiftDateText("30/09/2026, 09:30"),
             by: "Carteira",
             action: scenario.status,
             detail:

@@ -2,7 +2,9 @@
  * Operações de demonstração, uma em cada etapa da esteira.
  */
 import { type Operation } from "@/src/domain/core/types";
-export const initialOperations: Operation[] = [
+import { shiftDemoDates } from "./relative-dates";
+
+const seedOperations: Operation[] = [
   {
     id: "op-3408",
     proposal: "#3408",
@@ -501,3 +503,6 @@ export const initialOperations: Operation[] = [
     participants: ["Gestora Atlas", "Adm. Fiduciário Orbe", "Custodiante Nexus"],
   },
 ];
+
+/** Sementes com as datas acompanhando o dia de hoje (fixas nos testes). */
+export const initialOperations: Operation[] = shiftDemoDates(seedOperations);

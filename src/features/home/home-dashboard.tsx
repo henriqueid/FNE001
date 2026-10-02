@@ -29,7 +29,6 @@ export default function HomeDashboard({
   carteira,
   onGoFinance,
   companyScope,
-  onCompanyScopeChange,
   onOpen,
   onGoOperations,
   onNew,
@@ -41,7 +40,6 @@ export default function HomeDashboard({
   carteira: CarteiraFlow[];
   onGoFinance: () => void;
   companyScope: string;
-  onCompanyScopeChange: (scope: string) => void;
   onOpen: (op: Operation) => void;
   onGoOperations: () => void;
   onNew: () => void;
@@ -69,11 +67,15 @@ export default function HomeDashboard({
         profile={profile}
         onProfileChange={chooseProfile}
         companyScope={companyScope}
-        onCompanyScopeChange={onCompanyScopeChange}
         onNew={onNew}
       />
 
-      <CashHero timeline={metrics.timeline} minimum={metrics.minimumCash} onGoFinance={onGoFinance} />
+      <CashHero
+        timeline={metrics.timeline}
+        balance={metrics.bankBalance}
+        minimum={metrics.minimumCash}
+        onGoFinance={onGoFinance}
+      />
 
       <HomeKpis metrics={metrics} profile={profile} onGoOperations={onGoOperations} onGoFinance={onGoFinance} />
 

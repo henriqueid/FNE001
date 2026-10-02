@@ -1,8 +1,10 @@
 "use client";
 /**
- * Bloco principal da Visão geral: saldo de caixa em número grande e a linha do tempo
- * (30 dias realizados + 60 projetados) em barras finas com as linhas dos cenários,
- * régua de seleção do intervalo e cartão com entradas, saídas e variação do intervalo.
+ * Bloco principal da Visão geral: saldo em bancos hoje em número grande e a linha do tempo
+ * (30 dias realizados + 60 projetados). Em cima, as linhas de saldo dos cenários; embaixo,
+ * barras finas de entradas (para cima) e saídas (para baixo) por dia. A queda de hoje
+ * (liberações prontas e em formalização) vem marcada. Régua para escolher o intervalo e
+ * cartão com entradas, saídas e variação do intervalo.
  */
 import { type PointerEvent as ReactPointerEvent, type KeyboardEvent, useRef, useState } from "react";
 import { axisMoney, niceMax } from "./charts";
@@ -21,6 +23,8 @@ export type CashTimeline = {
   optimistic: number[];
   inflow: number[];
   outflow: number[];
+  readyOut: number;
+  formalizationOut: number;
 };
 
 const scenarioLabel: Record<Scenario, string> = {
@@ -52,10 +56,12 @@ function smooth(points: [number, number][]) {
 
 export function CashHero({
   timeline,
+  balance,
   minimum,
   onGoFinance,
 }: {
   timeline: CashTimeline;
+  balance: number;
   minimum: number;
   onGoFinance: () => void;
 }) {
@@ -71,11 +77,16 @@ export function CashHero({
 
   const series = t[scenario];
   const W = Math.max(320, size.width),
-    H = 300,
+    H = 320,
     R = 58,
     T = 18,
     B = 30,
     L = 0;
+  // zona das linhas (saldo) em cima e zona das barras (entradas/saídas) embaixo
+  const lineBottom = T + (H - T - B) * 0.64;
+  const flowTop = lineBottom + 18,
+    flowBase = flowTop + (H - B - flowTop) * 0.62,
+    flowBottom = H - B - 2;
   const band = (W - L - R) / n;
   const barW = Math.max(1.4, Math.min(5, band * 0.42));
   const data = [...t.base, ...t.conservative.slice(today), ...t.optimistic.slice(today)];
@@ -86,12 +97,16 @@ export function CashHero({
   const low = Math.max(0, Math.min(...all) * 0.9);
   const step = niceMax((top - low) / 4);
   const floor = Math.floor(low / step) * step;
-  const y = (v: number) => T + (1 - (v - floor) / (top - floor)) * (H - T - B);
+  const y = (v: number) => T + (1 - (v - floor) / (top - floor)) * (lineBottom - T);
+  const flowMax = niceMax(Math.max(1, ...t.inflow, ...t.outflow));
+  const up = (v: number) => (v / flowMax) * (flowBase - flowTop);
+  const down = (v: number) => Math.min(flowBottom - flowBase - 1, (v / flowMax) * (flowBase - flowTop));
   const x = (i: number) => L + band * i + band / 2;
   const ticks: number[] = [];
   for (let v = floor; v <= top + step / 2; v += step) ticks.push(v);
   const [a, b] = range;
   const end = hover ?? b;
+  const endChange = series[today] ? ((series[end] - series[today]) / series[today]) * 100 : 0;
   const inflow = t.inflow.slice(a, b + 1).reduce((s, v) => s + v, 0);
   const outflow = t.outflow.slice(a, b + 1).reduce((s, v) => s + v, 0);
   const change = series[a] ? ((series[b] - series[a]) / series[a]) * 100 : 0;
@@ -153,6 +168,13 @@ export function CashHero({
   const calloutIndex = hover ?? b;
   const calloutLeft = Math.min(W - R - 230, Math.max(0, x(calloutIndex) + 14));
   const calloutTop = Math.max(4, y(Math.max(series[calloutIndex], t.optimistic[calloutIndex] ?? 0)) - 86);
+  // marcação da queda de hoje (liberações) e de D+2 (formalização)
+  const marks = [
+    { value: t.readyOut, label: "liberações prontas (hoje)" },
+    { value: t.formalizationOut, label: "em formalização (D+2)" },
+  ].filter(m => m.value > 0);
+  const markX = x(Math.min(n - 1, today + 2)) + 10;
+  const markY = y(Math.min(...series.slice(today, today + 3))) + 34;
 
   return (
     <section className="lx-hero" aria-label="Caixa realizado e projetado">
@@ -180,11 +202,18 @@ export function CashHero({
           </div>
         </div>
         <div className="lx-hero-figure">
-          <strong>{wholeMoney.format(series[end])}</strong>
-          <small>
-            {end < today ? "Saldo em" : end === today ? "Saldo hoje," : "Saldo projetado em"} {ddmm(t.dates[end])}
-            {end > today ? ` · ${scenarioLabel[scenario].toLowerCase()}` : ""}
-          </small>
+          <strong>{wholeMoney.format(balance)}</strong>
+          <small>Saldo em bancos hoje</small>
+          <span className="lx-hero-sub">
+            {end < today ? "Saldo em" : end === today ? "Hoje, após liberações:" : "Projetado em"} {ddmm(t.dates[end])}
+            {end > today ? ` (${scenarioLabel[scenario].toLowerCase()})` : ""} <b>{compact(series[end])}</b>
+            {end !== today && (
+              <em className={endChange >= 0 ? "up" : "down"} title="Variação em relação a hoje">
+                {endChange >= 0 ? "+" : "−"}
+                {Math.abs(endChange).toFixed(1).replace(".", ",")}% vs. hoje
+              </em>
+            )}
+          </span>
         </div>
         <div className="lx-hero-right">
           <div className="lx-squares">
@@ -226,16 +255,23 @@ export function CashHero({
               </text>
             </g>
           ))}
-          {series.map((v, i) => (
-            <rect
-              key={t.dates[i]}
-              x={x(i) - barW / 2}
-              y={y(v)}
-              width={barW}
-              height={Math.max(0, y(floor) - y(v))}
-              className={`bar${i >= a && i <= b ? " on" : ""}${i < today ? " past" : ""}${hover === i ? " hover" : ""}`}
-            />
-          ))}
+          {b > a && (
+            <rect x={x(a) - band / 2} y={T} width={x(b) - x(a) + band} height={flowBottom - T} className="sel" />
+          )}
+          <line x1={L} x2={W - R} y1={flowBase} y2={flowBase} className="base" />
+          {t.dates.map((d, i) => {
+            const cls = `${i >= a && i <= b ? " on" : ""}${i < today ? " past" : ""}${hover === i ? " hover" : ""}`;
+            const hIn = Math.max(2, up(t.inflow[i]));
+            const hOut = down(t.outflow[i]);
+            return (
+              <g key={d}>
+                <rect x={x(i) - barW / 2} y={flowBase - hIn} width={barW} height={hIn} className={`bar in${cls}`} />
+                {hOut > 0 && (
+                  <rect x={x(i) - barW / 2} y={flowBase + 1} width={barW} height={hOut} className={`bar out${cls}`} />
+                )}
+              </g>
+            );
+          })}
           <path
             d={smooth(t.optimistic.slice(today).map((v, k) => [x(today + k), y(v)]))}
             className={`ln alt${scenario === "optimistic" ? " lead" : ""}`}
@@ -249,7 +285,23 @@ export function CashHero({
             className={`ln main${scenario === "base" ? " lead" : ""}`}
           />
           {showMinimum && <line x1={L} x2={W - R} y1={y(minimum)} y2={y(minimum)} className="min" />}
+          <text x={W - 4} y={flowBase - up(flowMax) + 10} textAnchor="end" className="tick flow-label">
+            entradas
+          </text>
+          <text x={W - 4} y={flowBase + 14} textAnchor="end" className="tick flow-label">
+            saídas
+          </text>
           <line x1={x(today)} x2={x(today)} y1={T} y2={H - B} className="today" />
+          {marks.length > 0 && (
+            <g className="mark">
+              <line x1={x(today) + 3} x2={markX - 4} y1={markY - 14} y2={markY - 4} />
+              {marks.map((m, k) => (
+                <text key={m.label} x={markX} y={markY + k * 15}>
+                  −{compact(m.value)} {m.label}
+                </text>
+              ))}
+            </g>
+          )}
           {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} className="cross" />}
           {xLabels.map(l => (
             <text key={l.i} x={x(l.i)} y={H - 8} textAnchor="middle" className="tick">
@@ -268,7 +320,8 @@ export function CashHero({
                 </span>
               </div>
               <small>
-                entradas de {ddmm(t.dates[a])} a {ddmm(t.dates[b])} · saídas {compact(outflow)}
+                entradas de {ddmm(t.dates[a])} a {ddmm(t.dates[b])} · saídas {compact(outflow)} · % = variação do saldo
+                no intervalo
               </small>
             </>
           ) : (

@@ -83,18 +83,30 @@ export function RevenueChart({ data }: { data: { month: string; revenue: number;
           </g>
         ))}
         {data.map((d, i) => {
-          const w = Math.min(bw * 0.56, 72),
-            x = P.l + i * bw + (bw - w) / 2,
-            top = y(d.revenue);
+          // par de barras finas: meta (cinza) e receita (tinta), como no restante do STRATO
+          const thin = Math.max(3, Math.min(6, bw * 0.06)),
+            gap = 4,
+            cx = P.l + i * bw + bw / 2;
           return (
             <g key={d.month} onMouseEnter={() => setHover(i)}>
               <rect x={P.l + i * bw} y={P.t} width={bw} height={H - P.t - P.b} fill="transparent" />
-              <path
-                d={`M${x},${y(0)} V${top + 4} q0,-4 4,-4 h${w - 8} q4,0 4,4 V${y(0)} Z`}
+              <rect
+                x={cx - thin - gap / 2}
+                y={y(d.goal)}
+                width={thin}
+                height={y(0) - y(d.goal)}
+                rx={thin / 2}
+                className="goal-bar"
+              />
+              <rect
+                x={cx + gap / 2}
+                y={y(d.revenue)}
+                width={thin}
+                height={Math.max(0, y(0) - y(d.revenue))}
+                rx={thin / 2}
                 className={`bar ${d.partial ? "partial" : ""} ${hover === i ? "hover" : ""}`}
               />
-              <line x1={x - 4} x2={x + w + 4} y1={y(d.goal)} y2={y(d.goal)} className="goal" />
-              <text x={x + w / 2} y={H - 8} textAnchor="middle" className="axis">
+              <text x={cx} y={H - 8} textAnchor="middle" className="axis">
                 {monthShort(d.month)}
               </text>
             </g>
@@ -106,7 +118,7 @@ export function RevenueChart({ data }: { data: { month: string; revenue: number;
           <i className="sw bar" /> Receita
         </span>
         <span>
-          <i className="sw goal" /> Meta
+          <i className="sw goal-bar" /> Meta
         </span>
         <span>
           <i className="sw partial" /> Mês em andamento

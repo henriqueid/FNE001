@@ -555,6 +555,15 @@ table th {
 .lx-nav button.is-active span {
   display: inline;
 }
+/* telas largas: todos os módulos com nome, para quem está começando */
+@media (min-width: 1720px) {
+  .lx-nav button {
+    padding: 0 14px 0 12px;
+  }
+  .lx-nav button span {
+    display: inline;
+  }
+}
 .lx-nav button b {
   position: absolute;
   top: -6px;
@@ -875,9 +884,9 @@ table th {
 }
 .lx-label {
   color: var(--ds-text-3);
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 
@@ -953,6 +962,36 @@ table th {
   color: var(--ds-text-3);
   font-size: 13px;
 }
+.lx-hero-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--ds-surface);
+  color: var(--ds-text-2);
+  font-size: 13px;
+}
+.lx-hero-sub b {
+  color: var(--ds-text);
+  font-weight: 600;
+}
+.lx-hero-sub em {
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.lx-hero-sub em.up {
+  color: var(--ds-mint-ink);
+  background: var(--ds-mint);
+}
+.lx-hero-sub em.down {
+  color: var(--ds-danger);
+  background: color-mix(in srgb, var(--ds-danger) 12%, transparent);
+}
 .lx-hero-right {
   display: grid;
   justify-items: end;
@@ -977,17 +1016,37 @@ table th {
   fill: var(--ds-text-3);
   font-size: 11px;
 }
+.lx-hero-chart .sel {
+  fill: color-mix(in srgb, var(--ds-text) 2.5%, transparent);
+}
+.lx-hero-chart .base {
+  stroke: var(--ds-border-strong);
+}
 .lx-hero-chart svg rect.bar {
-  fill: color-mix(in srgb, var(--ds-text) 16%, transparent);
+  fill: color-mix(in srgb, var(--ds-text) 20%, transparent);
 }
 .lx-hero-chart svg rect.bar.past {
-  fill: color-mix(in srgb, var(--ds-text) 11%, transparent);
+  fill: color-mix(in srgb, var(--ds-text) 14%, transparent);
 }
-.lx-hero-chart svg rect.bar.on {
+.lx-hero-chart svg rect.bar.in.on {
   fill: var(--ds-accent);
+}
+.lx-hero-chart svg rect.bar.out {
+  fill: color-mix(in srgb, var(--ds-danger) 35%, transparent);
+}
+.lx-hero-chart svg rect.bar.out.on {
+  fill: var(--ds-danger);
 }
 .lx-hero-chart svg rect.bar.hover {
   fill: var(--ds-text-2);
+}
+.lx-hero-chart .mark line {
+  stroke: var(--ds-text-2);
+}
+.lx-hero-chart .mark text {
+  fill: var(--ds-text-2);
+  font-size: 11.5px;
+  font-weight: 600;
 }
 .lx-hero-chart .ln {
   fill: none;
@@ -1122,9 +1181,9 @@ table th {
 .vg-card-head h2 {
   margin: 0 0 4px !important;
   color: var(--ds-text-3) !important;
-  font-size: 11.5px !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.08em !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  letter-spacing: 0.07em !important;
   text-transform: uppercase;
 }
 .vg-card-head p {
@@ -1154,9 +1213,9 @@ table th {
 }
 .vg-kpi .vg-kpi-label {
   color: var(--ds-text-3);
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 .vg-kpi strong {
@@ -1255,6 +1314,370 @@ table th {
     display: none;
   }
   .lx-callout {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   Ledger v10 · módulos (Operações, Carteira, Comercial, Financeiro, Cadastros,
+   Configurações, Integrações e Políticas)
+   ========================================================================== */
+
+/* cabeçalho: título grande e fino com a trilha (eyebrow) ao lado, descrição embaixo */
+.fn-heading > div:first-child,
+.page-heading > div:first-child,
+.ds-page-head > div:first-child {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 20px;
+}
+.fn-heading > div:first-child > h1,
+.page-heading > div:first-child > h1,
+.ds-page-head > div:first-child > h1 {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0 !important;
+}
+.fn-heading > div:first-child > .hd-eyebrow,
+.page-heading > div:first-child > .badge.eyebrow,
+.ds-page-head > div:first-child > .ds-eyebrow {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--ds-text-3) !important;
+  font-family: var(--ds-font) !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.02em !important;
+}
+.fn-heading > div:first-child > .hd-eyebrow svg,
+.page-heading > div:first-child > .badge.eyebrow svg {
+  width: 14px;
+  height: 14px;
+  color: var(--ds-text-3);
+}
+.fn-heading > div:first-child > p,
+.page-heading > div:first-child > p,
+.ds-page-head > div:first-child > p {
+  grid-column: 1 / -1;
+  margin-top: 8px !important;
+  color: var(--ds-text-3) !important;
+  font-size: 14px !important;
+}
+.fn-heading,
+.page-heading {
+  align-items: center !important;
+  margin-bottom: 22px !important;
+}
+
+/* filtros do cabeçalho (comercial, período): pílula sem rótulo visível */
+.company-scope {
+  position: relative;
+}
+.company-scope > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.company-scope select {
+  height: 42px !important;
+  padding: 0 36px 0 16px !important;
+  border: 1px solid var(--ds-border) !important;
+  border-radius: 11px !important;
+  background-color: var(--ds-elev) !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+}
+
+/* abas dos módulos: texto com sublinhado fino, contadores discretos */
+.fn-tabs {
+  gap: 22px !important;
+  border-bottom: 0 !important;
+  margin-bottom: 20px !important;
+}
+.fn-tabs button {
+  padding: 6px 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--ds-text-3) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+}
+.fn-tabs button:hover,
+.fn-tabs button.active,
+.fn-tabs button[aria-selected="true"] {
+  color: var(--ds-text) !important;
+}
+.fn-tabs button.active::after,
+.fn-tabs button[aria-selected="true"]::after {
+  height: 1.5px !important;
+  bottom: 0 !important;
+}
+.fn-tabs button b {
+  margin-left: 6px;
+  padding: 1px 6px !important;
+  border-radius: 999px !important;
+  color: var(--ds-text-2) !important;
+  background: var(--ds-surface-3) !important;
+  font-size: 11px !important;
+}
+
+/* faixas de indicadores: o primeiro é o número de destaque do módulo */
+.fn-kpis {
+  grid-template-columns: minmax(0, 2fr) repeat(5, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+}
+.fn-kpis > div,
+.fn-kpis > button {
+  padding: 18px 20px !important;
+  border-radius: 16px !important;
+  gap: 6px !important;
+}
+.fn-kpis span {
+  color: var(--ds-text-3) !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  letter-spacing: 0.07em !important;
+}
+.fn-kpis strong {
+  font-size: 26px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.035em !important;
+}
+.fn-kpis > :first-child strong {
+  font-size: clamp(34px, 3.4vw, 50px) !important;
+  letter-spacing: -0.045em !important;
+  line-height: 1 !important;
+}
+.fn-kpis small {
+  color: var(--ds-text-3) !important;
+}
+@media (max-width: 1280px) {
+  .fn-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .fn-kpis > :first-child {
+    grid-column: span 3;
+  }
+}
+@media (max-width: 760px) {
+  .fn-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .fn-kpis > :first-child {
+    grid-column: span 2;
+  }
+}
+
+/* cartões e cabeçalhos de cartão */
+.fn-card {
+  padding: 22px 24px !important;
+  border-radius: 16px !important;
+}
+.fn-card-head h2,
+.operations-card .card-head h2 {
+  color: var(--ds-text-3) !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase;
+}
+.fn-card-head p {
+  color: var(--ds-text-3) !important;
+}
+
+/* segmentados internos (Conservador · Base · Otimista, Diário · Semanal...) */
+.fn-seg,
+.vg-seg {
+  padding: 3px !important;
+  border: 1px solid var(--ds-border) !important;
+  border-radius: 11px !important;
+  background: var(--ds-elev) !important;
+}
+.fn-seg button,
+.vg-seg button {
+  border-radius: 8px !important;
+}
+.fn-seg button.active,
+.vg-seg button.active {
+  color: var(--ds-accent-ink) !important;
+  background: var(--ds-accent) !important;
+  box-shadow: none !important;
+}
+
+/* tabelas: cabeçalho em caixa alta cinza, linhas finas, sem zebra */
+.sx-content table th,
+.operations-card .table-head > span {
+  color: var(--ds-text-3) !important;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase;
+}
+.sx-content table th {
+  background-color: var(--ds-surface) !important;
+}
+.sx-content table tbody tr:hover {
+  background: var(--ds-surface-2);
+}
+.operations-card .table-head {
+  background: transparent !important;
+  border-bottom: 1px solid var(--ds-border) !important;
+}
+.operations-card .table-head > span + span,
+.operations-card .operation-row > span + span {
+  border-left: 0 !important;
+}
+
+/* Operações: resultado e fila */
+.metrics-group {
+  padding: 20px 22px !important;
+}
+.metrics-group > header strong,
+.metrics-group > header h2,
+.metrics-group-title {
+  color: var(--ds-text-3) !important;
+  font-size: 12px !important;
+  letter-spacing: 0.07em !important;
+}
+.metrics-groups .metric-card strong,
+.metrics-group-grid strong {
+  font-size: 30px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.04em !important;
+}
+@media (min-width: 900px) {
+  .metrics-groups > .metrics-group:first-child .metrics-group-grid {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr) !important;
+  }
+}
+.metrics-groups > .metrics-group:first-child .metrics-group-grid > :first-child strong {
+  font-size: clamp(30px, 2.8vw, 42px) !important;
+  white-space: nowrap;
+}
+.queue-tab {
+  border: 1px solid transparent !important;
+  border-radius: 14px !important;
+  background: var(--ds-surface-2) !important;
+  box-shadow: none !important;
+}
+.queue-tab:hover {
+  border-color: var(--ds-border-strong) !important;
+}
+.queue-tab .queue-icon {
+  border-radius: 10px !important;
+  color: var(--ds-text) !important;
+  background: var(--ds-elev) !important;
+  border: 1px solid var(--ds-border);
+}
+.queue-tab.active {
+  color: var(--ds-accent-ink) !important;
+  background: var(--ds-accent) !important;
+  border-color: var(--ds-accent) !important;
+}
+.queue-tab.active * {
+  color: inherit !important;
+}
+.queue-tab.active .queue-icon {
+  color: var(--ds-text) !important;
+}
+.queue-tab > b,
+.queue-tab.active > b {
+  border-radius: 999px !important;
+  color: var(--ds-text) !important;
+  background: var(--ds-elev) !important;
+}
+.stage-count strong,
+.flow-stage strong {
+  font-weight: 500 !important;
+}
+
+/* Comercial: gráfico de receita em barras finas pareadas e funil fino */
+.cm-chart .bar {
+  fill: var(--ds-accent) !important;
+}
+.cm-chart .bar.partial {
+  fill: color-mix(in srgb, var(--ds-text) 45%, transparent) !important;
+}
+.cm-chart .goal-bar,
+.cm-chart-legend .sw.goal-bar {
+  fill: color-mix(in srgb, var(--ds-text) 18%, transparent);
+  background: color-mix(in srgb, var(--ds-text) 18%, transparent);
+}
+.cm-chart-legend .sw {
+  width: 9px !important;
+  height: 9px !important;
+  border-radius: 50% !important;
+}
+.cm-funnel-bar {
+  height: 6px !important;
+  border-radius: 999px !important;
+}
+.cm-funnel-bar i,
+.cm-funnel-bar > * {
+  border-radius: 999px !important;
+}
+
+/* Financeiro: gráfico de saldo diário */
+.fn-mini-chart .line {
+  stroke: var(--ds-accent) !important;
+  stroke-width: 2 !important;
+}
+.fn-mini-chart .area {
+  fill: color-mix(in srgb, var(--ds-text) 5%, transparent) !important;
+}
+
+/* Configurações e Integrações */
+.ds-card,
+.st-card,
+.settings-card {
+  border-radius: 16px !important;
+}
+.sx-content {
+  min-width: 0;
+  overflow-x: clip;
+}
+
+/* modais */
+.modal-backdrop > section,
+.fn-modal,
+.settings-modal {
+  border-radius: 20px !important;
+  border: 0 !important;
+}
+
+@media (max-width: 760px) {
+  .fn-heading > div:first-child,
+  .page-heading > div:first-child,
+  .ds-page-head > div:first-child {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fn-heading > div:first-child > .hd-eyebrow,
+  .page-heading > div:first-child > .badge.eyebrow,
+  .ds-page-head > div:first-child > .ds-eyebrow {
+    grid-column: 1;
+    grid-row: 2;
+    margin-top: 6px;
+  }
+  .fn-heading > div:first-child > p,
+  .page-heading > div:first-child > p,
+  .ds-page-head > div:first-child > p {
+    grid-row: 3;
+  }
+  .lx-hero-chart .mark,
+  .lx-hero-chart .flow-label {
     display: none;
   }
 }

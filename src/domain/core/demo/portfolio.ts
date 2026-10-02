@@ -1,7 +1,8 @@
 import { type CedentPortfolioTitle, type CedentSettlementAdjustment } from "@/src/domain/core/types";
+import { shiftDemoDates } from "./relative-dates";
 // Posição analítica da carteira própria de cada cedente. Em produção, esta lista
 // será alimentada pelo módulo de carteira e conciliação, sem depender da operação atual.
-export const cedentPortfolioTitles: CedentPortfolioTitle[] = [
+const seedPortfolioTitles: CedentPortfolioTitle[] = [
   {
     id: "car-gz-001",
     cedentDocument: "52.927.676/0001-29",
@@ -244,7 +245,7 @@ export const cedentPortfolioTitles: CedentPortfolioTitle[] = [
   },
 ];
 
-export const cedentSettlementAdjustments: CedentSettlementAdjustment[] = [
+const seedSettlementAdjustments: CedentSettlementAdjustment[] = [
   {
     id: "adj-mc-pend-01",
     cedentDocument: "59.264.846/0001-81",
@@ -310,3 +311,7 @@ export const cedentSettlementAdjustments: CedentSettlementAdjustment[] = [
     amount: 8120,
   },
 ];
+
+/** Sementes com as datas acompanhando o dia de hoje (fixas nos testes). */
+export const cedentPortfolioTitles = shiftDemoDates(seedPortfolioTitles);
+export const cedentSettlementAdjustments = shiftDemoDates(seedSettlementAdjustments);

@@ -8,7 +8,7 @@ conectada ao Motor Universal, sem alterar silenciosamente execuções histórica
 ## Preparação
 
 1. Abra `http://localhost:3000/`.
-2. No menu lateral, clique em **Configurações**.
+2. Na barra superior, clique no ícone de **Configurações** (último à direita dos módulos).
 3. Selecione **Políticas e motor**.
 4. Confirme o título **Matriz Mestre de Elegibilidade**.
 

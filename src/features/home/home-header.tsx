@@ -17,7 +17,6 @@ export function HomeHeader({
   profile,
   onProfileChange,
   companyScope,
-  onCompanyScopeChange,
   onNew,
 }: {
   metrics: HomeMetrics;
@@ -27,7 +26,6 @@ export function HomeHeader({
   profile: HomeProfile;
   onProfileChange: (profile: HomeProfile) => void;
   companyScope: string;
-  onCompanyScopeChange: (scope: string) => void;
   onNew: () => void;
 }) {
   const { labels, periodEmpty } = metrics;
@@ -51,19 +49,6 @@ export function HomeHeader({
           </nav>
         </div>
         <div className="vg-controls">
-          <select
-            className="vg-select"
-            aria-label="Selecionar empresa ou visão consolidada"
-            value={companyScope}
-            onChange={e => onCompanyScopeChange(e.target.value)}
-          >
-            <option value="Consolidado">Consolidado · todas as empresas</option>
-            {destinations.map(d => (
-              <option key={d.name} value={d.name}>
-                {d.name}
-              </option>
-            ))}
-          </select>
           <button className="primary-action" onClick={onNew}>
             <PlusIcon /> Nova operação
           </button>

@@ -54,7 +54,7 @@ app/                         Rotas do Next (página única) e CSS global
   layout.tsx                 Fontes, metadados, script de tema antes da pintura
   page.tsx                   Monta <StratoApp />
   globals.css                Índice dos estilos (ver seção 6)
-  styles/                    tokens.generated.css, legacy.css, commercial.css, design-system.css
+  styles/                    tokens.generated.css, legacy.css, commercial.css, design-system.css, ledger.css
 src/
   app/
     strato-app.tsx           Raiz: estado global, navegação por view, providers
@@ -100,7 +100,7 @@ Cada arquivo começa com um comentário dizendo o que ele faz. Nenhum arquivo de
 | comercial | `CommercialState` | `strato-commercial-v1` |
 | pessoas do Cadastro | `Party[]` | `strato-parties-v1` |
 | explicações na interface | `boolean` | `lastro-interface-guidance-v1` |
-| tema, menu recolhido, perfil/período da Visão geral | preferências do usuário | `strato-theme`, `strato-sidebar-collapsed`, `strato-home-*` |
+| tema, perfil/período da Visão geral | preferências do usuário | `strato-theme`, `strato-home-*` |
 
 - A restauração acontece uma vez, depois de montar (`loadPersistedState`), e mescla o que foi salvo com os dados de demonstração atuais (migração tolerante a campos novos).
 - "Restaurar dados de demonstração" (busca global) chama `clearPersistedState` e recria o seed.
@@ -151,7 +151,8 @@ Regras implementadas (arquivo de referência entre parênteses):
 1. `styles/tokens.generated.css` — cada cor das telas legadas vira `var(--c-<papel>-<hex>)` com valor claro e escuro, gerados por `tools/theme_tokens.py` a partir do papel da cor (texto, fundo, borda, destaque). Não editar à mão.
 2. `styles/legacy.css` — estilos das telas de operação, Visão geral (`vg-`) e Financeiro (`fn-`).
 3. `styles/commercial.css` — Comercial (`cm-`).
-4. `styles/design-system.css` — tokens semânticos `--ds-*`, shell (`sx-`), componentes novos (`ds-`, `rg-`, `pf-`) e a camada visual por cima das telas legadas.
+4. `styles/design-system.css` — tokens semânticos `--ds-*`, shell (`sx-`), componentes novos (`ds-`, `rg-`, `pf-`).
+5. `styles/ledger.css` — padrão visual atual (v10): barra superior com módulos em ícones, títulos grandes com trilha, bloco de caixa da Visão geral, cartões sem borda, abas de texto, gauge e o tratamento comum dos módulos.
 
 Estilos novos usam os tokens `--ds-*`, que já têm valor claro e escuro. O tema é `data-theme="light|dark"` no `<html>`, com a preferência do usuário (claro, escuro ou sistema) salva em `strato-theme`.
 

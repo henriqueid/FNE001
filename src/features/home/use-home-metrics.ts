@@ -157,6 +157,9 @@ export function useHomeMetrics({
       optimistic: line(run(homeSettings.recovery.optimistic)),
       inflow: base.map(p => p.totalIn),
       outflow: base.map(p => p.totalOut),
+      // descontos aplicados sobre a curva: aparecem marcados no gráfico para a queda não parecer erro
+      readyOut,
+      formalizationOut,
     };
   }, [finance, companyScope, today, carteira, readyOut, formalizationOut]);
   const overduePayables = finance.titles.filter(

@@ -37,6 +37,10 @@ import {
   type OpFinancial,
 } from "@/src/domain/home/metrics";
 import { homeSettings, periodLabels, type HomePeriod, type HomeProfile } from "@/src/domain/home/settings";
+import { demoCedentHistories, demoDebtorHistories } from "@/src/domain/core/demo/quality-history";
+import { collectionMonth, concentration, rollRates, vintages } from "@/src/domain/risk/portfolio-dynamics";
+import { qualityRankings } from "@/src/domain/risk/quality";
+import { type QualityPolicy } from "@/src/domain/risk/quality-policy";
 import { useMemo } from "react";
 
 export type HomeMetricsInput = {
@@ -49,6 +53,7 @@ export type HomeMetricsInput = {
   period: HomePeriod;
   profile: HomeProfile;
   now: Date;
+  qualityPolicy: QualityPolicy;
 };
 
 export type HealthTone = "critical" | "watch" | "ok";
@@ -65,6 +70,7 @@ export function useHomeMetrics({
   period,
   profile,
   now,
+  qualityPolicy,
 }: HomeMetricsInput) {
   const registryCedents = useCedents();
   const fin = financials;
@@ -198,6 +204,37 @@ export function useHomeMetrics({
     scoped.filter(op => isLive(op) && b.match(op)).reduce((s, op) => s + (fin[op.id]?.revenue ?? 0), 0),
   );
 
+  /* risco: histórico mensal, qualidade (piorando × melhorando), rolagem, safras, concentração e cobrança */
+  const cedentHistories = useMemo(() => demoCedentHistories(registryCedents, today), [registryCedents, today]);
+  const debtorHistories = useMemo(
+    () =>
+      demoDebtorHistories(
+        debExp.map(d => ({
+          id: d.document,
+          name: d.name,
+          document: d.document,
+          exposure: d.exposure,
+          debtor: debtors.find(x => x.document.replace(/\D/g, "") === d.document),
+        })),
+        today,
+      ),
+    [debExp, debtors, today],
+  );
+  const risk = useMemo(
+    () => ({
+      cedentQuality: qualityRankings(cedentHistories, qualityPolicy),
+      debtorQuality: qualityRankings(debtorHistories, qualityPolicy),
+      rollRates: rollRates(cedentHistories),
+      vintages: vintages(cedentHistories),
+      cedentConcentration: concentration(cedExp.map(c => ({ name: c.name, amount: c.exposure }))),
+      debtorConcentration: concentration(debExp.map(d => ({ name: d.name, amount: d.exposure }))),
+      collection: collectionMonth(cedentHistories),
+      collectionPrevious: collectionMonth(cedentHistories, 1),
+      policy: qualityPolicy,
+    }),
+    [cedentHistories, debtorHistories, qualityPolicy, cedExp, debExp],
+  );
+
   /* listas derivadas: alertas, pendências, marcos, cobrança e concentração */
   const alerts = buildRiskAlerts({ cedExp, debExp, titles, active, today });
   const profileAlerts = alerts.filter(a => a.profiles.includes(profile));
@@ -259,6 +296,7 @@ export function useHomeMetrics({
     vehRows,
     cash,
     timeline,
+    risk,
     bankBalance,
     minimumCash,
     capacity,

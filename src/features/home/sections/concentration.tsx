@@ -15,7 +15,18 @@ export type Row = {
   overdue: number;
 };
 
-export function Concentration({ cedents, debtors, vehicles }: { cedents: Row[]; debtors: Row[]; vehicles: Row[] }) {
+export function Concentration({
+  cedents,
+  debtors,
+  vehicles,
+  notes,
+}: {
+  cedents: Row[];
+  debtors: Row[];
+  vehicles: Row[];
+  /** Índice HHI e participação dos 10 maiores por aba (cedentes, sacados). */
+  notes?: Partial<Record<"cedentes" | "sacados", string>>;
+}) {
   const [tab, setTab] = useState<"cedentes" | "sacados" | "veiculos">("cedentes");
   const rows = (tab === "cedentes" ? cedents : tab === "sacados" ? debtors : vehicles).slice(0, 6);
   const top = rows.slice(0, 5).reduce((s, r) => s + r.share, 0);
@@ -34,7 +45,9 @@ export function Concentration({ cedents, debtors, vehicles }: { cedents: Row[]; 
           ]}
         />
         <small>
-          {tab === "veiculos" ? "Operações em andamento e liberadas" : `Top 5 concentram ${pct(top)} da carteira`}
+          {tab === "veiculos"
+            ? "Operações em andamento e liberadas"
+            : (notes?.[tab] ?? `Top 5 concentram ${pct(top)} da carteira`)}
         </small>
       </div>
       <div className="vg-table vg-conc">

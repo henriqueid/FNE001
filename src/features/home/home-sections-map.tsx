@@ -17,13 +17,20 @@ import {
   Team,
 } from "@/src/features/home/sections/index";
 import type { HomeMetrics } from "./use-home-metrics";
-import { Card, compact } from "./widgets";
+import { Card, compact, pct } from "./widgets";
 
 import { type Operation } from "@/src/domain/core/types";
+import { hhiLabel } from "@/src/domain/risk/quality-policy";
+import { CollectionStrip } from "@/src/features/risk/collection-strip";
+import { QualityBoard } from "@/src/features/risk/quality-board";
+import { QualityPolicyModal } from "@/src/features/risk/quality-policy-modal";
+import { RollRate } from "@/src/features/risk/roll-rate";
+import { type useQualityPolicy } from "@/src/features/risk/use-quality-policy";
+import { VintageChart } from "@/src/features/risk/vintage-chart";
 import { brDate } from "@/src/domain/home/metrics";
 import type { HomePeriod, HomeProfile } from "@/src/domain/home/settings";
 import { ArrowIcon } from "@/src/ui/icons";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 export type SectionId =
   | "needs"
@@ -36,7 +43,11 @@ export type SectionId =
   | "revenue"
   | "collection"
   | "alerts"
-  | "team";
+  | "team"
+  | "quality"
+  | "cobranca"
+  | "rollrate"
+  | "vintage";
 
 // Grade de 12 colunas: cada linha soma 12 (8 + 4 ou 12). Abaixo de 1200px tudo vira coluna única.
 // O caixa fica no bloco principal (cash-hero.tsx), acima da grade, em todos os perfis.
@@ -61,11 +72,15 @@ export const layouts: Record<HomeProfile, [SectionId, number][]> = {
     ["alerts", 12],
   ],
   risco: [
+    ["quality", 12],
+    ["cobranca", 12],
+    ["rollrate", 6],
+    ["vintage", 6],
+    ["concentration", 8],
+    ["aging", 4],
     ["needs", 6],
     ["alerts", 6],
     ["maturity", 8],
-    ["aging", 4],
-    ["concentration", 8],
     ["collection", 4],
   ],
 };
@@ -79,6 +94,7 @@ export function HomeSections({
   onOpen,
   onGoOperations,
   onGoFinance,
+  qualityPolicy,
 }: {
   metrics: HomeMetrics;
   profile: HomeProfile;
@@ -88,8 +104,13 @@ export function HomeSections({
   onOpen: (op: Operation) => void;
   onGoOperations: () => void;
   onGoFinance: () => void;
+  qualityPolicy: ReturnType<typeof useQualityPolicy>;
 }) {
   const m = metrics;
+  const [editingPolicy, setEditingPolicy] = useState(false);
+  const r = m.risk;
+  const concNote = (c: typeof r.cedentConcentration) =>
+    `10 maiores: ${pct(c.topShare)} · HHI ${Math.round(c.hhi).toLocaleString("pt-BR")} (${hhiLabel(c.hhi, r.policy)})`;
   const sections: Record<SectionId, (span: number) => ReactNode> = {
     needs: span => (
       <Card
@@ -173,7 +194,12 @@ export function HomeSections({
         title="Concentração e limites"
         subtitle="Carteira em aberto · o limite inclui operações em andamento"
       >
-        <Concentration cedents={m.cedRows} debtors={m.debRows} vehicles={m.vehRows} />
+        <Concentration
+          cedents={m.cedRows}
+          debtors={m.debRows}
+          vehicles={m.vehRows}
+          notes={{ cedentes: concNote(r.cedentConcentration), sacados: concNote(r.debtorConcentration) }}
+        />
       </Card>
     ),
     revenue: span => (
@@ -209,7 +235,59 @@ export function HomeSections({
         <Team rows={m.team} period={period} />
       </Card>
     ),
+    quality: span => (
+      <Card
+        key="quality"
+        span={span}
+        title="Qualidade dos clientes"
+        subtitle="Quem mais piorou e quem mais melhorou, com os motivos e a ação sugerida"
+      >
+        <QualityBoard
+          cedents={r.cedentQuality}
+          debtors={r.debtorQuality}
+          policy={r.policy}
+          onEditPolicy={() => setEditingPolicy(true)}
+        />
+      </Card>
+    ),
+    cobranca: span => (
+      <Card key="cobranca" span={span} title="Cobrança do mês" subtitle="Comparado ao mês anterior">
+        <CollectionStrip now={r.collection} previous={r.collectionPrevious} />
+      </Card>
+    ),
+    rollrate: span => (
+      <Card
+        key="rollrate"
+        span={span}
+        title="Rolagem da carteira"
+        subtitle="% de cada faixa de atraso que passou para a seguinte no mês"
+      >
+        <RollRate rows={r.rollRates} />
+      </Card>
+    ),
+    vintage: span => (
+      <Card
+        key="vintage"
+        span={span}
+        title="Inadimplência por safra"
+        subtitle="% do valor adquirido em cada mês vencido há mais de 30 dias"
+      >
+        <VintageChart rows={r.vintages} />
+      </Card>
+    ),
   };
 
-  return <div className="vg-grid">{layouts[profile].map(([id, span]) => sections[id](span))}</div>;
+  return (
+    <>
+      <div className="vg-grid">{layouts[profile].map(([id, span]) => sections[id](span))}</div>
+      {editingPolicy && (
+        <QualityPolicyModal
+          policy={qualityPolicy.policy}
+          onSave={qualityPolicy.save}
+          onReset={qualityPolicy.reset}
+          onClose={() => setEditingPolicy(false)}
+        />
+      )}
+    </>
+  );
 }

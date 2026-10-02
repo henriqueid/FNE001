@@ -13,6 +13,7 @@ import { HomeKpis } from "./home-kpis";
 import { HomeSections } from "./home-sections-map";
 import { useHomeMetrics } from "./use-home-metrics";
 import { useHomePreferences } from "./use-home-preferences";
+import { useQualityPolicy } from "@/src/features/risk/use-quality-policy";
 
 import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { type CarteiraFlow } from "@/src/domain/finance/reports";
@@ -45,6 +46,7 @@ export default function HomeDashboard({
   onNew: () => void;
 }) {
   const { period, setPeriod, profile, chooseProfile, now } = useHomePreferences();
+  const quality = useQualityPolicy();
   const metrics = useHomeMetrics({
     operations,
     debtors,
@@ -55,6 +57,7 @@ export default function HomeDashboard({
     period,
     profile,
     now,
+    qualityPolicy: quality.policy,
   });
 
   return (
@@ -88,6 +91,7 @@ export default function HomeDashboard({
         onOpen={onOpen}
         onGoOperations={onGoOperations}
         onGoFinance={onGoFinance}
+        qualityPolicy={quality}
       />
 
       <p className="vg-footnote">

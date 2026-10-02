@@ -23,7 +23,7 @@ export function CentralHeader({
           <SparkIcon /> CENTRAL OPERACIONAL
         </Badge>
         <h1>Operações em andamento</h1>
-        <p>Tudo o que exige atenção, decisão ou acompanhamento — em um só lugar.</p>
+        <p>Filas, etapas e responsáveis das operações abertas.</p>
       </div>
       <div className="heading-actions">
         <label className="company-scope">

@@ -1,0 +1,476 @@
+/* ==========================================================================
+   STRATO · camada visual Ledger (v9)
+   Carregada por último. Substitui os efeitos da camada v6 (gradientes, brilhos,
+   grade de fundo, sombras) por superfícies planas, tinta preta/branca para ação
+   e seleção, verde-menta só para destaque positivo e números grandes.
+   Tokens em design-system.css; cores das telas legadas convertidas por
+   tools/ledger_palette.py.
+   ========================================================================== */
+
+/* ---------- base ---------- */
+body {
+  font-family: var(--ds-font);
+  font-weight: 450;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: 0.005em;
+}
+:where(.sx-content) :where(h1, h2, h3) {
+  font-family: var(--ds-font);
+}
+::selection {
+  background: var(--ds-mint);
+  color: var(--ds-mint-ink);
+}
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  box-shadow: var(--ds-focus);
+}
+
+/* ---------- sidebar clara ---------- */
+.sx-sidebar {
+  background: var(--sx-bg);
+  border-right: 1px solid var(--sx-line);
+}
+.sx-sidebar::after {
+  display: none;
+}
+.sx-brand {
+  padding: 8px 10px 22px;
+}
+.sx-logo {
+  width: 112px;
+}
+.sx-logo-dark {
+  display: none;
+}
+:root[data-theme="dark"] .sx-logo-light {
+  display: none;
+}
+:root[data-theme="dark"] .sx-logo-dark {
+  display: block;
+}
+.sx-shell.is-collapsed .sx-logo,
+.sx-shell.is-collapsed .sx-logo-dark {
+  display: none !important;
+}
+.sx-symbol {
+  filter: none;
+}
+:root[data-theme="dark"] .sx-symbol {
+  filter: brightness(0) invert(1);
+}
+.sx-nav-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.sx-sidebar nav button {
+  min-height: 38px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.sx-sidebar nav button.is-active {
+  color: var(--sx-active-ink);
+  background: var(--sx-active);
+  box-shadow: none;
+}
+.sx-sidebar nav button.is-active::before {
+  display: none;
+}
+.sx-sidebar nav button.is-active svg {
+  color: inherit;
+}
+.sx-sidebar nav button b {
+  color: var(--ds-mint-ink);
+  background: var(--ds-mint);
+  border: 0;
+}
+.sx-tenant,
+.sx-profile {
+  border-radius: 12px;
+}
+.sx-tenant {
+  background: var(--ds-surface-2);
+}
+.sx-tenant > span,
+.sx-profile > span,
+.sx-profile-head > span {
+  color: var(--ds-text);
+  background: var(--ds-surface-3);
+  border: 1px solid var(--ds-border);
+}
+.sx-menu-symbol {
+  color: var(--ds-text);
+  background: var(--ds-surface-3);
+}
+.sx-company-options > button > svg,
+.sx-profile-actions > button > svg {
+  color: var(--ds-text-2);
+}
+
+/* ---------- topo ---------- */
+.sx-main::before {
+  display: none;
+}
+.sx-topbar {
+  padding: 0 32px;
+  background: var(--ds-canvas);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-bottom: 1px solid var(--ds-border);
+}
+.sx-search {
+  height: 40px;
+  border-radius: 999px;
+  padding: 0 10px 0 16px;
+  box-shadow: none;
+}
+.sx-search:hover {
+  border-color: var(--ds-border-strong);
+}
+.sx-search kbd,
+.sx-palette kbd {
+  border-radius: 999px;
+  box-shadow: none;
+}
+.sx-icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border-color: var(--ds-border);
+  background: var(--ds-surface);
+}
+.sx-icon-btn:hover {
+  border-color: var(--ds-border-strong);
+}
+.sx-env {
+  border-radius: 999px;
+  color: var(--ds-text-2);
+}
+.sx-env i {
+  background: var(--ds-warning);
+  box-shadow: none;
+}
+.sx-dot {
+  color: var(--ds-mint-ink);
+  background: var(--ds-mint);
+  box-shadow: 0 0 0 2px var(--ds-canvas);
+}
+.sx-sidebar-popover,
+.sx-palette {
+  border-radius: 16px;
+}
+
+/* ---------- títulos e rótulos ---------- */
+.ds-page-head h1,
+.page-heading h1,
+.workspace-heading h1,
+.fn-heading h1,
+.vg-head h1 {
+  font-weight: 600 !important;
+  letter-spacing: -0.03em !important;
+}
+.ds-eyebrow,
+.badge.eyebrow,
+.hd-eyebrow,
+.vg-eyebrow {
+  font-family: var(--ds-font);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em !important;
+  color: var(--ds-text-3) !important;
+}
+.ds-eyebrow::before {
+  display: none;
+}
+.ds-chip-accent {
+  color: var(--ds-text);
+  background: var(--ds-surface-3);
+  border-color: var(--ds-border);
+}
+.fn-table th,
+.vg-table th,
+table th {
+  letter-spacing: 0.04em;
+  color: var(--ds-text-3);
+}
+.operation-identity small,
+.kanban-card-top small,
+.aditivo,
+.bordero,
+.fn-mono,
+.vg-need-copy small {
+  font-size: 11px !important;
+  letter-spacing: 0;
+}
+
+/* ---------- superfícies ---------- */
+.ds-card,
+.operations-card,
+.metrics-group,
+.vg-card,
+.fn-card,
+.fn-kpis > *,
+.vg-kpi,
+.cm-rep-card,
+.workspace-panel,
+.stage-panel,
+.risk-panel,
+.summary-card,
+.settings-modal,
+.fn-modal,
+.vg-brief {
+  border-radius: var(--ds-radius) !important;
+  border: 1px solid var(--ds-border) !important;
+  box-shadow: none !important;
+}
+.vg-kpi::before,
+.fn-kpis > *::before,
+.metrics-group::before {
+  display: none;
+}
+.modal-backdrop,
+.fn-modal-backdrop {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.modal-backdrop > section,
+.fn-modal {
+  box-shadow: var(--ds-shadow-lg) !important;
+}
+
+/* ---------- botões, abas e campos ---------- */
+.primary-action,
+.vg-btn.primary,
+.fn-btn.primary,
+.cm-page .fn-btn.primary {
+  background: var(--ds-accent) !important;
+  color: var(--ds-accent-ink) !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  font-weight: 600;
+}
+.primary-action:hover,
+.vg-btn.primary:hover,
+.fn-btn.primary:hover {
+  filter: none;
+  background: var(--ds-accent-hover) !important;
+  box-shadow: none !important;
+}
+.primary-action svg,
+.vg-btn.primary svg,
+.fn-btn.primary svg {
+  color: inherit;
+}
+.secondary-action,
+.vg-btn,
+.fn-btn {
+  border-radius: 999px !important;
+}
+.fn-tabs button.active::after,
+.fn-tabs button[aria-selected="true"]::after {
+  left: 0;
+  right: 0;
+  background: var(--ds-accent);
+  box-shadow: none;
+}
+.sx-content select,
+.sx-content input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.sx-content textarea {
+  border-radius: 10px;
+}
+.sx-content select:focus,
+.sx-content input:not([type="checkbox"]):not([type="radio"]):focus,
+.sx-content textarea:focus {
+  border-color: var(--ds-accent) !important;
+  box-shadow: 0 0 0 1px var(--ds-accent) !important;
+}
+.operations-card .table-head {
+  background: var(--ds-surface-2);
+}
+.operations-card .operation-row:nth-child(even) {
+  background: var(--ds-surface);
+}
+.operations-card .operation-row:hover {
+  background: var(--ds-surface-2);
+  box-shadow: inset 2px 0 var(--ds-accent);
+}
+.operations-card .table-head > span + span,
+.operations-card .operation-row > span + span {
+  border-left-color: var(--ds-border);
+}
+
+/* ---------- Visão geral ---------- */
+.vg-head h1 {
+  font-size: 34px !important;
+}
+.vg-seg {
+  border-radius: 999px;
+  padding: 3px;
+}
+.vg-seg button {
+  border-radius: 999px;
+}
+.vg-seg button.active,
+.vg-seg button[aria-selected="true"] {
+  color: var(--ds-accent-ink);
+  background: var(--ds-accent);
+  box-shadow: none;
+}
+.vg-profiles button.active,
+.vg-profiles button[aria-selected="true"] {
+  border-bottom-color: var(--ds-accent);
+}
+.vg-select {
+  border-radius: 999px !important;
+}
+
+.vg-brief {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 28px;
+  padding: 26px 28px;
+  background: var(--ds-surface);
+}
+.vg-brief-hero {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.vg-brief-hero small {
+  color: var(--ds-text-3);
+  font-size: 13px;
+}
+.vg-brief-hero strong {
+  font-size: clamp(36px, 4.4vw, 60px);
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: var(--ds-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vg-brief-health {
+  justify-self: start;
+  margin-top: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ds-mint-ink);
+  background: var(--ds-mint);
+}
+.vg-brief-health.tone-watch {
+  color: var(--ds-warning);
+  background: color-mix(in srgb, var(--ds-warning) 12%, transparent);
+}
+.vg-brief-health.tone-critical {
+  color: var(--ds-danger);
+  background: color-mix(in srgb, var(--ds-danger) 10%, transparent);
+}
+.vg-brief .vg-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 8px;
+  align-content: center;
+}
+.vg-brief .vg-chip {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  color: var(--ds-text-2);
+  background: var(--ds-surface-2);
+  border: 1px solid var(--ds-border);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+}
+.vg-brief .vg-chip b {
+  color: var(--ds-text);
+  font-size: 17px;
+  font-weight: 600;
+}
+.vg-brief .vg-chip.watch b {
+  color: var(--ds-warning);
+}
+.vg-brief .vg-chip.critical b {
+  color: var(--ds-danger);
+}
+.vg-brief .vg-chip:hover {
+  border-color: var(--ds-border-strong);
+  background: var(--ds-surface);
+}
+
+.vg-kpi {
+  padding: 18px 20px;
+  gap: 4px;
+}
+.vg-kpi-label {
+  color: var(--ds-text-3);
+  font-size: 13px;
+  font-weight: 500;
+}
+.vg-kpi strong {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.vg-delta.good b {
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--ds-mint-ink);
+  background: var(--ds-mint);
+}
+.vg-card-head h2 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Pendências: marcador de severidade em vez de ícone em círculo */
+.vg-need-list li,
+.vg-alerts li {
+  position: relative;
+  padding-left: 14px;
+}
+.vg-need-list li::before,
+.vg-alerts li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--ds-border-strong);
+}
+.vg-need-list li.sev-critical::before,
+.vg-alerts li.sev-critical::before {
+  background: var(--ds-danger);
+}
+.vg-need-list li.sev-serious::before,
+.vg-alerts li.sev-serious::before {
+  background: var(--ds-warning);
+}
+.vg-need-kind {
+  letter-spacing: 0.04em;
+}
+.vg-need-summary span {
+  border-radius: 999px;
+}
+
+@media (max-width: 900px) {
+  .vg-brief {
+    grid-template-columns: 1fr;
+  }
+  .vg-brief .vg-chips {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Marca em tinta: logotipo e símbolo monocromáticos no tema claro */
+.sx-logo-light,
+.sx-symbol {
+  filter: brightness(0);
+}

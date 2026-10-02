@@ -97,8 +97,8 @@ export function HomeSections({
       <Card
         key="needs"
         span={span}
-        title="Precisa de você agora"
-        subtitle="Ordenado por impacto"
+        title="Pendências"
+        subtitle="Por severidade"
         action={
           <button className="vg-link" onClick={onGoOperations}>
             Ver central <ArrowIcon />

@@ -156,7 +156,7 @@
 }
 
 .cm-chart .bar.partial {
-  fill: #93c5fd;
+  fill: #c0c0c0;
 }
 
 .cm-chart .bar.hover {
@@ -219,7 +219,7 @@
   position: absolute;
   top: 6px;
   transform: translate(-50%);
-  box-shadow: 0 8px 20px #0f172a40;
+  box-shadow: 0 8px 20px rgba(24, 24, 24, 0.251);
 }
 
 .cm-tip b {
@@ -360,7 +360,7 @@
 .cm-rep-card.active {
   background: var(--c-bg-f8fbff);
   border-color: var(--c-bd-2563eb);
-  box-shadow: 0 0 0 1px #2563eb;
+  box-shadow: 0 0 0 1px #141414;
 }
 
 .cm-rep-card.inactive {

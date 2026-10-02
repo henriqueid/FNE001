@@ -1,14 +1,14 @@
 "use client";
 /**
- * Cabeçalho da visão geral: saudação e data, seletor de empresa, período e nova operação,
- * abas de perfil, briefing com a situação e atalhos, e o aviso de período sem originação.
+ * Cabeçalho da visão geral: título e data, seletor de empresa, período e nova operação,
+ * abas de perfil, carteira em aberto com os indicadores de atenção e o aviso de período sem originação.
  */
 import { destinations } from "@/src/domain/core/demo/companies";
-import { brDate } from "@/src/domain/home/metrics";
 import { periodLabels, profileLabels, type HomePeriod, type HomeProfile } from "@/src/domain/home/settings";
-import { AlertIcon, CheckIcon, ClockIcon, PlusIcon, ShieldIcon, WalletIcon } from "@/src/ui/icons";
+import { ClockIcon, PlusIcon } from "@/src/ui/icons";
+import { money } from "@/src/domain/core/format";
 import type { HomeMetrics } from "./use-home-metrics";
-import { compact, pct, Segmented } from "./widgets";
+import { compact, int, pct, Segmented } from "./widgets";
 
 export function HomeHeader({
   metrics,
@@ -37,77 +37,48 @@ export function HomeHeader({
 }) {
   const {
     labels,
-    cur,
-    lastDate,
     active,
     activeAmount,
     ready,
     readyAmount,
+    titles,
+    portfolioTotal,
     blockedOps,
     capacity,
-    overdueTotal,
     overdueRatio,
-    volumePct,
-    criticalCount,
-    urgentCount,
     health,
     periodEmpty,
   } = metrics;
 
-  const hour = now.getHours();
-  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
   const dateLabel = now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
-
-  const briefing =
-    cur.count === 0 ? (
-      <>
-        Nenhuma operação originada {labels.range}
-        {lastDate ? (
-          <>
-            {" "}
-            (a última entrou em <b>{brDate(lastDate)}</b>)
-          </>
-        ) : null}
-        . Há <b>{active.length} em andamento</b> somando <b>{compact(activeAmount)}</b>,{" "}
-        <b>{ready.length} pronta(s) para liberar</b> e a carteira tem <b>{compact(overdueTotal)}</b> vencidos (
-        {pct(overdueRatio, 2)}).
-      </>
-    ) : (
-      <>
-        {period === "dia" ? "Hoje entraram" : period === "semana" ? "Na semana entraram" : "No mês entraram"}{" "}
-        <b>{cur.count} operação(ões)</b> somando <b>{compact(cur.volume)}</b> ({pct(volumePct, 0)} da meta), com receita
-        de <b>{compact(cur.revenue)}</b> a <b>{pct(cur.rate, 2)} a.m.</b> Há <b>{active.length} em andamento</b> e{" "}
-        <b>{criticalCount + urgentCount} pendência(s) prioritária(s)</b>.
-      </>
-    );
 
   const chips = [
     {
       key: "dec",
       tone: blockedOps.length ? "critical" : "ok",
-      icon: <AlertIcon />,
-      label: `${blockedOps.length} decisão(ões) aguardando`,
+      label: "Decisões aguardando",
+      value: String(blockedOps.length),
       onClick: onGoOperations,
     },
     {
       key: "lib",
       tone: ready.length ? "watch" : "ok",
-      icon: <CheckIcon />,
-      label: `${compact(readyAmount)} prontos para liberar`,
+      label: "Prontos para liberar",
+      value: compact(readyAmount),
       onClick: onGoOperations,
     },
     {
       key: "cap",
       tone: capacity > 0 ? "ok" : "critical",
-      icon: <WalletIcon />,
-      label: `Capacidade de compra ${compact(capacity)}`,
+      label: "Capacidade de compra",
+      value: compact(capacity),
       onClick: onGoFinance,
     },
     {
       key: "ina",
       tone: overdueRatio > 5 ? "critical" : overdueRatio > 0 ? "watch" : "ok",
-      icon: <ShieldIcon />,
-      label: `Inadimplência ${pct(overdueRatio, 1)}`,
+      label: "Inadimplência",
+      value: pct(overdueRatio, 1),
       onClick: () => onProfileChange("risco"),
     },
   ];
@@ -116,12 +87,10 @@ export function HomeHeader({
     <>
       <header className="vg-head">
         <div>
-          <span className="vg-date">{dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}</span>
-          <h1>{greeting}, Henrique</h1>
+          <h1>Visão geral</h1>
           <p>
-            {companyScope === "Consolidado"
-              ? `Consolidado de ${destinations.length} empresas e veículos`
-              : companyScope}
+            {dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)} ·{" "}
+            {companyScope === "Consolidado" ? `${destinations.length} empresas e veículos` : companyScope}
           </p>
         </div>
         <div className="vg-controls">
@@ -167,23 +136,21 @@ export function HomeHeader({
       </div>
 
       <section className={`vg-brief tone-${health.tone}`} aria-label="Resumo">
-        <div className="vg-brief-status">
-          <span className="dot" />
-          <div>
-            <small>Situação {labels.range}</small>
-            <strong>{health.label}</strong>
-          </div>
+        <div className="vg-brief-hero">
+          <small>
+            Carteira em aberto · {int.format(titles.length)} títulos · {active.length} operações em andamento (
+            {compact(activeAmount)})
+          </small>
+          <strong>{money.format(portfolioTotal)}</strong>
+          <span className={`vg-brief-health tone-${health.tone}`}>{health.label}</span>
         </div>
-        <div className="vg-brief-body">
-          <p>{briefing}</p>
-          <div className="vg-chips">
-            {chips.map(c => (
-              <button key={c.key} className={`vg-chip ${c.tone}`} onClick={c.onClick}>
-                {c.icon}
-                {c.label}
-              </button>
-            ))}
-          </div>
+        <div className="vg-chips">
+          {chips.map(c => (
+            <button key={c.key} className={`vg-chip ${c.tone}`} onClick={c.onClick}>
+              <span>{c.label}</span>
+              <b>{c.value}</b>
+            </button>
+          ))}
         </div>
       </section>
 

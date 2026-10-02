@@ -97,7 +97,7 @@ export default function FinanceModule({
             <BankIcon /> FINANCEIRO E CONTÁBIL
           </span>
           <h1>Financeiro</h1>
-          <p>Caixa, contas a pagar e a receber, conta corrente, conciliação e contabilidade no mesmo lançamento.</p>
+          <p>Caixa, contas a pagar e a receber, conta corrente, conciliação e contabilidade.</p>
         </div>
         <div className="fn-heading-actions">
           <label className="company-scope">

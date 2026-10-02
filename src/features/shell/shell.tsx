@@ -156,9 +156,14 @@ export function Shell({
     <div className={`sx-shell ${collapsed ? "is-collapsed" : ""}`}>
       <aside className={`sx-sidebar ${mobileMenu ? "is-open" : ""}`} aria-label="Navegação principal">
         <div className="sx-brand">
-          <img className="sx-logo" src="/brand/strato-logo-horizontal-negative.png" alt="STRATO" />
+          <img className="sx-logo sx-logo-light" src="/brand/strato-logo-horizontal-color.png" alt="STRATO" />
+          <img
+            className="sx-logo sx-logo-dark"
+            src="/brand/strato-logo-horizontal-negative.png"
+            alt=""
+            aria-hidden="true"
+          />
           <img className="sx-symbol" src="/brand/strato-symbol-32.png" alt="" aria-hidden="true" />
-          <span className="sx-brand-tag">Receivables OS</span>
         </div>
         <nav>
           {navGroups.map(group => (

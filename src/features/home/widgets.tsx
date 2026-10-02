@@ -72,16 +72,12 @@ export type KpiProps = {
   delta?: React.ReactNode;
   progress?: { value: number; label: string; tone?: string };
   tone?: string;
-  icon?: React.ReactNode;
 };
 
-export function Kpi({ label, value, hint, delta, progress, tone, icon }: KpiProps) {
+export function Kpi({ label, value, hint, delta, progress, tone }: KpiProps) {
   return (
     <div className={`vg-kpi ${tone ?? ""}`}>
-      <span className="vg-kpi-label">
-        {icon}
-        {label}
-      </span>
+      <span className="vg-kpi-label">{label}</span>
       <strong>{value}</strong>
       {delta}
       {progress && (

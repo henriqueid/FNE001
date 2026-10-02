@@ -1,10 +1,10 @@
 "use client";
 /**
- * Lista "Precisa de você agora": pendências do perfil ordenadas por severidade, com ação direta.
+ * Lista "Pendências": itens do perfil ordenadas por severidade, com ação direta.
  */
 import { type Operation } from "@/src/domain/core/types";
 import type { HomeProfile } from "@/src/domain/home/settings";
-import { AlertIcon, ArrowIcon, CheckIcon, ClockIcon } from "@/src/ui/icons";
+import { ArrowIcon } from "@/src/ui/icons";
 import { useState } from "react";
 import { compact, type Severity, severityLabel } from "@/src/features/home/widgets";
 
@@ -62,9 +62,6 @@ export function NeedsYou({
       <ul className="vg-need-list">
         {visible.map(item => (
           <li key={item.id} className={`sev-${item.severity}`}>
-            <span className="vg-sev" aria-hidden="true">
-              {item.severity === "critical" || item.severity === "serious" ? <AlertIcon /> : <ClockIcon />}
-            </span>
             <div className="vg-need-copy">
               <span className="vg-need-kind">
                 {item.kind} · {severityLabel[item.severity]}
@@ -87,11 +84,7 @@ export function NeedsYou({
             </div>
           </li>
         ))}
-        {items.length === 0 && (
-          <li className="vg-need-empty">
-            <CheckIcon /> Nenhuma pendência para este perfil. Tudo em dia.
-          </li>
-        )}
+        {items.length === 0 && <li className="vg-need-empty">Nenhuma pendência para este perfil.</li>}
       </ul>
       {items.length > limit && (
         <button className="vg-link vg-more" onClick={() => setShowAll(!showAll)}>

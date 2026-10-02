@@ -4,7 +4,6 @@
  */
 import { type Operation } from "@/src/domain/core/types";
 import type { HomeProfile } from "@/src/domain/home/settings";
-import { CheckIcon, ShieldIcon } from "@/src/ui/icons";
 import { Empty, type Severity } from "@/src/features/home/widgets";
 
 export type Alert = {
@@ -26,19 +25,11 @@ export function Alerts({
   onOpen: (op: Operation) => void;
   onGoOperations: () => void;
 }) {
-  if (!list.length)
-    return (
-      <Empty>
-        <CheckIcon /> Nenhum alerta de risco nas regras monitoradas.
-      </Empty>
-    );
+  if (!list.length) return <Empty>Nenhum alerta de risco nas regras monitoradas.</Empty>;
   return (
     <ul className="vg-alerts">
       {list.slice(0, 6).map(a => (
         <li key={a.id} className={`sev-${a.severity}`}>
-          <span className="vg-sev">
-            <ShieldIcon />
-          </span>
           <div>
             <strong>{a.title}</strong>
             <small>{a.detail}</small>

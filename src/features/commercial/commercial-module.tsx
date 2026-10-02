@@ -401,7 +401,7 @@ export default function CommercialModule({
             <section className="fn-card">
               <header className="fn-card-head">
                 <div>
-                  <h2>Precisa de atenção</h2>
+                  <h2>Pendências</h2>
                   <p>O que o gestor comercial deve cobrar hoje</p>
                 </div>
               </header>

@@ -1,11 +1,13 @@
 @import "tailwindcss";
 
-/* STRATO · design system v6
+/* STRATO · design system v9 (Ledger)
    1. tokens.generated.css — cores das telas legadas (claro e escuro), geradas por tools/theme_tokens.py
    2. legacy.css           — estilos das telas (Operações, Visão geral, Financeiro)
    3. commercial.css       — módulo Comercial
-   4. design-system.css    — tokens semânticos, shell, componentes e camada visual v6 */
+   4. design-system.css    — tokens semânticos, shell, componentes e camada visual v6
+   5. ledger.css           — camada visual Ledger (v9): monocromática, sem gradientes nem brilhos */
 @import "./styles/tokens.generated.css";
 @import "./styles/legacy.css";
 @import "./styles/commercial.css";
 @import "./styles/design-system.css";
+@import "./styles/ledger.css";

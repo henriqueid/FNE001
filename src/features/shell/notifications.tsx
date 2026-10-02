@@ -84,7 +84,7 @@ export function NotificationsPopover({
     <div className="sx-popover" ref={ref} role="dialog" aria-label="Alertas operacionais">
       <header>
         <strong>Alertas operacionais</strong>
-        <small>{signals.length ? `${signals.length} item(ns) pedem atenção` : "Tudo em dia"}</small>
+        <small>{signals.length ? `${signals.length} item(ns) pedem atenção` : "Nenhum alerta"}</small>
       </header>
       {signals.length ? (
         <ul>

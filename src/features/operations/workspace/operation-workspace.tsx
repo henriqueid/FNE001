@@ -25,8 +25,10 @@ import {
   withCancellation,
   withCedent,
   withManualEntry,
+  workspaceTimestamp,
 } from "./workspace-model";
 import { useEligibilityPolicies } from "@/src/app/eligibility-policy-context";
+import { autoAdvanceMessage, autoAdvanceWithinPolicy } from "@/src/domain/operations/auto-advance";
 
 export function OperationWorkspace({
   operation: initialOperation,
@@ -61,9 +63,16 @@ export function OperationWorkspace({
   const configuredPolicies = useEligibilityPolicies();
   const stageInsight = stageInsightFor(operation, active, automation, configuredPolicies);
 
+  /** Grava a operação; se o motor libera e não há decisão humana, Lastro e Preço avançam sozinhos. */
   function commit(next: Operation) {
-    setOperation(next);
-    onUpdate(next);
+    const result = autoAdvanceWithinPolicy(next, { debtors, at: workspaceTimestamp() });
+    setOperation(result.operation);
+    onUpdate(result.operation);
+    if (result.steps.length) {
+      setActive(result.operation.stage);
+      setFeedback({ tone: "success", message: autoAdvanceMessage(result) });
+    }
+    return result;
   }
 
   const advance = useStageAdvance({

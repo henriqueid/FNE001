@@ -8,8 +8,9 @@ import { eligibilityRouteFor } from "@/src/domain/eligibility/orchestration";
 import { needsIntervention } from "@/src/domain/operations/pace";
 import { normalizedPricing, pricingCalculation } from "@/src/domain/operations/pricing";
 import { operationSearchText } from "@/src/domain/operations/queries";
+import { pendingAuthoritiesFor } from "@/src/domain/eligibility/authority-queue";
 
-export type QueueScope = "active" | "intervention" | "formalization" | "released" | "cancelled";
+export type QueueScope = "active" | "intervention" | "authority" | "formalization" | "released" | "cancelled";
 export type DisplayMode = "list" | "kanban";
 export type DatePreset = "today" | "custom" | "all";
 export type ScreenFilters = { query: string; stageFilter: string; statusFilter: string; sourceFilter: string };
@@ -44,9 +45,11 @@ export function inQueue(op: Operation, scope: QueueScope) {
       ? op.status === "Liberada ao financeiro"
       : scope === "intervention"
         ? needsIntervention(op)
-        : scope === "formalization"
-          ? readyForFormalization(op)
-          : op.status === "Cancelada";
+        : scope === "authority"
+          ? pendingAuthoritiesFor(op).length > 0
+          : scope === "formalization"
+            ? readyForFormalization(op)
+            : op.status === "Cancelada";
 }
 
 /** Indicadores do topo e contadores das filas sobre as operações filtradas. */
@@ -75,6 +78,7 @@ export function centralMetricsFor(screenOperations: Operation[]) {
   ).length;
   const interventionCount = screenOperations.filter(needsIntervention).length;
   const formalizationCount = screenOperations.filter(readyForFormalization).length;
+  const authorityCount = screenOperations.filter(op => pendingAuthoritiesFor(op).length > 0).length;
   const cancellationCount = screenOperations.filter(op => op.status === "Cancelada").length;
   const financialSnapshot = activeOperations.map(op => {
     const opPricing = normalizedPricing(op);
@@ -104,6 +108,7 @@ export function centralMetricsFor(screenOperations: Operation[]) {
     decisionCount,
     interventionCount,
     formalizationCount,
+    authorityCount,
     cancellationCount,
     totalGain,
     averageFinalRate,

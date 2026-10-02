@@ -27,6 +27,11 @@ export type OperationalParameters = {
   readinessMinAutomation: number;
   /** Índice de automação abaixo do qual a operação vai para a fila de intervenção da Central. */
   queueAutomationThreshold: number;
+  /**
+   * Gestão por exceção: com o motor liberando a operação, Lastro e Preço avançam sozinhos quando não há
+   * decisão humana a tomar (ver `domain/operations/auto-advance.ts`). `false` volta ao clique manual.
+   */
+  autoAdvanceWithinPolicy: boolean;
   /** Condição comercial sugerida ao abrir a etapa de Preço. */
   pricingDefaults: {
     monthlyRate: number;
@@ -52,6 +57,7 @@ const base: OperationalParameters = {
   rateFloorByRisk: { Baixo: 1.4, Médio: 1.8, Alto: 2.4 },
   readinessMinAutomation: 70,
   queueAutomationThreshold: 80,
+  autoAdvanceWithinPolicy: true,
   pricingDefaults: {
     monthlyRate: 2.1,
     fundingCostMonthly: 1.2,

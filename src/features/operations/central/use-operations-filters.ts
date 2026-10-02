@@ -13,6 +13,7 @@ import {
   type QueueScope,
   type ScreenFilters,
 } from "./central-model";
+import { pendingAuthoritiesFor } from "@/src/domain/eligibility/authority-queue";
 
 export function useOperationsFilters(operations: Operation[], companyScope: string) {
   const [scope, setScope] = useState<QueueScope>("active");
@@ -47,7 +48,16 @@ export function useOperationsFilters(operations: Operation[], companyScope: stri
     () => scopedOperations.filter(op => matchesScreenFilters(op, { query, stageFilter, statusFilter, sourceFilter })),
     [scopedOperations, query, stageFilter, statusFilter, sourceFilter],
   );
-  const filtered = useMemo(() => screenOperations.filter(op => inQueue(op, scope)), [screenOperations, scope]);
+  const [authorityFilter, setAuthorityFilter] = useState("Todas");
+  const filtered = useMemo(
+    () =>
+      screenOperations.filter(
+        op =>
+          inQueue(op, scope) &&
+          (scope !== "authority" || authorityFilter === "Todas" || pendingAuthoritiesFor(op).includes(authorityFilter)),
+      ),
+    [screenOperations, scope, authorityFilter],
+  );
   const screenFilters: ScreenFilters = { query, stageFilter, statusFilter, sourceFilter };
 
   const rangeLabel = `${new Date(`${dateFrom}T12:00:00`).toLocaleDateString("pt-BR")} a ${new Date(`${dateTo}T12:00:00`).toLocaleDateString("pt-BR")}`;
@@ -68,6 +78,7 @@ export function useOperationsFilters(operations: Operation[], companyScope: stri
 
   const selectQueue = (next: QueueScope) => {
     setScope(next);
+    setAuthorityFilter("Todas");
     if (next !== "active") setDisplayMode("list");
   };
   const selectToday = () => {
@@ -97,6 +108,8 @@ export function useOperationsFilters(operations: Operation[], companyScope: stri
   return {
     scope,
     selectQueue,
+    authorityFilter,
+    setAuthorityFilter,
     displayMode,
     setDisplayMode,
     query,

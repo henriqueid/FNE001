@@ -1,7 +1,12 @@
 # Changelog
 
-## Não lançado — 02/10/2026 · Parâmetros operacionais fora das telas
+## Não lançado — 02/10/2026 · Gestão por exceção (fase 3) e parâmetros operacionais
 
+**Gestão por exceção**
+- Avanço automático (`domain/operations/auto-advance.ts`): com o motor liberando a operação (snapshot dentro da política ou exceções já deliberadas), Lastro e Preço concluem sozinhos e a operação chega à Tela Final (Aprovação). Lastro só avança com evidências validadas e amostra confirmada; Preço usa a condição já salva ou salva a condição padrão da modalidade quando respeita o piso e gera líquido e spread positivos. Aprovação, formalização e liberação nunca avançam sozinhas. Cada avanço fica registrado em nome do "Motor de elegibilidade", com o motivo; a esteira diz onde e por que parou. Desligável por `autoAdvanceWithinPolicy`.
+- Central: nova fila **Exceções por alçada** (`domain/eligibility/authority-queue.ts`), com resumo por alçada clicável e "Aguarda: …" na linha da operação. Lê só o snapshot e os overrides.
+
+**Parâmetros operacionais**
 - Novo `src/domain/eligibility/operational-parameters.ts`: fonte única, por modalidade, dos números que as etapas atuais usavam fixos no código (faixas de score 600/700, prazo mínimo de 15 dias, CFOP 5xxx/6xxx, amostra de lastro 25/50/100%, participação relevante de 25%, piso de taxa 1,4/1,8/2,4% a.m., automação 70 e 80, condição comercial padrão e garantia por risco). Mesmos valores, mesmo comportamento; são configuração de demonstração, não referência de mercado.
 - Risco, Lastro, Preço, Aprovação, Central, Cadastros e Visão geral passam a ler essa fonte.
 - Concentração da etapa de Risco passa a ler o limite da regra `DEBTOR-OPERATION-CONCENTRATION-MAX-001` do motor (`policy-parameter.ts`): primeiro o valor congelado no snapshot da análise, senão a política vigente configurada em Políticas. Acaba a divergência entre 20% (tela antiga) e 35% (política demo do motor).

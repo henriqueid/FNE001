@@ -4916,3 +4916,71 @@ a.fn-btn:not([href]) {
     grid-column: auto;
   }
 }
+
+/* Central · fila "Exceções por alçada" (gestão por exceção do motor) */
+.queue-tab.authority .queue-icon {
+  color: var(--ds-accent);
+  background: var(--ds-accent-soft);
+}
+.queue-tab.authority > b {
+  color: var(--ds-accent);
+  background: var(--ds-accent-soft);
+}
+.queue-tab.authority.active {
+  border-color: var(--ds-accent-line);
+  background: var(--ds-surface-2);
+}
+.authority-queue-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--ds-border);
+}
+.authority-queue-bar.empty span {
+  color: var(--ds-text-3);
+  font-size: 12px;
+}
+.authority-queue-bar button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--ds-border);
+  border-radius: 8px;
+  background: var(--ds-surface);
+  text-align: left;
+  cursor: pointer;
+}
+.authority-queue-bar button strong {
+  color: var(--ds-text);
+  font-size: 12px;
+}
+.authority-queue-bar button small {
+  color: var(--ds-text-3);
+  font-size: 11px;
+}
+.authority-queue-bar button.active {
+  border-color: var(--ds-accent-line);
+  background: var(--ds-accent-soft);
+}
+.operation-row .authority-pending {
+  display: block;
+  color: var(--ds-accent);
+  font-size: 11px;
+  font-style: normal;
+}
+/* Seis filas na Central: 6 colunas em telas largas, 3 em médias, 1 no celular */
+.queue-tabs {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+@media (max-width: 1500px) {
+  .queue-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .queue-tabs {
+    grid-template-columns: 1fr;
+  }
+}

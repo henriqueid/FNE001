@@ -44,11 +44,13 @@ export function OperationsToolbar({
               ? "Todas as operações ativas"
               : scope === "intervention"
                 ? "Operações que precisam de ação"
-                : scope === "formalization"
-                  ? "Operações prontas para envio"
-                  : scope === "released"
-                    ? "Operações liberadas ao financeiro"
-                    : "Operações canceladas"}
+                : scope === "authority"
+                  ? "Exceções aguardando decisão de alçada"
+                  : scope === "formalization"
+                    ? "Operações prontas para envio"
+                    : scope === "released"
+                      ? "Operações liberadas ao financeiro"
+                      : "Operações canceladas"}
         </strong>
         <span>
           {datePreset === "today"

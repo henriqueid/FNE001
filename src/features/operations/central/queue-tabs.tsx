@@ -1,9 +1,9 @@
 "use client";
 /**
- * Abas das filas da central (andamento, intervenção, formalização,
+ * Abas das filas da central (andamento, intervenção, exceções por alçada, formalização,
  * liberadas e canceladas) com a contagem de cada uma.
  */
-import { ActivityIcon, AlertIcon, CheckIcon, CloseIcon, WalletIcon } from "@/src/ui/icons";
+import { ActivityIcon, AlertIcon, CheckIcon, CloseIcon, ShieldIcon, WalletIcon } from "@/src/ui/icons";
 import type { ReactNode } from "react";
 import { type QueueScope } from "./central-model";
 
@@ -30,6 +30,13 @@ export function QueueTabs({
       icon: <AlertIcon />,
       title: "Intervenção necessária",
       hint: "Bloqueios, decisões ou ritmo fora do padrão",
+    },
+    {
+      id: "authority",
+      className: "authority",
+      icon: <ShieldIcon />,
+      title: "Exceções por alçada",
+      hint: "Decisões do motor aguardando cada alçada",
     },
     {
       id: "formalization",

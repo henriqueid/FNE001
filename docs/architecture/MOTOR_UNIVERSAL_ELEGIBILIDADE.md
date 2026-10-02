@@ -59,6 +59,19 @@ substituídos pela tradução formal da política aplicável e aprovados pela in
 10. Dataset de aprendizado para score proprietário, inicialmente sem cálculo de nota.
 11. Eventos de telemetria para execução, exceção e override.
 
+## Gestão por exceção na esteira (fase 3)
+
+| Situação do motor | Lastro | Preço | Aprovação |
+| --- | --- | --- | --- |
+| Dentro da política / com alertas | Avança se evidências validadas e amostra confirmada; senão para e diz quantos títulos faltam | Avança com a condição salva, ou salva a condição padrão se respeitar piso, líquido e spread | Sempre humana (Tela Final) |
+| Exceção ou análise incompleta | Para | Para | Para |
+| Inelegível | Para | Para | Para |
+
+- Implementação: `src/domain/operations/auto-advance.ts`, chamado a cada gravação no workspace.
+- Fila da Central "Exceções por alçada": `src/domain/eligibility/authority-queue.ts`.
+- Leitura de parâmetros do motor pelas etapas antigas: `src/domain/eligibility/policy-parameter.ts` (snapshot primeiro, depois a política vigente).
+- Parâmetros que ainda não têm regra no catálogo: `src/domain/eligibility/operational-parameters.ts`.
+
 ## Próximas etapas após homologação dos dados reais
 
 1. Substituir o armazenamento local do protótipo por persistência transacional no backend.

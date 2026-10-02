@@ -12,6 +12,7 @@ import { Badge, StatusBadge } from "@/src/features/operations/components/status"
 import { financeStatusFor } from "@/src/features/operations/release/released-summary";
 import { ArrowIcon, CheckIcon, ClockIcon, SearchIcon, WalletIcon } from "@/src/ui/icons";
 import { type DatePreset } from "./central-model";
+import { pendingAuthoritiesFor } from "@/src/domain/eligibility/authority-queue";
 
 export function OperationsTable({
   operations,
@@ -118,6 +119,9 @@ function OperationRow({ op, onOpen }: { op: Operation; onOpen: (op: Operation) =
         <span>
           <b>{op.owner}</b>
           <small>{op.nextAction}</small>
+          {pendingAuthoritiesFor(op).length > 0 && (
+            <em className="authority-pending">Aguarda: {pendingAuthoritiesFor(op).join(", ")}</em>
+          )}
         </span>
       </span>
       {op.status === "Liberada ao financeiro" ? (

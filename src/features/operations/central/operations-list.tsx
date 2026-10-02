@@ -13,6 +13,8 @@ import { OperationsKanban } from "./operations-kanban";
 import { OperationsTable } from "./operations-table";
 import { QueueTabs } from "./queue-tabs";
 import { useOperationsFilters } from "./use-operations-filters";
+import { authorityQueue } from "@/src/domain/eligibility/authority-queue";
+import { AuthorityQueueBar } from "./authority-queue-bar";
 
 export function OperationsList({
   operations,
@@ -46,6 +48,7 @@ export function OperationsList({
           counts={{
             active: inProgressOperations.length,
             intervention: metrics.interventionCount,
+            authority: metrics.authorityCount,
             formalization: metrics.formalizationCount,
             released: releasedOperations.length,
             cancelled: metrics.cancellationCount,
@@ -77,6 +80,13 @@ export function OperationsList({
             sourceFilter={filters.sourceFilter}
             onSourceFilterChange={filters.setSourceFilter}
             onClear={filters.clearFilters}
+          />
+        )}
+        {displayMode === "list" && scope === "authority" && (
+          <AuthorityQueueBar
+            entries={authorityQueue(filters.screenOperations)}
+            selected={filters.authorityFilter}
+            onSelect={filters.setAuthorityFilter}
           />
         )}
         {displayMode === "list" && (

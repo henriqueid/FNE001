@@ -28,9 +28,8 @@ function kpiSets({
   overdueRatio,
   overdueTotal,
   overdueTitles,
-  agenda,
-  dueToday,
-  debExp,
+  market,
+  risk,
 }: HomeMetrics): Record<HomeProfile, KpiProps[]> {
   return {
     gestao: [
@@ -106,15 +105,15 @@ function kpiSets({
         hint: `${compact(overdueTotal)} vencidos em ${overdueTitles.length} títulos`,
       },
       {
-        label: "Vence nos próximos 5 dias",
-        value: compact(agenda.slice(0, 5).reduce((s, d) => s + d.amount, 0)),
-        hint: `Hoje ${compact(dueToday.amount)} · ${agenda.slice(0, 5).reduce((s, d) => s + d.count, 0)} título(s)`,
+        label: "PDD estimada",
+        value: compact(market.provision),
+        hint: `Vencido > 30: ${compact(market.overdue30)} · > 90: ${compact(market.overdue90)}`,
       },
       {
-        label: "Maior sacado",
-        value: pct(debExp[0]?.share ?? 0),
-        tone: (debExp[0]?.share ?? 0) > homeSettings.debtorConcentrationCap ? "bad" : "",
-        hint: `${debExp[0]?.name.split(" ").slice(0, 3).join(" ") ?? "—"} · teto ${homeSettings.debtorConcentrationCap}%`,
+        label: "Cedentes piorando",
+        value: String(risk.cedentQuality.worsening.length),
+        tone: risk.cedentQuality.worsening.length ? "bad" : "",
+        hint: `${compact(risk.cedentQuality.worseningExposure)} em exposição · ${risk.cedentQuality.improving.length} melhorando`,
       },
     ],
   };

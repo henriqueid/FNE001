@@ -15,6 +15,7 @@ import { QueueTabs } from "./queue-tabs";
 import { useOperationsFilters } from "./use-operations-filters";
 import { authorityQueue } from "@/src/domain/eligibility/authority-queue";
 import { AuthorityQueueBar } from "./authority-queue-bar";
+import { PipelineIndicatorsCard } from "./pipeline-indicators-card";
 
 export function OperationsList({
   operations,
@@ -39,6 +40,7 @@ export function OperationsList({
       <CentralHeader companyScope={companyScope} onNew={onNew} />
       <CentralMetrics metrics={metrics} filterContext={filters.filterContext} />
       <StagePipeline operations={inProgressOperations} />
+      <PipelineIndicatorsCard operations={filters.screenOperations} />
       <section className="operations-card">
         <QueueTabs
           scope={scope}

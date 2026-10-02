@@ -11,6 +11,7 @@ import { type CarteiraFlow } from "@/src/domain/finance/reports";
 import { AccountingTab } from "@/src/features/finance/tabs/accounting-tab";
 import { BanksTab } from "@/src/features/finance/tabs/banks-tab";
 import { CashTab } from "@/src/features/finance/tabs/cash-tab";
+import { FinanceIndicatorsCard } from "./finance-indicators-card";
 import { ReleasesTab, ReturnModal } from "@/src/features/finance/tabs/releases-tab";
 import { ExtractTab } from "@/src/features/finance/tabs/statement-tab";
 import { NewTitleModal } from "@/src/features/finance/titles/new-title-modal";
@@ -118,6 +119,9 @@ export default function FinanceModule({
             <CloseIcon />
           </button>
         </div>
+      )}
+      {tab === "caixa" && (
+        <FinanceIndicatorsCard state={state} scope={companyScope} operations={operations} today={today} />
       )}
       {tab === "caixa" && (
         <CashTab

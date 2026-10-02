@@ -40,7 +40,9 @@ import { homeSettings, periodLabels, type HomePeriod, type HomeProfile } from "@
 import { demoCedentHistories, demoDebtorHistories } from "@/src/domain/core/demo/quality-history";
 import { collectionMonth, concentration, rollRates, vintages } from "@/src/domain/risk/portfolio-dynamics";
 import { qualityRankings } from "@/src/domain/risk/quality";
-import { type QualityPolicy } from "@/src/domain/risk/quality-policy";
+import { type QualityPolicy, provisionRate } from "@/src/domain/risk/quality-policy";
+import { originationIndicators } from "@/src/domain/indicators/origination";
+import { daysFrom } from "@/src/domain/indicators/portfolio";
 import { useMemo } from "react";
 
 export type HomeMetricsInput = {
@@ -235,6 +237,28 @@ export function useHomeMetrics({
     [cedentHistories, debtorHistories, qualityPolicy, cedExp, debExp],
   );
 
+  /* indicadores de mercado da Gestão: originação do período, carteira, provisão e concentração */
+  const market = useMemo(() => {
+    const periodOps = scoped.filter(op => {
+      const d = operationDate(op, today);
+      return isLive(op) && d >= win.from && d <= win.to;
+    });
+    const origination = originationIndicators(periodOps, op => operationDate(op, today));
+    const late = (dueDate: string) => daysFrom(dueDate, today);
+    const overdueOver = (days: number) => titles.filter(t => late(t.dueDate) > days).reduce((s, t) => s + t.amount, 0);
+    const provision = titles.reduce(
+      (s, t) => s + (t.amount * provisionRate(late(t.dueDate), qualityPolicy.indicators.provisionBands)) / 100,
+      0,
+    );
+    return {
+      origination,
+      overdue30: overdueOver(30),
+      overdue60: overdueOver(60),
+      overdue90: overdueOver(90),
+      provision,
+    };
+  }, [scoped, today, win, titles, qualityPolicy]);
+
   /* listas derivadas: alertas, pendências, marcos, cobrança e concentração */
   const alerts = buildRiskAlerts({ cedExp, debExp, titles, active, today });
   const profileAlerts = alerts.filter(a => a.profiles.includes(profile));
@@ -297,6 +321,7 @@ export function useHomeMetrics({
     cash,
     timeline,
     risk,
+    market,
     bankBalance,
     minimumCash,
     capacity,

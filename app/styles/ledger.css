@@ -2449,3 +2449,104 @@ table th {
     overflow-x: auto;
   }
 }
+
+/* indicadores de mercado (todas as telas) */
+.lx-ind-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+  gap: 12px;
+}
+.lx-ind {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--ds-elev);
+}
+.lx-ind strong {
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+.lx-ind.good strong {
+  color: var(--ds-success);
+}
+.lx-ind.bad strong {
+  color: var(--ds-danger);
+}
+.lx-ind small {
+  color: var(--ds-text-3);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.lx-manual {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--ds-text-2);
+  background: var(--ds-surface-3);
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.lx-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.lx-ind-card {
+  margin-bottom: 14px;
+}
+.lx-ind-list {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.lx-ind-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--ds-elev);
+}
+.lx-ind-list li span {
+  color: var(--ds-text-2);
+}
+@media (max-width: 1100px) {
+  .lx-ind-grid {
+    grid-template-columns: repeat(min(var(--cols, 4), 3), minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .lx-ind-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.lx-policy-section {
+  display: grid;
+  gap: 10px;
+}
+.lx-rep-quality {
+  width: 100%;
+  margin-top: 14px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.lx-rep-quality th,
+.lx-rep-quality td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ds-border);
+  text-align: left;
+}
+.lx-rep-quality td.bad {
+  color: var(--ds-danger);
+}

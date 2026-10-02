@@ -28,6 +28,8 @@ export function QualityPolicyModal({
   const totalWeight = draft.components.reduce((s, c) => s + c.weight, 0);
   const setComponent = (i: number, patch: Partial<QualityPolicy["components"][number]>) =>
     setDraft(d => ({ ...d, components: d.components.map((c, k) => (k === i ? { ...c, ...patch } : c)) }));
+  const setIndicators = (patch: Partial<QualityPolicy["indicators"]>) =>
+    setDraft(d => ({ ...d, indicators: { ...d.indicators, ...patch } }));
   const invalid = draft.components.some(c => c.good === c.bad) || totalWeight <= 0 || draft.windowMonths < 1;
   return (
     <div className="modal-backdrop" role="presentation">
@@ -153,6 +155,88 @@ export function QualityPolicyModal({
             ))}
           </tbody>
         </table>
+        <section className="lx-policy-section">
+          <span className="lx-label">Parâmetros dos indicadores das telas</span>
+          <div className="lx-policy-general">
+            <label>
+              <span>Revisão cadastral (dias)</span>
+              <input
+                type="number"
+                min={1}
+                value={draft.indicators.kycReviewDays}
+                onChange={e => setIndicators({ kycReviewDays: Math.max(1, num(e.target.value)) })}
+              />
+            </label>
+            <label>
+              <span>Revisão de limite (dias)</span>
+              <input
+                type="number"
+                min={1}
+                value={draft.indicators.limitReviewDays}
+                onChange={e => setIndicators({ limitReviewDays: Math.max(1, num(e.target.value)) })}
+              />
+            </label>
+            {draft.indicators.inactiveDays.map((d, i) => (
+              <label key={i}>
+                <span>Sem operar · faixa {i + 1} (dias)</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={d}
+                  onChange={e => {
+                    const next = [...draft.indicators.inactiveDays] as [number, number, number];
+                    next[i] = Math.max(1, num(e.target.value));
+                    setIndicators({ inactiveDays: next });
+                  }}
+                />
+              </label>
+            ))}
+          </div>
+          <div className="lx-policy-general">
+            {draft.indicators.provisionBands.map((b, i) => (
+              <label key={i}>
+                <span>PDD a partir de {b.fromDays} dia(s) (%)</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={b.rate}
+                  onChange={e =>
+                    setIndicators({
+                      provisionBands: draft.indicators.provisionBands.map((x, k) =>
+                        k === i ? { ...x, rate: Math.max(0, Math.min(100, num(e.target.value))) } : x,
+                      ),
+                    })
+                  }
+                />
+              </label>
+            ))}
+          </div>
+          <div className="lx-policy-general">
+            {(
+              Object.keys(draft.indicators.funnelProbability) as (keyof typeof draft.indicators.funnelProbability)[]
+            ).map(stage => (
+              <label key={stage}>
+                <span>Funil · {stage} (%)</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={draft.indicators.funnelProbability[stage]}
+                  onChange={e =>
+                    setIndicators({
+                      funnelProbability: {
+                        ...draft.indicators.funnelProbability,
+                        [stage]: Math.max(0, Math.min(100, num(e.target.value))),
+                      },
+                    })
+                  }
+                />
+              </label>
+            ))}
+          </div>
+        </section>
+
         {invalid && (
           <p className="lx-policy-error" role="alert">
             Cada componente precisa de valores “bom” e “ruim” diferentes, e a soma dos pesos deve ser maior que zero.

@@ -42,6 +42,8 @@ import { VisitModal } from "@/src/features/commercial/modals/visit-modal";
 import { br, compact, money } from "@/src/features/finance/finance-ui";
 import { type AppView } from "@/src/features/shell/shell-context";
 import { AlertIcon, CheckIcon, ClockIcon, CloseIcon } from "@/src/ui/icons";
+import { CommercialIndicatorsCard } from "./commercial-indicators-card";
+import { useQualityPolicy } from "@/src/features/risk/use-quality-policy";
 import { useMemo, useState } from "react";
 
 export function BriefcaseIcon() {
@@ -88,6 +90,7 @@ export default function CommercialModule({
   // O estado comercial vive no app (vínculo único com Cadastro, Operação e Carteira).
   const setState = onState;
   const cedents = useCedents();
+  const { policy } = useQualityPolicy();
   const titles = useMemo(() => portfolioTitles(operations), [operations]);
   const repPortfolio = useMemo(() => portfolioByRep(titles, state, today), [titles, state, today]);
 
@@ -294,6 +297,14 @@ export default function CommercialModule({
               <small>{period === "mes" ? "Prévia · mês em andamento" : "Apurada por competência"}</small>
             </div>
           </div>
+          <CommercialIndicatorsCard
+            state={state}
+            deals={deals}
+            today={today}
+            policy={policy}
+            repPortfolio={repPortfolio}
+            repFilter={repFilter}
+          />
           <div className="cm-grid">
             <section className="fn-card cm-span2">
               <header className="fn-card-head">

@@ -27,6 +27,7 @@ import { QualityPolicyModal } from "@/src/features/risk/quality-policy-modal";
 import { RollRate } from "@/src/features/risk/roll-rate";
 import { type useQualityPolicy } from "@/src/features/risk/use-quality-policy";
 import { VintageChart } from "@/src/features/risk/vintage-chart";
+import { fmtDays, fmtPct, IndicatorGrid } from "@/src/features/indicators/indicator-grid";
 import { brDate } from "@/src/domain/home/metrics";
 import type { HomePeriod, HomeProfile } from "@/src/domain/home/settings";
 import { ArrowIcon } from "@/src/ui/icons";
@@ -47,12 +48,14 @@ export type SectionId =
   | "quality"
   | "cobranca"
   | "rollrate"
-  | "vintage";
+  | "vintage"
+  | "market";
 
 // Grade de 12 colunas: cada linha soma 12 (8 + 4 ou 12). Abaixo de 1200px tudo vira coluna única.
 // O caixa fica no bloco principal (cash-hero.tsx), acima da grade, em todos os perfis.
 export const layouts: Record<HomeProfile, [SectionId, number][]> = {
   gestao: [
+    ["market", 12],
     ["trend", 8],
     ["revenue", 4],
     ["needs", 4],
@@ -235,6 +238,74 @@ export function HomeSections({
         <Team rows={m.team} period={period} />
       </Card>
     ),
+    market: span => {
+      const o = m.market.origination;
+      const c = r.collection;
+      return (
+        <Card
+          key="market"
+          span={span}
+          title="Indicadores da operação e da carteira"
+          subtitle={`Originação ${m.labels.range} · carteira e cobrança na posição de hoje · passe o mouse para ver a fonte`}
+        >
+          <IndicatorGrid
+            items={[
+              {
+                label: "Ticket médio",
+                value: compact(o.ticket),
+                caption: `${o.count} operação(ões) ${m.labels.range}`,
+                source: "Operações originadas no período, valor de face",
+              },
+              {
+                label: "Prazo médio ponderado",
+                value: o.count ? fmtDays(o.term) : "—",
+                caption: "dos títulos comprados no período",
+                source: "Vencimento de cada título menos a data da operação, ponderado pelo valor",
+              },
+              {
+                label: "Spread sobre captação",
+                value: o.count ? `${fmtPct(o.spread, 2)} a.m.` : "—",
+                caption: `taxa ${fmtPct(o.rate, 2)} − captação ${fmtPct(o.fundingCost, 2)} a.m.`,
+                tone: o.count ? (o.spread > 0 ? "good" : "bad") : "",
+                source:
+                  "Taxa efetiva total (all-in) das operações do período menos o custo de captação da modalidade (parâmetros operacionais)",
+              },
+              {
+                label: "Liquidez no vencimento",
+                value: fmtPct(c.onTimeRate),
+                caption: `até D+5: ${fmtPct(c.upTo5Rate)}`,
+                source: "Fechamento do mês: valor pago até o vencimento ÷ valor liquidado",
+              },
+              {
+                label: "Índice de recompra",
+                value: fmtPct(c.settled ? (c.repurchased / c.settled) * 100 : 0),
+                caption: `${compact(c.repurchased)} recomprados no mês`,
+                source: "Fechamento do mês: recompras ÷ valor liquidado",
+              },
+              {
+                label: "Vencido > 30 dias",
+                value: compact(m.market.overdue30),
+                caption: `> 60: ${compact(m.market.overdue60)} · > 90: ${compact(m.market.overdue90)}`,
+                tone: m.market.overdue30 > 0 ? "bad" : "good",
+                source: "Títulos em aberto da carteira pela data de vencimento",
+              },
+              {
+                label: "PDD estimada",
+                value: compact(m.market.provision),
+                caption: `${pct(m.portfolioTotal ? (m.market.provision / m.portfolioTotal) * 100 : 0)} da carteira · faixas da política`,
+                source: "Saldo vencido de cada título × % de provisão da faixa de atraso (política de risco)",
+              },
+              {
+                label: "10 maiores cedentes",
+                value: fmtPct(r.cedentConcentration.topShare),
+                caption: `${r.cedentConcentration.shares.length <= 10 ? `todos os ${r.cedentConcentration.shares.length} cedentes da carteira` : "da carteira em aberto"} · 10 maiores sacados: ${fmtPct(r.debtorConcentration.topShare)}`,
+                source: "Carteira em aberto por cedente e por sacado",
+              },
+            ]}
+          />
+        </Card>
+      );
+    },
     quality: span => (
       <Card
         key="quality"

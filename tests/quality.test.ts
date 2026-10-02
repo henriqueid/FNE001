@@ -62,7 +62,14 @@ describe("índice de qualidade", () => {
   it("melhora abaixo do patamar saudável vira acompanhamento, não aumento de limite", () => {
     const bad = ["2026-04", "2026-05", "2026-06"].map(m => month(m, { averageDelay: 25, settledOnTime: 60_000 }));
     const less = ["2026-07", "2026-08", "2026-09"].map(m => month(m, { averageDelay: 15, settledOnTime: 70_000 }));
-    const h: QualityHistory = { id: "y", name: "Y", document: "2", kind: "cedente", exposure: 1, months: [...bad, ...less] };
+    const h: QualityHistory = {
+      id: "y",
+      name: "Y",
+      document: "2",
+      kind: "cedente",
+      exposure: 1,
+      months: [...bad, ...less],
+    };
     const t = qualityTrend(h, demoQualityPolicy);
     expect(t.delta).toBeGreaterThan(0);
     expect(t.index).toBeLessThan(demoQualityPolicy.healthyIndex);

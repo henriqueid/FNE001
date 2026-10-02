@@ -1,5 +1,29 @@
 # Changelog
 
+## Não lançado — 02/10/2026 · Menu responsivo, painel de Risco e indicadores de mercado (v11)
+
+**Menu**
+- Desktop: módulos com nome na barra superior (Visão geral, Operações, Carteira, Comercial, Financeiro, Cadastros) e "Plataforma ▾" com Integrações e Configurações. Notebook: versão compacta. Tablet: botão "Menu" com painel agrupado (Operação, Gestão, Plataforma) e descrição de cada módulo. Celular: barra inferior + menu completo em folha.
+- Empresa de trabalho e tema (claro, escuro, sistema) passam para o menu do usuário. Sai a gaveta lateral antiga.
+
+**Risco e cobrança**
+- `src/domain/risk/`: índice de qualidade explicável (0–100) por cliente, comparando a janela recente com a anterior; motivos em linguagem direta ("atraso médio subiu de 3 para 14 dias") com o impacto em pontos; ação sugerida. Rolagem (roll rate), safras (vintage), concentração com HHI e cobrança do mês.
+- Política de qualidade (`quality-policy.ts`) com pesos, valores bom/ruim, janela, variação mínima, tamanho do ranking, patamar saudável, faixas de HHI e parâmetros dos indicadores (PDD por faixa, probabilidades do funil, prazos de revisão cadastral e de limite, faixas de inatividade). Editável na tela (botão de critérios) e guardada no navegador. Valores de demonstração, não referência de mercado.
+- Painel: top 10 cedentes e sacados piorando × melhorando com motivos e ação, cobrança do mês contra o anterior, rolagem, safras e HHI na concentração. Indicadores do perfil Risco incluem PDD estimada e cedentes piorando.
+- Histórico mensal de demonstração (`src/domain/core/demo/quality-history.ts`), coerente com a posição atual de cada cliente.
+
+**Indicadores de mercado por tela** (`src/domain/indicators/`, componente `IndicatorGrid` com a fonte de cada número)
+- Visão geral (Gestão): ticket médio, prazo médio ponderado, spread sobre captação, liquidez no vencimento, índice de recompra, vencido > 30/60/90, PDD estimada, 10 maiores cedentes e sacados.
+- Carteira: prazo médio remanescente, vencido por faixa, PDD, liquidez no vencimento, 10 maiores sacados, recomprado, prorrogados, cartório e protesto.
+- Operações: conversão até liberar, tempo de ciclo × padrão, operações sem intervenção, exceções decididas e regras do motor que mais param operações.
+- Comercial: clientes sem operar por faixa, funil ponderado, taxa média e qualidade da carteira trazida por comercial.
+- Financeiro: DRE do mês (receitas, despesas, resultado), spread sobre captação e giro da carteira.
+- Cadastros: revisão cadastral vencida/a vencer, limite com revisão vencida, cedentes sem operar e distribuição de score.
+- Taxa e custo de captação vêm da precificação da etapa Preço (parâmetros operacionais da modalidade): Visão geral e Financeiro mostram o mesmo número.
+
+**Qualidade**
+- 17 testes novos (83 no total): índice, motivos, rankings, rolagem, safras, HHI, PDD e indicadores de cada tela.
+
 ## Não lançado — 02/10/2026 · Visual Ledger (v10)
 
 **Moldura**

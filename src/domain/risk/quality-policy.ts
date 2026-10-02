@@ -30,6 +30,22 @@ export type QualityComponentRule = {
   appliesToDebtors: boolean;
 };
 
+/** Faixa de provisão (PDD) por dias de atraso. */
+export type ProvisionBand = { fromDays: number; rate: number };
+
+/** Parâmetros dos indicadores de mercado das telas (todos da política, nunca fixos no código). */
+export type IndicatorParameters = {
+  /** % provisionado do saldo vencido a partir de cada faixa de atraso. */
+  provisionBands: ProvisionBand[];
+  /** Probabilidade de fechamento por etapa do funil comercial (%). */
+  funnelProbability: Record<"Lead" | "Visita" | "Proposta" | "Comitê" | "Aprovado", number>;
+  /** Faixas de inatividade de clientes (dias sem operar). */
+  inactiveDays: [number, number, number];
+  /** Revisão cadastral (KYC) e de limite vencem depois de quantos dias. */
+  kycReviewDays: number;
+  limitReviewDays: number;
+};
+
 export type QualityPolicy = {
   name: string;
   version: string;
@@ -45,6 +61,7 @@ export type QualityPolicy = {
   hhiModerate: number;
   hhiHigh: number;
   components: QualityComponentRule[];
+  indicators: IndicatorParameters;
 };
 
 export const demoQualityPolicy: QualityPolicy = {
@@ -56,6 +73,19 @@ export const demoQualityPolicy: QualityPolicy = {
   healthyIndex: 70,
   hhiModerate: 1500,
   hhiHigh: 2500,
+  indicators: {
+    provisionBands: [
+      { fromDays: 1, rate: 1 },
+      { fromDays: 31, rate: 10 },
+      { fromDays: 61, rate: 30 },
+      { fromDays: 91, rate: 50 },
+      { fromDays: 181, rate: 100 },
+    ],
+    funnelProbability: { Lead: 10, Visita: 25, Proposta: 50, Comitê: 70, Aprovado: 90 },
+    inactiveDays: [30, 60, 90],
+    kycReviewDays: 365,
+    limitReviewDays: 180,
+  },
   components: [
     { id: "onTimeRate", label: "Liquidez no prazo", unit: "%", weight: 22, good: 95, bad: 70, appliesToDebtors: true },
     { id: "averageDelay", label: "Atraso médio", unit: "dias", weight: 16, good: 2, bad: 20, appliesToDebtors: true },
@@ -103,4 +133,12 @@ export const demoQualityPolicy: QualityPolicy = {
 
 export function hhiLabel(hhi: number, policy: Pick<QualityPolicy, "hhiModerate" | "hhiHigh">) {
   return hhi > policy.hhiHigh ? "concentrada" : hhi > policy.hhiModerate ? "moderada" : "pulverizada";
+}
+
+/** % de provisão para um título com `days` dias de atraso (0 se não venceu). */
+export function provisionRate(days: number, bands: ProvisionBand[]) {
+  if (days <= 0) return 0;
+  return [...bands]
+    .sort((a, b) => a.fromDays - b.fromDays)
+    .reduce((rate, b) => (days >= b.fromDays ? b.rate : rate), 0);
 }

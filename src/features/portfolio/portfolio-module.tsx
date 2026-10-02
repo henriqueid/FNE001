@@ -17,6 +17,9 @@ import { portfolioBalance, portfolioDisplayStatus, type PortfolioState } from "@
 import { ArrowIcon, SearchIcon, WalletIcon } from "@/src/ui/icons";
 import { compact } from "@/src/features/finance/finance-ui";
 import { PortfolioTitleGrid } from "./portfolio-title-grid";
+import { portfolioIndicators } from "@/src/domain/indicators/portfolio";
+import { fmtDays, fmtPct, IndicatorGrid } from "@/src/features/indicators/indicator-grid";
+import { useQualityPolicy } from "@/src/features/risk/use-quality-policy";
 
 type Tab = "titulos" | "cedentes" | "comerciais" | "aging";
 type Situation = "todos" | "avencer" | "vencidos" | "d30";
@@ -29,6 +32,7 @@ type Props = {
 
 export default function PortfolioModule({ portfolio, onPortfolio, companyScope, onNavigate }: Props) {
   const { commercial, cedents } = useRegistry();
+  const { policy } = useQualityPolicy();
   const today = todayIso();
   const [tab, setTab] = useState<Tab>("titulos");
   const [situation, setSituation] = useState<Situation>("todos");
@@ -83,6 +87,12 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
     e => !repFilter || repAt(commercial, e.document, e.date) === repFilter,
   );
   const repName = (id?: string) => commercial.reps.find(r => r.id === id)?.name ?? "Sem comercial";
+  const scopedIds = new Set(scoped.map(t => t.id));
+  const ind = portfolioIndicators(
+    portfolio.titles.filter(t => scopedIds.has(t.id)),
+    today,
+    policy.indicators.provisionBands,
+  );
   const buckets = aging(openScoped, today);
   const maxBucket = Math.max(1, ...buckets.map(b => b.amount));
 
@@ -198,6 +208,72 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
           <small>{byCedent.filter(c => c.overdue > 0).length} com vencidos</small>
         </div>
       </div>
+
+      <section className="fn-card lx-ind-card">
+        <header className="fn-card-head">
+          <div>
+            <h2>Indicadores da carteira</h2>
+            <p>Posição de hoje · PDD pelas faixas da política de risco · passe o mouse para ver a fonte</p>
+          </div>
+        </header>
+        <IndicatorGrid
+          columns={5}
+          items={[
+            {
+              label: "Prazo médio remanescente",
+              value: fmtDays(ind.remainingTerm),
+              caption: ind.originalTerm
+                ? `prazo médio na compra: ${fmtDays(ind.originalTerm)}`
+                : "ponderado pelo saldo a vencer",
+              source: "Dias até o vencimento dos títulos a vencer, ponderados pelo saldo",
+            },
+            {
+              label: "Vencido > 30 dias",
+              value: compact(ind.overdue30),
+              caption: `${fmtPct(ind.total ? (ind.overdue30 / ind.total) * 100 : 0)} · > 60: ${compact(ind.overdue60)} · > 90: ${compact(ind.overdue90)}`,
+              tone: ind.overdue30 > 0 ? "bad" : "good",
+              source: "Saldo dos títulos em aberto pela data de vencimento",
+            },
+            {
+              label: "PDD estimada",
+              value: compact(ind.provision),
+              caption: `${fmtPct(ind.total ? (ind.provision / ind.total) * 100 : 0)} da carteira`,
+              source: "Saldo vencido de cada título × % de provisão da faixa de atraso (política de risco)",
+            },
+            {
+              label: "Liquidez no vencimento",
+              value: fmtPct(ind.onTimeRate),
+              caption: "dos títulos já pagos",
+              source: "Valor pago até o vencimento original ÷ valor pago",
+            },
+            {
+              label: "10 maiores sacados",
+              value: fmtPct(ind.top10DebtorShare),
+              caption: "do saldo em aberto",
+              source: "Saldo em aberto agrupado por sacado",
+            },
+            {
+              label: "Recomprado",
+              value: compact(ind.repurchased),
+              caption: "acumulado nos títulos da carteira",
+              source: "Valor recomprado registrado nos títulos",
+            },
+            {
+              label: "Prorrogados",
+              value: String(ind.extended.length),
+              caption: compact(ind.extended.reduce((s, t) => s + portfolioBalance(t), 0)),
+              source: "Títulos com vencimento alterado ou situação Prorrogado",
+            },
+            {
+              label: "Cartório e protesto",
+              value: String(ind.inNotary.length),
+              caption: compact(ind.inNotary.reduce((s, t) => s + portfolioBalance(t), 0)),
+              tone: ind.inNotary.length ? "bad" : "",
+              source: "Títulos em cartório ou protestados",
+            },
+          ]}
+        />
+      </section>
 
       {tab === "titulos" && (
         <section className="fn-card">

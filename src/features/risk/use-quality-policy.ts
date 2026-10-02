@@ -15,8 +15,13 @@ export function useQualityPolicy() {
       const saved = window.localStorage.getItem(QUALITY_POLICY_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as QualityPolicy;
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- preferência lida do navegador depois de montar
-        if (parsed?.components?.length) setPolicy({ ...demoQualityPolicy, ...parsed });
+        if (parsed?.components?.length)
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- preferência lida do navegador depois de montar
+          setPolicy({
+            ...demoQualityPolicy,
+            ...parsed,
+            indicators: { ...demoQualityPolicy.indicators, ...(parsed.indicators ?? {}) },
+          });
       }
     } catch {
       /* sem armazenamento: fica a política de demonstração */

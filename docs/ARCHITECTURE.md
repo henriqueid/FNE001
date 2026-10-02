@@ -69,8 +69,13 @@ src/
     registry/                Pessoas e papéis (parties.ts), gravação com propagação (party-save.ts),
                              vínculo cedente↔comercial e eventos da carteira (registry.ts)
     home/                    Métricas da Visão geral e parâmetros (metas, cenários)
+    risk/                    Índice de qualidade explicável, política de qualidade (pesos, faixas, PDD,
+                             parâmetros dos indicadores), rolagem, safras, concentração (HHI) e cobrança
+    indicators/              Indicadores de mercado por tela (carteira, originação, esteira, comercial,
+                             financeiro, cadastro), funções puras com teste em tests/indicators.test.ts
   features/
-    shell/                   Menu, barra superior, busca Ctrl K, alertas, tema, páginas de roadmap
+    shell/                   Barra superior com módulos (menu responsivo: Plataforma ▾, painel no tablet,
+                             folha no celular), menu do usuário (empresa e tema), busca Ctrl K, alertas
     home/                    Visão geral (perfis Gestão, Operação, Risco)
     operations/              Central, Nova operação e o workspace com as 6 etapas
       central/ new-operation/ workspace/ entry/ risk/ lastro/ pricing/ approval/ release/ components/
@@ -79,6 +84,8 @@ src/
     finance/                 Financeiro (caixa, títulos, liberações, extrato, conciliação, contábil, bancos)
     registry/                Cadastros (pessoas com papéis, cedentes, sacados)
     settings/                Preferências da interface
+    risk/                    Painel de Risco: qualidade dos clientes, cobrança, rolagem, safras, critérios
+    indicators/              IndicatorGrid (grade de indicadores com a fonte de cada número)
   ui/                        Ícones, pressable (a11y), useElementWidth
 tests/                       Vitest: documentos, cadastro, preço, financeiro, comercial
 tools/theme_tokens.py        Gera tokens claro/escuro a partir de cores literais do CSS

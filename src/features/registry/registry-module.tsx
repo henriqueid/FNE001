@@ -23,6 +23,7 @@ import { LinkModal, TransferModal } from "./commercial-link-modals";
 import { DebtorsTab } from "./debtors-tab";
 import { PartiesTab } from "./parties-tab";
 import { PartyFormModal } from "./party-form-modal";
+import { RegistryIndicatorsCard } from "./registry-indicators-card";
 
 type Tab = "todos" | PartyRole;
 type Toast = { tone: "success" | "error"; text: string } | null;
@@ -94,6 +95,7 @@ export default function RegistryModule({ debtors, operations, onOpenOperation, o
           </button>
         </div>
       </div>
+      <RegistryIndicatorsCard operations={operations} />
       <nav className="fn-tabs rg-tabs" aria-label="Papéis do cadastro">
         {tabs.map(([id, label]) => (
           <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>

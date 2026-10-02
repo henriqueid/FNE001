@@ -198,3 +198,81 @@ export const FolderIcon = (p: IconProps) => (
     <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
   </Icon>
 );
+export const SwapIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M7 4 3 8l4 4" />
+    <path d="M3 8h14" />
+    <path d="m17 20 4-4-4-4" />
+    <path d="M21 16H7" />
+  </Icon>
+);
+export const SendIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M21 3 10 14" />
+    <path d="m21 3-7 18-4-7-7-4 18-7Z" />
+  </Icon>
+);
+export const ReceiptIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" />
+    <path d="M9 8h6M9 12h6M9 16h4" />
+  </Icon>
+);
+export const ScaleIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3v18M7 21h10" />
+    <path d="M5 7h14" />
+    <path d="m5 7-3 6a3 3 0 0 0 6 0L5 7Z" />
+    <path d="m19 7-3 6a3 3 0 0 0 6 0l-3-6Z" />
+  </Icon>
+);
+export const BookIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2V5Z" />
+    <path d="M4 19a2 2 0 0 1 2-2h14" />
+  </Icon>
+);
+export const ListIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M9 6h11M9 12h11M9 18h11" />
+    <path d="M4 6h.01M4 12h.01M4 18h.01" />
+  </Icon>
+);
+export const ChartIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+  </Icon>
+);
+export const UserPlusIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="9" cy="8" r="4" />
+    <path d="M2 21a7 7 0 0 1 14 0" />
+    <path d="M19 8v6M16 11h6" />
+  </Icon>
+);
+export const PinIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12Z" />
+    <circle cx="12" cy="9" r="2.5" />
+  </Icon>
+);
+export const FunnelIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3 4h18l-7 9v6l-4 2v-8L3 4Z" />
+  </Icon>
+);
+export const PercentIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M19 5 5 19" />
+    <circle cx="7" cy="7" r="2.5" />
+    <circle cx="17" cy="17" r="2.5" />
+  </Icon>
+);
+export const HandshakeIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m11 17 2 2a1.5 1.5 0 0 0 2-2" />
+    <path d="m14 14 2.5 2.5a1.5 1.5 0 0 0 2-2l-3.9-3.9a2 2 0 0 0-2.8 0l-.9.9a1.5 1.5 0 0 1-2-2l2.8-2.8a4 4 0 0 1 4.6-.7l.9.4H21v7" />
+    <path d="M3 5h3l4 4" />
+    <path d="M3 5v8l4 4 2-2" />
+  </Icon>
+);

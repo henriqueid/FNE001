@@ -17,6 +17,7 @@ import { type ClientRecord } from "@/src/domain/registry/registry";
 import { BY } from "@/src/features/finance/finance-ui";
 import { type AppView } from "@/src/features/shell/shell-context";
 import { AlertIcon, CheckIcon, CloseIcon, PlusIcon, UsersIcon } from "@/src/ui/icons";
+import { ModuleTabs } from "@/src/ui/module-tabs";
 import { useState } from "react";
 import { CedentsTab } from "./cedents-tab";
 import { LinkModal, TransferModal } from "./commercial-link-modals";
@@ -96,13 +97,13 @@ export default function RegistryModule({ debtors, operations, onOpenOperation, o
         </div>
       </div>
       <RegistryIndicatorsCard operations={operations} />
-      <nav className="fn-tabs rg-tabs" aria-label="Papéis do cadastro">
-        {tabs.map(([id, label]) => (
-          <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>
-            {label} <b>{countOf(id)}</b>
-          </button>
-        ))}
-      </nav>
+      <ModuleTabs
+        label="Papéis do cadastro"
+        className="rg-tabs"
+        value={tab}
+        onChange={setTab}
+        tabs={tabs.map(([id, label]) => ({ id, label, count: countOf(id), tone: "neutral" as const }))}
+      />
       {toast && (
         <div className={`fn-toast ${toast.tone}`} role="status">
           {toast.tone === "error" ? <AlertIcon /> : <CheckIcon />}

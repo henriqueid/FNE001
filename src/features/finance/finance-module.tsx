@@ -15,7 +15,20 @@ import { FinanceIndicatorsCard } from "./finance-indicators-card";
 import { ReleasesTab, ReturnModal } from "@/src/features/finance/tabs/releases-tab";
 import { ExtractTab } from "@/src/features/finance/tabs/statement-tab";
 import { NewTitleModal } from "@/src/features/finance/titles/new-title-modal";
-import { AlertIcon, BankIcon, CheckIcon, CloseIcon, PlusIcon } from "@/src/ui/icons";
+import {
+  ActivityIcon,
+  AlertIcon,
+  BankIcon,
+  BookIcon,
+  CheckIcon,
+  CloseIcon,
+  PlusIcon,
+  ReceiptIcon,
+  ScaleIcon,
+  SendIcon,
+  SwapIcon,
+} from "@/src/ui/icons";
+import { ModuleTabs } from "@/src/ui/module-tabs";
 import { useState } from "react";
 import { TitleActionModal, type Action } from "./finance-ui";
 import { ReconcileTab } from "@/src/features/finance/tabs/reconcile-tab";
@@ -87,6 +100,15 @@ export default function FinanceModule({
     ["contabil", "Contábil"],
     ["bancos", "Bancos"],
   ];
+  const tabIcons: Record<Tab, React.ReactNode> = {
+    caixa: <ActivityIcon />,
+    titulos: <SwapIcon />,
+    liberacoes: <SendIcon />,
+    extrato: <ReceiptIcon />,
+    conciliacao: <ScaleIcon />,
+    contabil: <BookIcon />,
+    bancos: <BankIcon />,
+  };
   return (
     <div className="page-wrap fn-page">
       <div className="fn-heading">
@@ -103,14 +125,18 @@ export default function FinanceModule({
           </button>
         </div>
       </div>
-      <nav className="fn-tabs" aria-label="Seções do financeiro">
-        {tabs.map(([id, label, badge]) => (
-          <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>
-            {label}
-            {badge ? <b>{badge}</b> : null}
-          </button>
-        ))}
-      </nav>
+      <ModuleTabs
+        label="Seções do financeiro"
+        value={tab}
+        onChange={setTab}
+        tabs={tabs.map(([id, label, badge]) => ({
+          id,
+          label,
+          icon: tabIcons[id],
+          count: badge,
+          tone: "alert" as const,
+        }))}
+      />
       {toast && (
         <div className={`fn-toast ${toast.tone}`} role="status">
           {toast.tone === "error" ? <AlertIcon /> : <CheckIcon />}

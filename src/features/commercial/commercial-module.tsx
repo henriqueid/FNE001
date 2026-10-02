@@ -41,7 +41,21 @@ import { RulesModal } from "@/src/features/commercial/modals/rules-modal";
 import { VisitModal } from "@/src/features/commercial/modals/visit-modal";
 import { br, compact, money } from "@/src/features/finance/finance-ui";
 import { type AppView } from "@/src/features/shell/shell-context";
-import { AlertIcon, CheckIcon, ClockIcon, CloseIcon } from "@/src/ui/icons";
+import {
+  AlertIcon,
+  ChartIcon,
+  CheckIcon,
+  ClockIcon,
+  CloseIcon,
+  FunnelIcon,
+  HandshakeIcon,
+  PercentIcon,
+  PinIcon,
+  ScaleIcon,
+  UserPlusIcon,
+  UsersIcon,
+} from "@/src/ui/icons";
+import { ModuleTabs } from "@/src/ui/module-tabs";
 import { CommercialIndicatorsCard } from "./commercial-indicators-card";
 import { useQualityPolicy } from "@/src/features/risk/use-quality-policy";
 import { useMemo, useState } from "react";
@@ -232,14 +246,27 @@ export default function CommercialModule({
           )}
         </div>
       </div>
-      <nav className="fn-tabs" aria-label="Seções do comercial">
-        {tabs.map(([id, label, badge]) => (
-          <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>
-            {label}
-            {badge ? <b>{badge}</b> : null}
-          </button>
-        ))}
-      </nav>
+      <ModuleTabs
+        label="Seções do comercial"
+        value={tab}
+        onChange={setTab}
+        tabs={tabs.map(([id, label, badge]) => ({
+          id,
+          label,
+          icon: {
+            painel: <ChartIcon />,
+            comerciais: <UsersIcon />,
+            negocios: <HandshakeIcon />,
+            contas: <UserPlusIcon />,
+            visitas: <PinIcon />,
+            funil: <FunnelIcon />,
+            comites: <ScaleIcon />,
+            comissoes: <PercentIcon />,
+          }[id],
+          count: badge,
+          tone: id === "visitas" ? ("alert" as const) : ("neutral" as const),
+        }))}
+      />
       {toast && (
         <div className={`fn-toast ${toast.tone}`} role="status">
           {toast.tone === "error" ? <AlertIcon /> : <CheckIcon />}

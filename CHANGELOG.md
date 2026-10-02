@@ -6,6 +6,8 @@
 - Desktop: módulos com nome na barra superior (Visão geral, Operações, Carteira, Comercial, Financeiro, Cadastros) e "Plataforma ▾" com Integrações e Configurações. Notebook: versão compacta. Tablet: botão "Menu" com painel agrupado (Operação, Gestão, Plataforma) e descrição de cada módulo. Celular: barra inferior + menu completo em folha.
 - Empresa de trabalho e tema (claro, escuro, sistema) passam para o menu do usuário. Sai a gaveta lateral antiga.
 
+- Abas das seções dos módulos (Financeiro, Carteira, Comercial, Cadastros) em barra de pílulas com ícone e contador (`src/ui/module-tabs.tsx`); contadores de pendência em vermelho, a aba ativa em preto.
+
 **Risco e cobrança**
 - `src/domain/risk/`: índice de qualidade explicável (0–100) por cliente, comparando a janela recente com a anterior; motivos em linguagem direta ("atraso médio subiu de 3 para 14 dias") com o impacto em pontos; ação sugerida. Rolagem (roll rate), safras (vintage), concentração com HHI e cobrança do mês.
 - Política de qualidade (`quality-policy.ts`) com pesos, valores bom/ruim, janela, variação mínima, tamanho do ranking, patamar saudável, faixas de HHI e parâmetros dos indicadores (PDD por faixa, probabilidades do funil, prazos de revisão cadastral e de limite, faixas de inatividade). Editável na tela (botão de critérios) e guardada no navegador. Valores de demonstração, não referência de mercado.

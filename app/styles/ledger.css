@@ -2550,3 +2550,108 @@ table th {
 .lx-rep-quality td.bad {
   color: var(--ds-danger);
 }
+
+/* abas das seções dos módulos: barra em pílula com ícone e contador */
+.lx-modtabs {
+  margin: 0 0 20px;
+}
+.lx-modtabs > div {
+  display: inline-flex;
+  max-width: 100%;
+  gap: 4px;
+  padding: 5px;
+  overflow-x: auto;
+  border: 1px solid var(--ds-border);
+  border-radius: 16px;
+  background: var(--ds-surface);
+  scrollbar-width: none;
+}
+.lx-modtabs > div::-webkit-scrollbar {
+  display: none;
+}
+.lx-modtabs button {
+  flex: 0 0 auto;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 14px 0 6px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ds-text-2);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.lx-modtabs button:not(:has(.lx-modtab-icon)) {
+  padding-left: 14px;
+}
+.lx-modtabs button:hover {
+  color: var(--ds-text);
+  background: var(--ds-surface-3);
+}
+.lx-modtab-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ds-border);
+  border-radius: 9px;
+  background: var(--ds-elev);
+  color: var(--ds-text);
+}
+.lx-modtab-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.lx-modtabs button b {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--ds-text-2);
+  background: var(--ds-surface-3);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.lx-modtabs button b.alert {
+  color: #fff;
+  background: var(--ds-danger);
+}
+.lx-modtabs button.active {
+  color: var(--ds-accent-ink);
+  background: var(--ds-accent);
+}
+.lx-modtabs button.active .lx-modtab-icon {
+  border-color: transparent;
+  color: var(--ds-accent-ink);
+  background: color-mix(in srgb, var(--ds-accent-ink) 16%, transparent);
+}
+.lx-modtabs button.active b:not(.alert) {
+  color: var(--ds-accent);
+  background: var(--ds-accent-ink);
+}
+.lx-modtabs button:focus-visible {
+  box-shadow: var(--ds-focus);
+}
+@media (max-width: 760px) {
+  .lx-modtabs > div {
+    display: flex;
+  }
+  .lx-modtabs button {
+    height: 38px;
+    font-size: 13px;
+  }
+}
+:root[data-theme="dark"] .lx-modtabs button b.alert {
+  color: #2a0606;
+}

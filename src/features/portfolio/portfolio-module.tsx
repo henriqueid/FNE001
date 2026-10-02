@@ -14,7 +14,8 @@ import { todayIso } from "@/src/domain/finance/ledger";
 import { aging, daysBetween } from "@/src/domain/home/metrics";
 import { portfolioByRep } from "@/src/domain/registry/registry";
 import { portfolioBalance, portfolioDisplayStatus, type PortfolioState } from "@/src/domain/portfolio/model";
-import { ArrowIcon, SearchIcon, WalletIcon } from "@/src/ui/icons";
+import { ArrowIcon, ClockIcon, ListIcon, SearchIcon, UsersIcon, WalletIcon, BriefcaseLineIcon } from "@/src/ui/icons";
+import { ModuleTabs } from "@/src/ui/module-tabs";
 import { compact } from "@/src/features/finance/finance-ui";
 import { PortfolioTitleGrid } from "./portfolio-title-grid";
 import { portfolioIndicators } from "@/src/domain/indicators/portfolio";
@@ -143,20 +144,23 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
           </label>
         </div>
       </div>
-      <nav className="fn-tabs" aria-label="Seções da carteira">
-        {(
-          [
-            ["titulos", "Títulos"],
-            ["cedentes", "Por cedente"],
-            ["comerciais", "Por comercial"],
-            ["aging", "Atraso"],
-          ] as [Tab, string][]
-        ).map(([id, label]) => (
-          <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>
-            {label}
-          </button>
-        ))}
-      </nav>
+      <ModuleTabs
+        label="Seções da carteira"
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { id: "titulos", label: "Títulos", icon: <ListIcon />, count: openScoped.length, tone: "neutral" },
+          { id: "cedentes", label: "Por cedente", icon: <UsersIcon />, count: byCedent.length, tone: "neutral" },
+          { id: "comerciais", label: "Por comercial", icon: <BriefcaseLineIcon /> },
+          {
+            id: "aging",
+            label: "Atraso",
+            icon: <ClockIcon />,
+            count: openScoped.filter(t => t.late > 0).length,
+            tone: "alert",
+          },
+        ]}
+      />
       <section className="pf-foundation" aria-label="Estado da carteira">
         <div>
           <span>BASE OPERACIONAL</span>

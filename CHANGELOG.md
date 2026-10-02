@@ -12,6 +12,7 @@
 - `src/domain/risk/`: índice de qualidade explicável (0–100) por cliente, comparando a janela recente com a anterior; motivos em linguagem direta ("atraso médio subiu de 3 para 14 dias") com o impacto em pontos; ação sugerida. Rolagem (roll rate), safras (vintage), concentração com HHI e cobrança do mês.
 - Política de qualidade (`quality-policy.ts`) com pesos, valores bom/ruim, janela, variação mínima, tamanho do ranking, patamar saudável, faixas de HHI e parâmetros dos indicadores (PDD por faixa, probabilidades do funil, prazos de revisão cadastral e de limite, faixas de inatividade). Editável na tela (botão de critérios) e guardada no navegador. Valores de demonstração, não referência de mercado.
 - Painel: top 10 cedentes e sacados piorando × melhorando com motivos e ação, cobrança do mês contra o anterior, rolagem, safras e HHI na concentração. Indicadores do perfil Risco incluem PDD estimada e cedentes piorando.
+- Panorama do cliente: clicar num cliente do top 10 (piorando ou melhorando) abre um painel lateral para apresentação, com resumo em uma frase (quanto caiu, de onde vem a queda, posição frente ao patamar saudável), índice antes → agora, exposição, vencido > 30 dias, uso do limite ou score, "o que moveu o índice" (barras de impacto por componente, antes → agora), evolução do índice em 6 meses com a linha do patamar saudável, componentes mês a mês coloridos pelas faixas bom/ruim da política, carteira por faixa de atraso, títulos em aberto, operações e ação sugerida. Setas ← → passam para o próximo cliente da lista; Esc fecha.
 - Histórico mensal de demonstração (`src/domain/core/demo/quality-history.ts`), coerente com a posição atual de cada cliente.
 
 **Indicadores de mercado por tela** (`src/domain/indicators/`, componente `IndicatorGrid` com a fonte de cada número)
@@ -24,7 +25,7 @@
 - Taxa e custo de captação vêm da precificação da etapa Preço (parâmetros operacionais da modalidade): Visão geral e Financeiro mostram o mesmo número.
 
 **Qualidade**
-- 17 testes novos (83 no total): índice, motivos, rankings, rolagem, safras, HHI, PDD e indicadores de cada tela.
+- 19 testes novos (85 no total): índice, motivos, rankings, rolagem, safras, HHI, PDD, panorama do cliente e indicadores de cada tela.
 
 ## Não lançado — 02/10/2026 · Visual Ledger (v10)
 

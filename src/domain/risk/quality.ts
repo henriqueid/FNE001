@@ -109,9 +109,34 @@ export type QualityTrend = {
   series: number[];
   reasons: QualityReason[];
   action: string;
+  /** Todos os componentes ativos: antes × agora, nota e impacto (para o painel do cliente). */
+  components: ComponentBreakdown[];
+  /** Valores de cada componente mês a mês (cada mês sozinho) e os meses de referência. */
+  monthly: { month: string; values: ComponentValues; index: number }[];
+  /** Último mês da carteira do cliente (saldo, faixas de atraso, uso de limite). */
+  latest?: QualityMonth;
+  /** Frase-resumo do panorama, montada só com os números acima. */
+  summary: string;
 };
 
-const fmtValue = (rule: QualityComponentRule, v: number) => {
+export type ComponentBreakdown = {
+  id: QualityComponentId;
+  label: string;
+  unit: QualityComponentRule["unit"];
+  /** Peso normalizado (% do índice). */
+  weight: number;
+  good: number;
+  bad: number;
+  before: number;
+  after: number;
+  scoreBefore: number;
+  scoreAfter: number;
+  impact: number;
+  beforeText: string;
+  afterText: string;
+};
+
+export const fmtValue = (rule: Pick<QualityComponentRule, "unit">, v: number) => {
   if (rule.unit === "%") return `${v.toFixed(v < 10 ? 1 : 0).replace(".", ",")}%`;
   if (rule.unit === "dias") return `${Math.round(v)} dia${Math.round(v) === 1 ? "" : "s"}`;
   if (rule.unit === "pontos") return `${Math.round(v)}`;
@@ -173,6 +198,45 @@ export function qualityTrend(history: QualityHistory, policy: QualityPolicy): Qu
       : index >= policy.healthyIndex
         ? "Candidato a mais limite ou taxa melhor"
         : "Melhorando, mas abaixo do patamar saudável: acompanhar";
+  const components: ComponentBreakdown[] = rules
+    .map(r => {
+      const scoreBefore = componentScore(r, previous[r.id]),
+        scoreAfter = componentScore(r, recent[r.id]);
+      return {
+        id: r.id,
+        label: r.label,
+        unit: r.unit,
+        weight: (r.weight / total) * 100,
+        good: r.good,
+        bad: r.bad,
+        before: previous[r.id],
+        after: recent[r.id],
+        scoreBefore,
+        scoreAfter,
+        impact: ((r.weight * (scoreAfter - scoreBefore)) / total) * 100,
+        beforeText: fmtValue(r, previous[r.id]),
+        afterText: fmtValue(r, recent[r.id]),
+      };
+    })
+    .sort((a, b) => a.impact - b.impact);
+  const monthly = history.months.map(m => {
+    const values = windowValues([m]);
+    return { month: m.month, values, index: qualityIndex(values, rules) };
+  });
+  const moved = components.filter(c => (delta < 0 ? c.impact < 0 : c.impact > 0));
+  const movedTotal = moved.reduce((s, c) => s + Math.abs(c.impact), 0);
+  const lead = [...moved].sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact))[0];
+  const days = w * 30;
+  const summary =
+    Math.abs(delta) < 0.5
+      ? `O índice ficou estável nos últimos ${days} dias (${Math.round(index)} pontos).`
+      : `O índice ${delta < 0 ? "caiu" : "subiu"} ${Math.abs(delta).toFixed(1).replace(".", ",")} pontos nos últimos ${days} dias, de ${Math.round(previousIndex)} para ${Math.round(index)}.` +
+        (lead && movedTotal
+          ? ` ${Math.round((Math.abs(lead.impact) / movedTotal) * 100)}% da ${delta < 0 ? "queda" : "melhora"} vem de ${lead.label.toLowerCase()} (${lead.beforeText} → ${lead.afterText}).`
+          : "") +
+        (index < policy.healthyIndex
+          ? ` Está abaixo do patamar saudável da política (${policy.healthyIndex}).`
+          : ` Continua acima do patamar saudável da política (${policy.healthyIndex}).`);
   const series = history.months.map((_, i) =>
     qualityIndex(windowValues(history.months.slice(Math.max(0, i - w + 1), i + 1)), rules),
   );
@@ -188,6 +252,10 @@ export function qualityTrend(history: QualityHistory, policy: QualityPolicy): Qu
     series,
     reasons: main,
     action,
+    components,
+    monthly,
+    latest: history.months[history.months.length - 1],
+    summary,
   };
 }
 

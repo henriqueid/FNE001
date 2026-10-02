@@ -318,6 +318,9 @@ export function HomeSections({
           debtors={r.debtorQuality}
           policy={r.policy}
           onEditPolicy={() => setEditingPolicy(true)}
+          titles={m.titles}
+          operations={m.scoped}
+          today={m.today}
         />
       </Card>
     ),

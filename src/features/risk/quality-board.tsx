@@ -2,9 +2,13 @@
 /**
  * Qualidade dos clientes: lado a lado, os que mais pioraram e os que mais melhoraram na
  * janela recente da política, com índice antes → agora, mini gráfico de 6 meses, os motivos
- * e a ação sugerida. Alterna entre cedentes e sacados.
+ * e a ação sugerida. Alterna entre cedentes e sacados. Clicar no cliente abre o panorama
+ * (`client-panel.tsx`), que explica a variação e mostra carteira e operações.
  */
+import { type Operation } from "@/src/domain/core/types";
+import { type PortfolioTitle } from "@/src/domain/home/metrics";
 import { type QualityTrend, type qualityRankings } from "@/src/domain/risk/quality";
+import { ClientPanel } from "./client-panel";
 import { type QualityPolicy } from "@/src/domain/risk/quality-policy";
 import { compact, IconSquare, TextTabs } from "@/src/features/home/widgets";
 import { ShellContext } from "@/src/features/shell/shell-context";
@@ -39,41 +43,43 @@ function TrendRow({
   t,
   rank,
   tone,
-  onOpen,
+  onSelect,
 }: {
   t: QualityTrend;
   rank: number;
   tone: "down" | "up";
-  onOpen: () => void;
+  onSelect: () => void;
 }) {
   return (
     <li className={`lx-q-row ${tone}`}>
-      <span className="lx-q-rank">{rank}</span>
-      <div className="lx-q-main">
-        <div className="lx-q-head">
-          <strong>{t.name}</strong>
-          <span className={`lx-pill ${tone === "down" ? "down" : "up"}`}>{pts(t.delta)}</span>
-        </div>
-        <div className="lx-q-meta">
-          <span>
-            Índice {Math.round(t.previousIndex)} → <b>{Math.round(t.index)}</b>
+      <button type="button" className="lx-q-hit" onClick={onSelect} aria-label={`Ver o panorama de ${t.name}`}>
+        <span className="lx-q-rank">{rank}</span>
+        <span className="lx-q-main">
+          <span className="lx-q-head">
+            <strong>{t.name}</strong>
+            <span className={`lx-pill ${tone === "down" ? "down" : "up"}`}>{pts(t.delta)}</span>
           </span>
-          <span>Exposição {compact(t.exposure)}</span>
-          <Spark values={t.series} tone={tone} />
-        </div>
-        {t.reasons.length > 0 && (
-          <ul className="lx-q-reasons">
-            {t.reasons.map(r => (
-              <li key={r.component}>
-                {r.text} <em>{pts(r.impact)}</em>
-              </li>
-            ))}
-          </ul>
-        )}
-        <button type="button" className="lx-q-action" onClick={onOpen}>
-          {t.action} →
-        </button>
-      </div>
+          <span className="lx-q-meta">
+            <span>
+              Índice {Math.round(t.previousIndex)} → <b>{Math.round(t.index)}</b>
+            </span>
+            <span>Exposição {compact(t.exposure)}</span>
+            <Spark values={t.series} tone={tone} />
+          </span>
+          {t.reasons.length > 0 && (
+            <span className="lx-q-reasons">
+              {t.reasons.map(r => (
+                <span key={r.component}>
+                  {r.text} <em>{pts(r.impact)}</em>
+                </span>
+              ))}
+            </span>
+          )}
+          <span className="lx-q-action">
+            {t.action} · <u>ver panorama →</u>
+          </span>
+        </span>
+      </button>
     </li>
   );
 }
@@ -84,14 +90,14 @@ function Column({
   exposure,
   tone,
   empty,
-  onOpen,
+  onSelect,
 }: {
   title: string;
   list: QualityTrend[];
   exposure: number;
   tone: "down" | "up";
   empty: string;
-  onOpen: () => void;
+  onSelect: (index: number) => void;
 }) {
   return (
     <section className={`lx-q-col ${tone}`}>
@@ -104,7 +110,7 @@ function Column({
       {list.length ? (
         <ol>
           {list.map((t, i) => (
-            <TrendRow key={t.id} t={t} rank={i + 1} tone={tone} onOpen={onOpen} />
+            <TrendRow key={t.id} t={t} rank={i + 1} tone={tone} onSelect={() => onSelect(i)} />
           ))}
         </ol>
       ) : (
@@ -119,15 +125,25 @@ export function QualityBoard({
   debtors,
   policy,
   onEditPolicy,
+  titles,
+  operations,
+  today,
 }: {
   cedents: Rankings;
   debtors: Rankings;
   policy: QualityPolicy;
   onEditPolicy: () => void;
+  titles: PortfolioTitle[];
+  operations: Operation[];
+  today: string;
 }) {
   const [who, setWho] = useState<"cedentes" | "sacados">("cedentes");
+  const [selected, setSelected] = useState<{ list: "worsening" | "improving"; index: number } | null>(null);
   const shell = useContext(ShellContext);
   const r = who === "cedentes" ? cedents : debtors;
+  const list = selected ? r[selected.list] : [];
+  const current = selected ? list[selected.index] : undefined;
+  const digits = (v: string) => v.replace(/\D/g, "");
   const days = policy.windowMonths * 30;
   return (
     <div className="lx-quality">
@@ -154,7 +170,7 @@ export function QualityBoard({
           exposure={r.worseningExposure}
           tone="down"
           empty={`Nenhum ${who === "cedentes" ? "cedente" : "sacado"} caiu mais de ${policy.minDelta} pontos.`}
-          onOpen={() => shell?.navigate("registry")}
+          onSelect={index => setSelected({ list: "worsening", index })}
         />
         <Column
           title={`Melhorando · top ${policy.rankingSize}`}
@@ -162,9 +178,45 @@ export function QualityBoard({
           exposure={r.improvingExposure}
           tone="up"
           empty={`Nenhum ${who === "cedentes" ? "cedente" : "sacado"} subiu mais de ${policy.minDelta} pontos.`}
-          onOpen={() => shell?.navigate("registry")}
+          onSelect={index => setSelected({ list: "improving", index })}
         />
       </div>
+      {selected && current && (
+        <ClientPanel
+          trend={current}
+          position={selected.index + 1}
+          total={list.length}
+          policy={policy}
+          today={today}
+          titles={titles.filter(t =>
+            current.kind === "cedente"
+              ? digits(t.ownerDocument) === digits(current.document)
+              : digits(t.debtorDocument) === digits(current.document),
+          )}
+          operations={
+            current.kind === "cedente"
+              ? operations.filter(op => digits(op.document) === digits(current.document))
+              : operations.filter(op =>
+                  (op.manualEntry?.entries ?? []).some(
+                    e => digits(e.debtorDocument ?? "") === digits(current.document),
+                  ),
+                )
+          }
+          onPrev={selected.index > 0 ? () => setSelected({ ...selected, index: selected.index - 1 }) : undefined}
+          onNext={
+            selected.index < list.length - 1 ? () => setSelected({ ...selected, index: selected.index + 1 }) : undefined
+          }
+          onClose={() => setSelected(null)}
+          onNavigate={view => {
+            setSelected(null);
+            shell?.navigate(view);
+          }}
+          onOpenOperation={op => {
+            setSelected(null);
+            shell?.openOperation(op);
+          }}
+        />
+      )}
     </div>
   );
 }

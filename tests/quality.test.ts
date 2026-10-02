@@ -128,3 +128,33 @@ describe("dinâmica da carteira", () => {
     expect(c.upTo5Rate).toBeGreaterThanOrEqual(c.onTimeRate);
   });
 });
+
+describe("panorama do cliente", () => {
+  const history = (months: QualityMonth[]): QualityHistory => ({
+    id: "c1",
+    name: "Cliente",
+    document: "00.000.000/0001-00",
+    kind: "cedente",
+    exposure: 500_000,
+    months,
+  });
+  it("decompõe a queda por componente e a soma dos impactos fecha com a variação", () => {
+    const good = ["2026-04", "2026-05", "2026-06"].map(m => month(m));
+    const bad = ["2026-07", "2026-08", "2026-09"].map(m => month(m, { settledOnTime: 80_000, averageDelay: 12 }));
+    const t = qualityTrend(history([...good, ...bad]), demoQualityPolicy);
+    expect(t.delta).toBeLessThan(0);
+    const total = t.components.reduce((s, c) => s + c.impact, 0);
+    expect(total).toBeCloseTo(t.delta, 6);
+    expect(t.components[0].impact).toBeLessThan(0);
+    expect(t.components.reduce((s, c) => s + c.weight, 0)).toBeCloseTo(100, 6);
+    expect(t.monthly).toHaveLength(6);
+    expect(t.series[t.series.length - 1]).toBeCloseTo(t.index, 6);
+    expect(t.latest?.month).toBe("2026-09");
+    expect(t.summary).toMatch(/^O índice caiu .* pontos/);
+    expect(t.summary).toMatch(/% da queda vem de/);
+  });
+  it("cliente estável recebe resumo de estabilidade", () => {
+    const rows = ["2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09"].map(m => month(m));
+    expect(qualityTrend(history(rows), demoQualityPolicy).summary).toMatch(/ficou estável/);
+  });
+});

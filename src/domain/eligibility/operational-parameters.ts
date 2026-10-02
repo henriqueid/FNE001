@@ -5,7 +5,8 @@
  * modalidade, lida por `operationalParametersFor`. Os valores são CONFIGURAÇÃO DE DEMONSTRAÇÃO herdada
  * do protótipo (mesmo comportamento de antes), não referência de mercado: cada instituição definirá
  * os seus na implantação. Regras avaliadas pelo motor (catálogo mestre + políticas versionadas) não
- * entram aqui; este arquivo cobre os parâmetros que as etapas legadas ainda usam diretamente.
+ * entram aqui (a concentração da etapa de Risco, por exemplo, é lida do motor por `policy-parameter.ts`);
+ * este arquivo cobre só os parâmetros que as etapas legadas usam e que ainda não têm regra no catálogo.
  */
 import { type InstitutionType, type Operation } from "@/src/domain/core/types";
 
@@ -16,8 +17,6 @@ export type OperationalParameters = {
   minimumTermDays: number;
   /** Prefixos de CFOP aceitos como circulação de mercadoria (duplicata). */
   cfopPrefixes: string[];
-  /** Concentração do maior sacado na operação acima da qual a etapa de Risco pede intervenção (%). */
-  riskConcentrationReference: number;
   /** Proporção de títulos sorteados para confirmação de lastro, por risco da operação. */
   lastroSampleRatio: Record<Operation["risk"], number>;
   /** Participação do título na operação a partir da qual ele é priorizado na amostra de lastro. */
@@ -48,7 +47,6 @@ const base: OperationalParameters = {
   scoreBands: { attention: 600, positive: 700 },
   minimumTermDays: 15,
   cfopPrefixes: ["5", "6"],
-  riskConcentrationReference: 20,
   lastroSampleRatio: { Baixo: 0.25, Médio: 0.5, Alto: 1 },
   lastroRelevantShare: 0.25,
   rateFloorByRisk: { Baixo: 1.4, Médio: 1.8, Alto: 2.4 },

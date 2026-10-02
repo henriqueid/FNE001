@@ -26,6 +26,7 @@ import {
   withCedent,
   withManualEntry,
 } from "./workspace-model";
+import { useEligibilityPolicies } from "@/src/app/eligibility-policy-context";
 
 export function OperationWorkspace({
   operation: initialOperation,
@@ -57,7 +58,8 @@ export function OperationWorkspace({
   const [summaryPinned, setSummaryPinned] = useState(true);
   const [financialObservation, setFinancialObservation] = useState(initialOperation.financialObservation ?? "");
   const automation = automationFor(operation);
-  const stageInsight = stageInsightFor(operation, active, automation);
+  const configuredPolicies = useEligibilityPolicies();
+  const stageInsight = stageInsightFor(operation, active, automation, configuredPolicies);
 
   function commit(next: Operation) {
     setOperation(next);

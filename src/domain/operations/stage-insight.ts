@@ -6,7 +6,9 @@ import { type Operation } from "@/src/domain/core/types";
 import { type AutomationBreakdown } from "./automation";
 import { operationDateISO } from "./dates";
 import { formatFlowMoney } from "./format";
+import { type EligibilityPolicy } from "@/src/domain/eligibility/model";
 import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
+import { policyParameterFor } from "@/src/domain/eligibility/policy-parameter";
 import { lastroAssessmentFor } from "./lastro";
 import {
   normalizedPricing,
@@ -16,7 +18,15 @@ import {
   settlementAdjustmentCalculation,
 } from "./pricing";
 
-export function stageInsightFor(operation: Operation, stageId: number, automation: AutomationBreakdown) {
+/** Regra do motor que define o limite de concentração do sacado mostrado na etapa de Risco. */
+export const CONCENTRATION_RULE_ID = "DEBTOR-OPERATION-CONCENTRATION-MAX-001";
+
+export function stageInsightFor(
+  operation: Operation,
+  stageId: number,
+  automation: AutomationBreakdown,
+  policies?: EligibilityPolicy[] | null,
+) {
   const entries = operation.manualEntry?.entries ?? [];
   const total = entries.reduce((sum, entry) => sum + entry.amount, 0);
   const discount = entries.reduce((sum, entry) => sum + (entry.discount ?? 0), 0);
@@ -44,7 +54,10 @@ export function stageInsightFor(operation: Operation, stageId: number, automatio
       )
     : 0;
   const parameters = operationalParametersFor(operation.institution);
-  const concentrationLimit = parameters.riskConcentrationReference;
+  const concentrationRule = stageId === 2 ? policyParameterFor(operation, CONCENTRATION_RULE_ID, policies) : undefined;
+  const concentrationLimit = typeof concentrationRule?.parameter === "number" ? concentrationRule.parameter : undefined;
+  const concentrationAbove = concentrationLimit !== undefined && concentration > concentrationLimit;
+  const limitLabel = `${String(concentrationLimit ?? "").replace(".", ",")}%`;
   const stageState =
     stageId < operation.stage ? "Concluída" : stageId === operation.stage ? "Etapa atual" : "Prévia calculada";
   const common = {
@@ -71,13 +84,14 @@ export function stageInsightFor(operation: Operation, stageId: number, automatio
         },
         { label: "PRAZO MÉDIO", value: entries.length ? `${averageTerm} dias` : "—", detail: "Emissão até vencimento" },
       ],
-      result:
-        concentration > concentrationLimit
-          ? `Intervenção: concentração acima da referência de ${String(concentrationLimit).replace(".", ",")}%.`
-          : entries.length
-            ? "Sem alerta de concentração pela referência atual."
-            : "Inclua títulos para calcular o risco.",
-      tone: concentration > concentrationLimit ? "warning" : "positive",
+      result: concentrationAbove
+        ? `Intervenção: concentração acima de ${limitLabel} (${concentrationRule!.policyName} ${concentrationRule!.policyVersion}).`
+        : !entries.length
+          ? "Inclua títulos para calcular o risco."
+          : concentrationLimit === undefined
+            ? "Sem limite de concentração ativo na política vigente."
+            : `Sem alerta de concentração: limite de ${limitLabel} da ${concentrationRule!.policyName}.`,
+      tone: concentrationAbove ? "warning" : "positive",
     };
   if (stageId === 3) {
     const lastro = lastroAssessmentFor(operation);

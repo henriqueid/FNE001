@@ -8,7 +8,11 @@ import {
   scoreBand,
   termDays,
 } from "@/src/domain/eligibility/operational-parameters";
+import { demoPoliciesFor } from "@/src/domain/eligibility/demo-policy";
+import { evaluateOperationEligibility } from "@/src/domain/eligibility/operation-adapter";
+import { policyParameterFor } from "@/src/domain/eligibility/policy-parameter";
 import { lastroAssessmentFor } from "@/src/domain/operations/lastro";
+import { CONCENTRATION_RULE_ID, stageInsightFor } from "@/src/domain/operations/stage-insight";
 import { defaultPricing } from "@/src/domain/operations/pricing";
 import { policyMinimumFor } from "@/src/features/operations/pricing/pricing-model";
 import { eligibleApproval, groupEntriesByDebtor, groupKey } from "@/src/features/operations/risk/risk-model";
@@ -101,5 +105,42 @@ describe("parâmetros operacionais (números que saíram das telas)", () => {
       regress: "Sem regresso",
       coobligation: false,
     });
+  });
+});
+
+describe("concentração da etapa de Risco lida do motor", () => {
+  const op = withEntries[0];
+  const automation = { score: 100, items: [] };
+  it("usa o limite da política vigente do motor (não mais 20% fixo)", () => {
+    const reading = policyParameterFor(op, CONCENTRATION_RULE_ID);
+    expect(reading?.source).toBe("vigente");
+    expect(reading?.parameter).toBe(35);
+    const insight = stageInsightFor({ ...op, eligibilityReview: undefined }, 2, automation);
+    expect(insight.result).toContain("35%");
+  });
+  it("respeita a política editada em Políticas", () => {
+    const policies = demoPoliciesFor(op).map(policy => ({
+      ...policy,
+      bindings: policy.bindings.map(binding =>
+        binding.ruleId === CONCENTRATION_RULE_ID ? { ...binding, parameter: 5 } : binding,
+      ),
+    }));
+    const insight = stageInsightFor({ ...op, eligibilityReview: undefined }, 2, automation, policies);
+    expect(insight.tone).toBe("warning");
+    expect(insight.result).toContain("5%");
+  });
+  it("operação já analisada mostra o valor congelado no snapshot", () => {
+    const run = evaluateOperationEligibility({ operation: op, debtors: initialDebtors });
+    const frozen = {
+      ...run,
+      evaluations: run.evaluations.map(item =>
+        item.ruleId === CONCENTRATION_RULE_ID ? { ...item, parameter: 12 } : item,
+      ),
+    };
+    const reading = policyParameterFor(
+      { ...op, eligibilityReview: { run: frozen, overrides: [] } },
+      CONCENTRATION_RULE_ID,
+    );
+    expect(reading).toMatchObject({ source: "snapshot", parameter: 12 });
   });
 });

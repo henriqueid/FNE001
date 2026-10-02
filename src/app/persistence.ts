@@ -10,6 +10,7 @@ import { initialDebtors } from "@/src/domain/core/demo/debtors";
 import { initialOperations } from "@/src/domain/core/demo/operations";
 import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { type FinanceState } from "@/src/domain/finance/model";
+import { migrateEligibilityPolicyState, type EligibilityPolicyState } from "@/src/domain/eligibility/policy-library";
 import { ensureChart } from "@/src/domain/finance/setup";
 import { datePrefix } from "@/src/domain/operations/dates";
 import { migratePortfolioState, type PortfolioState, type StoredPortfolioState } from "@/src/domain/portfolio/model";
@@ -22,6 +23,7 @@ export const STORAGE_KEYS = {
   commercial: "strato-commercial-v1",
   parties: "strato-parties-v1",
   portfolio: "strato-portfolio-v1",
+  policies: "strato-eligibility-policies-v2",
   guidance: "lastro-interface-guidance-v1",
 } as const;
 
@@ -32,6 +34,7 @@ export type PersistedState = {
   commercial: CommercialState;
   parties: Party[];
   portfolio: PortfolioState;
+  policies: EligibilityPolicyState;
 };
 
 /** Mescla operações salvas com a versão atual dos dados de demonstração. */
@@ -124,6 +127,8 @@ export function loadPersistedState(): Partial<PersistedState> & { guidance?: boo
     const commercial = read<CommercialState>(STORAGE_KEYS.commercial);
     const parties = read<Party[]>(STORAGE_KEYS.parties);
     const portfolio = read<StoredPortfolioState>(STORAGE_KEYS.portfolio);
+    const policies = read<unknown>(STORAGE_KEYS.policies);
+    window.localStorage.removeItem("strato-eligibility-policies-v1");
     const guidance = window.localStorage.getItem(STORAGE_KEYS.guidance);
     const migratedOperations = operations ? migrateStoredOperations(operations) : undefined;
     return {
@@ -136,6 +141,7 @@ export function loadPersistedState(): Partial<PersistedState> & { guidance?: boo
         portfolio && [1, 2, 3].includes(portfolio.version) && Array.isArray(portfolio.titles)
           ? migratePortfolioState(portfolio, migratedOperations ?? initialOperations)
           : undefined,
+      policies: migrateEligibilityPolicyState(policies),
       guidance: guidance === null ? undefined : guidance === "true",
     };
   } catch {
@@ -153,6 +159,7 @@ export function savePersistedState(state: PersistedState) {
     window.localStorage.setItem(STORAGE_KEYS.commercial, JSON.stringify(commercial));
     window.localStorage.setItem(STORAGE_KEYS.parties, JSON.stringify(state.parties));
     window.localStorage.setItem(STORAGE_KEYS.portfolio, JSON.stringify(state.portfolio));
+    window.localStorage.setItem(STORAGE_KEYS.policies, JSON.stringify(state.policies));
   } catch {
     /* sem armazenamento: a demonstração segue só na memória */
   }
@@ -176,6 +183,7 @@ export function clearPersistedState() {
       STORAGE_KEYS.commercial,
       STORAGE_KEYS.parties,
       STORAGE_KEYS.portfolio,
+      STORAGE_KEYS.policies,
     ].forEach(key => window.localStorage.removeItem(key));
   } catch {
     /* sem armazenamento */

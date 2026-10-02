@@ -9,7 +9,15 @@ import { createContext } from "react";
    ------------------------------------------------------------------------ */
 
 export type AppView =
-  "home" | "operations" | "portfolio" | "commercial" | "finance" | "registry" | "policies" | "integrations";
+  | "home"
+  | "operations"
+  | "portfolio"
+  | "commercial"
+  | "finance"
+  | "registry"
+  | "policies"
+  | "integrations"
+  | "settings";
 
 export type ShellContextValue = {
   operations: Operation[];

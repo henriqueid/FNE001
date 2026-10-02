@@ -6,6 +6,7 @@
  */
 import { stages } from "@/src/domain/core/stages";
 import { type Cedent, type Operation } from "@/src/domain/core/types";
+import { eligibilityRouteFor } from "@/src/domain/eligibility/orchestration";
 import { type lastroAssessmentFor } from "@/src/domain/operations/lastro";
 import {
   normalizedPricing,
@@ -140,6 +141,7 @@ export function buildFinancialFigures(operation: Operation, registryCedents: Ced
 export type FinancialFigures = ReturnType<typeof buildFinancialFigures>;
 
 export function isRiskApproved(operation: Operation) {
+  if (operation.eligibilityReview) return eligibilityRouteFor(operation).canAdvance;
   return (
     operation.riskReview?.cedentDecision === "Aprovado" &&
     (operation.manualEntry?.entries ?? []).every(title => Boolean(operation.riskReview?.titleDecisions?.[title.id])) &&
@@ -155,11 +157,16 @@ export function buildReadinessChecklist(
   lastro: ReturnType<typeof lastroAssessmentFor>,
 ): ReadinessItem[] {
   const riskApproved = isRiskApproved(operation);
+  const route = operation.eligibilityReview ? eligibilityRouteFor(operation) : undefined;
   return [
     {
       label: "Risco e elegibilidade",
       ok: riskApproved,
-      detail: riskApproved ? "Cedente, sacados e títulos aprovados" : "Existem decisões de risco pendentes",
+      detail: route
+        ? `${route.label} · ${route.explanation}`
+        : riskApproved
+          ? "Cedente, sacados e títulos aprovados"
+          : "Existem decisões de risco pendentes",
     },
     {
       label: "Lastro e confirmação",

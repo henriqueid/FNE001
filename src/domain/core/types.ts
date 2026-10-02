@@ -1,3 +1,5 @@
+import { type EligibilityReview } from "@/src/domain/eligibility/model";
+
 /**
  * Entidades centrais do domínio: operação, título (entrada manual), cedente, sacado, veículo e liberação.
  */
@@ -256,6 +258,8 @@ export type Operation = {
   }[];
   cancellation?: CancellationMemory;
   manualEntry?: ManualEntryData;
+  /** Execução congelada do motor e decisões humanas posteriores, preservadas para auditoria. */
+  eligibilityReview?: EligibilityReview;
   riskReview?: {
     cedentDecision?: "Aprovado" | "Reprovado";
     debtorDecisions?: Record<string, "Aprovado" | "Reprovado">;

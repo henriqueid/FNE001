@@ -3,6 +3,7 @@
  * financeiros/da fila e colunas do kanban.
  */
 import { type Operation } from "@/src/domain/core/types";
+import { eligibilityRouteFor } from "@/src/domain/eligibility/orchestration";
 import { needsIntervention } from "@/src/domain/operations/pace";
 import { normalizedPricing, pricingCalculation } from "@/src/domain/operations/pricing";
 import { operationSearchText } from "@/src/domain/operations/queries";
@@ -60,8 +61,13 @@ export function centralMetricsFor(screenOperations: Operation[]) {
   const readyValue = activeOperations
     .filter(op => op.status === "Pronta para liberar")
     .reduce((sum, op) => sum + op.amount, 0);
-  const exceptionCount = inProgressOperations.filter(op => op.blockers > 0 || op.alerts > 1).length;
-  const decisionCount = inProgressOperations.filter(op => op.blockers > 0).length;
+  const exceptionCount = inProgressOperations.filter(op => {
+    const route = op.eligibilityReview ? eligibilityRouteFor(op) : undefined;
+    return route ? !route.canAdvance || route.alerts > 0 : op.blockers > 0 || op.alerts > 1;
+  }).length;
+  const decisionCount = inProgressOperations.filter(op =>
+    op.eligibilityReview ? eligibilityRouteFor(op).requiresHumanDecision : op.blockers > 0,
+  ).length;
   const interventionCount = screenOperations.filter(needsIntervention).length;
   const formalizationCount = screenOperations.filter(readyForFormalization).length;
   const cancellationCount = screenOperations.filter(op => op.status === "Cancelada").length;

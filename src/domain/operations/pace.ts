@@ -2,6 +2,7 @@
  * Ritmo da operação comparado ao padrão histórico do cliente (mais rápida, no padrão, mais lenta, aprendendo).
  */
 import { type Operation } from "@/src/domain/core/types";
+import { eligibilityRouteFor } from "@/src/domain/eligibility/orchestration";
 import { formatDuration } from "./format";
 
 export function paceFor(operation: Operation) {
@@ -31,7 +32,11 @@ export function paceFor(operation: Operation) {
 
 export function needsIntervention(operation: Operation) {
   if (operation.status === "Cancelada" || operation.status === "Liberada ao financeiro") return false;
+  const eligibilityRequiresIntervention = operation.eligibilityReview
+    ? !eligibilityRouteFor(operation).canAdvance
+    : false;
   return (
+    eligibilityRequiresIntervention ||
     operation.blockers > 0 ||
     operation.alerts > 1 ||
     paceFor(operation).tone === "slower" ||

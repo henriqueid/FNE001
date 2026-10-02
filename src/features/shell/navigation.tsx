@@ -10,7 +10,6 @@ import {
   BriefcaseLineIcon,
   GridIcon,
   PlugIcon,
-  ShieldIcon,
   SlidersIcon,
   UsersIcon,
   WalletIcon,
@@ -49,14 +48,18 @@ export const navGroups: { title: string; items: NavItem[] }[] = [
     title: "Plataforma",
     items: [
       { label: "Cadastros", view: "registry", icon: <UsersIcon />, hint: "Cedentes, sacados, grupos e contas" },
-      { label: "Políticas", view: "policies", icon: <ShieldIcon />, hint: "Crédito, lastro, preço e alçadas" },
       {
         label: "Integrações",
         view: "integrations",
         icon: <PlugIcon />,
         hint: "Receita, SEFAZ, bureaus, bancos e assinatura",
       },
-      { label: "Configurações", icon: <SlidersIcon />, hint: "Preferências da interface" },
+      {
+        label: "Configurações",
+        view: "settings",
+        icon: <SlidersIcon />,
+        hint: "Políticas, empresas, integrações e preferências",
+      },
     ],
   },
 ];

@@ -8,8 +8,6 @@ import { type Cedent, type Debtor, type ManualEntryData, type Operation } from "
 import { operationNeedsCedent } from "@/src/domain/operations/queries";
 import { stageInsightFor } from "@/src/domain/operations/stage-insight";
 import { ReleasedOperationSummary } from "@/src/features/operations/release/released-summary";
-import { Shell } from "@/src/features/shell/shell";
-import { type AppView } from "@/src/features/shell/shell-context";
 import { useContext, useState } from "react";
 import { AssignCedentModal } from "./assign-cedent-modal";
 import { CancellationModal } from "./cancellation-modal";
@@ -31,26 +29,18 @@ import {
 
 export function OperationWorkspace({
   operation: initialOperation,
-  operationCount,
   debtors,
   onRegisterDebtor,
   onBack,
   onUpdate,
   showGuidance,
-  onOpenSettings,
-  onCompanyScopeChange,
-  onNavigate,
 }: {
   operation: Operation;
-  operationCount: number;
   debtors: Debtor[];
   onRegisterDebtor: (debtor: Debtor) => void;
   onBack: () => void;
   onUpdate: (operation: Operation) => void;
   showGuidance: boolean;
-  onOpenSettings: () => void;
-  onCompanyScopeChange?: (scope: string) => void;
-  onNavigate?: (target: AppView) => void;
 }) {
   const registryCedents = useCedents();
   const workspaceRegistry = useContext(RegistryContext);
@@ -114,13 +104,7 @@ export function OperationWorkspace({
     workspaceRegistry?.commercial.reps.find(rep => rep.id === operation.commercialRepId) ??
     workspaceRegistry?.repOf(operation.document);
   return (
-    <Shell
-      operationCount={operationCount}
-      companyScope={operation.vehicle}
-      onCompanyScopeChange={onCompanyScopeChange}
-      onOpenSettings={onOpenSettings}
-      onNavigate={onNavigate}
-    >
+    <>
       <div className="workspace-wrap">
         <WorkspaceHeader
           operation={operation}
@@ -188,6 +172,6 @@ export function OperationWorkspace({
         />
       )}
       {showCedentAssignment && <AssignCedentModal operation={operation} onBack={onBack} onAssign={assignCedent} />}
-    </Shell>
+    </>
   );
 }

@@ -15,6 +15,7 @@ import { lastroAssessmentFor } from "@/src/domain/operations/lastro";
 import { useState } from "react";
 import { ApprovalAuthorities } from "./approval-authorities";
 import { ApprovalDocuments } from "./approval-documents";
+import { ApprovalDecisionSummary } from "./approval-decision-summary";
 import { ApprovalFinancialSummary } from "./approval-financial-summary";
 import {
   type ApprovalReview,
@@ -143,6 +144,44 @@ export function ApprovalPanel({
     setFeedback("Operação aprovada. O pacote está pronto para envio às assinaturas.");
   }
 
+  function returnToRisk() {
+    if (observation.trim().length < 8) {
+      setFeedback("Registre uma justificativa com pelo menos oito caracteres antes de devolver a operação.");
+      return;
+    }
+    const audit = [
+      ...(review.audit ?? []),
+      { at: nowLabel(), by: "Henrique", action: "Operação devolvida", detail: observation.trim() },
+    ];
+    onChange({
+      ...operation,
+      stage: 2,
+      status: "Em atenção",
+      blockers: Math.max(1, operation.blockers),
+      nextAction: "Revisar política, dados e exceções da operação devolvida",
+      approvalReview: { ...review, status: "Preparação", observation, audit },
+    });
+  }
+
+  function rejectOperation() {
+    if (observation.trim().length < 8) {
+      setFeedback("Registre uma justificativa com pelo menos oito caracteres antes de reprovar a operação.");
+      return;
+    }
+    const audit = [
+      ...(review.audit ?? []),
+      { at: nowLabel(), by: "Henrique", action: "Operação reprovada", detail: observation.trim() },
+    ];
+    onChange({
+      ...operation,
+      status: "Em atenção",
+      blockers: Math.max(1, operation.blockers),
+      nextAction: "Operação reprovada — revisar decisão registrada",
+      approvalReview: { ...review, status: "Reprovada", observation, audit },
+    });
+    setFeedback("Reprovação registrada. A operação permanece bloqueada e auditável.");
+  }
+
   function sendForSignatures() {
     if (review.status !== "Aprovada" && review.status !== "Em formalização") {
       setFeedback("A operação precisa estar aprovada antes do envio para assinatura.");
@@ -267,6 +306,7 @@ export function ApprovalPanel({
   return (
     <section className="approval-workbench">
       <ApprovalHero status={review.status} />
+      <ApprovalDecisionSummary operation={operation} figures={figures} />
       <ApprovalFinancialSummary
         operation={operation}
         figures={figures}
@@ -333,6 +373,8 @@ export function ApprovalPanel({
         prerequisitesReady={prerequisitesReady}
         onSubmit={submitForApproval}
         onApprove={approveOperation}
+        onReturn={returnToRisk}
+        onReject={rejectOperation}
       />
       {reportType && (
         <ReportPreviewModal

@@ -28,6 +28,10 @@ import { type ReactNode, useContext, useEffect, useMemo, useRef, useState } from
 
 export const SIDEBAR_KEY = "strato-sidebar-collapsed";
 
+// Mantém a preferência entre remontagens do Shell. Isso evita que o menu nasça
+// expandido por um frame ao sair de uma operação para outro módulo.
+let collapsedPreference = false;
+
 export function initials(name: string) {
   return name
     .split(/\s+/)
@@ -61,7 +65,7 @@ export function Shell({
   const [bellOpen, setBellOpen] = useState(false);
   const [tenantOpen, setTenantOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(collapsedPreference);
   const [mobileMenu, setMobileMenu] = useState(false);
   const tenantRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -71,8 +75,10 @@ export function Shell({
 
   useEffect(() => {
     try {
+      const storedPreference = window.localStorage.getItem(SIDEBAR_KEY) === "true";
+      collapsedPreference = storedPreference;
       // eslint-disable-next-line react-hooks/set-state-in-effect -- preferência lida do localStorage depois de montar
-      setCollapsed(window.localStorage.getItem(SIDEBAR_KEY) === "true");
+      setCollapsed(storedPreference);
     } catch {
       /* ignora */
     }
@@ -121,12 +127,14 @@ export function Shell({
 
   const toggleCollapsed = () =>
     setCollapsed(current => {
+      const next = !current;
+      collapsedPreference = next;
       try {
-        window.localStorage.setItem(SIDEBAR_KEY, String(!current));
+        window.localStorage.setItem(SIDEBAR_KEY, String(next));
       } catch {
         /* ignora */
       }
-      return !current;
+      return next;
     });
   const go = (item: NavItem) => {
     setMobileMenu(false);

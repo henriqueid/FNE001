@@ -4,6 +4,7 @@
  */
 import { stages } from "@/src/domain/core/stages";
 import { type Cedent, type ManualEntryData, type Operation } from "@/src/domain/core/types";
+import { eligibilityRouteFor, withEligibilityRoute } from "@/src/domain/eligibility/orchestration";
 import { type AutomationBreakdown, manualAutomation } from "@/src/domain/operations/automation";
 import { lastroAssessmentFor } from "@/src/domain/operations/lastro";
 import {
@@ -76,8 +77,29 @@ export function stageAdvanceBlocker(
       },
     };
   }
+  if (operation.stage > 2 && operation.stage < 6 && operation.eligibilityReview) {
+    const route = eligibilityRouteFor(operation);
+    if (!route.canAdvance) {
+      return {
+        feedback: {
+          tone: "warning",
+          message: `${route.label}: ${route.explanation} Devolva a operação para Risco antes de continuar.`,
+        },
+      };
+    }
+  }
   const currentAssessment = stageInsightFor(operation, operation.stage, automation);
-  if (operation.stage === 2 && operation.manualEntry?.entries.length) {
+  if (operation.stage === 2 && operation.eligibilityReview) {
+    const route = eligibilityRouteFor(operation);
+    if (!route.canAdvance) {
+      return {
+        feedback: {
+          tone: "warning",
+          message: `${route.label}: ${route.explanation}`,
+        },
+      };
+    }
+  } else if (operation.stage === 2 && operation.manualEntry?.entries.length) {
     const debtorKeys = [...new Set(operation.manualEntry.entries.map(entry => entry.debtorId || entry.debtorDocument))];
     const cedentApproved = operation.riskReview?.cedentDecision === "Aprovado";
     const debtorsDecided = debtorKeys.every(key => Boolean(operation.riskReview?.debtorDecisions?.[key]));
@@ -150,6 +172,7 @@ export function stageAdvanceBlocker(
 
 /** Registra a conclusão da etapa atual e move a operação para a seguinte. */
 export function withCurrentStageCompleted(operation: Operation): Operation {
+  const routedOperation = operation.stage === 2 ? withEligibilityRoute(operation) : operation;
   const next = operation.stage + 1;
   const completion = {
     stageId: operation.stage,
@@ -161,7 +184,7 @@ export function withCurrentStageCompleted(operation: Operation): Operation {
     completion,
   ];
   return {
-    ...operation,
+    ...routedOperation,
     stage: next,
     stageCompletions,
     status: next === 6 ? "Pronta para liberar" : "Em andamento",

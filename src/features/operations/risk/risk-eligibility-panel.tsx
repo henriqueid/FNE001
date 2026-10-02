@@ -12,6 +12,7 @@ import { RiskDetailModal } from "./risk-detail-modal";
 import { RiskFinalActions } from "./risk-final-actions";
 import { RiskTitlesGrid } from "./risk-titles-grid";
 import { TitleAnalysisModal } from "./title-analysis-modal";
+import { PolicyExecutionPanel } from "./policy-execution-panel";
 import { useRiskReview } from "./use-risk-review";
 
 export function RiskEligibilityPanel({
@@ -43,6 +44,8 @@ export function RiskEligibilityPanel({
           <Badge tone="waiting">{Math.max(0, grouped.length - approvedDebtors - rejectedDebtors)} pendentes</Badge>
         </div>
       </div>
+
+      <PolicyExecutionPanel operation={operation} debtors={debtors} cedent={review.cedent} onChange={onChange} />
 
       <CedentCard operation={operation} cedent={review.cedent} onOpenAnalysis={() => review.setDetail("cedent")} />
 

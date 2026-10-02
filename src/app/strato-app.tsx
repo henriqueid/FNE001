@@ -10,7 +10,6 @@ import { OperationsList } from "@/src/features/operations/central/operations-lis
 import { Badge } from "@/src/features/operations/components/status";
 import { type NewOperationInput, NewOperationModal } from "@/src/features/operations/new-operation/new-operation-modal";
 import { OperationWorkspace } from "@/src/features/operations/workspace/operation-workspace";
-import { InterfaceSettingsModal } from "@/src/features/settings/interface-settings-modal";
 
 import CommercialModule from "@/src/features/commercial/commercial-module";
 import FinanceModule from "@/src/features/finance/finance-module";
@@ -42,6 +41,9 @@ import { ModuleRoadmap } from "@/src/features/shell/module-roadmap";
 import { Shell } from "@/src/features/shell/shell";
 import { type AppView, ShellContext } from "@/src/features/shell/shell-context";
 import { RegistryContext, type RegistryValue } from "./registry-context";
+import { EligibilityPolicyProvider } from "./eligibility-policy-context";
+import { seedEligibilityPolicies } from "@/src/domain/eligibility/policy-library";
+import SettingsModule from "@/src/features/settings/settings-module";
 
 const COMPANY_SCOPE_KEY = "strato-company-scope";
 
@@ -52,7 +54,6 @@ export default function StratoApp() {
   const [showNew, setShowNew] = useState(false);
   const [companyScope, setCompanyScope] = useState("Consolidado");
   const [storageReady, setStorageReady] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [showGuidance, setShowGuidance] = useState(true);
   const [confirmReset, setConfirmReset] = useState(false);
   const [view, setView] = useState<AppView>("home");
@@ -66,6 +67,7 @@ export default function StratoApp() {
   const [commercial, setCommercial] = useState<CommercialState>(() => seedCommercial());
   // Cadastro de pessoas (cedentes, sacados, fornecedores, representantes, investidores...).
   const [savedParties, setSavedParties] = useState<Party[]>(() => seedParties());
+  const [policies, setPolicies] = useState(() => seedEligibilityPolicies());
   // Resultado financeiro de cada operação, pela mesma precificação da etapa Preço, para a Visão geral.
   const homeFinancials = useMemo(
     () =>
@@ -151,6 +153,7 @@ export default function StratoApp() {
     if (stored.commercial) setCommercial(stored.commercial);
     if (stored.parties) setSavedParties(stored.parties);
     if (stored.portfolio) setPortfolio(stored.portfolio);
+    if (stored.policies) setPolicies(stored.policies);
     if (stored.guidance !== undefined) setShowGuidance(stored.guidance);
     try {
       const savedScope = window.localStorage.getItem(COMPANY_SCOPE_KEY);
@@ -168,8 +171,8 @@ export default function StratoApp() {
 
   useEffect(() => {
     if (storageReady)
-      savePersistedState({ operations, debtors, finance, commercial, parties: savedParties, portfolio });
-  }, [operations, debtors, finance, commercial, savedParties, portfolio, storageReady]);
+      savePersistedState({ operations, debtors, finance, commercial, parties: savedParties, portfolio, policies });
+  }, [operations, debtors, finance, commercial, savedParties, portfolio, policies, storageReady]);
 
   useEffect(() => {
     if (storageReady) saveGuidance(showGuidance);
@@ -209,6 +212,7 @@ export default function StratoApp() {
     setCommercial(seedCommercial());
     setSavedParties(seedParties());
     setPortfolio(seedPortfolio(initialOperations));
+    setPolicies(seedEligibilityPolicies());
     setSelected(null);
   }
   function createOperation(input: NewOperationInput) {
@@ -220,7 +224,7 @@ export default function StratoApp() {
   const activeCount = operations.filter(
     operation => operation.status !== "Cancelada" && operation.status !== "Liberada ao financeiro",
   ).length;
-  const openSettings = () => setShowSettings(true);
+  const openSettings = () => navigate("settings");
   const carteiraEvents = useMemo(() => repurchaseEvents(operations), [operations]);
   const commercialLive = useMemo(() => ({ ...commercial, carteiraEvents }), [commercial, carteiraEvents]);
   // Cedentes = cadastro de crédito existente + cedentes novos criados no Cadastro; limite vem do comitê.
@@ -284,41 +288,38 @@ export default function StratoApp() {
     openSettings,
     resetDemo,
   };
-  const shellFor = (active: string, content: React.ReactNode) => (
-    <Shell
-      active={active}
-      operationCount={activeCount}
-      companyScope={companyScope}
-      onCompanyScopeChange={setCompanyScope}
-      onOpenSettings={openSettings}
-      onNavigate={navigate}
-    >
-      {content}
-    </Shell>
-  );
-  const roadmapViews = { policies: "Políticas", integrations: "Integrações" } as const;
+  const roadmapViews = { integrations: "Integrações" } as const;
+  const activeSection = selected
+    ? "Operações"
+    : view === "home"
+      ? "Visão geral"
+      : view === "finance"
+        ? "Financeiro"
+        : view === "commercial"
+          ? "Comercial"
+          : view === "registry"
+            ? "Cadastros"
+            : view === "portfolio"
+              ? "Carteira"
+              : view === "settings" || view === "policies"
+                ? "Configurações"
+                : view in roadmapViews
+                  ? roadmapViews[view as keyof typeof roadmapViews]
+                  : "Operações";
   let page: React.ReactNode;
   if (selected)
     page = (
       <OperationWorkspace
         operation={selected}
-        operationCount={activeCount}
         debtors={debtors}
         onRegisterDebtor={registerDebtor}
         onBack={() => setSelected(null)}
         onUpdate={updateOperation}
         showGuidance={showGuidance}
-        onOpenSettings={openSettings}
-        onCompanyScopeChange={scope => {
-          setCompanyScope(scope);
-          setSelected(null);
-        }}
-        onNavigate={navigate}
       />
     );
   else if (view === "finance")
-    page = shellFor(
-      "Financeiro",
+    page = (
       <FinanceModule
         state={finance}
         onState={setFinance}
@@ -329,11 +330,10 @@ export default function StratoApp() {
         companyScope={companyScope}
         onCompanyScopeChange={setCompanyScope}
         onOpenOperation={setSelected}
-      />,
+      />
     );
   else if (view === "commercial")
-    page = shellFor(
-      "Comercial",
+    page = (
       <CommercialModule
         state={registryValue.commercial}
         onState={registryValue.onCommercial}
@@ -343,11 +343,10 @@ export default function StratoApp() {
         onFinance={setFinance}
         onOpenOperation={setSelected}
         onNavigate={navigate}
-      />,
+      />
     );
   else if (view === "home")
-    page = shellFor(
-      "Visão geral",
+    page = (
       <HomeDashboard
         operations={operations}
         debtors={debtors}
@@ -360,28 +359,31 @@ export default function StratoApp() {
         onOpen={setSelected}
         onGoOperations={() => navigate("operations")}
         onNew={() => setShowNew(true)}
-      />,
+      />
     );
   else if (view === "registry")
-    page = shellFor(
-      "Cadastros",
-      <RegistryModule debtors={debtors} operations={operations} onOpenOperation={setSelected} onNavigate={navigate} />,
+    page = (
+      <RegistryModule debtors={debtors} operations={operations} onOpenOperation={setSelected} onNavigate={navigate} />
     );
   else if (view === "portfolio")
-    page = shellFor(
-      "Carteira",
+    page = (
       <PortfolioModule
         portfolio={portfolio}
         onPortfolio={setPortfolio}
         companyScope={companyScope}
         onNavigate={navigate}
-      />,
+      />
     );
-  else if (view in roadmapViews)
-    page = shellFor(
-      roadmapViews[view as keyof typeof roadmapViews],
-      <ModuleRoadmap view={view as keyof typeof roadmapViews} />,
+  else if (view === "settings" || view === "policies")
+    page = (
+      <SettingsModule
+        policies={policies}
+        onPolicies={setPolicies}
+        showGuidance={showGuidance}
+        onGuidance={setShowGuidance}
+      />
     );
+  else if (view in roadmapViews) page = <ModuleRoadmap view={view as keyof typeof roadmapViews} />;
   else
     page = (
       <OperationsList
@@ -391,58 +393,63 @@ export default function StratoApp() {
         onOpen={setSelected}
         onNew={() => setShowNew(true)}
         onReset={resetDemo}
-        onOpenSettings={openSettings}
-        onNavigate={navigate}
       />
     );
   return (
-    <RegistryContext.Provider value={registryValue}>
-      <ShellContext.Provider value={shellContext}>
-        {page}
-        {showNew && (
-          <NewOperationModal
-            defaultDestination={companyScope}
-            onClose={() => setShowNew(false)}
-            onCreate={createOperation}
-          />
-        )}
-        {showSettings && (
-          <InterfaceSettingsModal
-            showGuidance={showGuidance}
-            onChange={setShowGuidance}
-            onClose={() => setShowSettings(false)}
-          />
-        )}
-        {confirmReset && (
-          <div className="modal-backdrop" role="presentation">
-            <section
-              className="settings-modal reset-modal"
-              role="alertdialog"
-              aria-modal="true"
-              aria-labelledby="reset-title"
-            >
-              <div className="modal-head">
-                <div>
-                  <Badge tone="eyebrow">DEMONSTRAÇÃO</Badge>
-                  <h2 id="reset-title">Restaurar dados de demonstração?</h2>
-                  <p>
-                    Operações, cadastro comercial, comitês, comissões e financeiro voltam ao estado inicial. As
-                    alterações feitas neste navegador são descartadas.
-                  </p>
+    <EligibilityPolicyProvider value={policies.policies}>
+      <RegistryContext.Provider value={registryValue}>
+        <ShellContext.Provider value={shellContext}>
+          <Shell
+            active={activeSection}
+            operationCount={activeCount}
+            companyScope={selected?.vehicle ?? companyScope}
+            onCompanyScopeChange={scope => {
+              setCompanyScope(scope);
+              if (selected) setSelected(null);
+            }}
+            onOpenSettings={openSettings}
+            onNavigate={navigate}
+          >
+            {page}
+          </Shell>
+          {showNew && (
+            <NewOperationModal
+              defaultDestination={companyScope}
+              onClose={() => setShowNew(false)}
+              onCreate={createOperation}
+            />
+          )}
+          {confirmReset && (
+            <div className="modal-backdrop" role="presentation">
+              <section
+                className="settings-modal reset-modal"
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="reset-title"
+              >
+                <div className="modal-head">
+                  <div>
+                    <Badge tone="eyebrow">DEMONSTRAÇÃO</Badge>
+                    <h2 id="reset-title">Restaurar dados de demonstração?</h2>
+                    <p>
+                      Operações, cadastro comercial, comitês, comissões e financeiro voltam ao estado inicial. As
+                      alterações feitas neste navegador são descartadas.
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="modal-actions">
-                <button className="secondary-action" onClick={() => setConfirmReset(false)}>
-                  Cancelar
-                </button>
-                <button className="primary-action" onClick={doResetDemo}>
-                  Restaurar
-                </button>
-              </div>
-            </section>
-          </div>
-        )}
-      </ShellContext.Provider>
-    </RegistryContext.Provider>
+                <div className="modal-actions">
+                  <button className="secondary-action" onClick={() => setConfirmReset(false)}>
+                    Cancelar
+                  </button>
+                  <button className="primary-action" onClick={doResetDemo}>
+                    Restaurar
+                  </button>
+                </div>
+              </section>
+            </div>
+          )}
+        </ShellContext.Provider>
+      </RegistryContext.Provider>
+    </EligibilityPolicyProvider>
   );
 }

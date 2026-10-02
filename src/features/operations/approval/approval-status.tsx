@@ -85,11 +85,15 @@ export function ApprovalFooter({
   prerequisitesReady,
   onSubmit,
   onApprove,
+  onReturn,
+  onReject,
 }: {
   status: ApprovalStatus;
   prerequisitesReady: boolean;
   onSubmit: () => void;
   onApprove: () => void;
+  onReturn: () => void;
+  onReject: () => void;
 }) {
   return (
     <div className="approval-footer">
@@ -99,12 +103,20 @@ export function ApprovalFooter({
           {prerequisitesReady ? "Requisitos anteriores concluídos." : "Existem requisitos anteriores pendentes."}
         </span>
       </div>
-      <button className="secondary-action" onClick={onSubmit}>
-        Enviar para alçadas
-      </button>
-      <button className="primary-action" onClick={onApprove}>
-        Aprovar operação <ArrowIcon />
-      </button>
+      <div className="approval-footer-actions">
+        <button className="danger-secondary" onClick={onReject}>
+          Reprovar
+        </button>
+        <button className="secondary-action" onClick={onReturn}>
+          Devolver para risco
+        </button>
+        <button className="secondary-action" onClick={onSubmit}>
+          Enviar para alçadas
+        </button>
+        <button className="primary-action" onClick={onApprove}>
+          Aprovar operação <ArrowIcon />
+        </button>
+      </div>
     </div>
   );
 }

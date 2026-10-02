@@ -15,7 +15,7 @@ import {
 import { useCedents } from "@/src/app/registry-context";
 import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { accountBalance, scopedAccounts } from "@/src/domain/finance/banking";
-import { type CarteiraFlow, dailyProjection } from "@/src/domain/finance/reports";
+import { type CarteiraFlow, cashFlow, dailyProjection } from "@/src/domain/finance/reports";
 import type { FinanceState } from "@/src/domain/finance/model";
 import {
   aging,
@@ -135,6 +135,30 @@ export function useHomeMetrics({
       inflow30,
     };
   }, [finance, companyScope, today, carteira, readyOut, formalizationOut]);
+  // linha do tempo do caixa para o gráfico principal: realizado (30 dias atrás) + projetado (60 dias à frente)
+  const timeline = useMemo(() => {
+    const back = homeSettings.timeline.daysBack,
+      ahead = homeSettings.timeline.daysAhead;
+    const from = isoDate(new Date(new Date(`${today}T12:00:00`).getTime() - back * 86_400_000));
+    const to = isoDate(new Date(new Date(`${today}T12:00:00`).getTime() + ahead * 86_400_000));
+    const run = (factor: number) =>
+      cashFlow(finance, { scope: companyScope, from, to, today, granularity: "dia", carteira, carteiraFactor: factor });
+    const base = run(homeSettings.recovery.base);
+    const todayIndex = base.findIndex(p => p.from === today);
+    // a partir de hoje desconta as liberações prontas; de D+2 em diante, as que estão em formalização
+    const adjust = (closing: number, i: number) =>
+      i < todayIndex ? closing : closing - readyOut - (i >= todayIndex + 2 ? formalizationOut : 0);
+    const line = (points: typeof base) => points.map((p, i) => adjust(p.closing, i));
+    return {
+      dates: base.map(p => p.from),
+      todayIndex,
+      base: line(base),
+      conservative: line(run(homeSettings.recovery.conservative)),
+      optimistic: line(run(homeSettings.recovery.optimistic)),
+      inflow: base.map(p => p.totalIn),
+      outflow: base.map(p => p.totalOut),
+    };
+  }, [finance, companyScope, today, carteira, readyOut, formalizationOut]);
   const overduePayables = finance.titles.filter(
     t =>
       t.status === "Em aberto" &&
@@ -231,6 +255,7 @@ export function useHomeMetrics({
     debRows,
     vehRows,
     cash,
+    timeline,
     bankBalance,
     minimumCash,
     capacity,

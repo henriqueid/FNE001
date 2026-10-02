@@ -1,9 +1,9 @@
 "use client";
 /**
- * Composição da receita do período: deságio × tarifas, taxa efetiva e valor liberado.
+ * Composição da receita do período: gauge deságio × tarifas, taxa efetiva e valor liberado.
  */
 import { periodLabels, type HomePeriod } from "@/src/domain/home/settings";
-import { compact, Empty, pct } from "@/src/features/home/widgets";
+import { compact, DotLegend, Empty, Gauge, pct } from "@/src/features/home/widgets";
 
 export function RevenueMix({
   discount,
@@ -24,8 +24,8 @@ export function RevenueMix({
 }) {
   const total = discount + fees;
   const mix = [
-    { label: "Deságio", value: discount, tone: "c1" },
-    { label: "Tarifas e ad valorem", value: fees, tone: "c2" },
+    { label: "Deságio", value: discount },
+    { label: "Tarifas e ad valorem", value: fees },
   ];
   return (
     <div className="vg-revenue">
@@ -38,28 +38,20 @@ export function RevenueMix({
       </div>
       {total > 0 ? (
         <>
-          <div className="vg-stack" role="img" aria-label="Composição da receita">
-            {mix
-              .filter(m => m.value > 0)
-              .map(m => (
-                <i
-                  key={m.label}
-                  className={m.tone}
-                  style={{ width: `${(m.value / total) * 100}%` }}
-                  title={`${m.label}: ${compact(m.value)}`}
-                />
-              ))}
-          </div>
-          <ul className="vg-legend-list">
-            {mix.map(m => (
-              <li key={m.label}>
-                <i className={`sw ${m.tone}`} />
-                <span>{m.label}</span>
-                <b>{compact(m.value)}</b>
-                <small>{pct(total ? (m.value / total) * 100 : 0, 0)}</small>
-              </li>
-            ))}
-          </ul>
+          <Gauge
+            value={discount}
+            total={total}
+            left={compact(discount)}
+            right={compact(fees)}
+            center={pct((discount / total) * 100, 0)}
+            caption="deságio · tarifas"
+          />
+          <DotLegend
+            items={[
+              { label: mix[0].label, tone: "ink" },
+              { label: mix[1].label, tone: "gray" },
+            ]}
+          />
         </>
       ) : (
         <Empty>Sem receita {periodLabels[period].range}.</Empty>

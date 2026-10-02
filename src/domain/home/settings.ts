@@ -30,6 +30,8 @@ export const homeSettings = {
   } as Record<string, number>,
   // Recebimento esperado dos vencimentos em cada cenário da curva de liquidez.
   recovery: { conservative: 0.8, base: 0.95, optimistic: 1 },
+  // Janela do gráfico principal de caixa: dias realizados para trás e projetados para frente.
+  timeline: { daysBack: 30, daysAhead: 60 },
   // Teto de concentração por sacado (regulamento/política).
   debtorConcentrationCap: 20,
   // Horários operacionais do dia.

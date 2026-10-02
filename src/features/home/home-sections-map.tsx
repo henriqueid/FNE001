@@ -3,7 +3,7 @@
  * Grade de cards da visão geral: o layout de cada perfil (quais seções, em que ordem e
  * largura) e o mapa que renderiza cada `SectionId` como um `Card` com seu conteúdo.
  */
-import { CashChart, TrendChart } from "./charts";
+import { TrendChart } from "./charts";
 import {
   Aging,
   Alerts,
@@ -30,7 +30,6 @@ export type SectionId =
   | "milestones"
   | "pipeline"
   | "trend"
-  | "cash"
   | "aging"
   | "maturity"
   | "concentration"
@@ -40,16 +39,16 @@ export type SectionId =
   | "team";
 
 // Grade de 12 colunas: cada linha soma 12 (8 + 4 ou 12). Abaixo de 1200px tudo vira coluna única.
+// O caixa fica no bloco principal (cash-hero.tsx), acima da grade, em todos os perfis.
 export const layouts: Record<HomeProfile, [SectionId, number][]> = {
   gestao: [
     ["trend", 8],
-    ["needs", 4],
-    ["cash", 8],
-    ["aging", 4],
-    ["concentration", 8],
     ["revenue", 4],
+    ["needs", 4],
+    ["concentration", 8],
+    ["aging", 4],
+    ["team", 8],
     ["pipeline", 12],
-    ["team", 12],
     ["alerts", 12],
   ],
   operacao: [
@@ -68,7 +67,6 @@ export const layouts: Record<HomeProfile, [SectionId, number][]> = {
     ["aging", 4],
     ["concentration", 8],
     ["collection", 4],
-    ["cash", 12],
   ],
 };
 
@@ -150,24 +148,6 @@ export function HomeSections({
           period={period}
           onWiderPeriod={period !== "mes" ? () => onPeriodChange("mes") : undefined}
           count={m.cur.count}
-        />
-      </Card>
-    ),
-    cash: span => (
-      <Card
-        key="cash"
-        span={span}
-        title="Caixa e capacidade de compra"
-        subtitle="Projeção de 30 dias: saldos, títulos do financeiro, carteira e liberações previstas"
-      >
-        <CashChart
-          series={m.cash}
-          capacity={m.capacity}
-          outflowToday={m.cash.outflowToday}
-          inflow30={m.cash.inflow30}
-          balance={m.bankBalance}
-          minimum={m.minimumCash}
-          onGoFinance={onGoFinance}
         />
       </Card>
     ),

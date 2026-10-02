@@ -1,10 +1,10 @@
 "use client";
 /**
- * Carteira por atraso: total em aberto, vencidos e barras por faixa de atraso.
+ * Carteira por atraso: gauge a vencer × vencidos, barras por faixa de atraso e nota de provisão.
  */
 import { type aging } from "@/src/domain/home/metrics";
 import { AlertIcon } from "@/src/ui/icons";
-import { compact, int, pct } from "@/src/features/home/widgets";
+import { compact, DotLegend, Gauge, int, pct } from "@/src/features/home/widgets";
 
 export function Aging({ buckets, total }: { buckets: ReturnType<typeof aging>; total: number }) {
   const overdue = buckets.slice(1);
@@ -13,20 +13,20 @@ export function Aging({ buckets, total }: { buckets: ReturnType<typeof aging>; t
   const over30 = overdue.slice(3).reduce((s, b) => s + b.amount, 0);
   return (
     <div className="vg-aging">
-      <div className="vg-stats two">
-        <div>
-          <small>Carteira em aberto</small>
-          <strong>{compact(total)}</strong>
-          <em>
-            {compact(buckets[0].amount)} a vencer · {int.format(buckets[0].count)} títulos
-          </em>
-        </div>
-        <div>
-          <small>Vencidos</small>
-          <strong className={overdueTotal ? "bad" : "good"}>{compact(overdueTotal)}</strong>
-          <em>{pct(total ? (overdueTotal / total) * 100 : 0, 1)} da carteira</em>
-        </div>
-      </div>
+      <Gauge
+        value={buckets[0].amount}
+        total={total}
+        left={compact(buckets[0].amount)}
+        right={compact(overdueTotal)}
+        center={compact(total)}
+        caption={`${pct(total ? (overdueTotal / total) * 100 : 0, 1)} vencido`}
+      />
+      <DotLegend
+        items={[
+          { label: `A vencer · ${int.format(buckets[0].count)} títulos`, tone: "ink" },
+          { label: "Vencidos", tone: "gray" },
+        ]}
+      />
       <ul className="vg-hbars">
         {overdue.map((b, k) => (
           <li key={b.label} title={`${b.label}: ${compact(b.amount)} em ${b.count} título(s)`}>

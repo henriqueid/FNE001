@@ -1,12 +1,13 @@
 "use client";
 /**
- * Visão geral (home): orquestra preferências de visualização, métricas e as três partes
- * da página (cabeçalho com briefing, faixa de KPIs e grade de cards do perfil).
+ * Visão geral (home): orquestra preferências de visualização, métricas e as partes da
+ * página (cabeçalho, bloco principal de caixa, faixa de KPIs e grade de cards do perfil).
  *
  * - `use-home-preferences.ts`: período, perfil e relógio.
  * - `use-home-metrics.ts`: todos os números e listas derivados das props.
  * - `home-header.tsx`, `home-kpis.tsx`, `home-sections-map.tsx`: apresentação.
  */
+import { CashHero } from "./cash-hero";
 import { HomeHeader } from "./home-header";
 import { HomeKpis } from "./home-kpis";
 import { HomeSections } from "./home-sections-map";
@@ -69,12 +70,12 @@ export default function HomeDashboard({
         onProfileChange={chooseProfile}
         companyScope={companyScope}
         onCompanyScopeChange={onCompanyScopeChange}
-        onGoOperations={onGoOperations}
-        onGoFinance={onGoFinance}
         onNew={onNew}
       />
 
-      <HomeKpis metrics={metrics} profile={profile} />
+      <CashHero timeline={metrics.timeline} minimum={metrics.minimumCash} onGoFinance={onGoFinance} />
+
+      <HomeKpis metrics={metrics} profile={profile} onGoOperations={onGoOperations} onGoFinance={onGoFinance} />
 
       <HomeSections
         metrics={metrics}

@@ -120,11 +120,27 @@ function kpiSets({
   };
 }
 
-export function HomeKpis({ metrics, profile }: { metrics: HomeMetrics; profile: HomeProfile }) {
+export function HomeKpis({
+  metrics,
+  profile,
+  onGoOperations,
+  onGoFinance,
+}: {
+  metrics: HomeMetrics;
+  profile: HomeProfile;
+  onGoOperations: () => void;
+  onGoFinance: () => void;
+}) {
+  // cada indicador abre o módulo de onde vem o número (no perfil Risco os números já são desta tela)
+  const target: Record<HomeProfile, (() => void)[]> = {
+    gestao: [onGoOperations, onGoOperations, onGoOperations, onGoFinance],
+    operacao: [onGoOperations, onGoOperations, onGoOperations, onGoFinance],
+    risco: [],
+  };
   return (
     <div className="vg-kpis">
-      {kpiSets(metrics)[profile].map(kpi => (
-        <Kpi key={kpi.label} {...kpi} />
+      {kpiSets(metrics)[profile].map((kpi, i) => (
+        <Kpi key={kpi.label} {...kpi} onOpen={target[profile][i]} />
       ))}
     </div>
   );

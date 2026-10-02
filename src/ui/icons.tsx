@@ -187,3 +187,14 @@ export const ReturnIcon = (p: IconProps) => (
     <path d="M20 4v7a4 4 0 0 1-4 4H4" />
   </Icon>
 );
+export const ExpandIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M14 4h6v6" />
+    <path d="M10 20H4v-6" />
+  </Icon>
+);
+export const FolderIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+  </Icon>
+);

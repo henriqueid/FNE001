@@ -1,5 +1,5 @@
 /* ==========================================================================
-   STRATO design system · Ledger (v9)
+   STRATO design system · Ledger (v10)
    Monocromático: tinta (preto/branco) para ação, foco e seleção; cinzas para
    estrutura; verde-menta só para destaque positivo; verde, âmbar e vermelho
    só para estado. Sem gradientes, brilhos ou sombras decorativas.
@@ -10,11 +10,12 @@
   --ds-font: "Urbanist Variable", "Urbanist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --ds-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, monospace;
 
-  --ds-canvas: #f2f2f2;
-  --ds-surface: #ffffff;
-  --ds-surface-2: #f7f7f7;
-  --ds-surface-3: #ececec;
-  --ds-border: #e3e3e3;
+  --ds-canvas: #ececec;
+  --ds-surface: #f7f7f7;
+  --ds-elev: #ffffff;
+  --ds-surface-2: #f2f2f2;
+  --ds-surface-3: #e6e6e6;
+  --ds-border: #dedede;
   --ds-border-strong: #d3d3d3;
   --ds-text: #0d0d0d;
   --ds-text-2: #4d4d4d;
@@ -56,15 +57,16 @@
   --sx-active-ink: #ffffff;
   --sx-width: 236px;
   --sx-width-collapsed: 76px;
-  --sx-topbar: 64px;
+  --sx-topbar: 76px;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
   --ds-canvas: #0a0a0a;
-  --ds-surface: #151515;
+  --ds-surface: #141414;
+  --ds-elev: #1b1b1b;
   --ds-surface-2: #111111;
-  --ds-surface-3: #1e1e1e;
+  --ds-surface-3: #202020;
   --ds-border: #262626;
   --ds-border-strong: #383838;
   --ds-text: #f2f2f2;

@@ -1,5 +1,19 @@
 # Changelog
 
+## Não lançado — 02/10/2026 · Visual Ledger (v10)
+
+**Moldura**
+- Sai o menu lateral no desktop: barra superior com os módulos em ícones quadrados (o ativo em preto, com o nome), busca, alertas, empresa e usuário. No celular continuam a gaveta e a barra inferior.
+- Títulos de página grandes e finos; na Visão geral, trilha com empresa e perfil e abas de texto para perfil e período.
+
+**Visão geral**
+- Bloco principal de caixa (`src/features/home/cash-hero.tsx`): saldo em número grande, 30 dias realizados + 60 projetados em barras finas com as linhas dos cenários, régua de seleção do intervalo (mouse e teclado), cartão com entradas, saídas e variação. Janela em `homeSettings.timeline`.
+- Saem o resumo em texto e o cartão "Caixa e capacidade de compra" (o caixa subiu para o bloco principal).
+- Indicadores com rótulo em caixa alta e atalho para o módulo; originação em barras finas pareadas (realizado × ritmo da meta); composição da receita e carteira por atraso em gauge semicircular; legendas em bolinhas.
+
+**Visual**
+- Paleta monocromática com verde-menta para destaque positivo, fonte Urbanist auto-hospedada, cartões sem borda sobre fundo cinza, sem gradientes, brilhos e sombras decorativas (`app/styles/ledger.css`, `tools/ledger_palette.py`).
+
 ## Não lançado — 02/10/2026 · Gestão por exceção (fase 3) e parâmetros operacionais
 
 **Gestão por exceção**

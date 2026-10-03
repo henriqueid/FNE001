@@ -4,6 +4,7 @@
  * e pelo período escolhidos e devolve, tipado, tudo o que cabeçalho, KPIs e cards exibem.
  * Não guarda estado próprio; período, perfil e relógio vêm de `use-home-preferences.ts`.
  */
+import { useQuality } from "@/src/features/risk/use-quality-policy";
 import {
   buildConcentrationRows,
   buildCollectionRows,
@@ -207,11 +208,18 @@ export function useHomeMetrics({
   );
 
   /* risco: histórico mensal, qualidade (piorando × melhorando), rolagem, safras, concentração e cobrança */
-  const cedentHistories = useMemo(() => demoCedentHistories(registryCedents, today), [registryCedents, today]);
-  const debtorHistories = useMemo(
-    () =>
+  // históricos compartilhados pelo app (o mesmo score do cadastro e da operação); fora do provedor, gera aqui
+  const shared = useQuality();
+  const cedentHistories = useMemo(
+    () => shared?.cedentHistories ?? demoCedentHistories(registryCedents, today),
+    [shared, registryCedents, today],
+  );
+  const debtorHistories = useMemo(() => {
+    const known = new Map((shared?.debtorHistories ?? []).map(h => [h.document, h]));
+    const missing = debExp.filter(d => !known.has(d.document));
+    const generated = new Map(
       demoDebtorHistories(
-        debExp.map(d => ({
+        missing.map(d => ({
           id: d.document,
           name: d.name,
           document: d.document,
@@ -219,9 +227,13 @@ export function useHomeMetrics({
           debtor: debtors.find(x => x.document.replace(/\D/g, "") === d.document),
         })),
         today,
-      ),
-    [debExp, debtors, today],
-  );
+      ).map(h => [h.document, h]),
+    );
+    return debExp.flatMap(d => {
+      const h = known.get(d.document) ?? generated.get(d.document);
+      return h ? [{ ...h, name: d.name, exposure: d.exposure }] : [];
+    });
+  }, [shared, debExp, debtors, today]);
   const risk = useMemo(
     () => ({
       cedentQuality: qualityRankings(cedentHistories, qualityPolicy),

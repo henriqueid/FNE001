@@ -24,7 +24,7 @@ export function CedentCard({
           {operation.document} · {cedent?.publicStatus ?? "Cadastro ainda não consultado"}
         </small>
       </div>
-      <ScoreExplanation score={cedent?.score} reasons={cedent?.scoreReasons} />
+      <ScoreExplanation score={cedent?.score} reasons={cedent?.scoreReasons} bureau={cedent?.bureauScore} />
       <div className="cedent-limit">
         <span>LIMITE APROVADO</span>
         <strong>{preciseMoney.format(cedent?.creditLimit ?? 0)}</strong>

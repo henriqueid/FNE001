@@ -1,7 +1,7 @@
 "use client";
 /**
  * Qualidade dos clientes: lado a lado, os que mais pioraram e os que mais melhoraram na
- * janela recente da política, com índice antes → agora, mini gráfico de 6 meses, os motivos
+ * janela recente da política, com score (0–1000) antes → agora, mini gráfico de 6 meses, os motivos
  * e a ação sugerida. Alterna entre cedentes e sacados. Clicar no cliente abre o panorama
  * (`client-panel.tsx`), que explica a variação e mostra carteira e operações.
  */
@@ -17,13 +17,13 @@ import { useContext, useState } from "react";
 
 type Rankings = ReturnType<typeof qualityRankings>;
 
-const pts = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(1).replace(".", ",")} pts`;
+const pts = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.round(Math.abs(v))} pts`;
 
 function Spark({ values, tone }: { values: number[]; tone: "down" | "up" }) {
   if (values.length < 2) return null;
   const min = Math.min(...values),
     max = Math.max(...values);
-  const span = Math.max(4, max - min);
+  const span = Math.max(40, max - min);
   const W = 84,
     H = 26;
   const d = values
@@ -61,7 +61,7 @@ function TrendRow({
           </span>
           <span className="lx-q-meta">
             <span>
-              Índice {Math.round(t.previousIndex)} → <b>{Math.round(t.index)}</b>
+              Score {Math.round(t.previousIndex)} → <b>{Math.round(t.index)}</b>
             </span>
             <span>Exposição {compact(t.exposure)}</span>
             <Spark values={t.series} tone={tone} />
@@ -161,7 +161,7 @@ export function QualityBoard({
           Últimos {days} dias × {days} anteriores · {r.stable} estáve{r.stable === 1 ? "l" : "is"} · {policy.name}{" "}
           {policy.version}
         </small>
-        <IconSquare label="Critérios do índice de qualidade" icon={<SlidersIcon />} onClick={onEditPolicy} />
+        <IconSquare label="Critérios do score de qualidade" icon={<SlidersIcon />} onClick={onEditPolicy} />
       </div>
       <div className="lx-q-grid">
         <Column

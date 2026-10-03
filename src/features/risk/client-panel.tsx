@@ -1,8 +1,8 @@
 "use client";
 /**
  * Panorama do cliente (abre ao clicar num cliente do ranking piorando × melhorando):
- * resumo em uma frase, o que moveu o índice (componente a componente, com antes → agora e
- * impacto em pontos), evolução de 6 meses contra o patamar saudável, carteira de hoje por
+ * resumo em uma frase, o que moveu o score (0–1000) (componente a componente, com antes → agora e
+ * impacto em pontos), evolução de 6 meses contra a faixa positiva de score, carteira de hoje por
  * faixa de atraso, maiores títulos em aberto e operações recentes. Setas ← → percorrem o
  * ranking, para apresentar cliente a cliente.
  */
@@ -19,7 +19,7 @@ import { createPortal } from "react-dom";
 
 type Title = { id: string; reference: string; debtorName: string; ownerName: string; dueDate: string; amount: number };
 
-const pts = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(1).replace(".", ",")}`;
+const pts = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.round(Math.abs(v))}`;
 const monthName = (m: string) =>
   new Date(`${m}-15T12:00:00`).toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
 
@@ -39,14 +39,14 @@ function ImpactBars({ rows }: { rows: ComponentBreakdown[] }) {
             </div>
             <div className="cp-impact-track" aria-hidden="true">
               <i className="mid" />
-              {Math.abs(r.impact) >= 0.05 && (
+              {Math.abs(r.impact) >= 0.5 && (
                 <i
                   className={r.impact < 0 ? "neg" : "pos"}
                   style={r.impact < 0 ? { right: "50%", width: `${w}%` } : { left: "50%", width: `${w}%` }}
                 />
               )}
             </div>
-            <em className={r.impact < -0.05 ? "neg" : r.impact > 0.05 ? "pos" : ""}>{pts(r.impact)} pts</em>
+            <em className={r.impact <= -0.5 ? "neg" : r.impact >= 0.5 ? "pos" : ""}>{pts(r.impact)} pts</em>
           </li>
         );
       })}
@@ -61,14 +61,14 @@ function IndexChart({ months, values, healthy }: { months: string[]; values: num
     R = 14,
     T = 18,
     B = 24;
-  const lo = Math.max(0, Math.floor((Math.min(healthy, ...values) - 10) / 10) * 10);
-  const hi = Math.min(100, Math.ceil((Math.max(healthy, ...values) + 8) / 10) * 10);
+  const lo = Math.max(0, Math.floor((Math.min(healthy, ...values) - 60) / 100) * 100);
+  const hi = Math.min(1000, Math.ceil((Math.max(healthy, ...values) + 40) / 100) * 100);
   const ticks = [lo, Math.round((lo + hi) / 2), hi];
   const x = (i: number) => L + (i / Math.max(1, values.length - 1)) * (W - L - R);
   const y = (v: number) => T + (1 - (v - lo) / Math.max(1, hi - lo)) * (H - T - B);
   const d = values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
   return (
-    <svg className="cp-index" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Índice de qualidade mês a mês">
+    <svg className="cp-index" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Score de qualidade mês a mês">
       {ticks.map(v => (
         <g key={v}>
           <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} className="grid" />
@@ -79,7 +79,7 @@ function IndexChart({ months, values, healthy }: { months: string[]; values: num
       ))}
       <line x1={L} x2={W - R} y1={y(healthy)} y2={y(healthy)} className="healthy" />
       <text x={L + 6} y={y(healthy) + 14} className="healthy-label">
-        patamar saudável {healthy}
+        faixa positiva {healthy}
       </text>
       <path d={d} className="ln" />
       {values.map((v, i) => (
@@ -141,8 +141,8 @@ export function ClientPanel({
   const overdue30 = latest?.overdue30 ?? 0;
   const buckets = latest?.buckets ?? [0, 0, 0, 0, 0];
   const bucketTotal = buckets.reduce((s, v) => s + v, 0) || 1;
-  const moved = t.components.filter(c => Math.abs(c.impact) >= 0.05);
-  const steady = t.components.filter(c => Math.abs(c.impact) < 0.05);
+  const moved = t.components.filter(c => Math.abs(c.impact) >= 0.5);
+  const steady = t.components.filter(c => Math.abs(c.impact) < 0.5);
   const topMoved = [...moved].sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact)).slice(0, 4);
   const open = [...titles]
     .map(x => ({ ...x, late: daysFrom(x.dueDate, today) }))
@@ -200,7 +200,7 @@ export function ClientPanel({
 
         <div className="cp-kpis">
           <div>
-            <span className="lx-label">Índice de qualidade</span>
+            <span className="lx-label">Score de qualidade</span>
             <strong>
               {Math.round(t.previousIndex)} → {Math.round(t.index)}
             </strong>
@@ -227,10 +227,10 @@ export function ClientPanel({
 
         <section className="cp-section">
           <header>
-            <h3>O que moveu o índice</h3>
+            <h3>O que moveu o score</h3>
             <small>
               Últimos {policy.windowMonths * 30} dias × {policy.windowMonths * 30} anteriores · impacto em pontos do
-              índice
+              score (0–1000)
             </small>
           </header>
           <ImpactBars rows={moved.length ? moved : t.components} />
@@ -243,8 +243,8 @@ export function ClientPanel({
           <header>
             <h3>Evolução em 6 meses</h3>
             <small>
-              Índice na janela móvel de {policy.windowMonths * 30} dias e, abaixo, cada componente mês a mês (verde
-              perto do “bom” da política, vermelho perto do “ruim”)
+              Score na janela móvel de {policy.windowMonths * 30} dias e, abaixo, cada componente mês a mês (verde perto
+              do “bom” da política, vermelho perto do “ruim”)
             </small>
           </header>
           <div className="cp-index-wrap">

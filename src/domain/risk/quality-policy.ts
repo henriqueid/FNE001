@@ -1,10 +1,12 @@
 /**
- * Política de qualidade de carteira: quais componentes entram no índice de qualidade
+ * Política de qualidade de carteira: quais componentes entram no score de qualidade (0–1000)
  * de cedentes e sacados, com que peso e a partir de que valor cada um é "bom" ou "ruim".
  *
  * Os números abaixo são configuração de DEMONSTRAÇÃO (editáveis na tela de Risco),
  * não referência de mercado: cada instituição define os seus na própria política.
  */
+import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
+
 export type QualityComponentId =
   | "onTimeRate"
   | "averageDelay"
@@ -51,9 +53,12 @@ export type QualityPolicy = {
   version: string;
   /** Meses de cada janela comparada (recente × anterior). */
   windowMonths: number;
-  /** Variação mínima do índice, em pontos, para aparecer como piorando ou melhorando. */
+  /** Variação mínima do score (escala 0–1000), em pontos, para aparecer como piorando ou melhorando. */
   minDelta: number;
-  /** Índice a partir do qual o cliente está em patamar saudável (melhora abaixo disso é só acompanhamento). */
+  /**
+   * Score a partir do qual o cliente está na faixa positiva. Não é editado aqui: vem das faixas de score
+   * dos parâmetros operacionais (`scoreBands.positive`), as mesmas que a operação usa.
+   */
   healthyIndex: number;
   /** Quantos clientes cada ranking mostra. */
   rankingSize: number;
@@ -68,9 +73,9 @@ export const demoQualityPolicy: QualityPolicy = {
   name: "Qualidade de carteira (demonstração)",
   version: "v1",
   windowMonths: 3,
-  minDelta: 3,
+  minDelta: 30,
   rankingSize: 10,
-  healthyIndex: 70,
+  healthyIndex: operationalParametersFor().scoreBands.positive,
   hhiModerate: 1500,
   hhiHigh: 2500,
   indicators: {
@@ -121,7 +126,7 @@ export const demoQualityPolicy: QualityPolicy = {
     { id: "limitUse", label: "Uso do limite", unit: "%", weight: 5, good: 60, bad: 100, appliesToDebtors: false },
     {
       id: "bureauScore",
-      label: "Score de bureau",
+      label: "Score de bureau (externo)",
       unit: "pontos",
       weight: 5,
       good: 800,

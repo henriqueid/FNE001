@@ -30,7 +30,10 @@ import { type Effect } from "@/src/domain/finance/ledger";
 import type { FinanceState } from "@/src/domain/finance/model";
 import { payableKey, syncReleases } from "@/src/domain/finance/releases";
 import { seedFinance } from "@/src/domain/finance/setup";
-import { portfolioTitles } from "@/src/domain/home/metrics";
+import { isoDate, portfolioTitles } from "@/src/domain/home/metrics";
+import { demoCedentHistories, demoDebtorHistories } from "@/src/domain/core/demo/quality-history";
+import { qualityByDocument, scoredCedent, scoredDebtor } from "@/src/domain/risk/quality-scores";
+import { QualityContext, type QualityValue, useQualityPolicyState } from "@/src/features/risk/use-quality-policy";
 import { mergeParties, type Party, partyToCedent, seedParties } from "@/src/domain/registry/parties";
 import { saveParty as savePartyRecord } from "@/src/domain/registry/party-save";
 import { buildRegistry, effectiveCedents, repurchaseEvents } from "@/src/domain/registry/registry";
@@ -235,22 +238,50 @@ export default function StratoApp() {
       .map(partyToCedent);
     return effectiveCedents(commercial, [...initialCedents, ...created]);
   }, [commercial, savedParties]);
+  // Score de qualidade único (0–1000): calculado pela política sobre o histórico de cada cliente e usado
+  // igual no cadastro, na operação, no painel de Risco e no panorama. O score de bureau fica em `bureauScore`.
+  const qualityState = useQualityPolicyState();
+  const scoreDay = isoDate(new Date());
+  const cedentHistories = useMemo(() => demoCedentHistories(registryCedents, scoreDay), [registryCedents, scoreDay]);
+  const debtorHistories = useMemo(
+    () =>
+      demoDebtorHistories(
+        debtors.map(d => {
+          const doc = d.document.replace(/\D/g, "");
+          return { id: doc, name: d.name, document: doc, exposure: d.portfolioReceivable ?? 0, debtor: d };
+        }),
+        scoreDay,
+      ),
+    [debtors, scoreDay],
+  );
+  const qualityValue = useMemo<QualityValue>(() => {
+    const byDocument = qualityByDocument([...cedentHistories, ...debtorHistories], qualityState.policy);
+    return { ...qualityState, cedentHistories, debtorHistories, byDocument };
+  }, [qualityState, cedentHistories, debtorHistories]);
+  const scoredCedents = useMemo(
+    () => registryCedents.map(c => scoredCedent(c, qualityValue.byDocument.get(c.document.replace(/\D/g, "")))),
+    [registryCedents, qualityValue],
+  );
+  const scoredDebtors = useMemo(
+    () => debtors.map(d => scoredDebtor(d, qualityValue.byDocument.get(d.document.replace(/\D/g, "")))),
+    [debtors, qualityValue],
+  );
   const today = new Date().toISOString().slice(0, 10);
   const parties = useMemo(
     () =>
       mergeParties(savedParties, {
-        cedents: registryCedents,
-        debtors,
+        cedents: scoredCedents,
+        debtors: scoredDebtors,
         reps: commercial.reps,
         repOfCedent: document => repAt(commercial, document, new Date().toISOString().slice(0, 10)),
       }),
-    [savedParties, registryCedents, debtors, commercial],
+    [savedParties, scoredCedents, scoredDebtors, commercial],
   );
   const registryValue = useMemo<RegistryValue>(
     () => ({
       commercial: commercialLive,
-      cedents: registryCedents,
-      records: buildRegistry(commercialLive, registryCedents),
+      cedents: scoredCedents,
+      records: buildRegistry(commercialLive, scoredCedents),
       repOf: (document: string, date?: string) => {
         const id = repAt(commercialLive, document, date ?? new Date().toISOString().slice(0, 10));
         return commercialLive.reps.find(rep => rep.id === id);
@@ -278,7 +309,7 @@ export default function StratoApp() {
         setCommercial(rest as CommercialState);
       },
     }),
-    [commercialLive, registryCedents, parties, savedParties, debtors, commercial, today],
+    [commercialLive, scoredCedents, parties, savedParties, debtors, commercial, today],
   );
   const shellContext = {
     operations,
@@ -311,7 +342,7 @@ export default function StratoApp() {
     page = (
       <OperationWorkspace
         operation={selected}
-        debtors={debtors}
+        debtors={scoredDebtors}
         onRegisterDebtor={registerDebtor}
         onBack={() => setSelected(null)}
         onUpdate={updateOperation}
@@ -348,7 +379,7 @@ export default function StratoApp() {
     page = (
       <HomeDashboard
         operations={operations}
-        debtors={debtors}
+        debtors={scoredDebtors}
         financials={homeFinancials}
         finance={finance}
         carteira={carteiraFlows}
@@ -361,7 +392,12 @@ export default function StratoApp() {
     );
   else if (view === "registry")
     page = (
-      <RegistryModule debtors={debtors} operations={operations} onOpenOperation={setSelected} onNavigate={navigate} />
+      <RegistryModule
+        debtors={scoredDebtors}
+        operations={operations}
+        onOpenOperation={setSelected}
+        onNavigate={navigate}
+      />
     );
   else if (view === "portfolio")
     page = (
@@ -395,57 +431,59 @@ export default function StratoApp() {
   return (
     <EligibilityPolicyProvider value={policies.policies}>
       <RegistryContext.Provider value={registryValue}>
-        <ShellContext.Provider value={shellContext}>
-          <Shell
-            active={activeSection}
-            operationCount={activeCount}
-            companyScope={selected?.vehicle ?? companyScope}
-            onCompanyScopeChange={scope => {
-              setCompanyScope(scope);
-              if (selected) setSelected(null);
-            }}
-            onOpenSettings={openSettings}
-            onNavigate={navigate}
-          >
-            {page}
-          </Shell>
-          {showNew && (
-            <NewOperationModal
-              defaultDestination={companyScope}
-              onClose={() => setShowNew(false)}
-              onCreate={createOperation}
-            />
-          )}
-          {confirmReset && (
-            <div className="modal-backdrop" role="presentation">
-              <section
-                className="settings-modal reset-modal"
-                role="alertdialog"
-                aria-modal="true"
-                aria-labelledby="reset-title"
-              >
-                <div className="modal-head">
-                  <div>
-                    <Badge tone="eyebrow">DEMONSTRAÇÃO</Badge>
-                    <h2 id="reset-title">Restaurar dados de demonstração?</h2>
-                    <p>
-                      Operações, cadastro comercial, comitês, comissões e financeiro voltam ao estado inicial. As
-                      alterações feitas neste navegador são descartadas.
-                    </p>
+        <QualityContext.Provider value={qualityValue}>
+          <ShellContext.Provider value={shellContext}>
+            <Shell
+              active={activeSection}
+              operationCount={activeCount}
+              companyScope={selected?.vehicle ?? companyScope}
+              onCompanyScopeChange={scope => {
+                setCompanyScope(scope);
+                if (selected) setSelected(null);
+              }}
+              onOpenSettings={openSettings}
+              onNavigate={navigate}
+            >
+              {page}
+            </Shell>
+            {showNew && (
+              <NewOperationModal
+                defaultDestination={companyScope}
+                onClose={() => setShowNew(false)}
+                onCreate={createOperation}
+              />
+            )}
+            {confirmReset && (
+              <div className="modal-backdrop" role="presentation">
+                <section
+                  className="settings-modal reset-modal"
+                  role="alertdialog"
+                  aria-modal="true"
+                  aria-labelledby="reset-title"
+                >
+                  <div className="modal-head">
+                    <div>
+                      <Badge tone="eyebrow">DEMONSTRAÇÃO</Badge>
+                      <h2 id="reset-title">Restaurar dados de demonstração?</h2>
+                      <p>
+                        Operações, cadastro comercial, comitês, comissões e financeiro voltam ao estado inicial. As
+                        alterações feitas neste navegador são descartadas.
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="modal-actions">
-                  <button className="secondary-action" onClick={() => setConfirmReset(false)}>
-                    Cancelar
-                  </button>
-                  <button className="primary-action" onClick={doResetDemo}>
-                    Restaurar
-                  </button>
-                </div>
-              </section>
-            </div>
-          )}
-        </ShellContext.Provider>
+                  <div className="modal-actions">
+                    <button className="secondary-action" onClick={() => setConfirmReset(false)}>
+                      Cancelar
+                    </button>
+                    <button className="primary-action" onClick={doResetDemo}>
+                      Restaurar
+                    </button>
+                  </div>
+                </section>
+              </div>
+            )}
+          </ShellContext.Provider>
+        </QualityContext.Provider>
       </RegistryContext.Provider>
     </EligibilityPolicyProvider>
   );

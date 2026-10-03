@@ -144,7 +144,10 @@ export type Debtor = {
   mobile?: string;
   whatsapp?: string;
   source: "Sistema" | "Integração" | "Cadastro manual";
+  /** Score de qualidade interno (0–1000), calculado pela política de qualidade. Vazio = sacado novo. */
   score?: number;
+  /** Score do bureau externo (Serasa, Boa Vista…), 0–1000. Entra no score interno como um componente. */
+  bureauScore?: number;
   portfolioReceivable?: number;
   portfolioOverdue?: number;
   settlements?: number;
@@ -167,7 +170,10 @@ export type Cedent = {
   id: string;
   document: string;
   name: string;
+  /** Score de qualidade interno (0–1000), calculado pela política de qualidade; 0 = conta nova. */
   score: number;
+  /** Score do bureau externo (Serasa, Boa Vista…), 0–1000. Entra no score interno como um componente. */
+  bureauScore?: number;
   creditLimit: number;
   usedLimit: number;
   portfolioReceivable: number;

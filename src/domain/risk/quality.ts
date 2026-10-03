@@ -1,9 +1,9 @@
 /**
- * Índice de qualidade explicável de cedentes e sacados.
+ * Score de qualidade (0–1000) explicável de cedentes e sacados.
  *
  * Para cada cliente, compara a janela recente (ex.: últimos 3 meses) com a anterior:
  * cada componente da política vira uma nota de 0 a 1 entre os valores "ruim" e "bom",
- * o índice é a média ponderada (0–100) e os motivos são os componentes que mais
+ * o score é a média ponderada na escala 0–1000 (a mesma do score do cadastro e da operação) e os motivos são os componentes que mais
  * moveram o índice, escritos em linguagem direta ("atraso médio subiu de 4 para 11 dias").
  * Funções puras: recebem o histórico mensal e a política, devolvem números e textos.
  */
@@ -82,17 +82,20 @@ export function activeRules(policy: QualityPolicy, kind: QualityHistory["kind"])
   return policy.components.filter(c => c.weight > 0 && (kind === "cedente" || c.appliesToDebtors));
 }
 
-/** Índice de 0 a 100 (pesos ativos normalizados). */
+/** Score de 0 a 1000 (pesos ativos normalizados), a mesma régua do bureau e das faixas de score. */
 export function qualityIndex(values: ComponentValues, rules: QualityComponentRule[]) {
   const total = rules.reduce((s, r) => s + r.weight, 0);
   if (!total) return 0;
-  return (rules.reduce((s, r) => s + r.weight * componentScore(r, values[r.id]), 0) / total) * 100;
+  return (rules.reduce((s, r) => s + r.weight * componentScore(r, values[r.id]), 0) / total) * SCORE_SCALE;
 }
+
+/** Escala do score de qualidade: 0 a 1000. */
+export const SCORE_SCALE = 1000;
 
 export type QualityReason = {
   component: QualityComponentId;
   text: string;
-  /** Quanto este componente moveu o índice, em pontos (negativo = piorou). */
+  /** Quanto este componente moveu o score, em pontos da escala 0–1000 (negativo = piorou). */
   impact: number;
 };
 
@@ -105,7 +108,7 @@ export type QualityTrend = {
   index: number;
   previousIndex: number;
   delta: number;
-  /** Índice mês a mês, para o mini gráfico. */
+  /** Score mês a mês (janela móvel), para o mini gráfico. */
   series: number[];
   reasons: QualityReason[];
   action: string;
@@ -182,9 +185,10 @@ export function qualityTrend(history: QualityHistory, policy: QualityPolicy): Qu
     .map(r => ({
       component: r.id,
       text: reasonText(r, previous[r.id], recent[r.id]),
-      impact: ((r.weight * (componentScore(r, recent[r.id]) - componentScore(r, previous[r.id]))) / total) * 100,
+      impact:
+        ((r.weight * (componentScore(r, recent[r.id]) - componentScore(r, previous[r.id]))) / total) * SCORE_SCALE,
     }))
-    .filter(r => Math.abs(r.impact) >= 0.3)
+    .filter(r => Math.abs(r.impact) >= 3)
     .filter(r => {
       const rule = rules.find(x => x.id === r.component)!;
       return rule.unit === "qtde" || fmtValue(rule, previous[r.component]) !== fmtValue(rule, recent[r.component]);
@@ -213,7 +217,7 @@ export function qualityTrend(history: QualityHistory, policy: QualityPolicy): Qu
         after: recent[r.id],
         scoreBefore,
         scoreAfter,
-        impact: ((r.weight * (scoreAfter - scoreBefore)) / total) * 100,
+        impact: ((r.weight * (scoreAfter - scoreBefore)) / total) * SCORE_SCALE,
         beforeText: fmtValue(r, previous[r.id]),
         afterText: fmtValue(r, recent[r.id]),
       };
@@ -228,15 +232,15 @@ export function qualityTrend(history: QualityHistory, policy: QualityPolicy): Qu
   const lead = [...moved].sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact))[0];
   const days = w * 30;
   const summary =
-    Math.abs(delta) < 0.5
-      ? `O índice ficou estável nos últimos ${days} dias (${Math.round(index)} pontos).`
-      : `O índice ${delta < 0 ? "caiu" : "subiu"} ${Math.abs(delta).toFixed(1).replace(".", ",")} pontos nos últimos ${days} dias, de ${Math.round(previousIndex)} para ${Math.round(index)}.` +
+    Math.abs(delta) < 5
+      ? `O score ficou estável nos últimos ${days} dias (${Math.round(index)}).`
+      : `O score ${delta < 0 ? "caiu" : "subiu"} ${Math.round(Math.abs(delta))} pontos nos últimos ${days} dias, de ${Math.round(previousIndex)} para ${Math.round(index)}.` +
         (lead && movedTotal
           ? ` ${Math.round((Math.abs(lead.impact) / movedTotal) * 100)}% da ${delta < 0 ? "queda" : "melhora"} vem de ${lead.label.toLowerCase()} (${lead.beforeText} → ${lead.afterText}).`
           : "") +
         (index < policy.healthyIndex
-          ? ` Está abaixo do patamar saudável da política (${policy.healthyIndex}).`
-          : ` Continua acima do patamar saudável da política (${policy.healthyIndex}).`);
+          ? ` Está abaixo da faixa positiva (${policy.healthyIndex}).`
+          : ` Continua na faixa positiva (${policy.healthyIndex}).`);
   const series = history.months.map((_, i) =>
     qualityIndex(windowValues(history.months.slice(Math.max(0, i - w + 1), i + 1)), rules),
   );

@@ -149,7 +149,7 @@ export function demoCedentHistories(cedents: Cedent[], today: string): QualityHi
         topDebtorShare: pm?.concentrationPercent ?? 20,
         protests: (pm?.protested.count ?? c.incidents) * 3,
         limitUse: c.creditLimit ? (c.usedLimit / c.creditLimit) * 100 : 0,
-        bureauScore: c.score,
+        bureauScore: c.bureauScore ?? c.score,
       };
       return {
         id: c.id,
@@ -193,7 +193,7 @@ export function demoDebtorHistories(
         topDebtorShare: 0,
         protests: (x?.incidents ?? 0) * 3,
         limitUse: 0,
-        bureauScore: x?.score ?? 700 + 60 * noise(`${key}:sc`),
+        bureauScore: x?.bureauScore ?? x?.score ?? 700 + 60 * noise(`${key}:sc`),
       };
       return {
         id: d.id,

@@ -1,14 +1,40 @@
 "use client";
 /**
- * Política de qualidade em uso na tela de Risco: começa na política de demonstração e
- * guarda os ajustes do usuário no navegador (até existir o cadastro de políticas no servidor).
+ * Política de qualidade em uso: começa na política de demonstração e guarda os ajustes do usuário
+ * no navegador (até existir o cadastro de políticas no servidor). A raiz do app (`strato-app.tsx`)
+ * guarda uma única política no `QualityContext`, junto com os históricos e o score de cada cliente,
+ * para que cadastro, operação, Risco e panorama mostrem o mesmo score.
  */
+import { type QualityHistory, type QualityTrend } from "@/src/domain/risk/quality";
 import { demoQualityPolicy, type QualityPolicy } from "@/src/domain/risk/quality-policy";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
-export const QUALITY_POLICY_KEY = "strato-quality-policy";
+/** v2: score na escala 0–1000 (a v1 guardava o índice em 0–100). */
+export const QUALITY_POLICY_KEY = "strato-quality-policy-v2";
 
-export function useQualityPolicy() {
+export type QualityState = ReturnType<typeof useQualityPolicyState>;
+
+export type QualityValue = QualityState & {
+  cedentHistories: QualityHistory[];
+  debtorHistories: QualityHistory[];
+  /** Tendência de qualidade por documento (só dígitos), cedentes e sacados. */
+  byDocument: Map<string, QualityTrend>;
+};
+
+export const QualityContext = createContext<QualityValue | null>(null);
+
+/** Política, históricos e scores compartilhados (null fora do provedor, como em testes). */
+export function useQuality() {
+  return useContext(QualityContext);
+}
+
+/** Política em uso: a do app quando há provedor; senão, estado local. */
+export function useQualityPolicy(): QualityState {
+  const local = useQualityPolicyState();
+  return useContext(QualityContext) ?? local;
+}
+
+export function useQualityPolicyState() {
   const [policy, setPolicy] = useState<QualityPolicy>(demoQualityPolicy);
   useEffect(() => {
     try {
@@ -20,6 +46,7 @@ export function useQualityPolicy() {
           setPolicy({
             ...demoQualityPolicy,
             ...parsed,
+            healthyIndex: demoQualityPolicy.healthyIndex,
             indicators: { ...demoQualityPolicy.indicators, ...(parsed.indicators ?? {}) },
           });
       }

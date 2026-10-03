@@ -1,6 +1,6 @@
 "use client";
 /**
- * Critérios do índice de qualidade: janela de comparação, variação mínima, tamanho dos
+ * Critérios do score de qualidade (0–1000): janela de comparação, variação mínima, tamanho dos
  * rankings, faixas de concentração e, para cada componente, peso e valores "bom" e "ruim".
  * Os números de fábrica são de demonstração; cada instituição ajusta os seus.
  */
@@ -37,7 +37,7 @@ export function QualityPolicyModal({
         <header>
           <div>
             <span className="lx-label">Política de risco</span>
-            <h2 id="qp-title">Critérios do índice de qualidade</h2>
+            <h2 id="qp-title">Critérios do score de qualidade (0–1000)</h2>
             <p>
               {draft.name} · {draft.version}. Valores de demonstração: ajuste para a política da sua instituição.
             </p>
@@ -63,7 +63,7 @@ export function QualityPolicyModal({
             <input
               type="number"
               min={0}
-              step={0.5}
+              step={5}
               value={draft.minDelta}
               onChange={e => setDraft({ ...draft, minDelta: Math.max(0, num(e.target.value)) })}
             />
@@ -79,14 +79,9 @@ export function QualityPolicyModal({
             />
           </label>
           <label>
-            <span>Índice saudável a partir de</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={draft.healthyIndex}
-              onChange={e => setDraft({ ...draft, healthyIndex: Math.max(0, Math.min(100, num(e.target.value))) })}
-            />
+            <span>Faixa positiva a partir de</span>
+            <input type="number" value={draft.healthyIndex} readOnly aria-describedby="qp-bands" />
+            <small id="qp-bands">Vem das faixas de score dos parâmetros operacionais</small>
           </label>
           <label>
             <span>HHI moderado a partir de</span>

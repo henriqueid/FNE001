@@ -11,6 +11,9 @@ import {
   type QualityMonth,
 } from "@/src/domain/risk/quality";
 import { demoQualityPolicy, type QualityComponentRule } from "@/src/domain/risk/quality-policy";
+import { qualityByDocument, scoredCedent, scoredDebtor } from "@/src/domain/risk/quality-scores";
+import { initialDebtors } from "@/src/domain/core/demo/debtors";
+import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
 
 const month = (m: string, over: Partial<QualityMonth> = {}): QualityMonth => ({
   month: m,
@@ -150,11 +153,41 @@ describe("panorama do cliente", () => {
     expect(t.monthly).toHaveLength(6);
     expect(t.series[t.series.length - 1]).toBeCloseTo(t.index, 6);
     expect(t.latest?.month).toBe("2026-09");
-    expect(t.summary).toMatch(/^O índice caiu .* pontos/);
+    expect(t.summary).toMatch(/^O score caiu \d+ pontos/);
     expect(t.summary).toMatch(/% da queda vem de/);
   });
   it("cliente estável recebe resumo de estabilidade", () => {
     const rows = ["2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09"].map(m => month(m));
     expect(qualityTrend(history(rows), demoQualityPolicy).summary).toMatch(/ficou estável/);
+  });
+});
+
+describe("score único 0–1000", () => {
+  const today = "2026-09-30";
+  const histories = demoCedentHistories(initialCedents, today);
+  const byDoc = qualityByDocument(histories, demoQualityPolicy);
+  const digits = (v: string) => v.replace(/\D/g, "");
+
+  it("o score do cadastro é o mesmo do painel de Risco", () => {
+    const ranking = qualityRankings(histories, demoQualityPolicy);
+    for (const c of initialCedents.filter(x => x.settlements)) {
+      const scored = scoredCedent(c, byDoc.get(digits(c.document)));
+      const trend = ranking.trends.find(t => digits(t.document) === digits(c.document));
+      expect(scored.score).toBe(Math.round(trend!.index));
+      expect(scored.score).toBeGreaterThanOrEqual(0);
+      expect(scored.score).toBeLessThanOrEqual(1000);
+      expect(scored.bureauScore).toBe(c.score);
+    }
+  });
+
+  it("conta nova continua sem score calculado", () => {
+    const fresh = { ...initialCedents[0], score: 0, settlements: 0 };
+    expect(scoredCedent(fresh, byDoc.get(digits(fresh.document))).score).toBe(0);
+    const newDebtor = { ...initialDebtors[0], score: undefined, settlements: 0 };
+    expect(scoredDebtor(newDebtor).score).toBeUndefined();
+  });
+
+  it("faixa positiva vem dos parâmetros operacionais", () => {
+    expect(demoQualityPolicy.healthyIndex).toBe(operationalParametersFor().scoreBands.positive);
   });
 });

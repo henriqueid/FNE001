@@ -53,7 +53,11 @@ export function DebtorStatement({
       {selectedGroup ? (
         <>
           <div className="debtor-profile-top">
-            <ScoreExplanation score={selectedDebtor?.score} reasons={selectedDebtor?.scoreReasons} />
+            <ScoreExplanation
+              score={selectedDebtor?.score}
+              reasons={selectedDebtor?.scoreReasons}
+              bureau={selectedDebtor?.bureauScore}
+            />
             <div>
               <b>{selectedDebtor?.score == null ? "Sacado novo no ambiente" : "Score comportamental interno"}</b>
               <small>

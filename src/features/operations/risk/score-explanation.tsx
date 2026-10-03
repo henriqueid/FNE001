@@ -4,7 +4,15 @@
  */
 import { scoreLabel, scoreTone } from "./risk-model";
 
-export function ScoreExplanation({ score, reasons = [] }: { score?: number; reasons?: string[] }) {
+export function ScoreExplanation({
+  score,
+  reasons = [],
+  bureau,
+}: {
+  score?: number;
+  reasons?: string[];
+  bureau?: number;
+}) {
   return (
     <div
       className="score-explain"
@@ -23,6 +31,10 @@ export function ScoreExplanation({ score, reasons = [] }: { score?: number; reas
         ) : (
           <small>Histórico insuficiente para detalhar os fatores da nota.</small>
         )}
+        <small className="score-scale">
+          Score de qualidade 0–1000, calculado pela política de qualidade (o mesmo do painel de Risco)
+          {bureau != null ? ` · bureau externo: ${Math.round(bureau)}` : ""}.
+        </small>
       </div>
     </div>
   );

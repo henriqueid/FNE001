@@ -49,6 +49,24 @@ describe("originação e esteira", () => {
     const p = pipelineIndicators(initialOperations);
     expect(p.funnel.reduce((s, f) => s + f.count, 0)).toBe(p.activeCount);
     expect(p.conversion).toBeGreaterThanOrEqual(0);
+    expect(p.untouchedRate).toBeGreaterThanOrEqual(0);
+    expect(p.untouchedRate).toBeLessThanOrEqual(100);
+    expect(p.exceptionRate).toBeGreaterThanOrEqual(0);
+    expect(p.exceptionRate).toBeLessThanOrEqual(100);
+    expect(p.exceptionOperations).toBeLessThanOrEqual(p.evaluatedOperations);
+    expect(p.cycleCoverage).toBeGreaterThanOrEqual(0);
+    expect(p.cycleCoverage).toBeLessThanOrEqual(100);
+  });
+  it("mede o ciclo entre entrada e disponibilização quando os dois carimbos existem", () => {
+    const released = {
+      ...initialOperations[0],
+      status: "Liberada ao financeiro" as const,
+      receivedAtIso: "2026-10-04T12:00:00.000Z",
+      releaseReview: { status: "Enviada ao financeiro" as const, releasedAt: "2026-10-04T13:30:00.000Z" },
+    };
+    const p = pipelineIndicators([released]);
+    expect(p.availabilitySamples).toBe(1);
+    expect(p.availabilityMinutes).toBe(90);
   });
 });
 

@@ -1,4 +1,5 @@
 import { type EligibilityReview } from "@/src/domain/eligibility/model";
+import { type EnrichmentReview } from "@/src/domain/integrations/enrichment";
 
 /**
  * Entidades centrais do domínio: operação, título (entrada manual), cedente, sacado, veículo e liberação.
@@ -54,6 +55,30 @@ export type ManualEntryData = {
   receivableType: "Duplicata" | "Cheque" | "Nota promissória" | "Transferibilidade" | "Garantia";
   mode: "parcelado" | "individual";
   entries: ManualEntry[];
+};
+
+export type EntryIntakeIssue = {
+  id: string;
+  severity: "ALERTA" | "BLOQUEIO";
+  code: string;
+  message: string;
+  row?: number;
+  field?: string;
+};
+
+export type EntryIntake = {
+  id: string;
+  source: OperationSource;
+  fileName: string;
+  fileHash: string;
+  importedAt: string;
+  format: "XML" | "CSV" | "CNAB" | "XLSX";
+  status: "PRONTO" | "ATENCAO" | "BLOQUEADO";
+  originalRows: number;
+  acceptedRows: number;
+  rejectedRows: number;
+  matchedDebtors: number;
+  issues: EntryIntakeIssue[];
 };
 
 export type BankAccount = {
@@ -144,6 +169,8 @@ export type Debtor = {
   mobile?: string;
   whatsapp?: string;
   source: "Sistema" | "Integração" | "Cadastro manual";
+  /** Importações podem criar uma identidade mínima até a complementação cadastral. */
+  registrationStatus?: "Completo" | "Provisório";
   /** Score de qualidade interno (0–1000), calculado pela política de qualidade. Vazio = sacado novo. */
   score?: number;
   /** Score do bureau externo (Serasa, Boa Vista…), 0–1000. Entra no score interno como um componente. */
@@ -240,6 +267,8 @@ export type Operation = {
   owner: string;
   ownerInitials: string;
   enteredAt: string;
+  /** Instante técnico da entrada, usado para medir o ciclo até a disponibilização. */
+  receivedAtIso?: string;
   waitingFor: string;
   elapsedMinutes: number;
   clientAverageMinutes: number;
@@ -264,6 +293,10 @@ export type Operation = {
   }[];
   cancellation?: CancellationMemory;
   manualEntry?: ManualEntryData;
+  /** Lote que originou os títulos importados, com hash, contagens e inconsistências. */
+  entryIntake?: EntryIntake;
+  /** Fotografia das fontes internas e externas usadas para enriquecer esta operação. */
+  enrichmentReview?: EnrichmentReview;
   /** Execução congelada do motor e decisões humanas posteriores, preservadas para auditoria. */
   eligibilityReview?: EligibilityReview;
   riskReview?: {
@@ -383,6 +416,12 @@ export type Operation = {
     submittedAt?: string;
     submittedBy?: string;
     observation?: string;
+    finalDecision?: {
+      outcome: "APROVADA" | "DEVOLVIDA" | "REPROVADA";
+      decidedAt: string;
+      decidedBy: string;
+      justification: string;
+    };
     approvals?: Array<{
       id: string;
       role: string;

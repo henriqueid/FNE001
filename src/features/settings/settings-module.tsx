@@ -5,6 +5,10 @@ import { masterRuleCatalog } from "@/src/domain/eligibility/master-rule-catalog"
 import { type EligibilityPolicyState } from "@/src/domain/eligibility/policy-library";
 import PoliciesModule from "@/src/features/policies/policies-module";
 import { useState } from "react";
+import {
+  type IntegrationState,
+  updateIntegrationMode,
+} from "@/src/domain/integrations/model";
 
 type SettingsSection = "overview" | "policies" | "companies" | "integrations" | "interface";
 
@@ -80,11 +84,15 @@ export default function SettingsModule({
   onPolicies,
   showGuidance,
   onGuidance,
+  integrations,
+  onIntegrations,
 }: {
   policies: EligibilityPolicyState;
   onPolicies: (state: EligibilityPolicyState) => void;
   showGuidance: boolean;
   onGuidance: (value: boolean) => void;
+  integrations: IntegrationState;
+  onIntegrations: (state: IntegrationState) => void;
 }) {
   const [section, setSection] = useState<SettingsSection>("overview");
   const activePolicies = policies.policies.filter(policy => policy.status === "ATIVA").length;
@@ -92,6 +100,8 @@ export default function SettingsModule({
     rule => rule.readiness !== "REQUER_DADO" && rule.readiness !== "REQUER_INTEGRACAO",
   ).length;
   const currentSection = menuGroups.flatMap(group => group.items).find(item => item.id === section);
+  const activeIntegrations = integrations.providers.filter(provider => provider.mode === "ATIVA").length;
+  const demoIntegrations = integrations.providers.filter(provider => provider.mode === "DEMONSTRACAO").length;
 
   return (
     <main className="settings-page">
@@ -172,9 +182,9 @@ export default function SettingsModule({
                   <small>Com os dados atuais</small>
                 </article>
                 <article>
-                  <strong>0</strong>
+                  <strong>{activeIntegrations}</strong>
                   <span>Integrações ativas</span>
-                  <small>Fontes externas pendentes</small>
+                  <small>{demoIntegrations} fonte(s) em demonstração</small>
                 </article>
               </section>
 
@@ -266,21 +276,39 @@ export default function SettingsModule({
               <header>
                 <span>FONTES EXTERNAS</span>
                 <h2>Integrações do motor</h2>
-                <p>Conexões necessárias para executar regras que dependem de dados externos.</p>
+                <p>Controle quais fontes alimentam o enriquecimento. Demonstração nunca é apresentada como consulta oficial.</p>
               </header>
+              <div className="settings-integration-legend">
+                <span><b>{activeIntegrations}</b> oficiais ativas</span>
+                <span><b>{demoIntegrations}</b> em demonstração</span>
+                <span><b>{integrations.providers.filter(provider => provider.mode === "NAO_CONFIGURADA").length}</b> não configuradas</span>
+              </div>
               <div className="settings-integration-grid">
-                {[
-                  "Receita Federal",
-                  "SEFAZ",
-                  "Bureaus de crédito",
-                  "Registradoras",
-                  "Bancos e funding",
-                  "Assinatura eletrônica",
-                ].map(name => (
-                  <article key={name}>
-                    <strong>{name}</strong>
-                    <span>Não configurada</span>
-                    <small>Preparada para integração institucional</small>
+                {integrations.providers.map(provider => (
+                  <article key={provider.id} className={`integration-${provider.mode.toLowerCase()}`}>
+                    <div>
+                      <small>{provider.capability}</small>
+                      <strong>{provider.name}</strong>
+                      <p>{provider.description}</p>
+                    </div>
+                    <span>
+                      {provider.mode === "ATIVA" ? "Oficial ativa" : provider.mode === "DEMONSTRACAO" ? "Demonstração" : provider.mode === "INDISPONIVEL" ? "Indisponível" : "Não configurada"}
+                    </span>
+                    <small>
+                      {provider.mode === "DEMONSTRACAO"
+                        ? "Usa dados fictícios claramente identificados."
+                        : provider.mode === "ATIVA"
+                          ? "Credenciais institucionais configuradas."
+                          : "Credenciais e homologação necessárias."
+                      }
+                    </small>
+                    {provider.mode === "DEMONSTRACAO" ? (
+                      <button type="button" onClick={() => onIntegrations(updateIntegrationMode(integrations, provider.id, "NAO_CONFIGURADA"))}>Desativar demonstração</button>
+                    ) : provider.mode === "NAO_CONFIGURADA" && ["RECEITA", "SEFAZ", "BUREAU"].includes(provider.id) ? (
+                      <button type="button" onClick={() => onIntegrations(updateIntegrationMode(integrations, provider.id, "DEMONSTRACAO"))}>Usar dados de demonstração</button>
+                    ) : (
+                      <em>Conexão institucional futura</em>
+                    )}
                   </article>
                 ))}
               </div>

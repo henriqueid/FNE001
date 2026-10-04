@@ -78,6 +78,7 @@ export default function HomeDashboard({
         balance={metrics.bankBalance}
         minimum={metrics.minimumCash}
         onGoFinance={onGoFinance}
+        compactView={profile !== "gestao"}
       />
 
       <HomeKpis metrics={metrics} profile={profile} onGoOperations={onGoOperations} onGoFinance={onGoFinance} />

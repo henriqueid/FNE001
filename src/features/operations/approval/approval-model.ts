@@ -7,6 +7,7 @@
 import { stages } from "@/src/domain/core/stages";
 import { type Cedent, type Operation } from "@/src/domain/core/types";
 import { eligibilityRouteFor } from "@/src/domain/eligibility/orchestration";
+import { effectiveEvaluationOutcome, effectiveRunSummary } from "@/src/domain/eligibility/decision";
 import { type lastroAssessmentFor } from "@/src/domain/operations/lastro";
 import {
   normalizedPricing,
@@ -139,6 +140,54 @@ export function buildFinancialFigures(operation: Operation, registryCedents: Ced
 }
 
 export type FinancialFigures = ReturnType<typeof buildFinancialFigures>;
+
+/** Síntese determinística usada pela Tela Final; não cria decisões, apenas consolida as já registradas. */
+export function buildFinalDecisionSnapshot(operation: Operation) {
+  const entries = operation.manualEntry?.entries ?? [];
+  const review = operation.eligibilityReview;
+  const policy = review ? effectiveRunSummary(review.run, review.overrides) : undefined;
+  let eligibleTitles = 0;
+  let exceptionTitles = 0;
+  let ineligibleTitles = 0;
+  let pendingTitles = 0;
+
+  entries.forEach(title => {
+    const outcomes = review?.run.evaluations
+      .filter(item => item.level === "TITULO" && item.subjectId === title.id)
+      .map(item => effectiveEvaluationOutcome(item, review.overrides));
+    if (!outcomes?.length) {
+      const manual = operation.riskReview?.titleDecisions?.[title.id];
+      if (manual === "Aprovado") eligibleTitles += 1;
+      else if (manual === "Reprovado") ineligibleTitles += 1;
+      else pendingTitles += 1;
+    } else if (outcomes.includes("REPROVADO")) ineligibleTitles += 1;
+    else if (outcomes.includes("EXCECAO")) exceptionTitles += 1;
+    else if (outcomes.includes("NAO_AVALIADO")) pendingTitles += 1;
+    else eligibleTitles += 1;
+  });
+
+  const portfolioEvaluations = review ? review.run.evaluations.filter(item => item.level === "CARTEIRA") : [];
+  const portfolioAttention = review
+    ? portfolioEvaluations.filter(item => effectiveEvaluationOutcome(item, review.overrides) !== "APROVADO").length
+    : 0;
+  const enrichment = operation.enrichmentReview?.snapshot;
+
+  return {
+    totalTitles: entries.length || operation.titleCount,
+    eligibleTitles,
+    exceptionTitles,
+    ineligibleTitles,
+    pendingTitles,
+    policy,
+    portfolioEvaluations,
+    portfolioAttention,
+    enrichment,
+    dataPending: (enrichment?.summary.PENDENTE ?? 0) + (enrichment?.summary.INDISPONIVEL ?? 0),
+    officialSources: enrichment?.summary.OFICIAL ?? 0,
+    internalSources: enrichment?.summary.INTERNO ?? 0,
+    demoSources: enrichment?.summary.DEMONSTRACAO ?? 0,
+  };
+}
 
 export function isRiskApproved(operation: Operation) {
   if (operation.eligibilityReview) return eligibilityRouteFor(operation).canAdvance;
@@ -293,4 +342,44 @@ export function buildApprovalTimeline(operation: Operation, audit: ApprovalAudit
 
 export function emptyManualDraft(signedDate: string): ManualSignatureDraft {
   return { signedDate, reason: "Contrato assinado fisicamente", notes: "", attachmentName: "" };
+}
+
+export function approvalPackageComplete(review: ApprovalReview) {
+  const approvals = review.approvals ?? [];
+  const documents = review.documents ?? [];
+  const signatures = review.signatures ?? [];
+  return (
+    review.finalDecision?.outcome === "APROVADA" &&
+    approvals.length > 0 &&
+    approvals.every(item => item.status === "Aprovado") &&
+    documents.filter(item => item.required).every(item => item.status === "Pronto" || item.status === "Dispensado") &&
+    signatures.length > 0 &&
+    signatures.every(item => item.status === "Assinado")
+  );
+}
+
+/** Disponibiliza a operação para liberação assim que a última formalidade humana é concluída. */
+export function withFormalizationCompleted(operation: Operation, review: ApprovalReview, at = nowLabel()): Operation {
+  if (!approvalPackageComplete(review)) return { ...operation, approvalReview: review };
+  const completion = { stageId: 5, completedBy: "Orquestrador FNE001", completedAt: at };
+  return {
+    ...operation,
+    stage: 6,
+    status: "Pronta para liberar",
+    blockers: 0,
+    nextAction: "Conferir favorecidos e autorizar o envio ao financeiro",
+    approvalReview: {
+      ...review,
+      audit: [
+        ...(review.audit ?? []),
+        {
+          at,
+          by: "Orquestrador FNE001",
+          action: "Operação disponibilizada",
+          detail: "Alçadas, documentos e assinaturas concluídos; encaminhada automaticamente para Liberação.",
+        },
+      ],
+    },
+    stageCompletions: [...(operation.stageCompletions ?? []).filter(item => item.stageId !== 5), completion],
+  };
 }

@@ -135,6 +135,19 @@ export const LockIcon = (p: IconProps) => (
     <path d="M8 11V7a4 4 0 0 1 8 0v4" />
   </Icon>
 );
+export const EyeIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+    <circle cx="12" cy="12" r="2.5" />
+  </Icon>
+);
+export const EyeOffIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m3 3 18 18" />
+    <path d="M10.6 6.2A10.9 10.9 0 0 1 12 6c6.5 0 10 6 10 6a16.6 16.6 0 0 1-2.1 2.8" />
+    <path d="M6.2 6.2C3.5 8 2 12 2 12s3.5 6 10 6a10.7 10.7 0 0 0 4.1-.8" />
+  </Icon>
+);
 export const UndoIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M9 14 4 9l5-5" />

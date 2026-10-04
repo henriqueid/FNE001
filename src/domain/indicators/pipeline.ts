@@ -7,6 +7,17 @@ import { type Operation } from "@/src/domain/core/types";
 
 const stageNames = ["Entrada", "Risco", "Lastro", "Preço", "Aprovação", "Liberação"];
 
+function timestamp(value: string | undefined) {
+  if (!value) return undefined;
+  const direct = Date.parse(value);
+  if (Number.isFinite(direct)) return direct;
+  const match = value.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s+(\d{1,2}):(\d{2})/);
+  if (!match) return undefined;
+  const [, day, month, rawYear, hour, minute] = match;
+  const year = Number(rawYear) < 100 ? 2000 + Number(rawYear) : Number(rawYear);
+  return new Date(year, Number(month) - 1, Number(day), Number(hour), Number(minute)).getTime();
+}
+
 export function pipelineIndicators(ops: Operation[]) {
   const live = ops.filter(op => op.status !== "Cancelada");
   const released = live.filter(op => op.status === "Liberada ao financeiro");
@@ -23,6 +34,12 @@ export function pipelineIndicators(ops: Operation[]) {
     : 0;
   const untouched = active.filter(op => op.blockers === 0 && op.alerts <= 1);
   const evaluations = ops.flatMap(op => op.eligibilityReview?.run.evaluations ?? []);
+  const evaluatedOperations = ops.filter(op => (op.eligibilityReview?.run.evaluations.length ?? 0) > 0);
+  const exceptionOperations = evaluatedOperations.filter(op =>
+    (op.eligibilityReview?.run.evaluations ?? []).some(
+      evaluation => evaluation.outcome === "EXCECAO" || evaluation.outcome === "REPROVADO",
+    ),
+  );
   const stops = new Map<string, { rule: string; count: number; operations: Set<string> }>();
   ops.forEach(op =>
     (op.eligibilityReview?.run.evaluations ?? [])
@@ -35,6 +52,11 @@ export function pipelineIndicators(ops: Operation[]) {
       }),
   );
   const overrides = ops.flatMap(op => op.eligibilityReview?.overrides ?? []);
+  const availabilityCycles = released.flatMap(op => {
+    const start = timestamp(op.receivedAtIso);
+    const end = timestamp(op.releaseReview?.releasedAt);
+    return start !== undefined && end !== undefined && end >= start ? [(end - start) / 60_000] : [];
+  });
   return {
     total: live.length,
     activeCount: active.length,
@@ -44,8 +66,16 @@ export function pipelineIndicators(ops: Operation[]) {
     funnel,
     cycleMinutes: cycle,
     standardMinutes: standard,
+    cycleCoverage: active.length ? (withHistory.length / active.length) * 100 : 0,
+    availabilityMinutes: availabilityCycles.length
+      ? availabilityCycles.reduce((sum, minutes) => sum + minutes, 0) / availabilityCycles.length
+      : 0,
+    availabilitySamples: availabilityCycles.length,
     untouchedRate: active.length ? (untouched.length / active.length) * 100 : 0,
     evaluations: evaluations.length,
+    evaluatedOperations: evaluatedOperations.length,
+    exceptionOperations: exceptionOperations.length,
+    exceptionRate: evaluatedOperations.length ? (exceptionOperations.length / evaluatedOperations.length) * 100 : 0,
     topStops: [...stops.values()]
       .map(s => ({ rule: s.rule, count: s.count, operations: s.operations.size }))
       .sort((a, b) => b.operations - a.operations || b.count - a.count)

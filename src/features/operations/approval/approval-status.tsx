@@ -83,6 +83,8 @@ export function ApprovalFeedback({ message, onDismiss }: { message: string; onDi
 export function ApprovalFooter({
   status,
   prerequisitesReady,
+  observation,
+  onObservationChange,
   onSubmit,
   onApprove,
   onReturn,
@@ -90,19 +92,31 @@ export function ApprovalFooter({
 }: {
   status: ApprovalStatus;
   prerequisitesReady: boolean;
+  observation: string;
+  onObservationChange: (value: string) => void;
   onSubmit: () => void;
   onApprove: () => void;
   onReturn: () => void;
   onReject: () => void;
 }) {
   return (
-    <div className="approval-footer">
-      <div>
+    <section className="approval-footer approval-final-decision">
+      <div className="approval-final-copy">
+        <small>DECISÃO HUMANA</small>
         <strong>{status === "Preparação" ? "Pacote em preparação" : status}</strong>
         <span>
           {prerequisitesReady ? "Requisitos anteriores concluídos." : "Existem requisitos anteriores pendentes."}
         </span>
       </div>
+      <label className="approval-final-justification">
+        <span>JUSTIFICATIVA, RESSALVA OU CONDICIONANTE</span>
+        <textarea
+          value={observation}
+          placeholder="Obrigatória para devolver ou reprovar; registrada na trilha permanente."
+          onChange={event => onObservationChange(event.target.value)}
+        />
+        <small>{observation.trim().length}/8 caracteres mínimos para devolver ou reprovar</small>
+      </label>
       <div className="approval-footer-actions">
         <button className="danger-secondary" onClick={onReject}>
           Reprovar
@@ -117,6 +131,6 @@ export function ApprovalFooter({
           Aprovar operação <ArrowIcon />
         </button>
       </div>
-    </div>
+    </section>
   );
 }

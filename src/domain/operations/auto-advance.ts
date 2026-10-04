@@ -6,7 +6,9 @@
  *   Se há confirmação pendente, a esteira PARA ali: ligar para o sacado é trabalho humano.
  * - Preço avança quando a condição comercial já foi salva, ou quando a condição padrão da modalidade
  *   respeita o piso de taxa e gera líquido e spread positivos (ela é salva em nome do motor).
- * - Aprovação, formalização e liberação nunca avançam sozinhas.
+ * - Aprovação e assinaturas continuam humanas. Depois da última assinatura e de todos os requisitos
+ *   concluídos, o orquestrador apenas disponibiliza a operação na etapa de Liberação.
+ * - A autorização financeira nunca é automática: favorecidos e pagamento ainda exigem conferência humana.
  *
  * Cada avanço automático fica registrado na conclusão da etapa ("Motor de elegibilidade") e no
  * histórico da condição comercial, com o motivo.

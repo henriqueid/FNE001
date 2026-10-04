@@ -68,6 +68,7 @@ export function OperationWorkspace({
     const result = autoAdvanceWithinPolicy(next, { debtors, at: workspaceTimestamp() });
     setOperation(result.operation);
     onUpdate(result.operation);
+    if (result.operation.stage !== operation.stage) setActive(result.operation.stage);
     if (result.steps.length) {
       setActive(result.operation.stage);
       setFeedback({ tone: "success", message: autoAdvanceMessage(result) });

@@ -43,6 +43,8 @@ import { collectionMonth, concentration, rollRates, vintages } from "@/src/domai
 import { qualityRankings } from "@/src/domain/risk/quality";
 import { type QualityPolicy, provisionRate } from "@/src/domain/risk/quality-policy";
 import { originationIndicators } from "@/src/domain/indicators/origination";
+import { financeIndicators } from "@/src/domain/indicators/finance";
+import { pipelineIndicators } from "@/src/domain/indicators/pipeline";
 import { daysFrom } from "@/src/domain/indicators/portfolio";
 import { useMemo } from "react";
 
@@ -214,6 +216,14 @@ export function useHomeMetrics({
     () => shared?.cedentHistories ?? demoCedentHistories(registryCedents, today),
     [shared, registryCedents, today],
   );
+  const scopedCedentHistories = useMemo(
+    () =>
+      cedExp.flatMap(exposure => {
+        const history = cedentHistories.find(item => item.document === exposure.document);
+        return history ? [{ ...history, exposure: exposure.exposure }] : [];
+      }),
+    [cedentHistories, cedExp],
+  );
   const debtorHistories = useMemo(() => {
     const known = new Map((shared?.debtorHistories ?? []).map(h => [h.document, h]));
     const missing = debExp.filter(d => !known.has(d.document));
@@ -236,18 +246,87 @@ export function useHomeMetrics({
   }, [shared, debExp, debtors, today]);
   const risk = useMemo(
     () => ({
-      cedentQuality: qualityRankings(cedentHistories, qualityPolicy),
+      cedentQuality: qualityRankings(scopedCedentHistories, qualityPolicy),
       debtorQuality: qualityRankings(debtorHistories, qualityPolicy),
-      rollRates: rollRates(cedentHistories),
-      vintages: vintages(cedentHistories),
+      rollRates: rollRates(scopedCedentHistories),
+      vintages: vintages(scopedCedentHistories),
       cedentConcentration: concentration(cedExp.map(c => ({ name: c.name, amount: c.exposure }))),
       debtorConcentration: concentration(debExp.map(d => ({ name: d.name, amount: d.exposure }))),
-      collection: collectionMonth(cedentHistories),
-      collectionPrevious: collectionMonth(cedentHistories, 1),
+      collection: collectionMonth(scopedCedentHistories),
+      collectionPrevious: collectionMonth(scopedCedentHistories, 1),
+      collectionHistory: Array.from({ length: 6 }, (_, index) =>
+        collectionMonth(scopedCedentHistories, 5 - index),
+      ).filter(month => month.month),
       policy: qualityPolicy,
     }),
-    [cedentHistories, debtorHistories, qualityPolicy, cedExp, debExp],
+    [scopedCedentHistories, debtorHistories, qualityPolicy, cedExp, debExp],
   );
+
+  const automation = useMemo(() => pipelineIndicators(scoped), [scoped]);
+  const limitHeadroom = cedExp.reduce(
+    (sum, cedent) => sum + Math.max(0, cedent.limit - cedent.usedLimit - cedent.pipeline),
+    0,
+  );
+  const projectedBase = timeline.base.slice(timeline.todayIndex);
+  const minimumProjectedValue = Math.min(...projectedBase);
+  const minimumProjectedOffset = projectedBase.indexOf(minimumProjectedValue);
+  const minimumProjectedIndex = Math.max(0, timeline.todayIndex + minimumProjectedOffset);
+  const liquidity = {
+    minimumProjectedValue,
+    minimumProjectedDate: timeline.dates[minimumProjectedIndex] ?? today,
+    fundingGap: Math.max(0, minimumCash - minimumProjectedValue),
+    operatingCapacity: Math.max(0, capacity),
+  };
+
+  const portfolioHistory = useMemo(() => {
+    const months = [...new Set(scopedCedentHistories.flatMap(history => history.months.map(row => row.month)))].sort();
+    const bucketDays = [0, 1, 31, 61, 91];
+    const raw = months.map(month => {
+      const rows = scopedCedentHistories.flatMap(history => history.months.filter(row => row.month === month));
+      const settled = rows.reduce((sum, row) => sum + row.settled, 0);
+      const onTime = rows.reduce((sum, row) => sum + row.settledOnTime, 0);
+      return {
+        month,
+        balance: rows.reduce((sum, row) => sum + row.openBalance, 0),
+        overdue30: rows.reduce((sum, row) => sum + row.overdue30, 0),
+        provision: rows.reduce(
+          (sum, row) =>
+            sum +
+            row.buckets.reduce(
+              (bucketSum, amount, index) =>
+                bucketSum + (amount * provisionRate(bucketDays[index], qualityPolicy.indicators.provisionBands)) / 100,
+              0,
+            ),
+          0,
+        ),
+        onTimeRate: settled ? (onTime / settled) * 100 : 100,
+      };
+    });
+    const latestBalance = raw[raw.length - 1]?.balance ?? 0;
+    const scale = latestBalance > 0 ? portfolioTotal / latestBalance : 1;
+    const normalized = raw.map(row => ({
+      ...row,
+      balance: row.balance * scale,
+      overdue30: row.overdue30 * scale,
+      provision: row.provision * scale,
+    }));
+    const latest = normalized[normalized.length - 1];
+    if (latest) {
+      latest.balance = portfolioTotal;
+      latest.overdue30 = titles
+        .filter(title => daysFrom(title.dueDate, today) > 30)
+        .reduce((sum, title) => sum + title.amount, 0);
+      latest.provision = titles.reduce(
+        (sum, title) =>
+          sum +
+          (title.amount * provisionRate(daysFrom(title.dueDate, today), qualityPolicy.indicators.provisionBands)) / 100,
+        0,
+      );
+    }
+    return normalized;
+  }, [scopedCedentHistories, qualityPolicy, portfolioTotal, titles, today]);
+  const portfolioHistoryIsDemo =
+    !shared?.cedentHistories || qualityPolicy.name.toLocaleLowerCase("pt-BR").includes("demonstra");
 
   /* indicadores de mercado da Gestão: originação do período, carteira, provisão e concentração */
   const market = useMemo(() => {
@@ -270,6 +349,20 @@ export function useHomeMetrics({
       provision,
     };
   }, [scoped, today, win, titles, qualityPolicy]);
+  const economics = useMemo(
+    () =>
+      financeIndicators(
+        finance,
+        companyScope,
+        win.from,
+        win.to,
+        market.origination.rate,
+        market.origination.fundingCost,
+        cur.volume,
+        Math.max(0, bankBalance),
+      ),
+    [finance, companyScope, win, market.origination, cur.volume, bankBalance],
+  );
 
   /* listas derivadas: alertas, pendências, marcos, cobrança e concentração */
   const alerts = buildRiskAlerts({ cedExp, debExp, titles, active, today });
@@ -334,6 +427,12 @@ export function useHomeMetrics({
     timeline,
     risk,
     market,
+    automation,
+    economics,
+    liquidity,
+    limitHeadroom,
+    portfolioHistory,
+    portfolioHistoryIsDemo,
     bankBalance,
     minimumCash,
     capacity,

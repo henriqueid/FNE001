@@ -91,9 +91,20 @@ o resultado original.
 2. Role até **Alçadas**.
 3. Verifique que as ações de aprovação continuam no fluxo já existente.
 
-Resultado esperado: a análise final informa e explica; ela não aprova, reprova ou avança a operação automaticamente.
+Resultado esperado: a análise final informa e explica; ela não aprova nem reprova a operação automaticamente.
 
-## 9. Apresentação
+## 9. Formalização e disponibilização automática
+
+1. Aprove todas as alçadas e a operação.
+2. Envie o pacote para assinatura.
+3. Registre a primeira assinatura e confirme que a operação permanece em **Aprovação**.
+4. Registre a última assinatura exigida.
+
+Resultado esperado: a operação muda automaticamente para **Pronta para liberar** e a etapa atual passa a ser
+**Liberação**. A trilha registra a conclusão pelo **Orquestrador FNE001**, mas nenhum pagamento é criado até a ação
+humana **Liberar para o financeiro**.
+
+## 10. Apresentação
 
 1. Alterne entre tema claro e escuro.
 2. Redimensione a janela.
@@ -111,7 +122,7 @@ Resultado esperado: os blocos reorganizam sem sobreposição e o detalhamento co
 - [ ] Principais concentrações por sacado aparecem em ordem decrescente.
 - [ ] Apenas alertas, exceções, impeditivos e decisões de override exigem aprofundamento.
 - [ ] Regra, explicação e evidência permanecem rastreáveis.
-- [ ] Nenhuma decisão humana é executada automaticamente.
+- [ ] Nenhuma decisão humana é executada automaticamente; apenas o avanço mecânico após a última assinatura.
 - [ ] A tela permanece legível em tema escuro e largura reduzida.
 
 ## Limite desta etapa

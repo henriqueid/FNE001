@@ -47,6 +47,8 @@ import { RegistryContext, type RegistryValue } from "./registry-context";
 import { EligibilityPolicyProvider } from "./eligibility-policy-context";
 import { seedEligibilityPolicies } from "@/src/domain/eligibility/policy-library";
 import SettingsModule from "@/src/features/settings/settings-module";
+import { seedIntegrationState } from "@/src/domain/integrations/model";
+import { IntegrationProvider } from "./integration-context";
 
 const COMPANY_SCOPE_KEY = "strato-company-scope";
 
@@ -71,6 +73,7 @@ export default function StratoApp() {
   // Cadastro de pessoas (cedentes, sacados, fornecedores, representantes, investidores...).
   const [savedParties, setSavedParties] = useState<Party[]>(() => seedParties());
   const [policies, setPolicies] = useState(() => seedEligibilityPolicies());
+  const [integrations, setIntegrations] = useState(() => seedIntegrationState());
   // Resultado financeiro de cada operação, pela mesma precificação da etapa Preço, para a Visão geral.
   const homeFinancials = useMemo(
     () =>
@@ -157,6 +160,7 @@ export default function StratoApp() {
     if (stored.parties) setSavedParties(stored.parties);
     if (stored.portfolio) setPortfolio(stored.portfolio);
     if (stored.policies) setPolicies(stored.policies);
+    if (stored.integrations) setIntegrations(stored.integrations);
     if (stored.guidance !== undefined) setShowGuidance(stored.guidance);
     try {
       const savedScope = window.localStorage.getItem(COMPANY_SCOPE_KEY);
@@ -174,8 +178,8 @@ export default function StratoApp() {
 
   useEffect(() => {
     if (storageReady)
-      savePersistedState({ operations, debtors, finance, commercial, parties: savedParties, portfolio, policies });
-  }, [operations, debtors, finance, commercial, savedParties, portfolio, policies, storageReady]);
+      savePersistedState({ operations, debtors, finance, commercial, parties: savedParties, portfolio, policies, integrations });
+  }, [operations, debtors, finance, commercial, savedParties, portfolio, policies, integrations, storageReady]);
 
   useEffect(() => {
     if (storageReady) saveGuidance(showGuidance);
@@ -216,10 +220,42 @@ export default function StratoApp() {
     setSavedParties(seedParties());
     setPortfolio(seedPortfolio(initialOperations));
     setPolicies(seedEligibilityPolicies());
+    setIntegrations(seedIntegrationState());
     setSelected(null);
   }
   function createOperation(input: NewOperationInput) {
     const next = buildNewOperation(input, operations, commercial, new Date().toISOString().slice(0, 10));
+    const provisionalDebtors = (input.importedData?.entries ?? []).flatMap(entry => {
+      if (!entry.debtorId.startsWith("pending:")) return [];
+      return [
+        {
+          id: entry.debtorId,
+          document: entry.debtorDocument,
+          name: entry.debtorName,
+          address: "Cadastro pendente",
+          number: "—",
+          district: "Cadastro pendente",
+          city: entry.city || "Cadastro pendente",
+          state: entry.state || "—",
+          zipCode: "",
+          source: "Integração" as const,
+          registrationStatus: "Provisório" as const,
+          publicStatus: "Consulta cadastral pendente",
+          portfolioReceivable: 0,
+          portfolioOverdue: 0,
+          settlements: 0,
+          lateSettlements: 0,
+          averageDelayDays: 0,
+          repurchases: 0,
+          incidents: 0,
+        },
+      ];
+    });
+    if (provisionalDebtors.length)
+      setDebtors(current => {
+        const known = new Set(current.map(debtor => debtor.document.replace(/\D/g, "")));
+        return [...provisionalDebtors.filter(debtor => !known.has(debtor.document.replace(/\D/g, ""))), ...current];
+      });
     setOperations([next, ...operations]);
     setShowNew(false);
     setSelected(next);
@@ -415,6 +451,8 @@ export default function StratoApp() {
         onPolicies={setPolicies}
         showGuidance={showGuidance}
         onGuidance={setShowGuidance}
+        integrations={integrations}
+        onIntegrations={setIntegrations}
       />
     );
   else if (view in roadmapViews) page = <ModuleRoadmap view={view as keyof typeof roadmapViews} />;
@@ -430,6 +468,7 @@ export default function StratoApp() {
     );
   return (
     <EligibilityPolicyProvider value={policies.policies}>
+      <IntegrationProvider value={integrations}>
       <RegistryContext.Provider value={registryValue}>
         <QualityContext.Provider value={qualityValue}>
           <ShellContext.Provider value={shellContext}>
@@ -449,6 +488,8 @@ export default function StratoApp() {
             {showNew && (
               <NewOperationModal
                 defaultDestination={companyScope}
+                operations={operations}
+                debtors={debtors}
                 onClose={() => setShowNew(false)}
                 onCreate={createOperation}
               />
@@ -485,6 +526,7 @@ export default function StratoApp() {
           </ShellContext.Provider>
         </QualityContext.Provider>
       </RegistryContext.Provider>
+      </IntegrationProvider>
     </EligibilityPolicyProvider>
   );
 }

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { initialCedents } from "@/src/domain/core/demo/cedents";
 import { initialDebtors } from "@/src/domain/core/demo/debtors";
 import { initialOperations } from "@/src/domain/core/demo/operations";
-import { effectiveRunSummary } from "@/src/domain/eligibility/decision";
+import { eligibilityAuditPackage } from "@/src/domain/eligibility/audit-package";
+import { effectiveRunSummary, replaceEligibilityRun } from "@/src/domain/eligibility/decision";
 import { eligibilityOperationalMetrics } from "@/src/domain/eligibility/metrics";
 import { evaluateOperationEligibility } from "@/src/domain/eligibility/operation-adapter";
 import { compareEligibilityValues } from "@/src/domain/eligibility/operators";
@@ -201,6 +202,103 @@ describe("Motor Universal de Elegibilidade", () => {
       status: "ENCERRADA",
       effectiveTo: "2026-10-31",
     });
+  });
+
+  it("detecta mudança de entrada e preserva a execução substituída com seus overrides", () => {
+    const operation = initialOperations.find(item => item.aditivoNumber === "20260925004")!;
+    const cedent = initialCedents.find(item => item.document === operation.document);
+    const original = evaluateOperationEligibility({ operation, debtors: initialDebtors, cedent, asOf: "2026-10-01" });
+    const changed = evaluateOperationEligibility({
+      operation: { ...operation, amount: operation.amount + 10_000 },
+      debtors: initialDebtors,
+      cedent,
+      asOf: "2026-10-01",
+    });
+    expect(original.inputFingerprint).toBeTruthy();
+    expect(changed.inputFingerprint).not.toBe(original.inputFingerprint);
+
+    const exception = original.evaluations.find(item => item.outcome === "EXCECAO")!;
+    const override = {
+      id: "override:history",
+      evaluationId: exception.id,
+      ruleId: exception.ruleId,
+      subjectId: exception.subjectId,
+      originalOutcome: exception.outcome,
+      observed: exception.observed,
+      parameter: exception.parameter,
+      decision: "APROVAR_EXCECAO" as const,
+      justification: "Decisão anterior preservada na trilha.",
+      authority: exception.overrideAuthority!,
+      decidedBy: "Henrique",
+      decidedAt: "2026-10-01T12:00:00",
+      evidence: exception.evidence,
+    };
+    const review = replaceEligibilityRun({ run: original, overrides: [override] }, changed, {
+      at: "2026-10-02T09:00:00",
+      by: "Henrique",
+      reason: "Valor bruto atualizado",
+    });
+    expect(review.overrides).toEqual([]);
+    expect(review.history).toHaveLength(1);
+    expect(review.history?.[0]).toMatchObject({
+      run: { id: original.id },
+      overrides: [{ id: "override:history" }],
+      supersededBy: "Henrique",
+      reason: "Valor bruto atualizado",
+    });
+    const audit = eligibilityAuditPackage(
+      { ...operation, eligibilityReview: review },
+      "2026-10-02T10:00:00",
+      "Henrique",
+    );
+    expect(audit).toMatchObject({
+      schema: "strato.eligibility-audit.v1",
+      exportedBy: "Henrique",
+      current: { run: { id: changed.id }, overrides: [] },
+      history: [{ run: { id: original.id }, overrides: [{ id: "override:history" }] }],
+    });
+  });
+
+  it("disponibiliza fatos projetados de sacado, cedente, operação e carteira para políticas específicas", () => {
+    const operation = initialOperations.find(item => item.aditivoNumber === "20260925004")!;
+    const cedent = initialCedents.find(item => item.document === operation.document);
+    const policy = {
+      id: "POL-FACTS-TEST:v1",
+      name: "Política de fatos disponíveis",
+      version: "v1",
+      layer: "UNIVERSAL" as const,
+      effectiveFrom: "2026-01-01",
+      status: "ATIVA" as const,
+      bindings: [
+        "DEBTOR-PORTFOLIO-CONCENTRATION-MAX-001",
+        "DEBTOR-GROUP-CONCENTRATION-MAX-001",
+        "DEBTOR-INTERNAL-SCORE-MIN-001",
+        "CEDENT-INTERNAL-SCORE-MIN-001",
+        "OPERATION-WEIGHTED-TERM-MAX-001",
+        "PORTFOLIO-DEBTOR-CONCENTRATION-MAX-001",
+        "PORTFOLIO-DIVERSIFICATION-MIN-001",
+      ].map(ruleId => ({
+        ruleId,
+        enabled: true,
+        parameter: ruleId.includes("SCORE-MIN") || ruleId.includes("DIVERSIFICATION-MIN") ? 0 : 100,
+        failureOutcome: "EXCECAO" as const,
+        action: "SOLICITAR_DECISAO" as const,
+        overrideAllowed: true,
+        overrideAuthority: "Gerente de crédito",
+      })),
+    };
+    const run = evaluateOperationEligibility({
+      operation,
+      debtors: initialDebtors,
+      cedent,
+      asOf: "2026-10-01",
+      policies: [policy],
+    });
+    expect(run.evaluations.length).toBeGreaterThan(7);
+    expect(run.evaluations.every(item => item.observed !== null)).toBe(true);
+    expect(run.evaluations.find(item => item.ruleId === "PORTFOLIO-DEBTOR-CONCENTRATION-MAX-001")?.evidence).toContain(
+      "carteira projetada",
+    );
   });
 
   it("mantém um catálogo amplo sem inventar parâmetros universais", () => {

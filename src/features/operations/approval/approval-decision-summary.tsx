@@ -2,9 +2,9 @@
 
 import { preciseMoney } from "@/src/domain/core/format";
 import { type Operation } from "@/src/domain/core/types";
-import { effectiveEvaluationOutcome, effectiveRunSummary, latestOverrideFor } from "@/src/domain/eligibility/decision";
+import { effectiveEvaluationOutcome, latestOverrideFor } from "@/src/domain/eligibility/decision";
 import { type EligibilityOutcome } from "@/src/domain/eligibility/model";
-import { type FinancialFigures, decimal } from "./approval-model";
+import { buildFinalDecisionSnapshot, type FinancialFigures, decimal } from "./approval-model";
 
 const outcomeLabel: Record<EligibilityOutcome, string> = {
   APROVADO: "Aprovado",
@@ -25,7 +25,8 @@ const outcomeWeight: Record<EligibilityOutcome, number> = {
 export function ApprovalDecisionSummary({ operation, figures }: { operation: Operation; figures: FinancialFigures }) {
   const entries = operation.manualEntry?.entries ?? [];
   const review = operation.eligibilityReview;
-  const summary = review ? effectiveRunSummary(review.run, review.overrides) : undefined;
+  const decision = buildFinalDecisionSnapshot(operation);
+  const summary = decision.policy;
   const attention = review
     ? review.run.evaluations
         .filter(item => item.outcome !== "APROVADO" || Boolean(latestOverrideFor(item.id, review.overrides)))
@@ -48,11 +49,7 @@ export function ApprovalDecisionSummary({ operation, figures }: { operation: Ope
       {},
     ),
   ).sort((a, b) => b.amount - a.amount);
-  const titleDecisions = operation.riskReview?.titleDecisions ?? {};
-  const approvedTitles = entries.filter(item => titleDecisions[item.id] === "Aprovado").length;
-  const rejectedTitles = entries.filter(item => titleDecisions[item.id] === "Reprovado").length;
-  const pendingTitles = Math.max(0, entries.length - approvedTitles - rejectedTitles);
-  const totalTitles = entries.length || operation.titleCount;
+  const totalTitles = decision.totalTitles;
   const grossAmount = figures.calculated.face || operation.amount;
   const netAmount = figures.calculated.face ? figures.finalNet : operation.netAmount;
   const projectedLimit = Math.max(0, figures.availableLimit - grossAmount);
@@ -91,15 +88,20 @@ export function ApprovalDecisionSummary({ operation, figures }: { operation: Ope
             <strong>{totalTitles}</strong> títulos analisados
           </span>
           <span>
-            <strong>{approvedTitles}</strong> elegíveis
+            <strong>{decision.eligibleTitles}</strong> elegíveis
           </span>
-          {pendingTitles > 0 && (
+          {decision.exceptionTitles > 0 && (
             <span className="attention">
-              <strong>{pendingTitles}</strong> pendentes
+              <strong>{decision.exceptionTitles}</strong> com exceção
             </span>
           )}
-          <span className={rejectedTitles ? "danger" : ""}>
-            <strong>{rejectedTitles}</strong> inelegíveis
+          {decision.pendingTitles > 0 && (
+            <span className="attention">
+              <strong>{decision.pendingTitles}</strong> pendentes
+            </span>
+          )}
+          <span className={decision.ineligibleTitles ? "danger" : ""}>
+            <strong>{decision.ineligibleTitles}</strong> inelegíveis
           </span>
           <span className={attention.length ? "attention" : ""}>
             <strong>{attention.length}</strong> pontos de atenção
@@ -150,6 +152,89 @@ export function ApprovalDecisionSummary({ operation, figures }: { operation: Ope
               </div>
             ))}
             {!debtorGroups.length && <p>Nenhum título disponível para consolidar sacados.</p>}
+          </div>
+        </section>
+      </div>
+
+      <div className="approval-intelligence-grid">
+        <section className="approval-context-card approval-enrichment-card">
+          <header>
+            <span>QUALIDADE DOS DADOS</span>
+            <strong>Cobertura do enriquecimento</strong>
+          </header>
+          {decision.enrichment ? (
+            <>
+              <div className="approval-source-counts">
+                <Metric label="Internas" value={String(decision.internalSources)} />
+                <Metric label="Oficiais" value={String(decision.officialSources)} />
+                <Metric label="Demonstração" value={String(decision.demoSources)} />
+                <Metric label="Pendências" value={String(decision.dataPending)} />
+              </div>
+              <details className="approval-evidence-drilldown">
+                <summary>
+                  Ver fontes e evidências <b>⌄</b>
+                </summary>
+                <div>
+                  {decision.enrichment.checks.map(check => (
+                    <p key={check.id}>
+                      <span className={`approval-source-state ${check.provenance.toLocaleLowerCase()}`}>
+                        {check.provenance === "DEMONSTRACAO" ? "Demonstração" : check.provenance.toLocaleLowerCase()}
+                      </span>
+                      <strong>{check.label}</strong>
+                      <small>
+                        {check.source} · {check.value} · {check.evidence}
+                      </small>
+                    </p>
+                  ))}
+                </div>
+              </details>
+            </>
+          ) : (
+            <div className="approval-attention-empty is-unavailable">
+              <strong>Enriquecimento ainda não fotografado.</strong>
+              <span>Retorne ao Risco para consolidar as fontes antes da decisão final.</span>
+            </div>
+          )}
+        </section>
+
+        <section className="approval-context-card approval-portfolio-card">
+          <header>
+            <span>IMPACTO NA CARTEIRA</span>
+            <strong>Efeito projetado após a operação</strong>
+          </header>
+          {decision.portfolioEvaluations.length ? (
+            <div className="approval-portfolio-rules">
+              {decision.portfolioEvaluations.map(item => {
+                const effective = review ? effectiveEvaluationOutcome(item, review.overrides) : item.outcome;
+                return (
+                  <details key={item.id}>
+                    <summary>
+                      <span className={`approval-attention-state ${effective.toLocaleLowerCase()}`}>
+                        {outcomeLabel[effective]}
+                      </span>
+                      <span>
+                        <strong>{item.ruleName}</strong>
+                        <small>{item.explanation}</small>
+                      </span>
+                      <b>⌄</b>
+                    </summary>
+                    <p>
+                      <strong>Evidência:</strong> {item.evidence}
+                    </p>
+                  </details>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="approval-attention-empty is-unavailable">
+              <strong>Sem avaliação de carteira registrada.</strong>
+              <span>A decisão não deve presumir impacto quando a dimensão não foi executada.</span>
+            </div>
+          )}
+          <div className={`approval-portfolio-status ${decision.portfolioAttention ? "attention" : "ready"}`}>
+            {decision.portfolioAttention
+              ? `${decision.portfolioAttention} ponto(s) da carteira exigem atenção.`
+              : `${decision.portfolioEvaluations.length} regra(s) de carteira sem exceção aberta.`}
           </div>
         </section>
       </div>

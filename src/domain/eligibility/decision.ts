@@ -2,6 +2,7 @@ import {
   type EligibilityEvaluation,
   type EligibilityOutcome,
   type EligibilityOverride,
+  type EligibilityReview,
   type EligibilityRun,
 } from "./model";
 
@@ -40,4 +41,29 @@ export function effectiveRunSummary(run: EligibilityRun, overrides: EligibilityO
     "APROVADO",
   );
   return { counts, overallOutcome };
+}
+
+/**
+ * Substitui a execução corrente sem apagar o snapshot nem os overrides anteriores.
+ * A reexecução é sempre explícita; o motor nunca recalcula histórico silenciosamente.
+ */
+export function replaceEligibilityRun(
+  review: EligibilityReview,
+  nextRun: EligibilityRun,
+  audit: { at: string; by: string; reason: string },
+): EligibilityReview {
+  return {
+    run: nextRun,
+    overrides: [],
+    history: [
+      ...(review.history ?? []),
+      {
+        run: review.run,
+        overrides: review.overrides,
+        supersededAt: audit.at,
+        supersededBy: audit.by,
+        reason: audit.reason,
+      },
+    ],
+  };
 }

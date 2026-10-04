@@ -67,11 +67,13 @@ function evaluate(subject: EligibilitySubject, resolved: ResolvedRule): Eligibil
 export function runEligibilityEngine({
   runId,
   evaluatedAt,
+  inputFingerprint,
   subjects,
   rules,
 }: {
   runId: string;
   evaluatedAt: string;
+  inputFingerprint?: string;
   subjects: EligibilitySubject[];
   rules: ResolvedRule[];
 }): EligibilityRun {
@@ -92,8 +94,20 @@ export function runEligibilityEngine({
   );
   const policyVersions = [
     ...new Map(
-      rules.map(({ policy }) => [policy.id, { id: policy.id, name: policy.name, version: policy.version }]),
+      rules.map(({ policy }) => [
+        policy.id,
+        {
+          id: policy.id,
+          name: policy.name,
+          version: policy.version,
+          layer: policy.layer,
+          effectiveFrom: policy.effectiveFrom,
+          effectiveTo: policy.effectiveTo,
+          company: policy.company,
+          product: policy.product,
+        },
+      ]),
     ).values(),
   ];
-  return { id: runId, evaluatedAt, overallOutcome, policyVersions, evaluations, counts };
+  return { id: runId, evaluatedAt, inputFingerprint, overallOutcome, policyVersions, evaluations, counts };
 }

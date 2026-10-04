@@ -1,6 +1,6 @@
 "use client";
 /**
- * Bloco principal da Visão geral: saldo em bancos hoje em número grande e a linha do tempo
+ * Bloco principal da Visão geral: saldo em bancos hoje e a linha do tempo
  * (30 dias realizados + 60 projetados). Em cima, as linhas de saldo dos cenários; embaixo,
  * barras finas de entradas (para cima) e saídas (para baixo) por dia. A queda de hoje
  * (liberações prontas e em formalização) vem marcada. Régua para escolher o intervalo e
@@ -9,7 +9,7 @@
 import { type PointerEvent as ReactPointerEvent, type KeyboardEvent, useRef, useState } from "react";
 import { axisMoney, niceMax } from "./charts";
 import { compact, IconSquare, TextTabs } from "./widgets";
-import { ExpandIcon } from "@/src/ui/icons";
+import { ExpandIcon, EyeIcon, EyeOffIcon } from "@/src/ui/icons";
 import { useElementSize } from "@/src/ui/use-element-width";
 
 type Scenario = "base" | "conservative" | "optimistic";
@@ -59,17 +59,20 @@ export function CashHero({
   balance,
   minimum,
   onGoFinance,
+  compactView = false,
 }: {
   timeline: CashTimeline;
   balance: number;
   minimum: number;
   onGoFinance: () => void;
+  compactView?: boolean;
 }) {
   const t = timeline;
   const n = t.dates.length;
   const today = Math.max(0, t.todayIndex);
   const [scenario, setScenario] = useState<Scenario>("base");
   const [horizon, setHorizon] = useState<Horizon>("30");
+  const [showBalance, setShowBalance] = useState(true);
   const [range, setRange] = useState<[number, number]>([today, Math.min(n - 1, today + 30)]);
   const [hover, setHover] = useState<number | null>(null);
   const [chartRef, size] = useElementSize<HTMLDivElement>({ width: 1100, height: 300 });
@@ -77,7 +80,7 @@ export function CashHero({
 
   const series = t[scenario];
   const W = Math.max(320, size.width),
-    H = 320,
+    H = compactView ? 210 : 320,
     R = 58,
     T = 18,
     B = 30,
@@ -177,7 +180,7 @@ export function CashHero({
   const markY = y(Math.min(...series.slice(today, today + 3))) + 34;
 
   return (
-    <section className="lx-hero" aria-label="Caixa realizado e projetado">
+    <section className={`lx-hero${compactView ? " is-compact" : ""}`} aria-label="Caixa realizado e projetado">
       <div className="lx-hero-top">
         <div className="lx-hero-left">
           <span className="lx-label">Caixa · realizado e projetado</span>
@@ -202,8 +205,19 @@ export function CashHero({
           </div>
         </div>
         <div className="lx-hero-figure">
-          <strong>{wholeMoney.format(balance)}</strong>
-          <small>Saldo em bancos hoje</small>
+          <div className="lx-hero-figure-head">
+            <small>Saldo em bancos hoje</small>
+            <button
+              type="button"
+              className="lx-balance-visibility"
+              aria-label={showBalance ? "Ocultar saldo em bancos" : "Mostrar saldo em bancos"}
+              title={showBalance ? "Ocultar saldo" : "Mostrar saldo"}
+              onClick={() => setShowBalance(visible => !visible)}
+            >
+              {showBalance ? <EyeIcon /> : <EyeOffIcon />}
+            </button>
+          </div>
+          <strong aria-live="polite">{showBalance ? wholeMoney.format(balance) : "R$ ••••••"}</strong>
           <span className="lx-hero-sub">
             {end < today ? "Saldo em" : end === today ? "Hoje, após liberações:" : "Projetado em"} {ddmm(t.dates[end])}
             {end > today ? ` (${scenarioLabel[scenario].toLowerCase()})` : ""} <b>{compact(series[end])}</b>

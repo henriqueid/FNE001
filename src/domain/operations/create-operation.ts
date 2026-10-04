@@ -6,7 +6,14 @@
 import { repAt } from "@/src/domain/commercial/rules";
 import { type CommercialState } from "@/src/domain/commercial/types";
 import { initialOperations } from "@/src/domain/core/demo/operations";
-import { type Cedent, type Destination, type Operation, type OperationSource } from "@/src/domain/core/types";
+import {
+  type Cedent,
+  type Destination,
+  type EntryIntake,
+  type ManualEntryData,
+  type Operation,
+  type OperationSource,
+} from "@/src/domain/core/types";
 import { operationalParametersFor, riskFromScore } from "@/src/domain/eligibility/operational-parameters";
 import { datePrefix } from "./dates";
 
@@ -15,10 +22,12 @@ export type NewOperationRequest = {
   operationType: string;
   destination: Destination;
   cedent: Cedent;
+  importedData?: ManualEntryData;
+  entryIntake?: EntryIntake;
 };
 
 export function buildNewOperation(
-  { source, operationType, destination, cedent }: NewOperationRequest,
+  { source, operationType, destination, cedent, importedData, entryIntake }: NewOperationRequest,
   operations: Operation[],
   commercial: CommercialState,
   today: string,
@@ -41,6 +50,21 @@ export function buildNewOperation(
   const borderoSequence = Math.max(0, ...operations.map(operation => Number(operation.borderoNumber) || 0)) + 1;
   const aditivoNumber = `${prefix}${String(dailySequence).padStart(3, "0")}`;
   const borderoNumber = String(borderoSequence).padStart(7, "0");
+  const importedEntries = importedData?.entries ?? [];
+  const importedAmount = importedEntries.reduce((total, title) => total + title.amount, 0);
+  const importedDiscount = importedEntries.reduce((total, title) => total + (title.discount ?? 0), 0);
+  const intakeAutomation = entryIntake
+    ? Math.max(
+        0,
+        Math.min(
+          100,
+          75 +
+            Math.round((entryIntake.matchedDebtors / Math.max(1, entryIntake.acceptedRows)) * 15) -
+            entryIntake.rejectedRows * 5 -
+            entryIntake.issues.filter(issue => issue.severity === "ALERTA").length * 2,
+        ),
+      )
+    : 0;
   return {
     ...initialOperations[4],
     commercialRepId: repAt(commercial, cedent.document, today),
@@ -55,19 +79,23 @@ export function buildNewOperation(
     cedent: cedent.name,
     document: cedent.document,
     risk: riskFromScore(cedent.score, operationalParametersFor(destination.institution).scoreBands),
-    amount: 0,
-    netAmount: 0,
-    titleCount: 0,
+    amount: importedAmount,
+    netAmount: Math.max(0, importedAmount - importedDiscount),
+    titleCount: importedEntries.length,
     stage: 1,
     status: "Em andamento",
     blockers: 0,
     alerts: cedent.incidents,
     enteredAt: "Agora",
+    receivedAtIso: new Date().toISOString(),
     waitingFor: "agora",
     elapsedMinutes: 0,
     clientAverageMinutes: 0,
     historySample: 0,
-    nextAction: nextActions[source],
+    nextAction: importedEntries.length ? "Conferir lote normalizado e concluir a entrada" : nextActions[source],
+    manualEntry: importedData,
+    entryIntake,
+    automation: entryIntake ? intakeAutomation : source === "Digitação manual" ? 0 : initialOperations[4].automation,
     policy:
       destination.institution === "FIDC"
         ? "Política do fundo selecionado"

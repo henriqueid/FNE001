@@ -13,6 +13,7 @@ import { RiskFinalActions } from "./risk-final-actions";
 import { RiskTitlesGrid } from "./risk-titles-grid";
 import { TitleAnalysisModal } from "./title-analysis-modal";
 import { PolicyExecutionPanel } from "./policy-execution-panel";
+import { EnrichmentPanel } from "./enrichment-panel";
 import { useRiskReview } from "./use-risk-review";
 
 export function RiskEligibilityPanel({
@@ -44,6 +45,8 @@ export function RiskEligibilityPanel({
           <Badge tone="waiting">{Math.max(0, grouped.length - approvedDebtors - rejectedDebtors)} pendentes</Badge>
         </div>
       </div>
+
+      <EnrichmentPanel operation={operation} debtors={debtors} cedent={review.cedent} onChange={onChange} />
 
       <PolicyExecutionPanel operation={operation} debtors={debtors} cedent={review.cedent} onChange={onChange} />
 

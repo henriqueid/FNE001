@@ -10,16 +10,12 @@ import { type ApprovalItem } from "./approval-model";
 export function ApprovalAuthorities({
   approvals,
   approvedCount,
-  observation,
-  onObservationChange,
   onDecide,
   collapsed,
   onToggle,
 }: SectionToggle & {
   approvals: ApprovalItem[];
   approvedCount: number;
-  observation: string;
-  onObservationChange: (value: string) => void;
   onDecide: (id: string, decision: "Aprovado" | "Reprovado") => void;
 }) {
   return (
@@ -66,14 +62,6 @@ export function ApprovalAuthorities({
               </div>
             ))}
           </div>
-          <label className="approval-observation inline">
-            <span>OBSERVAÇÃO OU JUSTIFICATIVA DA DECISÃO</span>
-            <textarea
-              value={observation}
-              placeholder="Registre condicionantes, ressalvas ou a justificativa da aprovação/reprovação."
-              onChange={event => onObservationChange(event.target.value)}
-            />
-          </label>
         </>
       )}
     </section>

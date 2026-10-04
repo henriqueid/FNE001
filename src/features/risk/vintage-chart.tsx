@@ -48,6 +48,7 @@ export function VintageChart({ rows }: { rows: ReturnType<typeof vintages> }) {
           const lastV = c.curve[c.curve.length - 1];
           return (
             <g key={c.month} className={lead ? "lead" : ""}>
+              <title>{`${monthName(c.month)} · volume original ${compact(c.face)} · vencido acima de 30 dias ${pct(lastV)}`}</title>
               <path d={d} className="ln" />
               {c.curve.map((v, k) => (
                 <circle key={k} cx={x(k)} cy={y(v)} r={lead ? 3 : 2} className="pt" />

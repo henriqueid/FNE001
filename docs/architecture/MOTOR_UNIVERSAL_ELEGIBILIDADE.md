@@ -72,10 +72,21 @@ substituídos pela tradução formal da política aplicável e aprovados pela in
 - Leitura de parâmetros do motor pelas etapas antigas: `src/domain/eligibility/policy-parameter.ts` (snapshot primeiro, depois a política vigente).
 - Parâmetros que ainda não têm regra no catálogo: `src/domain/eligibility/operational-parameters.ts`.
 
+## Fechamento do motor no protótipo
+
+- Cada execução recebe uma assinatura determinística dos fatos e parâmetros usados.
+- Mudanças de dados ou de política não recalculam o histórico: a tela sinaliza a divergência e exige uma reexecução
+  explícita na etapa de Risco.
+- Ao reexecutar, o snapshot anterior e todos os seus overrides são arquivados em uma trilha append-only.
+- A trilha completa pode ser exportada em JSON para homologação e auditoria.
+- O adaptador já expõe fatos disponíveis de título, sacado, grupo econômico, cedente, operação e carteira projetada;
+  cada implantação escolhe quais regras ativar e quais parâmetros aplicar.
+- A Tela Final usa o resultado efetivo do motor como requisito, mas continua exigindo a decisão humana configurada.
+
 ## Próximas etapas após homologação dos dados reais
 
 1. Substituir o armazenamento local do protótipo por persistência transacional no backend.
 2. Substituir a política demonstrativa pela política real da instituição/produto.
-3. Incorporar exposição de carteira por sacado e grupo econômico.
+3. Substituir os dados demonstrativos de exposição por posições oficiais da carteira, registradora e custodiante.
 4. Integrar autenticação e validar a alçada efetiva do usuário antes do override.
-5. Conectar o resultado à decisão final somente após homologação dos parâmetros e cenários.
+5. Homologar formalmente os parâmetros e cenários antes de usar o motor como decisão produtiva.

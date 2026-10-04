@@ -28,11 +28,12 @@ import {
   emptyManualDraft,
   nowLabel,
   type ReportType,
+  withFormalizationCompleted,
 } from "./approval-model";
 import { ApprovalReadiness } from "./approval-readiness";
 import { ApprovalReports } from "./approval-reports";
 import { ApprovalSignatures } from "./approval-signatures";
-import { ApprovalFeedback, ApprovalFooter, ApprovalHero, ApprovalStatusStrip } from "./approval-status";
+import { ApprovalFeedback, ApprovalFooter, ApprovalStatusStrip } from "./approval-status";
 import { ApprovalTimeline } from "./approval-timeline";
 import { ReportPreviewModal } from "./report-preview-modal";
 
@@ -83,7 +84,7 @@ export function ApprovalPanel({
     };
   }
 
-  function saveReview(change: Partial<ApprovalReview>, action: string, detail: string) {
+  function saveReview(change: Partial<ApprovalReview>, action: string, detail: string, tryAvailability = false) {
     const next = {
       ...review,
       ...change,
@@ -92,7 +93,7 @@ export function ApprovalPanel({
       signatures: change.signatures ?? signatures,
       audit: [...(review.audit ?? []), { at: nowLabel(), by: "Henrique", action, detail }],
     };
-    onChange({ ...operation, approvalReview: next });
+    onChange(tryAvailability ? withFormalizationCompleted(operation, next) : { ...operation, approvalReview: next });
   }
 
   function submitForApproval() {
@@ -137,7 +138,16 @@ export function ApprovalPanel({
       return;
     }
     saveReview(
-      { status: "Aprovada", observation },
+      {
+        status: "Aprovada",
+        observation,
+        finalDecision: {
+          outcome: "APROVADA",
+          decidedAt: nowLabel(),
+          decidedBy: "Henrique",
+          justification: observation.trim() || "Política e alçadas atendidas.",
+        },
+      },
       "Operação aprovada",
       `Líquido aprovado: ${preciseMoney.format(finalNet)}`,
     );
@@ -159,7 +169,18 @@ export function ApprovalPanel({
       status: "Em atenção",
       blockers: Math.max(1, operation.blockers),
       nextAction: "Revisar política, dados e exceções da operação devolvida",
-      approvalReview: { ...review, status: "Preparação", observation, audit },
+      approvalReview: {
+        ...review,
+        status: "Preparação",
+        observation,
+        finalDecision: {
+          outcome: "DEVOLVIDA",
+          decidedAt: nowLabel(),
+          decidedBy: "Henrique",
+          justification: observation.trim(),
+        },
+        audit,
+      },
     });
   }
 
@@ -177,7 +198,18 @@ export function ApprovalPanel({
       status: "Em atenção",
       blockers: Math.max(1, operation.blockers),
       nextAction: "Operação reprovada — revisar decisão registrada",
-      approvalReview: { ...review, status: "Reprovada", observation, audit },
+      approvalReview: {
+        ...review,
+        status: "Reprovada",
+        observation,
+        finalDecision: {
+          outcome: "REPROVADA",
+          decidedAt: nowLabel(),
+          decidedBy: "Henrique",
+          justification: observation.trim(),
+        },
+        audit,
+      },
     });
     setFeedback("Reprovação registrada. A operação permanece bloqueada e auditável.");
   }
@@ -208,10 +240,11 @@ export function ApprovalPanel({
       { status: "Em formalização", signatures: nextSignatures },
       "Assinatura registrada",
       nextSignatures.find(item => item.id === id)?.party ?? id,
+      true,
     );
     setFeedback(
       nextSignatures.every(item => item.status === "Assinado")
-        ? "Todas as partes assinaram. A operação está pronta para seguir à liberação."
+        ? "Todas as partes assinaram. A operação foi disponibilizada automaticamente para Liberação."
         : "Assinatura registrada. Ainda existem partes aguardando assinatura.",
     );
   }
@@ -258,11 +291,12 @@ export function ApprovalPanel({
       { status: "Em formalização", signatures: nextSignatures },
       "Assinatura manual registrada",
       `${party} · ${formatBrazilianDate(manualDraft.signedDate)} · ${reason}${manualDraft.attachmentName ? ` · anexo ${manualDraft.attachmentName}` : ""}`,
+      true,
     );
     setManualSignatureId(null);
     setFeedback(
       nextSignatures.every(item => item.status === "Assinado")
-        ? "Todas as partes assinaram. A operação está pronta para seguir à liberação."
+        ? "Todas as partes assinaram. A operação foi disponibilizada automaticamente para Liberação."
         : "Assinatura manual registrada. Ainda existem partes aguardando assinatura.",
     );
   }
@@ -305,8 +339,17 @@ export function ApprovalPanel({
 
   return (
     <section className="approval-workbench">
-      <ApprovalHero status={review.status} />
       <ApprovalDecisionSummary operation={operation} figures={figures} />
+      <ApprovalFooter
+        status={review.status}
+        prerequisitesReady={prerequisitesReady}
+        observation={observation}
+        onObservationChange={setObservation}
+        onSubmit={submitForApproval}
+        onApprove={approveOperation}
+        onReturn={returnToRisk}
+        onReject={rejectOperation}
+      />
       <ApprovalFinancialSummary
         operation={operation}
         figures={figures}
@@ -332,8 +375,6 @@ export function ApprovalPanel({
           <ApprovalAuthorities
             approvals={approvals}
             approvedCount={approvedCount}
-            observation={observation}
-            onObservationChange={setObservation}
             onDecide={decideApproval}
             {...sectionToggle("approvals")}
           />
@@ -368,14 +409,6 @@ export function ApprovalPanel({
       <ApprovalReports onOpenReport={setReportType} {...sectionToggle("reports")} />
       <ApprovalTimeline events={approvalTimeline} {...sectionToggle("timeline")} />
       {feedback && <ApprovalFeedback message={feedback} onDismiss={() => setFeedback("")} />}
-      <ApprovalFooter
-        status={review.status}
-        prerequisitesReady={prerequisitesReady}
-        onSubmit={submitForApproval}
-        onApprove={approveOperation}
-        onReturn={returnToRisk}
-        onReject={rejectOperation}
-      />
       {reportType && (
         <ReportPreviewModal
           reportType={reportType}

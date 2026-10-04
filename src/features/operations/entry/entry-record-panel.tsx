@@ -45,6 +45,30 @@ export function EntryRecordPanel({ operation }: { operation: Operation }) {
           <small>{operation.operationType ?? operation.manualEntry?.receivableType ?? "Tipo não definido"}</small>
         </div>
       </div>
+      {operation.entryIntake && (
+        <div className={`entry-intake-trace ${operation.entryIntake.status.toLocaleLowerCase()}`}>
+          <div>
+            <span>LOTE DE ENTRADA</span>
+            <strong>{operation.entryIntake.fileName}</strong>
+            <small>
+              {operation.entryIntake.format} · hash {operation.entryIntake.fileHash} · recebido em{" "}
+              {new Date(operation.entryIntake.importedAt).toLocaleString("pt-BR")}
+            </small>
+          </div>
+          <div>
+            <span>NORMALIZAÇÃO</span>
+            <strong>
+              {operation.entryIntake.acceptedRows} aceitos · {operation.entryIntake.rejectedRows} rejeitados
+            </strong>
+            <small>{operation.entryIntake.matchedDebtors} sacado(s) associados automaticamente</small>
+          </div>
+          <div>
+            <span>APONTAMENTOS</span>
+            <strong>{operation.entryIntake.issues.length}</strong>
+            <small>{operation.entryIntake.status}</small>
+          </div>
+        </div>
+      )}
       <div className="entry-record-kpis">
         <div>
           <span>TÍTULOS</span>

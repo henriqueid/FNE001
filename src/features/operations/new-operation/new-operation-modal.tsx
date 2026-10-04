@@ -6,9 +6,18 @@
 import { RegistryContext, useCedents } from "@/src/app/registry-context";
 import { destinations } from "@/src/domain/core/demo/companies";
 import { preciseMoney } from "@/src/domain/core/format";
-import { type Cedent, type Destination, type OperationSource } from "@/src/domain/core/types";
+import {
+  type Cedent,
+  type Debtor,
+  type Destination,
+  type EntryIntake,
+  type ManualEntryData,
+  type Operation,
+  type OperationSource,
+} from "@/src/domain/core/types";
+import { intakeCsvTemplate, normalizeOperationIntake } from "@/src/domain/operations/intake";
 import { Badge } from "@/src/features/operations/components/status";
-import { ArrowIcon, CheckIcon, CloseIcon, SparkIcon } from "@/src/ui/icons";
+import { AlertIcon, ArrowIcon, CheckIcon, CloseIcon, SparkIcon } from "@/src/ui/icons";
 import { useContext, useState } from "react";
 import { scoreBand } from "@/src/domain/eligibility/operational-parameters";
 
@@ -17,6 +26,8 @@ export type NewOperationInput = {
   operationType: string;
   destination: Destination;
   cedent: Cedent;
+  importedData?: ManualEntryData;
+  entryIntake?: EntryIntake;
 };
 
 export const sourceOptions: { source: OperationSource; label: string; description: string; tag: string }[] = [
@@ -56,10 +67,14 @@ export function NewOperationModal({
   onClose,
   onCreate,
   defaultDestination,
+  operations,
+  debtors,
 }: {
   onClose: () => void;
   onCreate: (input: NewOperationInput) => void;
   defaultDestination?: string;
+  operations: Operation[];
+  debtors: Debtor[];
 }) {
   const registryCedents = useCedents();
   const registry = useContext(RegistryContext);
@@ -68,7 +83,8 @@ export function NewOperationModal({
     defaultDestination && defaultDestination !== "Consolidado" ? defaultDestination : destinations[0].name,
   );
   const [cedentId, setCedentId] = useState("");
-  const [fileLoaded, setFileLoaded] = useState(false);
+  const [analysis, setAnalysis] = useState<{ data: ManualEntryData; intake: EntryIntake } | null>(null);
+  const [readingFile, setReadingFile] = useState(false);
   const requiresFile = source === "XML NF-e" || source === "CNAB" || source === "Planilha";
   const detectedType =
     source === "XML NF-e"
@@ -85,7 +101,37 @@ export function NewOperationModal({
 
   function chooseSource(next: OperationSource) {
     setSource(next);
-    setFileLoaded(false);
+    setAnalysis(null);
+  }
+
+  async function analyzeFile(file?: File) {
+    if (!file) return;
+    setReadingFile(true);
+    try {
+      const text = await file.text();
+      const knownTitles = operations.flatMap(operation => operation.manualEntry?.entries ?? []);
+      setAnalysis(
+        normalizeOperationIntake({
+          source,
+          fileName: file.name,
+          text,
+          debtors,
+          knownTitles,
+          importedAt: new Date().toISOString(),
+        }),
+      );
+    } finally {
+      setReadingFile(false);
+    }
+  }
+
+  function downloadTemplate() {
+    const url = URL.createObjectURL(new Blob([intakeCsvTemplate()], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "modelo-importacao-operacao.csv";
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -167,26 +213,105 @@ export function NewOperationModal({
         </div>
         <div className="operation-origin-panel">
           {requiresFile ? (
-            <div className="file-import">
-              <div>
-                <strong>Arquivo da operação</strong>
-                <small>
-                  {source === "XML NF-e"
-                    ? "Selecione um ou mais arquivos .xml"
-                    : source === "CNAB"
-                      ? "Selecione o arquivo CNAB recebido"
-                      : "Selecione um arquivo .xlsx ou .csv"}
-                </small>
+            <div className="intake-import-workbench">
+              <div className="file-import">
+                <div>
+                  <strong>Arquivo da operação</strong>
+                  <small>
+                    {source === "XML NF-e"
+                      ? "Selecione um arquivo .xml com NF-e e duplicatas"
+                      : source === "CNAB"
+                        ? "Selecione o CNAB; o leiaute precisa estar configurado"
+                        : "CSV é processado agora; XLSX exige conversão para CSV nesta implantação"}
+                  </small>
+                </div>
+                <div className="intake-file-actions">
+                  {source === "Planilha" && (
+                    <button type="button" className="secondary-action" onClick={downloadTemplate}>
+                      Baixar modelo CSV
+                    </button>
+                  )}
+                  <label className="secondary-action intake-file-picker">
+                    {readingFile ? "Analisando..." : analysis ? "Trocar arquivo" : "Selecionar arquivo"}
+                    <input
+                      type="file"
+                      accept={
+                        source === "XML NF-e"
+                          ? ".xml,text/xml"
+                          : source === "Planilha"
+                            ? ".csv,.xlsx,text/csv"
+                            : ".rem,.ret,.cnab,.txt,.csv"
+                      }
+                      disabled={readingFile}
+                      onChange={event => void analyzeFile(event.target.files?.[0])}
+                    />
+                  </label>
+                </div>
               </div>
-              <button className={fileLoaded ? "file-loaded" : "secondary-action"} onClick={() => setFileLoaded(true)}>
-                {fileLoaded ? (
-                  <>
-                    <CheckIcon /> Arquivo analisado
-                  </>
-                ) : (
-                  "Selecionar arquivo"
-                )}
-              </button>
+              {analysis && (
+                <div className={`intake-analysis ${analysis.intake.status.toLocaleLowerCase()}`}>
+                  <div className="intake-analysis-head">
+                    <span>{analysis.intake.status === "PRONTO" ? <CheckIcon /> : <AlertIcon />}</span>
+                    <div>
+                      <strong>{analysis.intake.fileName}</strong>
+                      <small>
+                        {analysis.intake.format} · lote {analysis.intake.fileHash} · {analysis.intake.originalRows}{" "}
+                        linha(s)
+                      </small>
+                    </div>
+                    <Badge
+                      tone={
+                        analysis.intake.status === "PRONTO"
+                          ? "ready"
+                          : analysis.intake.status === "ATENCAO"
+                            ? "attention"
+                            : "critical"
+                      }
+                    >
+                      {analysis.intake.status}
+                    </Badge>
+                  </div>
+                  <div className="intake-analysis-kpis">
+                    <span>
+                      <b>{analysis.intake.acceptedRows}</b> aceitas
+                    </span>
+                    <span>
+                      <b>{analysis.intake.rejectedRows}</b> rejeitadas
+                    </span>
+                    <span>
+                      <b>{analysis.intake.matchedDebtors}</b> sacados associados
+                    </span>
+                    <span>
+                      <b>{analysis.intake.issues.length}</b> apontamentos
+                    </span>
+                  </div>
+                  {analysis.intake.issues.length > 0 && (
+                    <div className="intake-issues">
+                      {analysis.intake.issues.slice(0, 4).map(item => (
+                        <p key={item.id}>
+                          <b>{item.severity}</b> {item.row ? `Linha ${item.row} · ` : ""}
+                          {item.message}
+                        </p>
+                      ))}
+                      {analysis.intake.issues.length > 4 && (
+                        <small>+ {analysis.intake.issues.length - 4} apontamento(s)</small>
+                      )}
+                    </div>
+                  )}
+                  {analysis.data.entries.length > 0 && (
+                    <div className="intake-preview">
+                      {analysis.data.entries.slice(0, 3).map(title => (
+                        <span key={title.id}>
+                          <strong>{title.documentNumber}</strong>
+                          <small>
+                            {title.debtorName} · {preciseMoney.format(title.amount)} · {title.dueDate}
+                          </small>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : source === "Digitação manual" ? (
             <div className="structured-info">
@@ -201,7 +326,7 @@ export function NewOperationModal({
               <small>Informe as partes, condições financeiras, cronograma e garantias na próxima etapa.</small>
             </div>
           )}
-          {(!requiresFile || fileLoaded) && (
+          {(!requiresFile || Boolean(analysis?.intake.acceptedRows)) && (
             <div className="detected-type">
               <SparkIcon />
               <div>
@@ -229,8 +354,18 @@ export function NewOperationModal({
           </button>
           <button
             className="primary-action"
-            disabled={!cedent || (requiresFile && !fileLoaded)}
-            onClick={() => cedent && onCreate({ source, operationType: detectedType, destination, cedent })}
+            disabled={!cedent || (requiresFile && (!analysis || analysis.intake.status === "BLOQUEADO"))}
+            onClick={() =>
+              cedent &&
+              onCreate({
+                source,
+                operationType: detectedType,
+                destination,
+                cedent,
+                importedData: analysis?.data,
+                entryIntake: analysis?.intake,
+              })
+            }
           >
             Iniciar operação <ArrowIcon />
           </button>

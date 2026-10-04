@@ -2,7 +2,8 @@
 
 import { type Cedent, type Debtor, type Operation } from "@/src/domain/core/types";
 import { useEligibilityPolicies } from "@/src/app/eligibility-policy-context";
-import { effectiveRunSummary, latestOverrideFor } from "@/src/domain/eligibility/decision";
+import { eligibilityAuditPackage } from "@/src/domain/eligibility/audit-package";
+import { effectiveRunSummary, latestOverrideFor, replaceEligibilityRun } from "@/src/domain/eligibility/decision";
 import { formatEligibilityValue } from "@/src/domain/eligibility/engine";
 import { evaluateOperationEligibility } from "@/src/domain/eligibility/operation-adapter";
 import { eligibilityRouteFor, withEligibilityRoute } from "@/src/domain/eligibility/orchestration";
@@ -52,6 +53,12 @@ export function PolicyExecutionPanel({
   const run = operation.eligibilityReview?.run ?? calculatedRun;
   const hasHistoricalSnapshot = Boolean(operation.eligibilityReview?.run);
   const overrides = operation.eligibilityReview?.overrides ?? [];
+  const executionHistory = operation.eligibilityReview?.history ?? [];
+  const inputsChanged = Boolean(
+    hasHistoricalSnapshot &&
+    calculatedRun.inputFingerprint &&
+    (!run.inputFingerprint || run.inputFingerprint !== calculatedRun.inputFingerprint),
+  );
   const effective = effectiveRunSummary(run, overrides);
   const route = eligibilityRouteFor({ ...operation, eligibilityReview: { run, overrides } });
   const visible = run.evaluations.filter(item => showApproved || item.outcome !== "APROVADO");
@@ -94,6 +101,32 @@ export function PolicyExecutionPanel({
     onChange(withEligibilityRoute(nextOperation));
     setPendingDecision(null);
     setJustification("");
+  };
+
+  const executeLatestInputs = () => {
+    if (!operation.eligibilityReview || !inputsChanged || operation.stage !== 2) return;
+    const now = new Date().toISOString();
+    const freshRun = { ...calculatedRun, id: `${calculatedRun.id}:${Date.now()}`, evaluatedAt: now };
+    const nextOperation: Operation = {
+      ...operation,
+      eligibilityReview: replaceEligibilityRun(operation.eligibilityReview, freshRun, {
+        at: now,
+        by: "Henrique",
+        reason: "Dados da operação ou parâmetros da política foram atualizados",
+      }),
+    };
+    onChange(withEligibilityRoute(nextOperation));
+  };
+
+  const exportAudit = () => {
+    const audit = eligibilityAuditPackage(operation, new Date().toISOString(), "Henrique");
+    if (!audit) return;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(audit, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `auditoria-elegibilidade-${operation.aditivoNumber}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const returnToRisk = () => {
@@ -146,6 +179,25 @@ export function PolicyExecutionPanel({
           )}
         </div>
       </div>
+
+      {inputsChanged && (
+        <div className="policy-refresh-notice" role="status">
+          <div>
+            <strong>Há dados ou parâmetros novos desde a última execução</strong>
+            <small>
+              O resultado exibido continua sendo o snapshot original. Uma nova execução arquiva esta versão e cria outra
+              trilha, sem apagar decisões anteriores.
+            </small>
+          </div>
+          {operation.stage === 2 ? (
+            <button type="button" onClick={executeLatestInputs}>
+              Executar nova análise
+            </button>
+          ) : (
+            <small>Devolva a operação para Risco antes de executar novamente.</small>
+          )}
+        </div>
+      )}
 
       {!expanded && (
         <button className="policy-collapsed-summary" type="button" onClick={() => setExpanded(true)}>
@@ -208,11 +260,38 @@ export function PolicyExecutionPanel({
                 </span>
               ))}
               <span>Executada em {new Date(run.evaluatedAt).toLocaleDateString("pt-BR")}</span>
+              {executionHistory.length > 0 && (
+                <span>{executionHistory.length} execução(ões) anterior(es) preservada(s)</span>
+              )}
             </div>
-            <button type="button" onClick={() => setShowApproved(current => !current)}>
-              {showApproved ? "Ocultar aprovadas" : `Ver ${effective.counts.APROVADO} aprovadas`}
-            </button>
+            <div className="policy-toolbar-actions">
+              <button type="button" onClick={exportAudit}>
+                Exportar trilha
+              </button>
+              <button type="button" onClick={() => setShowApproved(current => !current)}>
+                {showApproved ? "Ocultar aprovadas" : `Ver ${effective.counts.APROVADO} aprovadas`}
+              </button>
+            </div>
           </div>
+
+          {executionHistory.length > 0 && (
+            <details className="policy-history">
+              <summary>Histórico de execuções ({executionHistory.length})</summary>
+              <div>
+                {[...executionHistory].reverse().map(snapshot => (
+                  <article key={`${snapshot.run.id}:${snapshot.supersededAt}`}>
+                    <strong>{outcomeLabel[snapshot.run.overallOutcome]}</strong>
+                    <span>{new Date(snapshot.run.evaluatedAt).toLocaleString("pt-BR")}</span>
+                    <small>
+                      {snapshot.run.evaluations.length} avaliações · {snapshot.overrides.length} override(s) ·
+                      substituída por {snapshot.supersededBy}
+                    </small>
+                    <small>{snapshot.reason}</small>
+                  </article>
+                ))}
+              </div>
+            </details>
+          )}
 
           <div className="policy-results">
             {visible.length === 0 ? (
@@ -352,6 +431,8 @@ export function PolicyExecutionPanel({
               : "Prévia não persistida: o sistema não fabrica histórico retroativo. "}
             Parâmetros demonstrativos devem ser substituídos pela política real antes de o motor controlar o fluxo da
             operação.
+            {executionHistory.length > 0 &&
+              ` A trilha conserva ${executionHistory.length} execução(ões) substituída(s), incluindo seus overrides.`}
           </footer>
         </>
       )}

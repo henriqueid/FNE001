@@ -91,8 +91,19 @@ export type EligibilityEvaluation = {
 export type EligibilityRun = {
   id: string;
   evaluatedAt: string;
+  /** Assinatura determinística dos fatos e parâmetros usados nesta execução. */
+  inputFingerprint?: string;
   overallOutcome: EligibilityOutcome;
-  policyVersions: { id: string; name: string; version: string }[];
+  policyVersions: {
+    id: string;
+    name: string;
+    version: string;
+    layer?: PolicyLayer;
+    effectiveFrom?: string;
+    effectiveTo?: string;
+    company?: string;
+    product?: string;
+  }[];
   evaluations: EligibilityEvaluation[];
   counts: Record<EligibilityOutcome, number>;
 };
@@ -118,4 +129,12 @@ export type EligibilityOverride = {
 export type EligibilityReview = {
   run: EligibilityRun;
   overrides: EligibilityOverride[];
+  /** Execuções substituídas permanecem imutáveis para auditoria. */
+  history?: {
+    run: EligibilityRun;
+    overrides: EligibilityOverride[];
+    supersededAt: string;
+    supersededBy: string;
+    reason: string;
+  }[];
 };

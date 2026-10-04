@@ -32,6 +32,11 @@ import { brDate } from "@/src/domain/home/metrics";
 import type { HomePeriod, HomeProfile } from "@/src/domain/home/settings";
 import { ArrowIcon } from "@/src/ui/icons";
 import { type ReactNode, useState } from "react";
+import {
+  AutomationIntelligence,
+  ManagementIntelligence,
+  PortfolioEvolution,
+} from "@/src/features/home/sections/decision-intelligence";
 
 export type SectionId =
   | "needs"
@@ -49,12 +54,16 @@ export type SectionId =
   | "cobranca"
   | "rollrate"
   | "vintage"
-  | "market";
+  | "market"
+  | "decision"
+  | "automation"
+  | "portfolioHistory";
 
 // Grade de 12 colunas: cada linha soma 12 (8 + 4 ou 12). Abaixo de 1200px tudo vira coluna única.
 // O caixa fica no bloco principal (cash-hero.tsx), acima da grade, em todos os perfis.
 export const layouts: Record<HomeProfile, [SectionId, number][]> = {
   gestao: [
+    ["decision", 12],
     ["market", 12],
     ["trend", 8],
     ["revenue", 4],
@@ -66,6 +75,7 @@ export const layouts: Record<HomeProfile, [SectionId, number][]> = {
     ["alerts", 12],
   ],
   operacao: [
+    ["automation", 12],
     ["needs", 8],
     ["milestones", 4],
     ["pipeline", 12],
@@ -77,6 +87,7 @@ export const layouts: Record<HomeProfile, [SectionId, number][]> = {
   risco: [
     ["quality", 12],
     ["cobranca", 12],
+    ["portfolioHistory", 12],
     ["rollrate", 6],
     ["vintage", 6],
     ["concentration", 8],
@@ -306,6 +317,40 @@ export function HomeSections({
         </Card>
       );
     },
+    decision: span => (
+      <Card
+        key="decision"
+        span={span}
+        title="Resultado, capacidade e exposição"
+        subtitle="Efeito econômico da operação e espaço disponível para continuar originando"
+      >
+        <ManagementIntelligence metrics={m} />
+      </Card>
+    ),
+    automation: span => (
+      <Card
+        key="automation"
+        span={span}
+        title="Eficiência do motor e da esteira"
+        subtitle="Quanto flui sozinho, quanto tempo leva e o que mais exige decisão humana"
+      >
+        <AutomationIntelligence metrics={m} />
+      </Card>
+    ),
+    portfolioHistory: span => (
+      <Card
+        key="portfolioHistory"
+        span={span}
+        title="Evolução da carteira"
+        subtitle={
+          m.portfolioHistoryIsDemo
+            ? "Histórico demonstrativo normalizado à posição atual · substituir pelos fechamentos mensais da implantação"
+            : "Fechamentos mensais de saldo, vencido acima de 30 dias, PDD e liquidez"
+        }
+      >
+        <PortfolioEvolution rows={m.portfolioHistory} />
+      </Card>
+    ),
     quality: span => (
       <Card
         key="quality"
@@ -326,7 +371,7 @@ export function HomeSections({
     ),
     cobranca: span => (
       <Card key="cobranca" span={span} title="Cobrança do mês" subtitle="Comparado ao mês anterior">
-        <CollectionStrip now={r.collection} previous={r.collectionPrevious} />
+        <CollectionStrip now={r.collection} previous={r.collectionPrevious} history={r.collectionHistory} />
       </Card>
     ),
     rollrate: span => (

@@ -15,6 +15,7 @@ import { ensureChart } from "@/src/domain/finance/setup";
 import { datePrefix } from "@/src/domain/operations/dates";
 import { migratePortfolioState, type PortfolioState, type StoredPortfolioState } from "@/src/domain/portfolio/model";
 import { type Party } from "@/src/domain/registry/parties";
+import { migrateIntegrationState, type IntegrationState } from "@/src/domain/integrations/model";
 
 export const STORAGE_KEYS = {
   operations: "lastro-mvp-operations-v3",
@@ -24,6 +25,7 @@ export const STORAGE_KEYS = {
   parties: "strato-parties-v1",
   portfolio: "strato-portfolio-v1",
   policies: "strato-eligibility-policies-v2",
+  integrations: "strato-integrations-v1",
   guidance: "lastro-interface-guidance-v1",
 } as const;
 
@@ -35,6 +37,7 @@ export type PersistedState = {
   parties: Party[];
   portfolio: PortfolioState;
   policies: EligibilityPolicyState;
+  integrations: IntegrationState;
 };
 
 /** Mescla operações salvas com a versão atual dos dados de demonstração. */
@@ -128,6 +131,7 @@ export function loadPersistedState(): Partial<PersistedState> & { guidance?: boo
     const parties = read<Party[]>(STORAGE_KEYS.parties);
     const portfolio = read<StoredPortfolioState>(STORAGE_KEYS.portfolio);
     const policies = read<unknown>(STORAGE_KEYS.policies);
+    const integrations = read<unknown>(STORAGE_KEYS.integrations);
     window.localStorage.removeItem("strato-eligibility-policies-v1");
     const guidance = window.localStorage.getItem(STORAGE_KEYS.guidance);
     const migratedOperations = operations ? migrateStoredOperations(operations) : undefined;
@@ -142,6 +146,7 @@ export function loadPersistedState(): Partial<PersistedState> & { guidance?: boo
           ? migratePortfolioState(portfolio, migratedOperations ?? initialOperations)
           : undefined,
       policies: migrateEligibilityPolicyState(policies),
+      integrations: migrateIntegrationState(integrations),
       guidance: guidance === null ? undefined : guidance === "true",
     };
   } catch {
@@ -160,6 +165,7 @@ export function savePersistedState(state: PersistedState) {
     window.localStorage.setItem(STORAGE_KEYS.parties, JSON.stringify(state.parties));
     window.localStorage.setItem(STORAGE_KEYS.portfolio, JSON.stringify(state.portfolio));
     window.localStorage.setItem(STORAGE_KEYS.policies, JSON.stringify(state.policies));
+    window.localStorage.setItem(STORAGE_KEYS.integrations, JSON.stringify(state.integrations));
   } catch {
     /* sem armazenamento: a demonstração segue só na memória */
   }
@@ -184,6 +190,7 @@ export function clearPersistedState() {
       STORAGE_KEYS.parties,
       STORAGE_KEYS.portfolio,
       STORAGE_KEYS.policies,
+      STORAGE_KEYS.integrations,
     ].forEach(key => window.localStorage.removeItem(key));
   } catch {
     /* sem armazenamento */

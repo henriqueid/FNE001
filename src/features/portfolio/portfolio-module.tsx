@@ -181,125 +181,7 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
           },
         ]}
       />
-      <section className="pf-foundation" aria-label="Estado da carteira">
-        <div>
-          <span>BASE OPERACIONAL</span>
-          <b>{portfolio.titles.length} títulos controlados</b>
-          <small>Dados históricos e novas operações na mesma estrutura</small>
-        </div>
-        <div>
-          <span>EMPRESA ATIVA</span>
-          <b>{companyScope}</b>
-          <small>
-            {openScoped.length} título(s) em aberto · {scoped.length} no histórico
-          </small>
-        </div>
-        <div>
-          <span>RASTREABILIDADE</span>
-          <b>Origem preservada</b>
-          <small>Proposta, aditivo, borderô e campos importados</small>
-        </div>
-      </section>
-      <div className="fn-kpis">
-        <div>
-          <span>Carteira em aberto</span>
-          <strong>{compact(open)}</strong>
-          <small>{openScoped.length} título(s)</small>
-        </div>
-        <div>
-          <span>Vence em 7 dias</span>
-          <strong>{compact(next7)}</strong>
-          <small>{openScoped.filter(t => t.late <= 0 && t.late >= -7).length} título(s)</small>
-        </div>
-        <div>
-          <span>Vencido</span>
-          <strong className={overdue ? "bad" : ""}>{compact(overdue)}</strong>
-          <small>{open ? `${((overdue / open) * 100).toFixed(1).replace(".", ",")}% da carteira` : "—"}</small>
-        </div>
-        <div>
-          <span>Vencido &gt; 30 dias</span>
-          <strong className={overdue30 ? "bad" : ""}>{compact(overdue30)}</strong>
-          <small>candidatos a provisão ou recompra</small>
-        </div>
-        <div>
-          <span>Recompras</span>
-          <strong>{compact(sum(events))}</strong>
-          <small>{events.length} evento(s) · estornam comissão</small>
-        </div>
-        <div>
-          <span>Cedentes</span>
-          <strong>{byCedent.length}</strong>
-          <small>{byCedent.filter(c => c.overdue > 0).length} com vencidos</small>
-        </div>
-      </div>
-
-      <section className="fn-card lx-ind-card">
-        <header className="fn-card-head">
-          <div>
-            <h2>Indicadores da carteira</h2>
-            <p>Posição de hoje · PDD pelas faixas da política de risco · passe o mouse para ver a fonte</p>
-          </div>
-        </header>
-        <IndicatorGrid
-          columns={5}
-          items={[
-            {
-              label: "Prazo médio remanescente",
-              value: fmtDays(ind.remainingTerm),
-              caption: ind.originalTerm
-                ? `prazo médio na compra: ${fmtDays(ind.originalTerm)}`
-                : "ponderado pelo saldo a vencer",
-              source: "Dias até o vencimento dos títulos a vencer, ponderados pelo saldo",
-            },
-            {
-              label: "Vencido > 30 dias",
-              value: compact(ind.overdue30),
-              caption: `${fmtPct(ind.total ? (ind.overdue30 / ind.total) * 100 : 0)} · > 60: ${compact(ind.overdue60)} · > 90: ${compact(ind.overdue90)}`,
-              tone: ind.overdue30 > 0 ? "bad" : "good",
-              source: "Saldo dos títulos em aberto pela data de vencimento",
-            },
-            {
-              label: "PDD estimada",
-              value: compact(ind.provision),
-              caption: `${fmtPct(ind.total ? (ind.provision / ind.total) * 100 : 0)} da carteira`,
-              source: "Saldo vencido de cada título × % de provisão da faixa de atraso (política de risco)",
-            },
-            {
-              label: "Liquidez no vencimento",
-              value: fmtPct(ind.onTimeRate),
-              caption: "dos títulos já pagos",
-              source: "Valor pago até o vencimento original ÷ valor pago",
-            },
-            {
-              label: "10 maiores sacados",
-              value: fmtPct(ind.top10DebtorShare),
-              caption: "do saldo em aberto",
-              source: "Saldo em aberto agrupado por sacado",
-            },
-            {
-              label: "Recomprado",
-              value: compact(ind.repurchased),
-              caption: "acumulado nos títulos da carteira",
-              source: "Valor recomprado registrado nos títulos",
-            },
-            {
-              label: "Prorrogados",
-              value: String(ind.extended.length),
-              caption: compact(ind.extended.reduce((s, t) => s + portfolioBalance(t), 0)),
-              source: "Títulos com vencimento alterado ou situação Prorrogado",
-            },
-            {
-              label: "Cartório e protesto",
-              value: String(ind.inNotary.length),
-              caption: compact(ind.inNotary.reduce((s, t) => s + portfolioBalance(t), 0)),
-              tone: ind.inNotary.length ? "bad" : "",
-              source: "Títulos em cartório ou protestados",
-            },
-          ]}
-        />
-      </section>
-
-      {tab === "cobranca" && (
+      {tab === "cobranca" ? (
         <CollectionCenter
           rows={openScoped}
           today={today}
@@ -307,6 +189,126 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
           onPortfolio={onPortfolio}
           repName={repName}
         />
+      ) : (
+        <>
+          <section className="pf-foundation" aria-label="Estado da carteira">
+            <div>
+              <span>BASE OPERACIONAL</span>
+              <b>{portfolio.titles.length} títulos controlados</b>
+              <small>Dados históricos e novas operações na mesma estrutura</small>
+            </div>
+            <div>
+              <span>EMPRESA ATIVA</span>
+              <b>{companyScope}</b>
+              <small>
+                {openScoped.length} título(s) em aberto · {scoped.length} no histórico
+              </small>
+            </div>
+            <div>
+              <span>RASTREABILIDADE</span>
+              <b>Origem preservada</b>
+              <small>Proposta, aditivo, borderô e campos importados</small>
+            </div>
+          </section>
+          <div className="fn-kpis">
+            <div>
+              <span>Carteira em aberto</span>
+              <strong>{compact(open)}</strong>
+              <small>{openScoped.length} título(s)</small>
+            </div>
+            <div>
+              <span>Vence em 7 dias</span>
+              <strong>{compact(next7)}</strong>
+              <small>{openScoped.filter(t => t.late <= 0 && t.late >= -7).length} título(s)</small>
+            </div>
+            <div>
+              <span>Vencido</span>
+              <strong className={overdue ? "bad" : ""}>{compact(overdue)}</strong>
+              <small>{open ? `${((overdue / open) * 100).toFixed(1).replace(".", ",")}% da carteira` : "—"}</small>
+            </div>
+            <div>
+              <span>Vencido &gt; 30 dias</span>
+              <strong className={overdue30 ? "bad" : ""}>{compact(overdue30)}</strong>
+              <small>candidatos a provisão ou recompra</small>
+            </div>
+            <div>
+              <span>Recompras</span>
+              <strong>{compact(sum(events))}</strong>
+              <small>{events.length} evento(s) · estornam comissão</small>
+            </div>
+            <div>
+              <span>Cedentes</span>
+              <strong>{byCedent.length}</strong>
+              <small>{byCedent.filter(c => c.overdue > 0).length} com vencidos</small>
+            </div>
+          </div>
+
+          <section className="fn-card lx-ind-card">
+            <header className="fn-card-head">
+              <div>
+                <h2>Indicadores da carteira</h2>
+                <p>Posição de hoje · PDD pelas faixas da política de risco · passe o mouse para ver a fonte</p>
+              </div>
+            </header>
+            <IndicatorGrid
+              columns={5}
+              items={[
+                {
+                  label: "Prazo médio remanescente",
+                  value: fmtDays(ind.remainingTerm),
+                  caption: ind.originalTerm
+                    ? `prazo médio na compra: ${fmtDays(ind.originalTerm)}`
+                    : "ponderado pelo saldo a vencer",
+                  source: "Dias até o vencimento dos títulos a vencer, ponderados pelo saldo",
+                },
+                {
+                  label: "Vencido > 30 dias",
+                  value: compact(ind.overdue30),
+                  caption: `${fmtPct(ind.total ? (ind.overdue30 / ind.total) * 100 : 0)} · > 60: ${compact(ind.overdue60)} · > 90: ${compact(ind.overdue90)}`,
+                  tone: ind.overdue30 > 0 ? "bad" : "good",
+                  source: "Saldo dos títulos em aberto pela data de vencimento",
+                },
+                {
+                  label: "PDD estimada",
+                  value: compact(ind.provision),
+                  caption: `${fmtPct(ind.total ? (ind.provision / ind.total) * 100 : 0)} da carteira`,
+                  source: "Saldo vencido de cada título × % de provisão da faixa de atraso (política de risco)",
+                },
+                {
+                  label: "Liquidez no vencimento",
+                  value: fmtPct(ind.onTimeRate),
+                  caption: "dos títulos já pagos",
+                  source: "Valor pago até o vencimento original ÷ valor pago",
+                },
+                {
+                  label: "10 maiores sacados",
+                  value: fmtPct(ind.top10DebtorShare),
+                  caption: "do saldo em aberto",
+                  source: "Saldo em aberto agrupado por sacado",
+                },
+                {
+                  label: "Recomprado",
+                  value: compact(ind.repurchased),
+                  caption: "acumulado nos títulos da carteira",
+                  source: "Valor recomprado registrado nos títulos",
+                },
+                {
+                  label: "Prorrogados",
+                  value: String(ind.extended.length),
+                  caption: compact(ind.extended.reduce((s, t) => s + portfolioBalance(t), 0)),
+                  source: "Títulos com vencimento alterado ou situação Prorrogado",
+                },
+                {
+                  label: "Cartório e protesto",
+                  value: String(ind.inNotary.length),
+                  caption: compact(ind.inNotary.reduce((s, t) => s + portfolioBalance(t), 0)),
+                  tone: ind.inNotary.length ? "bad" : "",
+                  source: "Títulos em cartório ou protestados",
+                },
+              ]}
+            />
+          </section>
+        </>
       )}
 
       {tab === "titulos" && (

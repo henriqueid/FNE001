@@ -12,6 +12,7 @@ import {
   GearIcon,
   GridIcon,
   PlugIcon,
+  ShieldIcon,
   UsersIcon,
   WalletIcon,
 } from "@/src/ui/icons";
@@ -29,6 +30,12 @@ export const navGroups: { title: string; items: NavItem[] }[] = [
         view: "operations",
         icon: <ActivityIcon />,
         hint: "Central, esteira e workspace da operação",
+      },
+      {
+        label: "Controladoria",
+        view: "controlleria",
+        icon: <ShieldIcon />,
+        hint: "Checagem, formalização, conciliação, auditoria e relatórios",
       },
       { label: "Carteira", view: "portfolio", icon: <WalletIcon />, hint: "Títulos, vencimentos, atraso e cobrança" },
     ],

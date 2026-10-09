@@ -39,6 +39,7 @@ import { saveParty as savePartyRecord } from "@/src/domain/registry/party-save";
 import { buildRegistry, effectiveCedents, repurchaseEvents } from "@/src/domain/registry/registry";
 import { seedPortfolio, syncPortfolio } from "@/src/domain/portfolio/model";
 import PortfolioModule from "@/src/features/portfolio/portfolio-module";
+import ControlleriaModule from "@/src/features/controlleria/controlleria-module";
 import RegistryModule from "@/src/features/registry/registry-module";
 import { ModuleRoadmap } from "@/src/features/shell/module-roadmap";
 import { Shell } from "@/src/features/shell/shell";
@@ -352,13 +353,15 @@ export default function StratoApp() {
           ? "Comercial"
           : view === "registry"
             ? "Cadastros"
-            : view === "portfolio"
-              ? "Carteira"
-              : view === "settings" || view === "policies"
-                ? "Configurações"
-                : view in roadmapViews
-                  ? roadmapViews[view as keyof typeof roadmapViews]
-                  : "Operações";
+            : view === "controlleria"
+              ? "Controladoria"
+              : view === "portfolio"
+                ? "Carteira"
+                : view === "settings" || view === "policies"
+                  ? "Configurações"
+                  : view in roadmapViews
+                    ? roadmapViews[view as keyof typeof roadmapViews]
+                    : "Operações";
   let page: React.ReactNode;
   if (selected)
     page = (
@@ -428,6 +431,16 @@ export default function StratoApp() {
         onPortfolio={setPortfolio}
         companyScope={companyScope}
         onNavigate={navigate}
+      />
+    );
+  else if (view === "controlleria")
+    page = (
+      <ControlleriaModule
+        operations={operations}
+        portfolio={portfolio}
+        onPortfolio={setPortfolio}
+        companyScope={companyScope}
+        onOpenOperation={setSelected}
       />
     );
   else if (view === "settings" || view === "policies")

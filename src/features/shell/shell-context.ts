@@ -11,6 +11,7 @@ import { createContext } from "react";
 export type AppView =
   | "home"
   | "operations"
+  | "controlleria"
   | "portfolio"
   | "commercial"
   | "finance"

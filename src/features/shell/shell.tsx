@@ -109,6 +109,7 @@ export function Shell({
                 onClick={() => go(item)}
               >
                 {item.icon}
+                <span className="lx-nav-label">{item.label}</span>
                 {badge(item)}
               </button>
             ))}

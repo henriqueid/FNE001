@@ -3358,27 +3358,62 @@ table th {
 
   .lx-shell .lx-nav > button {
     position: relative;
-    width: 40px;
     min-width: 40px;
+    max-width: 40px;
     height: 40px;
-    display: inline-grid;
-    place-items: center;
-    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0;
+    padding: 0 11px;
+    overflow: hidden;
     border: 0;
     border-radius: 999px;
     color: var(--ds-text-2);
     background: transparent;
+    white-space: nowrap;
+    transition:
+      max-width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      gap 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      padding 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      color 0.15s ease,
+      background 0.15s ease;
   }
 
   .lx-shell .lx-nav > button svg {
     display: block;
+    flex: 0 0 18px;
     width: 18px;
     height: 18px;
   }
 
-  .lx-shell .lx-nav > button:hover {
+  .lx-shell .lx-nav > button .lx-nav-label {
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateX(-5px);
+    font-size: 13px;
+    font-weight: 500;
+    transition:
+      max-width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.16s ease,
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .lx-shell .lx-nav > button:hover,
+  .lx-shell .lx-nav > button:focus-visible {
+    max-width: 180px;
+    gap: 8px;
+    padding-right: 15px;
     color: var(--ds-text);
     background: color-mix(in srgb, var(--ds-text) 6%, transparent);
+  }
+
+  .lx-shell .lx-nav > button:hover .lx-nav-label,
+  .lx-shell .lx-nav > button:focus-visible .lx-nav-label {
+    max-width: 125px;
+    opacity: 1;
+    transform: translateX(0);
   }
 
   .lx-shell .lx-nav > button.is-active {
@@ -3401,6 +3436,13 @@ table th {
     box-shadow: 0 0 0 2px var(--ds-canvas);
     font-size: 10px;
     line-height: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lx-shell .lx-nav > button,
+    .lx-shell .lx-nav > button .lx-nav-label {
+      transition: none;
+    }
   }
 
   .lx-shell .lx-actions {

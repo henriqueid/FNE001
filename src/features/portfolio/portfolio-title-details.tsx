@@ -88,15 +88,17 @@ export function PortfolioTitleDetails({
   portfolio,
   onPortfolio,
   onClose,
+  initialTab = "resumo",
 }: {
   title: PortfolioGridRow;
   repName: (id?: string) => string;
   portfolio: PortfolioState;
   onPortfolio: (state: PortfolioState) => void;
   onClose: () => void;
+  initialTab?: DetailTab;
 }) {
   const { parties } = useRegistry();
-  const [tab, setTab] = useState<DetailTab>("resumo");
+  const [tab, setTab] = useState<DetailTab>(initialTab);
   const [notice, setNotice] = useState("");
   const cedent = parties.find(party => digits(party.document) === digits(title.ownerDocument));
   const debtor = parties.find(party => digits(party.document) === digits(title.debtorDocument));

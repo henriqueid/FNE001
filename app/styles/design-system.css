@@ -2917,6 +2917,183 @@ a.fn-btn:not([href]) {
   color: var(--ds-warning);
 }
 
+/* Central de Cobrança: agenda priorizada e régua operacional. */
+.pf-collection-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+  background: var(--ds-border);
+}
+.pf-collection-summary > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 15px 16px;
+  background: var(--ds-surface);
+}
+.pf-collection-summary span,
+.pf-collection-priority small {
+  color: var(--ds-text-3);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.pf-collection-summary b {
+  color: var(--ds-text);
+  font-size: 22px;
+  font-weight: 650;
+}
+.pf-collection-summary small {
+  overflow: hidden;
+  color: var(--ds-text-3);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf-collection-summary > .critical b {
+  color: var(--ds-danger);
+}
+.pf-collection-card,
+.pf-ruler-card {
+  margin-top: 14px;
+}
+.pf-collection-list {
+  display: grid;
+}
+.pf-collection-item {
+  display: grid;
+  grid-template-columns: 92px minmax(180px, 0.9fr) minmax(270px, 1.4fr) minmax(150px, 0.65fr) auto;
+  gap: 16px;
+  align-items: center;
+  min-width: 0;
+  padding: 13px 16px;
+  border-top: 1px solid var(--ds-border);
+  border-left: 3px solid var(--ds-border);
+}
+.pf-collection-item.critica {
+  border-left-color: var(--ds-danger);
+}
+.pf-collection-item.alta {
+  border-left-color: var(--ds-warning);
+}
+.pf-collection-item.media {
+  border-left-color: var(--ds-accent);
+}
+.pf-collection-item.baixa {
+  border-left-color: var(--ds-text-3);
+}
+.pf-collection-priority,
+.pf-collection-party,
+.pf-collection-reason,
+.pf-collection-value {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.pf-collection-priority > span {
+  width: max-content;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: var(--ds-surface-2);
+  color: var(--ds-text-2);
+  font-size: 11px;
+  font-weight: 800;
+}
+.pf-collection-item.critica .pf-collection-priority > span {
+  background: color-mix(in srgb, var(--ds-danger) 12%, transparent);
+  color: var(--ds-danger);
+}
+.pf-collection-item.alta .pf-collection-priority > span {
+  background: color-mix(in srgb, var(--ds-warning) 12%, transparent);
+  color: var(--ds-warning);
+}
+.pf-collection-party b,
+.pf-collection-reason b,
+.pf-collection-value b {
+  overflow: hidden;
+  color: var(--ds-text);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf-collection-party span,
+.pf-collection-reason span,
+.pf-collection-value span {
+  overflow: hidden;
+  color: var(--ds-text-2);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf-collection-party small,
+.pf-collection-reason small,
+.pf-collection-value small {
+  overflow: hidden;
+  color: var(--ds-text-3);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf-collection-value {
+  text-align: right;
+}
+.pf-ruler {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  border-top: 1px solid var(--ds-border);
+  background: var(--ds-border);
+}
+.pf-ruler > div {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  background: var(--ds-surface);
+}
+.pf-ruler b {
+  color: var(--ds-accent);
+  font-size: 12px;
+}
+.pf-ruler span {
+  color: var(--ds-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+.pf-ruler small {
+  color: var(--ds-text-3);
+  font-size: 11px;
+}
+@media (max-width: 1060px) {
+  .pf-collection-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pf-collection-item {
+    grid-template-columns: 82px minmax(160px, 0.8fr) minmax(230px, 1.2fr) auto;
+  }
+  .pf-collection-value {
+    display: none;
+  }
+  .pf-ruler {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .pf-collection-item {
+    grid-template-columns: 78px minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+  .pf-collection-reason {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .pf-ruler {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Análise final orientada por exceção · etapa de Aprovação */
 .approval-decision-summary {
   overflow: hidden;

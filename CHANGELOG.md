@@ -1,5 +1,12 @@
 # Changelog
 
+## Não lançado — 08/10/2026 · Central de cobrança e checagem
+
+- Nova agenda operacional da carteira com priorização automática por promessa vencida, retorno atrasado, faixa de atraso, vencimento e confirmação do sacado.
+- Filas separadas para cobrança e controladoria, filtros rápidos, valor único em tratamento e acesso direto à aba correta do título pelo botão **Atuar**.
+- Régua visível de D−3 a D+31, com orientação de contato preventivo, cobrança amigável, cobrança formal e escalonamento.
+- Cobertura automatizada das regras de prioridade e exclusão de títulos encerrados; suíte ampliada para 116 testes.
+
 ## Não lançado — 08/10/2026 · Manutenção de dependências
 
 - Atualização coordenada de React 19.3, Vite 8.3, vinext 1.1, Vitest 5 e ferramentas de deploy da Cloudflare.

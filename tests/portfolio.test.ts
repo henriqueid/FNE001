@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { initialOperations } from "@/src/domain/core/demo/operations";
+import { buildCollectionQueue } from "@/src/domain/portfolio/collection";
 import {
   addCollectionOccurrence,
   migratePortfolioState,
@@ -156,5 +157,71 @@ describe("carteira operacional", () => {
 
     expect(changed.confirmation).toMatchObject({ status: "Confirmado", channel: "Telefone" });
     expect(changed.events.at(-1)?.action).toBe("Controladoria · Confirmado");
+  });
+});
+
+describe("central de cobrança", () => {
+  const title = () => ({
+    ...seedPortfolio(initialOperations).titles[0],
+    status: "Em aberto" as const,
+    dueDate: "2026-10-01",
+    originalDueDate: "2026-10-01",
+    paidAmount: 0,
+    repurchasedAmount: 0,
+    discountAmount: 0,
+    abatementAmount: 0,
+    collectionOccurrences: [],
+    confirmation: { status: "Não iniciada" as const },
+  });
+
+  it("prioriza título vencido e cria uma ação de checagem", () => {
+    const queue = buildCollectionQueue([title()], "2026-10-08");
+
+    expect(queue.find(action => action.queue === "cobranca")).toMatchObject({
+      reason: "vencido",
+      priority: "alta",
+      daysLate: 7,
+    });
+    expect(queue.find(action => action.queue === "checagem")).toMatchObject({
+      reason: "confirmacao-pendente",
+      priority: "alta",
+    });
+  });
+
+  it("coloca promessa vencida acima da régua comum", () => {
+    const queued = buildCollectionQueue(
+      [
+        {
+          ...title(),
+          collectionOccurrences: [
+            {
+              id: "promise-1",
+              chargedAt: "2026-10-02T10:00",
+              channel: "WhatsApp" as const,
+              contactPerson: "Maria",
+              outcome: "Promessa de pagamento" as const,
+              notes: "Pagamento combinado.",
+              nextContactAt: "2026-10-06T09:00",
+              promiseDate: "2026-10-05",
+              createdAt: "2026-10-02T10:01:00.000Z",
+              createdBy: "Henrique",
+            },
+          ],
+        },
+      ],
+      "2026-10-08",
+    );
+
+    expect(queued[0]).toMatchObject({ reason: "promessa-vencida", priority: "critica" });
+    expect(queued.filter(action => action.queue === "cobranca")).toHaveLength(1);
+  });
+
+  it("não cria checagem para título confirmado nem ações para título encerrado", () => {
+    const confirmed = { ...title(), confirmation: { status: "Confirmado" as const } };
+    const closed = { ...title(), id: "closed", status: "Pago" as const };
+    const queue = buildCollectionQueue([confirmed, closed], "2026-10-08");
+
+    expect(queue.some(action => action.queue === "checagem")).toBe(false);
+    expect(queue.some(action => action.titleId === "closed")).toBe(false);
   });
 });

@@ -14,15 +14,26 @@ import { todayIso } from "@/src/domain/finance/ledger";
 import { aging, daysBetween } from "@/src/domain/home/metrics";
 import { portfolioByRep } from "@/src/domain/registry/registry";
 import { portfolioBalance, portfolioDisplayStatus, type PortfolioState } from "@/src/domain/portfolio/model";
-import { ArrowIcon, ClockIcon, ListIcon, SearchIcon, UsersIcon, WalletIcon, BriefcaseLineIcon } from "@/src/ui/icons";
+import { buildCollectionQueue } from "@/src/domain/portfolio/collection";
+import {
+  ArrowIcon,
+  BellIcon,
+  ClockIcon,
+  ListIcon,
+  SearchIcon,
+  UsersIcon,
+  WalletIcon,
+  BriefcaseLineIcon,
+} from "@/src/ui/icons";
 import { ModuleTabs } from "@/src/ui/module-tabs";
 import { compact } from "@/src/features/finance/finance-ui";
 import { PortfolioTitleGrid } from "./portfolio-title-grid";
 import { portfolioIndicators } from "@/src/domain/indicators/portfolio";
 import { fmtDays, fmtPct, IndicatorGrid } from "@/src/features/indicators/indicator-grid";
 import { useQualityPolicy } from "@/src/features/risk/use-quality-policy";
+import { CollectionCenter } from "./collection-center";
 
-type Tab = "titulos" | "cedentes" | "comerciais" | "aging";
+type Tab = "cobranca" | "titulos" | "cedentes" | "comerciais" | "aging";
 type Situation = "todos" | "avencer" | "vencidos" | "d30";
 type Props = {
   portfolio: PortfolioState;
@@ -35,7 +46,7 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
   const { commercial, cedents } = useRegistry();
   const { policy } = useQualityPolicy();
   const today = todayIso();
-  const [tab, setTab] = useState<Tab>("titulos");
+  const [tab, setTab] = useState<Tab>("cobranca");
   const [situation, setSituation] = useState<Situation>("todos");
   const [repFilter, setRepFilter] = useState("");
   const [q, setQ] = useState("");
@@ -64,6 +75,7 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
   const openScoped = scoped.filter(
     t => t.status !== "Pago" && t.status !== "Recomprado" && t.status !== "Cancelado" && t.amount > 0,
   );
+  const collectionActions = buildCollectionQueue(openScoped, today);
   const shown = scoped
     .filter(
       t =>
@@ -149,6 +161,14 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
         value={tab}
         onChange={setTab}
         tabs={[
+          {
+            id: "cobranca",
+            label: "Central de cobrança",
+            icon: <BellIcon />,
+            count: collectionActions.filter(action => action.priority === "critica" || action.priority === "alta")
+              .length,
+            tone: "alert",
+          },
           { id: "titulos", label: "Títulos", icon: <ListIcon />, count: openScoped.length, tone: "neutral" },
           { id: "cedentes", label: "Por cedente", icon: <UsersIcon />, count: byCedent.length, tone: "neutral" },
           { id: "comerciais", label: "Por comercial", icon: <BriefcaseLineIcon /> },
@@ -278,6 +298,16 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
           ]}
         />
       </section>
+
+      {tab === "cobranca" && (
+        <CollectionCenter
+          rows={openScoped}
+          today={today}
+          portfolio={portfolio}
+          onPortfolio={onPortfolio}
+          repName={repName}
+        />
+      )}
 
       {tab === "titulos" && (
         <section className="fn-card">
@@ -452,8 +482,8 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
         <div>
           <h2>Próximas entregas da Carteira</h2>
           <p>
-            Remessa e retorno CNAB por banco, crédito a identificar, régua de cobrança, protesto, prorrogação e conta
-            gráfica do cedente.
+            Remessa e retorno CNAB por banco, crédito a identificar, protesto, negativação, prorrogação e conta gráfica
+            do cedente.
           </p>
         </div>
         <div className="ds-today-links">

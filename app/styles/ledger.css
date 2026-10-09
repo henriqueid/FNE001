@@ -3401,7 +3401,8 @@ table th {
   }
 
   .lx-shell .lx-nav > button:hover,
-  .lx-shell .lx-nav > button:focus-visible {
+  .lx-shell .lx-nav > button:focus-visible,
+  .lx-shell .lx-nav > button.is-active {
     max-width: 180px;
     gap: 8px;
     padding-right: 15px;
@@ -3410,7 +3411,8 @@ table th {
   }
 
   .lx-shell .lx-nav > button:hover .lx-nav-label,
-  .lx-shell .lx-nav > button:focus-visible .lx-nav-label {
+  .lx-shell .lx-nav > button:focus-visible .lx-nav-label,
+  .lx-shell .lx-nav > button.is-active .lx-nav-label {
     max-width: 125px;
     opacity: 1;
     transform: translateX(0);
@@ -3423,8 +3425,10 @@ table th {
 
   .lx-shell .lx-nav > button > b {
     position: absolute;
-    top: -7px;
-    right: -5px;
+    z-index: 2;
+    top: 0;
+    left: 25px;
+    right: auto;
     min-width: 18px;
     height: 18px;
     padding: 0 5px;

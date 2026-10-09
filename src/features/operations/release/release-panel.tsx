@@ -476,7 +476,11 @@ export function ReleasePanel({
               />
             </label>
             {!released ? (
-              <button className="primary-action release-submit" disabled={!readyToRelease} onClick={release}>
+              <button
+                className="primary-action action-confirm release-submit"
+                disabled={!readyToRelease}
+                onClick={release}
+              >
                 Liberar para o financeiro <ArrowIcon />
               </button>
             ) : (

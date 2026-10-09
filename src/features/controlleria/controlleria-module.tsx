@@ -401,7 +401,7 @@ function CheckRow({ item, onOpen }: { item: ReturnType<typeof buildControlChecks
         <b>{money(item.balance)}</b>
         <span>saldo do título</span>
       </div>
-      <button className="fn-btn small" onClick={onOpen}>
+      <button className="fn-btn small action-warning" onClick={onOpen}>
         Checar
       </button>
     </article>

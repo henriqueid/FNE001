@@ -157,7 +157,7 @@ export function TitleActionModal({
               Cancelar
             </button>
             <button
-              className="fn-btn primary"
+              className="fn-btn primary action-confirm"
               disabled={!accountId}
               onClick={() =>
                 onApply(

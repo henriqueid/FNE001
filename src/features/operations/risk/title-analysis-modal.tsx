@@ -100,7 +100,7 @@ export function TitleAnalysisModal({
           <button className="danger-secondary" onClick={() => decideAndClose("Reprovado")}>
             Rejeitar título
           </button>
-          <button className="primary-action" onClick={() => decideAndClose("Aprovado")}>
+          <button className="primary-action action-confirm" onClick={() => decideAndClose("Aprovado")}>
             Aprovar título
           </button>
         </div>

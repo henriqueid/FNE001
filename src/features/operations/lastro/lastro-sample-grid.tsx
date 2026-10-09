@@ -99,7 +99,9 @@ function LastroSampleRow({
         <small>{review?.updatedAt ?? "Agora"}</small>
       </span>
       <span className="lastro-row-actions">
-        <button onClick={() => onSelect(row.title.id)}>{row.sampled ? "Analisar" : "Confirmar"}</button>
+        <button className={row.sampled ? "action-warning" : "action-confirm"} onClick={() => onSelect(row.title.id)}>
+          {row.sampled ? "Analisar" : "Confirmar"}
+        </button>
         {!row.automaticEvidence && row.evidenceStatus !== "Validada" && (
           <label>
             Anexar

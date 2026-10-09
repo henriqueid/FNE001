@@ -27,7 +27,7 @@ export function RiskFinalActions({
         Reprovar operação
       </button>
       <button
-        className="primary-action"
+        className="primary-action action-confirm"
         title="Aprova só o que a política permite: sacado com score ≥ 600, título com prazo ≥ mínimo e sem reprovação manual. O restante fica para decisão individual."
         onClick={onApproveEligible}
       >

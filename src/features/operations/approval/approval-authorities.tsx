@@ -53,7 +53,9 @@ export function ApprovalAuthorities({
                 </Badge>
                 {item.status === "Pendente" && (
                   <div className="approval-row-actions">
-                    <button onClick={() => onDecide(item.id, "Reprovado")}>Reprovar</button>
+                    <button className="action-danger" onClick={() => onDecide(item.id, "Reprovado")}>
+                      Reprovar
+                    </button>
                     <button className="approve" onClick={() => onDecide(item.id, "Aprovado")}>
                       Aprovar
                     </button>

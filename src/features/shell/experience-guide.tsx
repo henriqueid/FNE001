@@ -178,16 +178,16 @@ export function ExperienceGuide({
             <div className="xp-color-key">
               <small>CORES QUE FALAM</small>
               <span>
-                <i className="info" /> informação
+                <i className="info" /> salvar
               </span>
               <span>
-                <i className="attention" /> atenção
+                <i className="attention" /> revisar
               </span>
               <span>
-                <i className="blocked" /> bloqueio
+                <i className="blocked" /> excluir
               </span>
               <span>
-                <i className="done" /> concluído
+                <i className="done" /> confirmar
               </span>
             </div>
           </div>
@@ -219,7 +219,7 @@ export function ExperienceGuide({
             </div>
             <button
               type="button"
-              className="xp-ai-action"
+              className="xp-ai-action action-warning"
               onClick={() => {
                 onNavigate(suggestion.view);
                 setCopilotOpen(false);

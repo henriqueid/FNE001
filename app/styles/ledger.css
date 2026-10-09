@@ -4219,3 +4219,125 @@ table th {
     display: none;
   }
 }
+
+/* ==========================================================================
+   Linguagem de ações · a mesma cor comunica a mesma intenção em todo o produto
+   azul = salvar/avançar · verde = confirmar/aprovar · laranja = revisar
+   vermelho = excluir/reprovar. A cor nunca substitui o texto da ação.
+   ========================================================================== */
+:root {
+  --action-save: #2563eb;
+  --action-save-hover: #1d4ed8;
+  --action-confirm: #16803c;
+  --action-confirm-hover: #11652f;
+  --action-warning: #d97706;
+  --action-warning-hover: #b45309;
+  --action-danger: #dc2626;
+  --action-danger-hover: #b91c1c;
+}
+
+:is(.primary-action, .vg-btn.primary, .fn-btn.primary, .policy-primary-action, .pricing-save, .action-save) {
+  min-height: 38px;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  color: #fff !important;
+  background: var(--action-save) !important;
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--action-save) 24%, transparent) !important;
+  font-weight: 700;
+}
+:is(.primary-action, .vg-btn.primary, .fn-btn.primary, .policy-primary-action, .pricing-save, .action-save):hover:not(
+    :disabled
+  ) {
+  color: #fff !important;
+  background: var(--action-save-hover) !important;
+  transform: translateY(-1px);
+}
+
+:is(.action-confirm, button.approve, button.confirm, .fn-btn.release, .release-submit) {
+  min-height: 38px;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  color: #fff !important;
+  background: var(--action-confirm) !important;
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--action-confirm) 24%, transparent) !important;
+  font-weight: 700;
+}
+:is(.action-confirm, button.approve, button.confirm, .fn-btn.release, .release-submit):hover:not(:disabled) {
+  color: #fff !important;
+  background: var(--action-confirm-hover) !important;
+  transform: translateY(-1px);
+}
+
+:is(.action-warning, .xp-ai-action.action-warning) {
+  min-height: 38px;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  color: #fff !important;
+  background: var(--action-warning) !important;
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--action-warning) 22%, transparent) !important;
+  font-weight: 700;
+}
+:is(.action-warning, .xp-ai-action.action-warning):hover:not(:disabled) {
+  color: #fff !important;
+  background: var(--action-warning-hover) !important;
+  transform: translateY(-1px);
+}
+
+:is(
+  .action-danger,
+  .danger-action,
+  .danger-secondary,
+  .fn-btn.danger,
+  button.danger,
+  button.reject,
+  button[aria-label^="Excluir"],
+  button[aria-label^="Remover"]
+) {
+  min-height: 38px;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  color: #fff !important;
+  background: var(--action-danger) !important;
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--action-danger) 22%, transparent) !important;
+  font-weight: 700;
+}
+:is(
+    .action-danger,
+    .danger-action,
+    .danger-secondary,
+    .fn-btn.danger,
+    button.danger,
+    button.reject,
+    button[aria-label^="Excluir"],
+    button[aria-label^="Remover"]
+  ):hover:not(:disabled) {
+  color: #fff !important;
+  background: var(--action-danger-hover) !important;
+  transform: translateY(-1px);
+}
+
+:is(
+  .primary-action,
+  .vg-btn.primary,
+  .fn-btn.primary,
+  .policy-primary-action,
+  .pricing-save,
+  .action-save,
+  .action-confirm,
+  button.approve,
+  button.confirm,
+  .fn-btn.release,
+  .release-submit,
+  .action-warning,
+  .action-danger,
+  .danger-action,
+  .danger-secondary,
+  .fn-btn.danger,
+  button.danger,
+  button.reject
+):disabled {
+  opacity: 0.42;
+  box-shadow: none !important;
+  cursor: not-allowed;
+  transform: none;
+}

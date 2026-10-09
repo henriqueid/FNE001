@@ -127,7 +127,7 @@ export function ApprovalFooter({
         <button className="secondary-action" onClick={onSubmit}>
           Enviar para alçadas
         </button>
-        <button className="primary-action" onClick={onApprove}>
+        <button className="primary-action action-confirm" onClick={onApprove}>
           Aprovar operação <ArrowIcon />
         </button>
       </div>

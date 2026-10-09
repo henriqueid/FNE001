@@ -18,7 +18,9 @@ function EntryRowActions({ entry, onEdit, onDelete }: Omit<EntryRowProps, "editi
   return (
     <span className="title-row-actions">
       <button onClick={() => onEdit(entry)}>Editar</button>
-      <button onClick={() => onDelete(entry.id)}>Excluir</button>
+      <button className="action-danger" onClick={() => onDelete(entry.id)}>
+        Excluir
+      </button>
     </span>
   );
 }
@@ -103,7 +105,9 @@ export function EntriesGrid({
         </div>
         <div className="saved-list-summary-actions">
           <span>{preciseMoney.format(entriesTotal(entries))}</span>
-          <button onClick={onDeleteAll}>Excluir todos</button>
+          <button className="action-danger" onClick={onDeleteAll}>
+            Excluir todos
+          </button>
         </div>
       </div>
       <div className="saved-list-scroll">

@@ -386,6 +386,7 @@ export function PolicyExecutionPanel({
                                 </button>
                                 <button
                                   type="button"
+                                  className="action-confirm"
                                   disabled={justification.trim().length < 8}
                                   onClick={registerOverride}
                                 >
@@ -399,6 +400,7 @@ export function PolicyExecutionPanel({
                               <div>
                                 <button
                                   type="button"
+                                  className="action-danger"
                                   onClick={() =>
                                     setPendingDecision({ evaluationId: item.id, decision: "REJEITAR_EXCECAO" })
                                   }
@@ -407,6 +409,7 @@ export function PolicyExecutionPanel({
                                 </button>
                                 <button
                                   type="button"
+                                  className="action-confirm"
                                   onClick={() =>
                                     setPendingDecision({ evaluationId: item.id, decision: "APROVAR_EXCECAO" })
                                   }

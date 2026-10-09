@@ -535,7 +535,7 @@ export function PortfolioTitleDetails({
                     <span>{returnRule}</span>
                   </div>
                   <footer>
-                    <button type="submit" className="fn-btn">
+                    <button type="submit" className="fn-btn action-save">
                       Salvar ocorrência
                     </button>
                   </footer>
@@ -682,7 +682,7 @@ export function PortfolioTitleDetails({
                   </label>
                 </div>
                 <footer>
-                  <button type="submit" className="fn-btn">
+                  <button type="submit" className="fn-btn action-save">
                     Salvar confirmação
                   </button>
                 </footer>

@@ -165,7 +165,7 @@ export function ReleasesTab({
                 </button>
               )}
               {reg && !locked && (
-                <button className="fn-btn ghost" onClick={() => onApply(confirmCollection(state, op.id))}>
+                <button className="fn-btn action-confirm" onClick={() => onApply(confirmCollection(state, op.id))}>
                   <CheckIcon /> Confirmar retorno do banco
                 </button>
               )}

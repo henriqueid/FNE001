@@ -4341,3 +4341,269 @@ table th {
   cursor: not-allowed;
   transform: none;
 }
+
+/* ---------- Comercial · dinâmica Agente + Gerente de carteira ---------- */
+.cm-team-page {
+  display: grid;
+  gap: 18px;
+}
+.cm-role-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 12px;
+}
+.cm-role-flow > article {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px 14px;
+  padding: 20px;
+  border: 1px solid var(--ds-border);
+  border-top: 4px solid var(--action-save);
+  border-radius: 16px;
+  background: var(--ds-surface);
+}
+.cm-role-flow > article.manager {
+  border-top-color: var(--action-confirm);
+}
+.cm-role-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #fff;
+  background: var(--action-save);
+}
+.cm-role-flow .manager .cm-role-icon {
+  background: var(--action-confirm);
+}
+.cm-role-icon svg {
+  width: 21px;
+}
+.cm-role-flow article small {
+  color: var(--ds-text-3);
+  font-size: 9.5px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+.cm-role-flow article h2 {
+  margin: 3px 0 5px;
+  font-size: 21px;
+}
+.cm-role-flow article p {
+  margin: 0;
+  color: var(--ds-text-2);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.cm-role-flow article dl {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 4px 0 0;
+}
+.cm-role-flow article dl > div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--ds-surface-2);
+}
+.cm-role-flow dt {
+  color: var(--ds-text-3);
+  font-size: 10px;
+}
+.cm-role-flow dd {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+}
+.cm-handoff-step {
+  align-self: center;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 16px 12px;
+  border: 1px dashed color-mix(in srgb, var(--action-warning) 52%, var(--ds-border));
+  border-radius: 14px;
+  color: var(--action-warning);
+  background: color-mix(in srgb, var(--action-warning) 7%, var(--ds-surface));
+  text-align: center;
+}
+.cm-handoff-step > svg:first-child {
+  width: 25px;
+}
+.cm-handoff-step > svg:last-child {
+  width: 16px;
+}
+.cm-handoff-step b {
+  font-size: 12px;
+}
+.cm-handoff-step small {
+  color: var(--ds-text-3);
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+.fn-kpis.cm-team-kpis {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+.cm-team-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.cm-role-ranking {
+  min-width: 0;
+  padding: 20px;
+  border-top: 4px solid var(--action-save);
+}
+.cm-role-ranking.manager {
+  border-top-color: var(--action-confirm);
+}
+.cm-role-list {
+  display: grid;
+  gap: 9px;
+}
+.cm-role-list > button {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+  color: var(--ds-text);
+  background: var(--ds-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+.cm-role-list > button:hover {
+  border-color: var(--action-save);
+  transform: translateY(-1px);
+}
+.cm-role-ranking.manager .cm-role-list > button:hover {
+  border-color: var(--action-confirm);
+}
+.cm-role-list header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.cm-role-list header > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.cm-role-list header b,
+.cm-role-list header small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cm-role-list header small {
+  color: var(--ds-text-3);
+  font-size: 10px;
+}
+.cm-role-list header > strong {
+  color: var(--action-save);
+  font-size: 17px;
+}
+.cm-role-ranking.manager .cm-role-list header > strong {
+  color: var(--action-confirm);
+}
+.cm-role-list dl {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.cm-role-list dl > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.cm-role-list dt {
+  overflow: hidden;
+  color: var(--ds-text-3);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cm-role-list dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.cm-role-list dd.bad {
+  color: var(--action-danger);
+}
+.cm-role-progress {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ds-surface-3);
+}
+.cm-role-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--action-save);
+}
+.cm-role-ranking.manager .cm-role-progress i {
+  background: var(--action-confirm);
+}
+.cm-handoff-board {
+  padding: 20px;
+}
+.cm-handoff-board .fn-chip svg {
+  width: 13px;
+  height: 13px;
+}
+.cm-handoff-board td:last-child {
+  color: var(--ds-text-2);
+  font-size: 11px;
+}
+
+@media (max-width: 1100px) {
+  .cm-role-flow {
+    grid-template-columns: 1fr 120px 1fr;
+  }
+  .fn-kpis.cm-team-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .cm-team-columns {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .cm-role-flow {
+    grid-template-columns: 1fr;
+  }
+  .cm-handoff-step {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    justify-items: start;
+    text-align: left;
+  }
+  .cm-handoff-step small {
+    grid-column: 2;
+  }
+  .fn-kpis.cm-team-kpis {
+    grid-template-columns: 1fr !important;
+  }
+  .cm-role-list dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cm-role-ranking,
+  .cm-handoff-board {
+    padding: 14px;
+  }
+}

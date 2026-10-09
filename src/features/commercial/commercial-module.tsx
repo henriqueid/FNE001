@@ -12,6 +12,7 @@ import { FunnelTab } from "@/src/features/commercial/tabs/funnel-tab";
 import { NewAccountsTab } from "@/src/features/commercial/tabs/new-accounts-tab";
 import { CarteiraTab } from "@/src/features/commercial/tabs/portfolio-tab";
 import { VisitsTab } from "@/src/features/commercial/tabs/visits-tab";
+import { TeamDynamicsTab } from "@/src/features/commercial/tabs/team-dynamics-tab";
 import { Avatar, Meter, type Period, RevenueChart, type Toast, pct } from "./commercial-ui";
 
 import { useCedents } from "@/src/app/registry-context";
@@ -78,7 +79,8 @@ export function BriefcaseIcon() {
   );
 }
 
-export type Tab = "painel" | "comerciais" | "negocios" | "contas" | "visitas" | "funil" | "comites" | "comissoes";
+export type Tab =
+  "painel" | "equipe" | "comerciais" | "negocios" | "contas" | "visitas" | "funil" | "comites" | "comissoes";
 export type Props = {
   state: CommercialState;
   onState: (s: CommercialState) => void;
@@ -182,7 +184,8 @@ export default function CommercialModule({
 
   const tabs: [Tab, string, number?][] = [
     ["painel", "Painel"],
-    ["comerciais", "Comerciais e carteira"],
+    ["equipe", "Agentes e gerentes"],
+    ["comerciais", "Carteiras"],
     ["negocios", "Negócios realizados"],
     ["contas", "Contas novas"],
     ["visitas", "Visitas", overdueVisits.length],
@@ -255,6 +258,7 @@ export default function CommercialModule({
           label,
           icon: {
             painel: <ChartIcon />,
+            equipe: <UsersIcon />,
             comerciais: <UsersIcon />,
             negocios: <HandshakeIcon />,
             contas: <UserPlusIcon />,
@@ -581,6 +585,19 @@ export default function CommercialModule({
           onEdit={rep => setModal({ type: "rep", rep })}
           onNew={() => setModal({ type: "rep" })}
           onTransfer={link => setModal({ type: "transfer", link })}
+        />
+      )}
+
+      {tab === "equipe" && (
+        <TeamDynamicsTab
+          state={state}
+          deals={deals}
+          titles={titles}
+          from={from}
+          to={to}
+          today={today}
+          repFilter={repFilter}
+          onSelectRep={setRepFilter}
         />
       )}
 

@@ -11,6 +11,7 @@ import { NotificationsPopover, isOpen, operationSignals } from "./notifications"
 import { type AppView, ShellContext } from "./shell-context";
 import { useTheme } from "./use-theme";
 import { UserMenu } from "./user-menu";
+import { ExperienceGuide } from "./experience-guide";
 
 import { BellIcon, MenuIcon, SearchIcon } from "@/src/ui/icons";
 import { type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -166,6 +167,12 @@ export function Shell({
           </div>
         </header>
         {menuOpen && <ModuleMenu active={active} openCount={openCount} onGo={go} onClose={closeMenu} />}
+        <ExperienceGuide
+          active={active}
+          operations={operations}
+          signals={signals}
+          onNavigate={view => (onNavigate ?? context?.navigate)?.(view)}
+        />
         <main className="sx-content">{children}</main>
       </div>
       <nav className="sx-bottom-nav" aria-label="Navegação rápida">

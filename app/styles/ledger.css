@@ -27,6 +27,13 @@ body {
   letter-spacing: -0.035em !important;
   line-height: normal !important;
 }
+.ct-page {
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+.ct-page > * {
+  min-width: 0;
+}
 @media (max-width: 1100px) {
   .fn-kpis.ct-kpis {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
@@ -2100,6 +2107,16 @@ table th {
 }
 
 @media (max-width: 760px) {
+  .fn-heading,
+  .fn-heading > div:first-child,
+  .fn-heading > div:first-child > p {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .fn-heading > div:first-child > p {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
   .fn-heading > div:first-child,
   .page-heading > div:first-child,
   .ds-page-head > div:first-child {
@@ -3724,4 +3741,481 @@ table th {
   font-size: 11px !important;
   font-weight: 400;
   line-height: 1.4;
+}
+
+/* ===========================================================================
+   Jornada guiada e Copiloto · clareza ponta a ponta
+   ========================================================================== */
+.xp-guide {
+  position: relative;
+  z-index: 22;
+  padding: 8px 32px;
+  background: color-mix(in srgb, var(--ds-elev) 96%, transparent);
+  border-bottom: 1px solid var(--ds-border);
+}
+.xp-guide-main {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+}
+.xp-guide-context {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.xp-guide-context > div {
+  display: grid;
+  gap: 2px;
+}
+.xp-guide-context small,
+.xp-guide-detail small,
+.xp-color-key > small {
+  color: var(--ds-text-3);
+  font-size: 9.5px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+.xp-guide-context b {
+  font-size: 13px;
+}
+.xp-context-dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  border-radius: 50%;
+  background: #64748b;
+  box-shadow: 0 0 0 5px color-mix(in srgb, #64748b 12%, transparent);
+}
+.xp-context-dot[data-tone="blue"],
+.xp-journey [data-tone="blue"] i {
+  background: #3b82f6;
+}
+.xp-context-dot[data-tone="violet"],
+.xp-journey [data-tone="violet"] i {
+  background: #7c3aed;
+}
+.xp-context-dot[data-tone="amber"],
+.xp-journey [data-tone="amber"] i {
+  background: #d97706;
+}
+.xp-context-dot[data-tone="red"],
+.xp-journey [data-tone="red"] i {
+  background: #dc2626;
+}
+.xp-context-dot[data-tone="green"],
+.xp-journey [data-tone="green"] i {
+  background: #15803d;
+}
+.xp-context-dot[data-tone="mint"],
+.xp-journey [data-tone="mint"] i {
+  background: #059669;
+}
+.xp-journey {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(76px, 1fr));
+  align-items: center;
+}
+.xp-journey button {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--ds-text-3);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.xp-journey button:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: calc(100% - 4px);
+  width: 8px;
+  height: 1px;
+  background: var(--ds-border-strong);
+}
+.xp-journey button:hover {
+  background: var(--ds-surface-2);
+  color: var(--ds-text);
+}
+.xp-journey button.is-current {
+  color: var(--ds-text);
+  background: var(--ds-surface-2);
+}
+.xp-journey button.is-past {
+  color: var(--ds-text-2);
+}
+.xp-journey i {
+  width: 21px;
+  height: 21px;
+  flex: 0 0 21px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--ds-text-3);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.42;
+}
+.xp-journey i svg {
+  width: 12px;
+  height: 12px;
+}
+.xp-journey .is-current i {
+  opacity: 1;
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 8%, transparent);
+}
+.xp-journey .is-past i {
+  opacity: 0.72;
+}
+.xp-journey button > span {
+  min-width: 0;
+  display: grid;
+  line-height: 1.15;
+}
+.xp-journey button b,
+.xp-journey button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.xp-journey button b {
+  font-size: 10.5px;
+}
+.xp-journey button small {
+  margin-top: 2px;
+  color: var(--ds-text-3);
+  font-size: 9px;
+}
+.xp-explain-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border: 1px solid var(--ds-border);
+  border-radius: 999px;
+  background: var(--ds-surface);
+  color: var(--ds-text-2);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.xp-explain-btn svg {
+  width: 13px;
+  height: 13px;
+  transition: transform 0.16s ease;
+}
+.xp-explain-btn[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+.xp-guide-detail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(250px, 0.9fr);
+  gap: 1px;
+  margin: 4px 0 6px;
+  overflow: hidden;
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+  background: var(--ds-border);
+  animation: xp-reveal 0.18s ease-out;
+}
+.xp-guide-detail > div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 11px 14px;
+  background: var(--ds-surface);
+}
+.xp-guide-detail b {
+  font-size: 11.5px;
+  font-weight: 550;
+  line-height: 1.35;
+}
+.xp-color-key {
+  grid-template-columns: repeat(4, auto);
+  align-content: center;
+  align-items: center;
+  gap: 5px 10px !important;
+}
+.xp-color-key > small {
+  grid-column: 1 / -1;
+}
+.xp-color-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ds-text-3);
+  font-size: 9.5px;
+}
+.xp-color-key i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3b82f6;
+}
+.xp-color-key i.attention {
+  background: #d97706;
+}
+.xp-color-key i.blocked {
+  background: #dc2626;
+}
+.xp-color-key i.done {
+  background: #15803d;
+}
+@keyframes xp-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+
+.xp-copilot {
+  position: fixed;
+  z-index: 70;
+  right: 22px;
+  bottom: 22px;
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+.xp-copilot-trigger {
+  min-width: 148px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 15px;
+  border: 1px solid color-mix(in srgb, #7c3aed 36%, var(--ds-border));
+  border-radius: 16px;
+  color: #fff;
+  background: #17131f;
+  box-shadow: 0 14px 35px rgba(15, 10, 25, 0.2);
+  font: inherit;
+  cursor: pointer;
+}
+.xp-copilot-trigger > svg {
+  width: 19px;
+  color: #c4b5fd;
+}
+.xp-copilot-trigger span {
+  display: grid;
+  text-align: left;
+}
+.xp-copilot-trigger b {
+  font-size: 12px;
+}
+.xp-copilot-trigger small {
+  color: #c4b5fd;
+  font-size: 9.5px;
+}
+.xp-copilot > section {
+  width: min(370px, calc(100vw - 24px));
+  padding: 18px;
+  border: 1px solid var(--ds-border);
+  border-radius: 20px;
+  color: var(--ds-text);
+  background: var(--ds-elev);
+  box-shadow: var(--ds-shadow-lg);
+  animation: xp-copilot-in 0.18s ease-out;
+}
+.xp-copilot > section header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.xp-copilot > section header span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.xp-copilot > section header svg {
+  width: 17px;
+  color: #7c3aed;
+}
+.xp-copilot > section header button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: var(--ds-surface-2);
+  color: var(--ds-text);
+  cursor: pointer;
+}
+.xp-ai-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 20px;
+  color: #7c3aed;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+.xp-ai-label i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7c3aed;
+}
+.xp-copilot h2 {
+  margin: 8px 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+.xp-copilot p {
+  margin: 0;
+  color: var(--ds-text-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.xp-ai-proof {
+  display: flex;
+  gap: 9px;
+  margin: 16px 0;
+  padding: 11px;
+  border-radius: 12px;
+  background: var(--ds-surface-2);
+}
+.xp-ai-proof svg {
+  width: 17px;
+  flex: 0 0 17px;
+  color: #d97706;
+}
+.xp-ai-proof span {
+  display: grid;
+  gap: 2px;
+  color: var(--ds-text-3);
+  font-size: 10.5px;
+}
+.xp-ai-action {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: #7c3aed;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.xp-ai-action svg {
+  width: 15px;
+}
+.xp-copilot > section > small {
+  display: block;
+  margin-top: 11px;
+  color: var(--ds-text-3);
+  font-size: 9.5px;
+  text-align: center;
+}
+@keyframes xp-copilot-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+@media (max-width: 1279px) {
+  .xp-guide {
+    padding-inline: 20px;
+  }
+  .xp-guide-main {
+    grid-template-columns: 150px minmax(0, 1fr) auto;
+  }
+  .xp-journey button {
+    padding-inline: 5px;
+  }
+}
+@media (max-width: 1100px) {
+  .xp-guide-main {
+    grid-template-columns: 135px minmax(0, 1fr) auto;
+  }
+  .xp-journey {
+    grid-template-columns: repeat(7, minmax(60px, 1fr));
+  }
+  .xp-journey button small {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .xp-journey button {
+    justify-content: center;
+  }
+  .xp-journey button > span {
+    display: none;
+  }
+  .xp-journey button:not(:last-child)::after {
+    left: calc(100% - 10px);
+    width: 20px;
+  }
+}
+@media (max-width: 760px) {
+  .xp-guide {
+    padding: 7px 12px;
+  }
+  .xp-guide-main {
+    min-height: 46px;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+  .xp-journey {
+    grid-column: 1 / -1;
+    order: 3;
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .xp-journey button {
+    flex: 0 0 42px;
+    padding: 3px;
+  }
+  .xp-journey button:not(:last-child)::after {
+    display: none;
+  }
+  .xp-guide-context small {
+    font-size: 8.5px;
+  }
+  .xp-explain-btn {
+    padding: 7px 9px;
+    font-size: 10px;
+  }
+  .xp-guide-detail {
+    grid-template-columns: 1fr;
+    max-height: 50dvh;
+    overflow-y: auto;
+  }
+  .xp-color-key {
+    grid-template-columns: repeat(2, auto);
+  }
+  .xp-copilot {
+    right: 12px;
+    bottom: 82px;
+  }
+  .xp-copilot-trigger {
+    min-width: 48px;
+    width: 48px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+  .xp-copilot-trigger span {
+    display: none;
+  }
 }

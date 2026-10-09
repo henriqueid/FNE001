@@ -1,5 +1,12 @@
 # Changelog
 
+## Não lançado — 08/10/2026 · Manutenção de dependências
+
+- Atualização coordenada de React 19.3, Vite 8.3, vinext 1.1, Vitest 5 e ferramentas de deploy da Cloudflare.
+- Remoção de `drizzle-orm` e `drizzle-kit`, que ainda não eram usados pelo protótipo e mantinham uma cadeia vulnerável de build.
+- Correção transitiva de `fflate` por override de patch compatível.
+- Auditoria das dependências de produção sem vulnerabilidades; as ocorrências restantes são exclusivas do ambiente de desenvolvimento e vêm da cadeia de `braces`, ainda sem versão corrigida publicada.
+
 ## Não lançado — 02/10/2026 · Menu responsivo, painel de Risco e indicadores de mercado (v11)
 
 **Menu**

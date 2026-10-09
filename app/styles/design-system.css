@@ -1648,49 +1648,6 @@ table th {
   .sx-shell .sx-sidebar .sx-trigger-caret {
     display: block;
   }
-  /* No celular, a gaveta deve abrir completa mesmo se o desktop foi salvo recolhido. */
-  .sx-shell.is-collapsed .sx-sidebar.is-open .sx-logo-light {
-    display: block !important;
-  }
-  :root[data-theme="dark"] .sx-shell.is-collapsed .sx-sidebar.is-open .sx-logo-light {
-    display: none !important;
-  }
-  :root[data-theme="dark"] .sx-shell.is-collapsed .sx-sidebar.is-open .sx-logo-dark {
-    display: block !important;
-  }
-  .sx-shell.is-collapsed .sx-sidebar.is-open .sx-brand-tag,
-  .sx-shell.is-collapsed .sx-sidebar.is-open .sx-nav-label,
-  .sx-shell.is-collapsed .sx-sidebar.is-open nav button span,
-  .sx-shell.is-collapsed .sx-sidebar.is-open .sx-tenant div,
-  .sx-shell.is-collapsed .sx-sidebar.is-open .sx-profile div {
-    display: revert;
-  }
-  .sx-shell.is-collapsed .sx-sidebar.is-open .sx-tenant div,
-  .sx-shell.is-collapsed .sx-sidebar.is-open .sx-profile div {
-    display: grid;
-  }
-  .sx-shell.is-collapsed .sx-sidebar.is-open .sx-symbol {
-    display: none;
-  }
-  .sx-shell.is-collapsed .sx-sidebar.is-open .sx-brand {
-    align-items: flex-start;
-    padding-inline: 10px;
-  }
-  .sx-shell.is-collapsed .sx-sidebar.is-open nav button {
-    justify-content: flex-start;
-    padding: 0 12px;
-  }
-  .sx-shell.is-collapsed .sx-sidebar.is-open nav button b {
-    position: static;
-  }
-  .sx-shell.is-collapsed .sx-sidebar.is-open .sx-tenant,
-  .sx-shell.is-collapsed .sx-sidebar.is-open .sx-profile {
-    justify-content: flex-start;
-    padding-inline: 10px;
-  }
-  .sx-shell.is-collapsed .sx-sidebar.is-open .sx-trigger-caret {
-    display: block;
-  }
   .sx-shell .sx-sidebar-popover {
     left: 12px;
     width: calc(100vw - 24px);

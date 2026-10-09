@@ -3321,6 +3321,115 @@ table th {
   }
 }
 
+/* ==========================================================================
+   Menu Ledger v10 · referência original do Claude
+   ========================================================================== */
+@media (min-width: 1024px) {
+  .lx-shell .lx-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    padding: 0 26px;
+    background: var(--ds-canvas);
+    border-bottom: 1px solid var(--ds-border);
+  }
+
+  .lx-shell .lx-brand {
+    flex: 0 0 auto;
+  }
+
+  .lx-shell .lx-brand .sx-logo {
+    width: 116px;
+  }
+
+  .lx-shell .lx-nav {
+    flex: 0 0 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 2px;
+    padding: 0;
+  }
+
+  .lx-shell .lx-nav > button {
+    position: relative;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    color: var(--ds-text-2);
+    background: transparent;
+  }
+
+  .lx-shell .lx-nav > button svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+  }
+
+  .lx-shell .lx-nav > button:hover {
+    color: var(--ds-text);
+    background: color-mix(in srgb, var(--ds-text) 6%, transparent);
+  }
+
+  .lx-shell .lx-nav > button.is-active {
+    color: var(--ds-accent-ink);
+    background: var(--ds-accent);
+  }
+
+  .lx-shell .lx-nav > button > b {
+    position: absolute;
+    top: -7px;
+    right: -5px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--ds-mint-ink);
+    background: var(--ds-mint);
+    box-shadow: 0 0 0 2px var(--ds-canvas);
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  .lx-shell .lx-actions {
+    margin-left: auto;
+    gap: 8px;
+  }
+
+  .lx-shell .lx-search {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    justify-content: center;
+    padding: 0;
+    border-radius: 11px;
+    background: var(--ds-elev, var(--ds-surface));
+  }
+
+  .lx-shell .lx-search span,
+  .lx-shell .lx-search kbd {
+    display: none;
+  }
+
+  .lx-shell .lx-icon {
+    border-radius: 11px;
+    background: var(--ds-elev, var(--ds-surface));
+  }
+}
+
 /* ---------- Central de operações: separação entre linhas ---------- */
 /* Divisória firme entre operações, linha mais compacta, conteúdo centrado
    e destaque claro no hover e no foco por teclado. */

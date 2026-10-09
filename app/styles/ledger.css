@@ -3380,9 +3380,17 @@ table th {
       background 0.15s ease;
   }
 
-  .lx-shell .lx-nav > button svg {
-    display: block;
+  .lx-shell .lx-nav-icon {
+    position: relative;
     flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    display: grid;
+    place-items: center;
+  }
+
+  .lx-shell .lx-nav-icon > svg {
+    display: block;
     width: 18px;
     height: 18px;
   }
@@ -3423,22 +3431,21 @@ table th {
     background: var(--ds-accent);
   }
 
-  .lx-shell .lx-nav > button > b {
+  .lx-shell .lx-nav-icon > b {
     position: absolute;
     z-index: 2;
-    top: 0;
-    left: 25px;
-    right: auto;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
+    top: -8px;
+    right: -8px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
     display: grid;
     place-items: center;
     border-radius: 999px;
     color: var(--ds-mint-ink);
     background: var(--ds-mint);
     box-shadow: 0 0 0 2px var(--ds-canvas);
-    font-size: 10px;
+    font-size: 9px;
     line-height: 1;
   }
 
@@ -3473,6 +3480,29 @@ table th {
   .lx-shell .lx-icon {
     border-radius: 11px;
     background: var(--ds-elev, var(--ds-surface));
+  }
+
+  .lx-shell .lx-action-icon {
+    position: relative;
+    width: 18px;
+    height: 18px;
+    display: grid;
+    place-items: center;
+  }
+
+  .lx-shell .lx-action-icon > svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .lx-shell .lx-action-icon > .sx-dot {
+    top: -8px;
+    right: -8px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 9px;
+    line-height: 1;
   }
 }
 

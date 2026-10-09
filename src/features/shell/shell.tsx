@@ -108,9 +108,11 @@ export function Shell({
                 title={`${item.label} · ${item.hint}`}
                 onClick={() => go(item)}
               >
-                {item.icon}
+                <span className="lx-nav-icon">
+                  {item.icon}
+                  {badge(item)}
+                </span>
                 <span className="lx-nav-label">{item.label}</span>
-                {badge(item)}
               </button>
             ))}
           </nav>
@@ -133,8 +135,10 @@ export function Shell({
                 aria-expanded={bellOpen}
                 onClick={() => setBellOpen(open => !open)}
               >
-                <BellIcon />
-                {signals.length > 0 && <i className="sx-dot">{signals.length}</i>}
+                <span className="lx-action-icon">
+                  <BellIcon />
+                  {signals.length > 0 && <i className="sx-dot">{signals.length}</i>}
+                </span>
               </button>
               {bellOpen && (
                 <NotificationsPopover

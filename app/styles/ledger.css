@@ -4786,6 +4786,26 @@ table th {
 .vg-capacity-rows b {
   font-size: 13.5px;
 }
+.vg-capacity-rows b.good,
+.vg-capacity-main strong.good {
+  color: #168447;
+}
+.vg-capacity-rows b.bad,
+.vg-capacity-main strong.bad {
+  color: var(--ds-danger);
+}
+.vg-operation-card > header > svg {
+  color: #d97706;
+}
+.vg-operation-card .vg-capacity-main {
+  background: color-mix(in srgb, #d97706 8%, var(--ds-surface));
+}
+.vg-risk-card > header > svg {
+  color: #b42318;
+}
+.vg-risk-card .vg-capacity-main {
+  background: color-mix(in srgb, #b42318 7%, var(--ds-surface));
+}
 .vg-capacity-action {
   width: 100%;
   justify-content: center;
@@ -4841,6 +4861,31 @@ table th {
 }
 .vg-flow-card .vg-pipeline {
   gap: 8px;
+}
+.vg-decision-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border-radius: 13px;
+  background: var(--ds-border);
+}
+.vg-decision-strip > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 18px;
+  background: var(--ds-surface-2);
+}
+.vg-decision-strip span,
+.vg-decision-strip small {
+  color: var(--ds-text-3);
+  font-size: 11.5px;
+}
+.vg-decision-strip b {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 .vg-deep-dive {
   display: grid;
@@ -4941,6 +4986,9 @@ table th {
   .vg-deep-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .vg-decision-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (max-width: 760px) {
   .vg-head.lx-page-head {
@@ -5013,6 +5061,9 @@ table th {
   .vg-deep-metrics {
     grid-template-columns: 1fr;
     padding-inline: 12px;
+  }
+  .vg-decision-strip {
+    grid-template-columns: 1fr;
   }
   .vg-deep-content {
     padding-inline: 12px;

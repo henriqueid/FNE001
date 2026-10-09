@@ -29,6 +29,11 @@ export function HomeHeader({
 }) {
   const { labels, periodEmpty } = metrics;
   const dateLabel = now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+  const perspectiveIntro: Record<HomeProfile, string> = {
+    gestao: "Resultado, liquidez e exposição para decidir onde crescer e onde conter.",
+    operacao: "Fila, bloqueios, prazos e liberações para comandar o trabalho do dia.",
+    risco: "Atraso, provisão e deterioração para proteger a carteira e orientar a cobrança.",
+  };
 
   return (
     <>
@@ -48,7 +53,7 @@ export function HomeHeader({
               </span>
             </nav>
           </div>
-          <p>Decisões, caixa e andamento da operação — na ordem em que precisam da sua atenção.</p>
+          <p>{perspectiveIntro[profile]}</p>
         </div>
         <div className="vg-controls">
           <button className="primary-action" onClick={onNew}>

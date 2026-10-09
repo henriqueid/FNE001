@@ -1,31 +1,24 @@
-# Q'Prof — MVP da nova FNE001
+# STRATO · Receivables OS — protótipo navegável
 
-Protótipo navegável da nova experiência da tela Operação do Q'Prof. O MVP reorganiza o processo em um workspace único, sem integração com backend.
+Plataforma operacional de recebíveis para factoring, securitizadora, FIDC e ESC. Os dados são fictícios e todas as ações são simuladas no navegador (sem backend).
 
 ## Executar
 
 1. Instale o Node.js 22 ou superior.
-2. Abra esta pasta em um terminal.
-3. Execute `npm install`.
-4. Execute `npm run dev`.
-5. Abra o endereço local exibido no terminal.
+2. Nesta pasta, rode `npm install` e depois `npm run dev`.
+3. Abra o endereço exibido no terminal.
 
-## Roteiro sugerido
+Pré-visualização rápida sem Cloudflare/vinext: `npm run preview` (porta 5188).
 
-1. Na Central de Operações, clique em **Nova operação** e teste as três origens de títulos.
-2. Volte à Central e abra a operação **#3399**.
-3. Navegue pelas abas **Visão geral**, **Análise**, **Títulos**, **Documentos** e **Histórico**.
-4. Use **Acessar pré-checagem** para entrar na rotina integrada da Controladoria.
-5. Conclua com **Aprovar e avançar** para retornar à operação.
+## Roteiro de demonstração (5 minutos)
 
-## Escopo demonstrado
+1. **Visão geral** — alterne Gestão / Operação / Risco e o recorte por empresa. Use `Ctrl K` para buscar qualquer operação, cedente ou módulo.
+2. **Cadastros** — veja o comercial responsável, o limite do comitê e a carteira de cada cedente. Clique em **Novo cadastro**, marque os papéis (ex.: cedente e sacado) e salve: o cedente aparece na Nova operação e o sacado na digitação. Cadastre também um representante (vira comercial), um fornecedor ou um debenturista.
+3. **Operações** — abra o aditivo da Rede Clínica (etapa Risco). Tente abrir uma etapa futura: ela fica travada até a atual ser concluída.
+4. **Nova operação** — escolha o cedente: o comercial responsável aparece e é gravado na operação.
+5. **Carteira** — títulos em aberto, atraso por faixa e qualidade da carteira por comercial.
+6. **Comercial** — comitês atualizam o limite no Cadastro; recompras da Carteira estornam comissão; o envio ao Financeiro cria os títulos a pagar e o status de pagamento volta para a apuração.
+7. **Financeiro** — baixe a comissão em A pagar e a receber e confira o status em Comercial › Comissões.
+8. Alterne o **tema claro/escuro** no topo.
 
-- Central de Operações com filtros, status e indicadores.
-- Entrada por arquivo, digitação manual ou XML separado e integrado.
-- Jornada completa com etapa condicional de pré-checagem.
-- Resumo financeiro e operacional persistente.
-- Análise de críticas, sacados, títulos e validações.
-- Acesso contextual à FCT001, sem nova busca manual.
-- SLA, tempo na etapa e próxima ação.
-
-Os dados são fictícios e todas as ações são simuladas no navegador.
+Para recomeçar: busca global (`Ctrl K`) › "Restaurar dados de demonstração".

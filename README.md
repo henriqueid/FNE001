@@ -1,31 +1,42 @@
-# Lastro — MVP de operações de recebíveis
+# STRATO · Receivables OS
 
-Primeira fundação navegável do Lastro, uma plataforma operacional para FIDC, securitizadora e factoring. A experiência é orientada por operações e exceções, com o fluxo completo dentro de um único workspace.
+Plataforma operacional de recebíveis para factoring, securitizadora, FIDC e ESC (codinome **Lastro**). Este repositório é um protótipo navegável completo: todas as telas funcionam no navegador com dados fictícios e sem backend.
 
-## Executar
+## Rodar
 
-1. Instale o Node.js 22 ou superior.
-2. Abra esta pasta em um terminal.
-3. Execute `npm install`.
-4. Execute `npm run dev`.
-5. Abra o endereço local exibido no terminal.
+Requer Node.js 22+.
 
-## Roteiro do MVP
+```bash
+npm install
+npm run preview        # Vite puro, http://localhost:5188 (recomendado para testar)
+npm run dev            # Next/vinext (precisa de build/sites-vite-plugin do ambiente de hospedagem)
+```
 
-1. Na Central de Operações, filtre por FIDC, securitizadora ou factoring.
-2. Abra a operação **#3408** para ver o workspace único de um FIDC.
-3. Compare a concentração observada, a política e o ajuste recomendado.
-4. Navegue pelas seis etapas sem sair da operação.
-5. Clique em **Nova operação** e escolha a estrutura desejada.
+Scripts de qualidade:
 
-## Escopo demonstrado
+```bash
+npm run check          # typecheck + lint + formatação + testes
+npm test               # testes unitários (Vitest)
+npm run format         # Prettier
+npm run build:artifact # gera uma página única publicável em .preview/dist-artifact
+```
 
-- Central de Operações com volume, exceções, SLA, automação e filtros.
-- Operações nativas de FIDC, securitizadora e factoring.
-- Workspace único com seis etapas, política e próxima ação.
-- Explicação da crítica com regra, evidência e recomendação.
-- Estrutura do FIDC com classe e participantes.
-- Criação simulada de uma nova operação.
-- Protótipo funcional anterior preservado em `/lastro.html`.
+## Módulos
 
-Os dados são fictícios e todas as ações são simuladas no navegador.
+| Menu | O que faz | Código |
+|---|---|---|
+| Visão geral | Resultado, carteira, caixa, pendências por perfil (Gestão, Operação, Risco) | `src/features/home` |
+| Operações | Central, nova operação e workspace com 6 etapas (Entrada, Risco, Lastro, Preço, Aprovação, Liberação) | `src/features/operations` |
+| Carteira | Títulos adquiridos, atraso, por cedente e por comercial | `src/features/portfolio` |
+| Comercial | Metas, carteira, negócios, visitas, funil, comitês e comissões | `src/features/commercial` |
+| Financeiro | Caixa e fluxo, a pagar e a receber, liberações, extrato, conciliação OFX, contábil, bancos | `src/features/finance` |
+| Cadastros | Pessoas PF/PJ com papéis: cedente, sacado, fornecedor, representante, debenturista, cotista, avalista, prestador | `src/features/registry` |
+| Políticas, Integrações | Escopo da próxima fase | `src/features/shell/module-roadmap.tsx` |
+
+## Documentação
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — camadas, mapa de pastas, estado, vínculos entre módulos, estilos, testes.
+- [docs/CONVENTIONS.md](docs/CONVENTIONS.md) — padrões de código.
+- [INSTRUCOES.md](INSTRUCOES.md) — roteiro de demonstração.
+- [docs/produto/](docs/produto/) — contexto de produto, revisão v6 e pesquisa de mercado.
+- [CHANGELOG.md](CHANGELOG.md) — o que mudou em cada versão.

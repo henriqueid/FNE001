@@ -28,3 +28,13 @@ Thumbs.db
 
 # Local generated output
 output/
+.preview/dist/
+tsconfig.tsbuildinfo
+.preview/dist-artifact/
+
+# Local reference snapshots and migration artifacts
+.stage-v7/
+_backup-v5/
+Claude outputs/
+FNE001-atualizado/
+FNE001-parametros/

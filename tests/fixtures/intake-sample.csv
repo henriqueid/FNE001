@@ -1,0 +1,2 @@
+documento;valor;vencimento;emissao;sacado_cnpj;sacado_nome;chave_nfe;cfop;uf;cidade;observacao
+TESTE-ENTRADA-001;12500,00;30/11/2026;04/10/2026;44.659.901/0001-65;L.V. Carvalho Gutierrez Ltda;12345678901234567890123456789012345678901234;5102;PR;Cascavel;Arquivo de homologacao

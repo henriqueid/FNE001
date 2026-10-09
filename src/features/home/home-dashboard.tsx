@@ -7,10 +7,9 @@
  * - `use-home-metrics.ts`: todos os números e listas derivados das props.
  * - `home-header.tsx`, `home-kpis.tsx`, `home-sections-map.tsx`: apresentação.
  */
-import { CashHero } from "./cash-hero";
+import { HomeFocus } from "./home-focus";
 import { HomeHeader } from "./home-header";
 import { HomeKpis } from "./home-kpis";
-import { HomeSections } from "./home-sections-map";
 import { useHomeMetrics } from "./use-home-metrics";
 import { useHomePreferences } from "./use-home-preferences";
 import { useQualityPolicy } from "@/src/features/risk/use-quality-policy";
@@ -73,26 +72,14 @@ export default function HomeDashboard({
         onNew={onNew}
       />
 
-      <CashHero
-        timeline={metrics.timeline}
-        balance={metrics.bankBalance}
-        minimum={metrics.minimumCash}
-        onGoFinance={onGoFinance}
-        compactView={profile !== "gestao"}
-      />
-
       <HomeKpis metrics={metrics} profile={profile} onGoOperations={onGoOperations} onGoFinance={onGoFinance} />
 
-      <HomeSections
+      <HomeFocus
         metrics={metrics}
         profile={profile}
-        period={period}
-        now={now}
-        onPeriodChange={setPeriod}
         onOpen={onOpen}
         onGoOperations={onGoOperations}
         onGoFinance={onGoFinance}
-        qualityPolicy={quality}
       />
 
       <p className="vg-footnote">

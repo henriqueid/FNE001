@@ -1,8 +1,7 @@
 "use client";
 
 /**
- * Itens e grupos do menu. Os grupos "Operação" e "Gestão" e o Cadastros ficam visíveis na
- * barra superior; o restante de "Plataforma" fica em "Plataforma ▾".
+ * Itens e grupos do menu lateral.
  */
 import { type AppView } from "./shell-context";
 import {
@@ -11,6 +10,7 @@ import {
   BriefcaseLineIcon,
   GridIcon,
   PlugIcon,
+  ShieldIcon,
   SlidersIcon,
   UsersIcon,
   WalletIcon,
@@ -49,6 +49,7 @@ export const navGroups: { title: string; items: NavItem[] }[] = [
     title: "Plataforma",
     items: [
       { label: "Cadastros", view: "registry", icon: <UsersIcon />, hint: "Cedentes, sacados, grupos e contas" },
+      { label: "Políticas", view: "policies", icon: <ShieldIcon />, hint: "Crédito, lastro, preço e alçadas" },
       {
         label: "Integrações",
         view: "integrations",
@@ -66,12 +67,3 @@ export const navGroups: { title: string; items: NavItem[] }[] = [
 ];
 
 export const allNav = navGroups.flatMap(group => group.items);
-
-/** Módulos com nome na barra superior (desktop). */
-export const primaryNav = allNav.filter(item => item.view !== "integrations" && item.view !== "settings");
-/** Módulos do botão "Plataforma ▾". */
-export const platformNav = allNav.filter(item => item.view === "integrations" || item.view === "settings");
-/** Atalhos da barra inferior no celular (o quinto botão abre o menu completo). */
-export const bottomNav = allNav.filter(item =>
-  ["home", "operations", "portfolio", "finance"].includes(item.view ?? ""),
-);

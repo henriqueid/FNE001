@@ -6,7 +6,7 @@
  */
 import { type DeskReply } from "@/src/domain/copilot/desk-assistant";
 import { type Cedent } from "@/src/domain/core/types";
-import { AlertIcon, ArrowIcon, CheckIcon, ExpandIcon, FolderIcon } from "@/src/ui/icons";
+import { AlertIcon, ArrowIcon, CheckIcon, ExpandIcon, FolderIcon, SparkIcon } from "@/src/ui/icons";
 import { type DragEvent, useState } from "react";
 import { DeskGate, DeskMoney } from "./copilot-analysis";
 import { type CopilotDesk, DESK_STAGES } from "./use-copilot-desk";
@@ -14,10 +14,10 @@ import { type CopilotDesk, DESK_STAGES } from "./use-copilot-desk";
 export type CopilotSuggestion = { title: string; body: string; action: string; onAction: () => void };
 
 const PROMPTS = [
-  { text: "Resumo da carteira", hint: "Valor, prazo e vencidos" },
-  { text: "Quais títulos estão vencidos?", hint: "Os maiores primeiro" },
-  { text: "Maiores sacados da carteira", hint: "Concentração por sacado" },
-  { text: "Qual a regra de concentração de sacado?", hint: "Política ativa" },
+  { text: "Resumo da carteira", hint: "Valor, prazo e vencidos", tag: "VISÃO EXECUTIVA" },
+  { text: "Quais títulos estão vencidos?", hint: "Os maiores primeiro", tag: "COBRANÇA" },
+  { text: "Maiores sacados da carteira", hint: "Concentração por sacado", tag: "RISCO" },
+  { text: "Qual a regra de concentração?", hint: "Consulte a política ativa", tag: "POLÍTICA" },
 ];
 
 export function StartCard({
@@ -44,15 +44,28 @@ export function StartCard({
   return (
     <div className="cpl-start">
       <div className="cpl-hero">
-        <b>Como posso ajudar?</b>
-        <p>Pergunte sobre carteira, cedentes, sacados, operações ou política. Também analiso um lote de recebíveis.</p>
+        <span className="cpl-hero-mark">
+          <SparkIcon />
+        </span>
+        <span className="cpl-eyebrow">INTELIGÊNCIA OPERACIONAL</span>
+        <b>O que vamos decidir agora?</b>
+        <p>Consulte a operação em tempo real, investigue riscos ou analise um novo lote com evidências rastreáveis.</p>
+        <div className="cpl-trustline" aria-label="Recursos do Copiloto">
+          <span>Dados do STRATO</span>
+          <span>Fontes rastreáveis</span>
+          <span>Decisão humana</span>
+        </div>
       </div>
       {showPrompts && (
         <div className="cpl-prompts">
           {PROMPTS.map(item => (
             <button type="button" key={item.text} onClick={() => onAsk(item.text)}>
+              <span className="cpl-prompt-top">
+                <small>{item.tag}</small>
+                <ArrowIcon />
+              </span>
               <b>{item.text}</b>
-              <small>{item.hint}</small>
+              <span className="cpl-prompt-hint">{item.hint}</span>
             </button>
           ))}
         </div>
@@ -156,8 +169,20 @@ export function StartCard({
 
 export function ProgressCard({ desk }: { desk: CopilotDesk }) {
   const current = DESK_STAGES.findIndex(item => item.key === desk.stage);
+  const completed = desk.stage === "concluida" ? DESK_STAGES.length : Math.max(current, 0);
+  const progress = Math.round((completed / DESK_STAGES.length) * 100);
   return (
     <div className="cpl-card">
+      <div className="cpl-progress-head">
+        <div>
+          <span>ANÁLISE EM CURSO</span>
+          <b>{desk.waitingAuth ? "Aguardando você" : DESK_STAGES[Math.max(current, 0)]?.label}</b>
+        </div>
+        <strong>{progress}%</strong>
+      </div>
+      <div className="cpl-progress-bar" aria-label={`${progress}% concluído`}>
+        <i style={{ width: `${progress}%` }} />
+      </div>
       <ol className="cpl-rail">
         {DESK_STAGES.map((item, index) => {
           const done = index < current || desk.stage === "concluida";
@@ -235,6 +260,12 @@ export function ReplyBubble({ reply }: { reply: DeskReply }) {
   const source = reply.tool ? SOURCE[reply.tool.split("(")[0]] : undefined;
   return (
     <div className="cpl-bubble is-ai">
+      <span className="cpl-reply-author">
+        <i>
+          <SparkIcon />
+        </i>
+        STRATO
+      </span>
       {source && (
         <span className="cpl-tool" title={reply.tool}>
           Fonte: {source}

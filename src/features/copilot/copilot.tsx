@@ -129,15 +129,26 @@ export function Copilot({ suggestion }: { suggestion?: CopilotSuggestion }) {
           send(draft);
         }}
       >
-        <input
+        <span className="cpl-input-mark" aria-hidden="true">
+          <SparkIcon />
+        </span>
+        <textarea
+          rows={1}
           value={draft}
           onChange={event => setDraft(event.target.value)}
-          placeholder="Pergunte sobre a carteira ou a política"
+          onKeyDown={event => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              send(draft);
+            }
+          }}
+          placeholder="Pergunte, investigue ou simule um cenário…"
           aria-label="Mensagem para o Copiloto"
         />
         <button type="submit" aria-label="Enviar" disabled={!draft.trim()}>
           <SendIcon />
         </button>
+        <small className="cpl-input-hint">Enter envia · Shift + Enter quebra a linha</small>
       </form>
     </div>
   );
@@ -153,15 +164,18 @@ export function Copilot({ suggestion }: { suggestion?: CopilotSuggestion }) {
           aria-label="Copiloto STRATO"
         >
           <header className="cpl-head">
-            <span className="cpl-avatar" data-busy={desk.busy || undefined}>
-              <SparkIcon />
-            </span>
-            <div>
-              <b>Copiloto STRATO</b>
-              <small>
-                <i className="cpl-status-dot" data-state={desk.waitingAuth ? "wait" : desk.busy ? "busy" : "on"} />
-                {status}
-              </small>
+            <div className="cpl-brand">
+              <span className="cpl-avatar" data-busy={desk.busy || undefined}>
+                <SparkIcon />
+              </span>
+              <div>
+                <span className="cpl-brand-kicker">STRATO INTELLIGENCE</span>
+                <b>Copiloto operacional</b>
+                <small>
+                  <i className="cpl-status-dot" data-state={desk.waitingAuth ? "wait" : desk.busy ? "busy" : "on"} />
+                  {status}
+                </small>
+              </div>
             </div>
             {(desk.messages.length > 0 || desk.stage !== "idle") && (
               <button

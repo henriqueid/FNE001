@@ -1,5 +1,13 @@
 # Changelog
 
+## Não lançado — 10/10/2026 · Copiloto operacional — experiência v3
+
+- Nova identidade visual para o Copiloto, com painel translúcido, cabeçalho STRATO Intelligence, abertura fluida e lançador com estados de atividade.
+- Tela inicial orientada a decisões, com atalhos categorizados, fontes rastreáveis e indicação explícita de decisão humana.
+- Conversa ganhou respostas identificadas, cartões mais claros, campo multilinha e envio por `Enter` ou quebra de linha com `Shift + Enter`.
+- Análise em segundo plano agora apresenta etapa atual, percentual de avanço e barra de progresso animada.
+- Experiência responsiva revisada para desktop e celular, com suporte à preferência de redução de movimento.
+
 ## Não lançado — 10/10/2026 · Plano técnico da estrutura de IA
 
 - Formalizada a arquitetura-alvo do Copiloto, da Mesa Inteligente e do processamento assistido de documentos.

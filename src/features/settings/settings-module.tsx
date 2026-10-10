@@ -6,8 +6,10 @@ import { type EligibilityPolicyState } from "@/src/domain/eligibility/policy-lib
 import PoliciesModule from "@/src/features/policies/policies-module";
 import { useState } from "react";
 import { type IntegrationState, updateIntegrationMode } from "@/src/domain/integrations/model";
+import type { OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
+import { OperationalParametersEditor } from "@/src/features/registry/operational-parameters-editor";
 
-type SettingsSection = "overview" | "policies" | "companies" | "integrations" | "interface";
+type SettingsSection = "overview" | "operational" | "policies" | "companies" | "integrations" | "interface";
 
 type SettingsItem = {
   id: SettingsSection;
@@ -27,15 +29,23 @@ const menuGroups: Array<{ label: string; items: SettingsItem[] }> = [
   },
   {
     label: "RISCO E OPERAÇÕES",
-    items: [{ id: "policies", label: "Políticas e motor", description: "Regras, alçadas e vigências", marker: "03" }],
+    items: [
+      {
+        id: "operational",
+        label: "Padrões operacionais",
+        description: "Taxas, tarifas, limites e lastro",
+        marker: "03",
+      },
+      { id: "policies", label: "Políticas e motor", description: "Regras, alçadas e vigências", marker: "04" },
+    ],
   },
   {
     label: "CONEXÕES",
-    items: [{ id: "integrations", label: "Integrações", description: "Fontes de dados externas", marker: "04" }],
+    items: [{ id: "integrations", label: "Integrações", description: "Fontes de dados externas", marker: "05" }],
   },
   {
     label: "PREFERÊNCIAS",
-    items: [{ id: "interface", label: "Interface", description: "Orientação e visualização", marker: "05" }],
+    items: [{ id: "interface", label: "Interface", description: "Orientação e visualização", marker: "06" }],
   },
 ];
 
@@ -46,6 +56,13 @@ const shortcuts: Array<{
   description: string;
   action: string;
 }> = [
+  {
+    section: "operational",
+    eyebrow: "OPERAÇÕES",
+    title: "Padrões operacionais",
+    description: "Defina o que todo cliente novo herda em taxas, tarifas, lastro e concentração.",
+    action: "Configurar padrões",
+  },
   {
     section: "policies",
     eyebrow: "RISCO E OPERAÇÕES",
@@ -85,6 +102,8 @@ export default function SettingsModule({
   onJourney,
   integrations,
   onIntegrations,
+  operationalDefaults,
+  onOperationalDefaults,
 }: {
   policies: EligibilityPolicyState;
   onPolicies: (state: EligibilityPolicyState) => void;
@@ -94,6 +113,8 @@ export default function SettingsModule({
   onJourney: (value: boolean) => void;
   integrations: IntegrationState;
   onIntegrations: (state: IntegrationState) => void;
+  operationalDefaults: OperationalDefaultsState;
+  onOperationalDefaults: (state: OperationalDefaultsState) => void;
 }) {
   const [section, setSection] = useState<SettingsSection>("overview");
   const activePolicies = policies.policies.filter(policy => policy.status === "ATIVA").length;
@@ -243,6 +264,30 @@ export default function SettingsModule({
 
           {section === "policies" && <PoliciesModule state={policies} onState={onPolicies} embedded />}
 
+          {section === "operational" && (
+            <div className="settings-section-card settings-operational-defaults">
+              <header>
+                <span>HERANÇA DE PARÂMETROS</span>
+                <h2>Padrões operacionais gerais</h2>
+                <p>
+                  Todo cliente novo nasce com estes valores. No cadastro, somente os campos personalizados substituem o
+                  padrão; zero continua sendo um valor válido.
+                </p>
+              </header>
+              <OperationalParametersEditor
+                defaults={operationalDefaults}
+                overrides={operationalDefaults.general}
+                allowInheritance={false}
+                onChange={general =>
+                  onOperationalDefaults({
+                    ...operationalDefaults,
+                    general: { ...operationalDefaults.general, ...general },
+                  })
+                }
+              />
+            </div>
+          )}
+
           {section === "companies" && (
             <div className="settings-section-card">
               <header>
@@ -318,6 +363,9 @@ export default function SettingsModule({
                           ? "Credenciais institucionais configuradas."
                           : "Credenciais e homologação necessárias."}
                     </small>
+                    <small className="settings-integration-requirements">
+                      <b>Para ativar:</b> {provider.requirements}
+                    </small>
                     {provider.mode === "DEMONSTRACAO" ? (
                       <button
                         type="button"
@@ -327,7 +375,8 @@ export default function SettingsModule({
                       >
                         Desativar demonstração
                       </button>
-                    ) : provider.mode === "NAO_CONFIGURADA" && ["RECEITA", "SEFAZ", "BUREAU"].includes(provider.id) ? (
+                    ) : provider.mode === "NAO_CONFIGURADA" &&
+                      ["CEP", "RECEITA", "SEFAZ", "BUREAU", "PEP_SANCOES"].includes(provider.id) ? (
                       <button
                         type="button"
                         onClick={() => onIntegrations(updateIntegrationMode(integrations, provider.id, "DEMONSTRACAO"))}

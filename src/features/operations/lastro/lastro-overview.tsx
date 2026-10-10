@@ -58,15 +58,31 @@ export function LastroKpis({
         </small>
       </div>
       <div>
-        <span>CONFIRMAÇÕES DA AMOSTRA</span>
+        <span>CONFIRMAÇÃO POR QUANTIDADE</span>
         <strong
           className={confirmedDebtors === sampledDebtors.length && sampledDebtors.length ? "positive" : "warning-text"}
         >
-          {confirmedDebtors}/{sampledDebtors.length}
+          {Math.round(assessment.confirmationCountPercent)}%
         </strong>
         <small>
-          {assessment.confirmed} obrigatória(s) · {optionalConfirmed} voluntária(s)
-          {assessment.exceptions.length ? ` · ${assessment.exceptions.length} exceção(ões)` : ""}
+          mínimo {assessment.minimumConfirmationCountPercent}% · {assessment.confirmed} obrigatória(s) ·{" "}
+          {optionalConfirmed} voluntária(s)
+        </small>
+      </div>
+      <div>
+        <span>CONFIRMAÇÃO POR VALOR</span>
+        <strong
+          className={
+            assessment.confirmationAmountPercent >= assessment.minimumConfirmationAmountPercent
+              ? "positive"
+              : "warning-text"
+          }
+        >
+          {Math.round(assessment.confirmationAmountPercent)}%
+        </strong>
+        <small>
+          mínimo {assessment.minimumConfirmationAmountPercent}% · ação:{" "}
+          {assessment.confirmationFailureAction.toLowerCase()}
         </small>
       </div>
       <div>

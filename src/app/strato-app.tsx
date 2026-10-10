@@ -56,6 +56,7 @@ import { seedEligibilityPolicies } from "@/src/domain/eligibility/policy-library
 import SettingsModule from "@/src/features/settings/settings-module";
 import { seedIntegrationState } from "@/src/domain/integrations/model";
 import { IntegrationProvider } from "./integration-context";
+import { seedOperationalDefaults } from "@/src/domain/registry/operational-profile";
 
 const COMPANY_SCOPE_KEY = "strato-company-scope";
 
@@ -82,6 +83,7 @@ export default function StratoApp() {
   const [savedParties, setSavedParties] = useState<Party[]>(() => seedParties());
   const [policies, setPolicies] = useState(() => seedEligibilityPolicies());
   const [integrations, setIntegrations] = useState(() => seedIntegrationState());
+  const [operationalDefaults, setOperationalDefaults] = useState(() => seedOperationalDefaults());
   // Resultado financeiro de cada operação, pela mesma precificação da etapa Preço, para a Visão geral.
   const homeFinancials = useMemo(
     () =>
@@ -169,6 +171,7 @@ export default function StratoApp() {
     if (stored.portfolio) setPortfolio(stored.portfolio);
     if (stored.policies) setPolicies(stored.policies);
     if (stored.integrations) setIntegrations(stored.integrations);
+    if (stored.operationalDefaults) setOperationalDefaults(stored.operationalDefaults);
     if (stored.guidance !== undefined) setShowGuidance(stored.guidance);
     if (stored.journey !== undefined) setShowJourney(stored.journey);
     try {
@@ -196,8 +199,20 @@ export default function StratoApp() {
         portfolio,
         policies,
         integrations,
+        operationalDefaults,
       });
-  }, [operations, debtors, finance, commercial, savedParties, portfolio, policies, integrations, storageReady]);
+  }, [
+    operations,
+    debtors,
+    finance,
+    commercial,
+    savedParties,
+    portfolio,
+    policies,
+    integrations,
+    operationalDefaults,
+    storageReady,
+  ]);
 
   useEffect(() => {
     if (storageReady) saveGuidance(showGuidance);
@@ -243,6 +258,7 @@ export default function StratoApp() {
     setPortfolio(seedPortfolio(initialOperations));
     setPolicies(seedEligibilityPolicies());
     setIntegrations(seedIntegrationState());
+    setOperationalDefaults(seedOperationalDefaults());
     setSelected(null);
   }
   function createOperation(input: NewOperationInput) {
@@ -326,6 +342,7 @@ export default function StratoApp() {
         const id = managerOf(commercialLive, document);
         return commercialLive.reps.find(rep => rep.id === id);
       },
+      operationalDefaults,
       parties,
       saveParty: (party, reason) => {
         const result = savePartyRecord({
@@ -351,7 +368,7 @@ export default function StratoApp() {
         setCommercial(rest as CommercialState);
       },
     }),
-    [commercialLive, scoredCedents, parties, savedParties, debtors, commercial, today],
+    [commercialLive, scoredCedents, parties, savedParties, debtors, commercial, operationalDefaults, today],
   );
   const shellContext = {
     operations,
@@ -473,6 +490,8 @@ export default function StratoApp() {
         onJourney={setShowJourney}
         integrations={integrations}
         onIntegrations={setIntegrations}
+        operationalDefaults={operationalDefaults}
+        onOperationalDefaults={setOperationalDefaults}
       />
     );
   else if (view in roadmapViews) page = <ModuleRoadmap view={view as keyof typeof roadmapViews} />;

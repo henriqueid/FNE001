@@ -21,6 +21,7 @@ import { AlertIcon, ArrowIcon, CheckIcon, CloseIcon, SparkIcon } from "@/src/ui/
 import { useContext, useState } from "react";
 import { scoreBand } from "@/src/domain/eligibility/operational-parameters";
 import { saveFile } from "@/src/ui/download";
+import { resolveOperationalParameters, type OperationalParameters } from "@/src/domain/registry/operational-profile";
 
 export type NewOperationInput = {
   source: OperationSource;
@@ -29,6 +30,7 @@ export type NewOperationInput = {
   cedent: Cedent;
   importedData?: ManualEntryData;
   entryIntake?: EntryIntake;
+  operationalParameters?: OperationalParameters;
 };
 
 export const sourceOptions: { source: OperationSource; label: string; description: string; tag: string }[] = [
@@ -99,6 +101,12 @@ export function NewOperationModal({
             : "A definir na digitação";
   const destination = destinations.find(item => item.name === destinationName) ?? destinations[0];
   const cedent = registryCedents.find(item => item.id === cedentId);
+  const cedentParty = registry?.parties.find(
+    party => party.document.replace(/\D/g, "") === cedent?.document.replace(/\D/g, ""),
+  );
+  const resolvedParameters = registry
+    ? resolveOperationalParameters(registry.operationalDefaults, cedentParty?.roleData.cedente?.operationalOverrides)
+    : undefined;
 
   function chooseSource(next: OperationSource) {
     setSource(next);
@@ -391,6 +399,7 @@ export function NewOperationModal({
                 cedent,
                 importedData: analysis?.data,
                 entryIntake: analysis?.intake,
+                operationalParameters: resolvedParameters,
               })
             }
           >

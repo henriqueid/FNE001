@@ -1,5 +1,6 @@
 import { type EligibilityReview } from "@/src/domain/eligibility/model";
 import { type EnrichmentReview } from "@/src/domain/integrations/enrichment";
+import type { OperationalParameters as ClientOperationalParameters } from "@/src/domain/registry/operational-profile";
 
 /**
  * Entidades centrais do domínio: operação, título (entrada manual), cedente, sacado, veículo e liberação.
@@ -280,6 +281,8 @@ export type Operation = {
   commercialRepId?: string;
   /** Gerente da conta responsável pela operação e pelo pós-venda. */
   accountManagerId?: string;
+  /** Fotografia dos parâmetros gerais + específicos resolvidos na criação. */
+  clientOperationalParameters?: ClientOperationalParameters;
   automation: number;
   blockers: number;
   alerts: number;

@@ -151,6 +151,15 @@ export function saveParty({
       effects.push("cedente transferido de comercial");
     }
     const currentLink = nextCommercial.links.find(l => onlyDigits(l.document) === doc);
+    if (currentLink && currentLink.approvedLimit !== cedente.creditLimit) {
+      nextCommercial = {
+        ...nextCommercial,
+        links: nextCommercial.links.map(item =>
+          item.id === currentLink.id ? { ...item, approvedLimit: cedente.creditLimit } : item,
+        ),
+      };
+      effects.push("limite operacional atualizado");
+    }
     if (currentLink && cedente.managerId && currentLink.managerId !== cedente.managerId) {
       const result = assignAccountManager(nextCommercial, currentLink.id, cedente.managerId);
       if (result.error) return { ok: false, error: result.error };

@@ -1,5 +1,17 @@
 export type IntegrationProviderId =
-  "RECEITA" | "SEFAZ" | "BUREAU" | "REGISTRADORA" | "CUSTODIANTE" | "FUNDING" | "ASSINATURA";
+  | "CEP"
+  | "RECEITA"
+  | "SEFAZ"
+  | "BUREAU"
+  | "PROTESTO"
+  | "PEP_SANCOES"
+  | "REGISTRADORA"
+  | "CUSTODIANTE"
+  | "OPEN_FINANCE"
+  | "BANKING_PIX"
+  | "FUNDING"
+  | "ASSINATURA"
+  | "NOTIFICACAO";
 
 export type IntegrationMode = "DEMONSTRACAO" | "NAO_CONFIGURADA" | "ATIVA" | "INDISPONIVEL";
 
@@ -8,6 +20,7 @@ export type IntegrationProvider = {
   name: string;
   description: string;
   capability: string;
+  requirements: string;
   mode: IntegrationMode;
   updatedAt?: string;
 };
@@ -16,46 +29,95 @@ export type IntegrationState = { version: 1; providers: IntegrationProvider[] };
 
 const providerCatalog: Omit<IntegrationProvider, "mode">[] = [
   {
+    id: "CEP",
+    name: "CEP e endereços",
+    description: "Preenchimento e validação de endereço a partir do CEP.",
+    capability: "Cadastro e endereço",
+    requirements: "Disponível em demonstração; produção deve definir provedor e SLA.",
+  },
+  {
     id: "RECEITA",
     name: "Receita Federal",
     description: "Situação cadastral de cedentes e sacados.",
     capability: "Cadastro e situação pública",
+    requirements: "Certificado, procuração ou provedor homologado, conforme a fonte contratada.",
   },
   {
     id: "SEFAZ",
     name: "SEFAZ",
     description: "Existência e situação fiscal dos documentos eletrônicos.",
     capability: "NF-e e documentos fiscais",
+    requirements: "Certificado digital e credenciamento SEFAZ por UF.",
   },
   {
     id: "BUREAU",
     name: "Bureaus de crédito",
     description: "Scores, restrições e ocorrências externas.",
     capability: "Crédito e restrições",
+    requirements: "Contrato e credenciais do bureau escolhido.",
+  },
+  {
+    id: "PROTESTO",
+    name: "Protestos e cartórios",
+    description: "Consultas de protestos, ocorrências e evidências cartorárias.",
+    capability: "Crédito e ocorrências",
+    requirements: "Contrato com central ou provedor de dados cartorários.",
+  },
+  {
+    id: "PEP_SANCOES",
+    name: "PEP, sanções e compliance",
+    description: "Listas restritivas, PEP, sanções e apoio à qualificação KYC/COAF.",
+    capability: "Compliance e prevenção",
+    requirements: "Provedor homologado; COAF não oferece uma consulta cadastral pública irrestrita.",
   },
   {
     id: "REGISTRADORA",
     name: "Registradoras",
     description: "Registro, titularidade, gravames e ônus do recebível.",
     capability: "Registro e gravames",
+    requirements: "Contrato, homologação e certificado com a registradora escolhida.",
   },
   {
     id: "CUSTODIANTE",
     name: "Custodiante",
     description: "Validação documental e eventos de custódia.",
     capability: "Custódia e lastro",
+    requirements: "Contrato e leiaute/API do custodiante.",
+  },
+  {
+    id: "OPEN_FINANCE",
+    name: "Open Finance",
+    description: "Dados bancários consentidos para análise e conciliação.",
+    capability: "Dados bancários consentidos",
+    requirements: "Participante ou agregador regulado, consentimento e certificados mTLS.",
+  },
+  {
+    id: "BANKING_PIX",
+    name: "Bancos, Pix e pagamentos",
+    description: "Validação de conta, iniciação de pagamentos, Pix e retorno bancário.",
+    capability: "Liquidação e conciliação",
+    requirements: "Credenciais bancárias, certificados e homologação por instituição.",
   },
   {
     id: "FUNDING",
     name: "Bancos e funding",
     description: "Disponibilidade, limites e condições da estrutura de funding.",
     capability: "Funding e liquidação",
+    requirements: "Contrato e API da instituição de funding.",
   },
   {
     id: "ASSINATURA",
     name: "Assinatura eletrônica",
     description: "Formalização e evidências de assinatura.",
     capability: "Formalização",
+    requirements: "Conta corporativa e credenciais do provedor de assinatura.",
+  },
+  {
+    id: "NOTIFICACAO",
+    name: "E-mail, WhatsApp e notificações",
+    description: "Confirmação de títulos, avisos operacionais e pós-venda.",
+    capability: "Comunicação operacional",
+    requirements: "Conta do provedor, modelos aprovados e consentimentos aplicáveis.",
   },
 ];
 
@@ -64,7 +126,9 @@ export function seedIntegrationState(): IntegrationState {
     version: 1,
     providers: providerCatalog.map(provider => ({
       ...provider,
-      mode: ["RECEITA", "SEFAZ", "BUREAU"].includes(provider.id) ? "DEMONSTRACAO" : "NAO_CONFIGURADA",
+      mode: ["CEP", "RECEITA", "SEFAZ", "BUREAU", "PEP_SANCOES"].includes(provider.id)
+        ? "DEMONSTRACAO"
+        : "NAO_CONFIGURADA",
     })),
   };
 }

@@ -9,6 +9,7 @@ import { initialCedents } from "@/src/domain/core/demo/cedents";
 import { type Cedent } from "@/src/domain/core/types";
 import { type Party } from "@/src/domain/registry/parties";
 import { type ClientRecord } from "@/src/domain/registry/registry";
+import { type OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
 import { createContext, useContext } from "react";
 
 export type RegistryValue = {
@@ -17,6 +18,7 @@ export type RegistryValue = {
   records: ClientRecord[];
   repOf: (document: string, date?: string) => SalesRep | undefined;
   managerOf: (document: string) => SalesRep | undefined;
+  operationalDefaults: OperationalDefaultsState;
   onCommercial: (next: CommercialState) => void;
   /** Pessoas do Cadastro (salvas + derivadas dos módulos), uma por documento. */
   parties: Party[];

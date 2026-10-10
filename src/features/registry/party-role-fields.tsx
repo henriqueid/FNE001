@@ -108,52 +108,11 @@ export function PartyRoleFields({ party, onChange, issueFor }: Props) {
                           ))}
                       </select>
                     </Field>
-                    <Field
-                      label={link ? "Limite aprovado (comitê)" : "Limite proposto (R$)"}
-                      hint={
-                        link
-                          ? "Alterações de limite passam pelo comitê (Comercial › Comitês)."
-                          : "Vira o limite inicial do vínculo; o comitê pode revisar."
-                      }
-                    >
-                      {link ? (
-                        <input id="ced-limit" value={formatMoneyInput(link.approvedLimit)} disabled />
-                      ) : (
-                        <MoneyInput
-                          id="ced-limit"
-                          value={d.creditLimit}
-                          onChange={v => update("cedente", { creditLimit: v })}
-                        />
-                      )}
-                    </Field>
-                    <Field label="Taxa padrão (% a.m.)">
-                      <input
-                        id="ced-rate"
-                        inputMode="decimal"
-                        value={String(d.monthlyRate).replace(".", ",")}
-                        onChange={e => update("cedente", { monthlyRate: parseMoneyBR(e.target.value) })}
-                      />
-                    </Field>
-                    <Field label="Modalidade padrão">
-                      <select
-                        id="ced-guarantee"
-                        value={d.guarantee}
-                        onChange={e =>
-                          update("cedente", { guarantee: e.target.value as "Com regresso" | "Sem regresso" })
-                        }
-                      >
-                        <option>Com regresso</option>
-                        <option>Sem regresso</option>
-                      </select>
-                    </Field>
-                    <Field label="Contrato-mãe válido até">
-                      <input
-                        id="ced-contract"
-                        type="date"
-                        value={d.contractUntil}
-                        onChange={e => update("cedente", { contractUntil: e.target.value })}
-                      />
-                    </Field>
+                    {link && (
+                      <Field label="Situação do relacionamento">
+                        <input value={`${link.status} · desde ${link.since}`} disabled />
+                      </Field>
+                    )}
                   </>
                 );
               })()}

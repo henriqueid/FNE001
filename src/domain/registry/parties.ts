@@ -14,6 +14,12 @@
  */
 import type { Cedent, Debtor } from "@/src/domain/core/types";
 import type { RepKind, SalesRep } from "@/src/domain/commercial/types";
+import type {
+  ClientComplianceProfile,
+  ClientContractProfile,
+  LimitTranche,
+  OperationalParameterOverrides,
+} from "./operational-profile";
 
 export type PersonKind = "PJ" | "PF";
 
@@ -70,6 +76,10 @@ export type CedentRoleData = {
   managerId?: string;
   contractUntil: string;
   guarantee: "Com regresso" | "Sem regresso";
+  operationalOverrides?: OperationalParameterOverrides;
+  tranches?: LimitTranche[];
+  contract?: ClientContractProfile;
+  compliance?: ClientComplianceProfile;
 };
 export type SacadoRoleData = { creditLimit: number; confirmationContact: string };
 export type SupplierRoleData = { category: string; paymentTermDays: number };
@@ -283,6 +293,27 @@ export function defaultRoleData(role: PartyRole): PartyRoleData[PartyRole] {
         managerId: "",
         contractUntil: "",
         guarantee: "Com regresso",
+        operationalOverrides: {},
+        tranches: [],
+        contract: {
+          number: "",
+          signedAt: "",
+          validFrom: "",
+          validUntil: "",
+          automaticRenewal: false,
+          allowedInstitutions: [],
+          allowedReceivables: [],
+          notes: "",
+        },
+        compliance: {
+          kycStatus: "Pendente",
+          coafQualified: false,
+          politicallyExposed: false,
+          beneficialOwnerIdentified: false,
+          sanctionsCheckedAt: "",
+          registrationReviewAt: "",
+          creditReviewAt: "",
+        },
       };
     case "sacado":
       return { creditLimit: 0, confirmationContact: "" };

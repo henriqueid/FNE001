@@ -11,18 +11,19 @@ export type PricingDraft = NonNullable<Operation["pricingReview"]>;
 /** Condição comercial sugerida: vem dos parâmetros operacionais da modalidade. */
 export function defaultPricing(operation: Operation): PricingDraft {
   const defaults = operationalParametersFor(operation.institution).pricingDefaults;
+  const client = operation.clientOperationalParameters;
   return {
-    method: "Composta Mista",
+    method: client?.calculationMethod ?? "Composta Mista",
     vaEnabled: false,
-    monthlyRate: defaults.monthlyRate,
+    monthlyRate: client?.monthlyRate ?? defaults.monthlyRate,
     targetFinalRateMonthly: 0,
     fundingCostMonthly: defaults.fundingCostMonthly,
     floatDays: defaults.floatDays,
     minimumTermDays: defaults.minimumTermDays,
-    operationFee: defaults.operationFee,
-    feePerTitle: defaults.feePerTitle,
+    operationFee: client?.operationFee ?? defaults.operationFee,
+    feePerTitle: client?.titleFee ?? defaults.feePerTitle,
     adValoremPercent: defaults.adValoremPercent,
-    guaranteePercent: defaults.guaranteePercentByRisk[operation.risk],
+    guaranteePercent: client?.reservePercent ?? defaults.guaranteePercentByRisk[operation.risk],
     manualRetention: 0,
     manualFees: [],
     repurchaseTitleIds: [],
@@ -30,7 +31,7 @@ export function defaultPricing(operation: Operation): PricingDraft {
     repurchaseTerms: {},
     feeAllocation: "Por valor × prazo",
     regress: defaults.regress,
-    regressDays: defaults.regressDays,
+    regressDays: client?.repurchaseTermDays ?? defaults.regressDays,
     coobligation: defaults.coobligation,
     status: "Simulação",
     version: 0,

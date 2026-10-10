@@ -16,6 +16,7 @@ import {
 } from "@/src/domain/core/types";
 import { operationalParametersFor, riskFromScore } from "@/src/domain/eligibility/operational-parameters";
 import { datePrefix } from "./dates";
+import type { OperationalParameters } from "@/src/domain/registry/operational-profile";
 
 export type NewOperationRequest = {
   source: OperationSource;
@@ -24,10 +25,11 @@ export type NewOperationRequest = {
   cedent: Cedent;
   importedData?: ManualEntryData;
   entryIntake?: EntryIntake;
+  operationalParameters?: OperationalParameters;
 };
 
 export function buildNewOperation(
-  { source, operationType, destination, cedent, importedData, entryIntake }: NewOperationRequest,
+  { source, operationType, destination, cedent, importedData, entryIntake, operationalParameters }: NewOperationRequest,
   operations: Operation[],
   commercial: CommercialState,
   today: string,
@@ -69,6 +71,7 @@ export function buildNewOperation(
     ...initialOperations[4],
     commercialRepId: repAt(commercial, cedent.document, today),
     accountManagerId: managerOf(commercial, cedent.document),
+    clientOperationalParameters: operationalParameters,
     id: `op-${Date.now()}`,
     proposal: `#${borderoSequence}`,
     aditivoNumber,

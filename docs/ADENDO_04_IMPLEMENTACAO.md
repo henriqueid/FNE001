@@ -18,11 +18,15 @@ O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como 
 - fallback seguro: sem IA, comandos conversacionais ficam indisponíveis e o motor determinístico continua operacional;
 - identificação visual entre resultado do motor de políticas e insight com apoio de IA;
 - classificação explícita de apontamentos como fato, regra, tendência, hipótese ou sugestão.
-- API de decisões com empresa e ator derivados da sessão recebida pelo servidor;
+- API de decisões com empresa e ator derivados de sessão opaca validada pelo servidor;
 - persistência D1 com sequência por decisão e índices por tenant, decisão e operação;
 - gatilhos de banco que recusam `UPDATE` e `DELETE`, preservando o contrato append-only;
 - autorização no servidor para leitura, aprovação de exceção, formalização e confirmação de pagamento;
 - bloqueio de acesso cruzado entre tenants antes de qualquer consulta ou gravação.
+- sessão em cookie `HttpOnly`, `SameSite=Strict`, com token opaco e somente seu hash persistido;
+- diretório D1 de usuários, vínculos com o tenant, permissões, escopos empresariais e alçadas formais;
+- autorização de decisões a partir da permissão e da alçada persistidas, sem confiar em cabeçalhos de identidade do cliente;
+- bootstrap demonstrativo de sessão limitado a `localhost`, recusado fora do ambiente local.
 
 ## Já existente e preservado
 
@@ -36,9 +40,9 @@ O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como 
 
 ## Próxima fatia para produção
 
-1. Trocar a identidade demonstrativa por autenticação real e sessão assinada.
+1. Integrar um provedor de identidade corporativo ao emissor das sessões opacas já implementadas.
 2. Criar outbox transacional e idempotency keys no servidor.
-3. Persistir o catálogo de usuários, vínculos, permissões e alçadas no backend.
+3. Tornar a gravação do diretório de acesso transacional e registrar somente alterações efetivas.
 4. Implementar condições precedentes e impedir formalização enquanto estiverem pendentes.
 5. Registrar liquidações, promessas e desfechos como eventos compensatórios.
 6. Conectar o provedor de IA somente depois de entitlement, orçamento, consentimento e autorização por ação.
@@ -47,4 +51,4 @@ O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como 
 
 ## Limite desta entrega
 
-A trilha de decisões deixou o navegador e está funcional no D1 local, com imutabilidade e segregação aplicadas no banco e na API. Os demais estados operacionais continuam no navegador. Antes do uso produtivo ainda é necessário implantar o banco no ambiente definitivo e substituir os cabeçalhos da sessão demonstrativa por autenticação real e verificável.
+A trilha de decisões e o diretório de acesso deixaram o navegador e estão funcionais no D1 local, com imutabilidade e segregação aplicadas no banco e na API. A identidade usada pela API já vem de cookie opaco verificável, mas o login automático é apenas um bootstrap local; antes do uso produtivo ainda é necessário integrar o provedor de identidade e implantar o banco no ambiente definitivo. Os demais estados operacionais continuam no navegador.

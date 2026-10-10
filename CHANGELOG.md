@@ -11,7 +11,10 @@
 - Trilha do Copiloto migrada do estado efêmero da tela para uma API com Cloudflare D1.
 - Eventos recebem empresa, ator, horário e versão no servidor; gatilhos do banco impedem alteração e exclusão.
 - API valida escopo por tenant e bloqueia aprovação, formalização ou pagamento sem a permissão correspondente.
-- Migração SQL e testes de segurança cobrem o contrato da persistência; a autenticação ainda usa a identidade demonstrativa.
+- Sessões agora usam token opaco em cookie `HttpOnly`, com apenas o hash persistido no D1; cabeçalhos de identidade enviados pelo navegador são ignorados.
+- Usuários, vínculos, escopos empresariais, permissões e alçadas formais passam a ser carregados e gravados no D1.
+- A criação automática de sessão demonstrativa fica restrita a `localhost`; o ambiente produtivo continua exigindo integração com um provedor de identidade.
+- Migrações SQL e testes de segurança cobrem o ledger, a sessão e a autorização persistida.
 
 ## Não lançado — 10/10/2026 · Revisão de prontidão e limpeza técnica
 
@@ -29,7 +32,8 @@
 - Sessão administrativa e visão simulada agora são identidades separadas, com faixa persistente para encerrar o teste e retornar ao administrador sem perder o controle.
 - Menu principal, menu completo, busca global, links diretos, seleção de empresa e criação de operações passam a respeitar as permissões e o escopo do perfil ativo.
 - A busca global recebe somente as operações autorizadas e deixa de sugerir módulos ou ações indisponíveis para o usuário.
-- A posição original do administrador foi preservada ao fim do teste; a entrega permanece como protótipo local até a conexão com autenticação e autorização no servidor.
+- A posição original do administrador foi preservada ao fim do teste; o catálogo de acessos já é persistido e validado no servidor.
+- Configurações ganhou a seção **Alçadas formais**, incluindo a competência da Diretoria de crédito para aprovar ou rejeitar exceções.
 - Sete testes cobrem permissões, módulos, escopo empresarial, atualização de perfil, simulação segura e migração do estado; suíte ampliada para 169 testes.
 
 ## Não lançado — 10/10/2026 · Central do Dia integrada

@@ -1,8 +1,11 @@
-import { can, seedAccessState, type AccessUser, type Permission } from "@/src/domain/access/model";
+import { type Permission } from "@/src/domain/access/model";
 import { type DecisionEventType } from "@/src/domain/decisions/model";
+import { type ServerPrincipal } from "@/src/server/access/repository";
+import { sessionPrincipal } from "@/src/server/access/session";
+import { type DecisionDatabase } from "./repository";
 
 export type DecisionPrincipal = {
-  user: AccessUser;
+  user: ServerPrincipal;
   tenantId: string;
 };
 
@@ -15,14 +18,11 @@ export class DecisionAccessError extends Error {
   }
 }
 
-export function decisionPrincipal(headers: Headers): DecisionPrincipal {
-  const userId = headers.get("x-strato-user-id")?.trim();
+export async function decisionPrincipal(db: DecisionDatabase, headers: Headers): Promise<DecisionPrincipal> {
   const tenantId = headers.get("x-strato-tenant-id")?.trim();
-  if (!userId || !tenantId) throw new DecisionAccessError("Sessão ou empresa não informada.", 401);
-
-  const user = seedAccessState().users.find(candidate => candidate.id === userId);
-  if (!user || user.status !== "active") throw new DecisionAccessError("Sessão inválida ou suspensa.", 401);
-  if (!user.tenantIds.includes(tenantId)) throw new DecisionAccessError("Usuário sem acesso a esta empresa.", 403);
+  if (!tenantId) throw new DecisionAccessError("Empresa não informada.", 401);
+  const user = await sessionPrincipal(db, headers, tenantId);
+  if (!user) throw new DecisionAccessError("Sessão inválida, expirada ou sem acesso a esta empresa.", 401);
   return { user, tenantId };
 }
 
@@ -34,10 +34,15 @@ const permissionByEvent: Partial<Record<DecisionEventType, Permission>> = {
   PAYMENT_CONFIRMED: "finance:release",
 };
 
-export function assertDecisionPermission(user: AccessUser, eventType?: DecisionEventType) {
+export function assertDecisionPermission(user: ServerPrincipal, eventType?: DecisionEventType, authorityId?: string) {
   const permission = eventType ? permissionByEvent[eventType] : undefined;
-  if (permission && !can(user, permission))
+  if (permission && !user.permissions.includes(permission))
     throw new DecisionAccessError("Usuário sem permissão para esta decisão.", 403);
-  if (!permission && !can(user, "operations:view"))
+  if (!permission && !user.permissions.includes("operations:view"))
     throw new DecisionAccessError("Usuário sem acesso às operações.", 403);
+  if (
+    (eventType === "EXCEPTION_APPROVED" || eventType === "EXCEPTION_REJECTED") &&
+    (!authorityId || !user.authorityIds.includes(authorityId))
+  )
+    throw new DecisionAccessError("Usuário sem a alçada exigida para esta decisão.", 403);
 }

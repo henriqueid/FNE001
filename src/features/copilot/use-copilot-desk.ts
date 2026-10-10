@@ -96,7 +96,7 @@ export function useCopilotDesk(
 
   useEffect(() => {
     let cancelled = false;
-    loadDecisionLedger(actor, intelligence.tenantId, decisionId)
+    loadDecisionLedger(intelligence.tenantId, decisionId)
       .then(ledger => {
         if (cancelled) return;
         setDecisionError("");
@@ -164,7 +164,7 @@ export function useCopilotDesk(
       };
       persistenceQueue.current = persistenceQueue.current
         .then(async () => {
-          const persisted = await persistDecisionEvent(actor, intelligence.tenantId, event);
+          const persisted = await persistDecisionEvent(intelligence.tenantId, event);
           latestPersistedEventId.current = persisted.eventId;
           setDecisionLedger(current => ({
             ...current,
@@ -177,7 +177,7 @@ export function useCopilotDesk(
           setDecisionError(error instanceof Error ? error.message : "Não foi possível persistir a decisão.");
         });
     },
-    [actor, cedent, decisionId, files, intelligence.tenantId, operationId, scenarios],
+    [cedent, decisionId, files, intelligence.tenantId, operationId, scenarios],
   );
 
   const loadExamples = () => {

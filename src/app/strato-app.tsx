@@ -78,8 +78,10 @@ import {
   stopUserPreview,
 } from "@/src/domain/access/model";
 import { seedIntelligenceState } from "@/src/domain/intelligence/model";
+import { loadAccessDirectory, saveAccessDirectory } from "./access-directory-client";
 
 const COMPANY_SCOPE_KEY = "strato-company-scope";
+const ACCESS_SERVER_MIGRATION_KEY = "strato-access-server-migrated-v1";
 
 export default function StratoApp() {
   const deepLinkHandled = useRef(false);
@@ -93,6 +95,7 @@ export default function StratoApp() {
   const [showJourney, setShowJourney] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [access, setAccess] = useState(() => seedAccessState());
+  const [accessServerReady, setAccessServerReady] = useState(false);
   const [intelligence, setIntelligence] = useState(() => seedIntelligenceState());
   const currentUser = useMemo(() => activeUser(access), [access]);
   const sessionUser = useMemo(() => authenticatedUser(access), [access]);
@@ -257,6 +260,39 @@ export default function StratoApp() {
   useEffect(() => {
     if (storageReady) saveGuidance(showGuidance);
   }, [showGuidance, storageReady]);
+
+  useEffect(() => {
+    if (!storageReady || accessServerReady) return;
+    let cancelled = false;
+    const tenantId = intelligence.tenantId;
+    const migrate = window.localStorage.getItem(ACCESS_SERVER_MIGRATION_KEY) !== "done";
+    const request = migrate ? saveAccessDirectory(tenantId, access) : loadAccessDirectory(tenantId);
+    request
+      .then(serverState => {
+        if (cancelled) return;
+        setAccess(current => ({ ...serverState, previewUserId: current.previewUserId }));
+        window.localStorage.setItem(ACCESS_SERVER_MIGRATION_KEY, "done");
+      })
+      .catch(() => {
+        /* mantém a demonstração local quando o backend estiver indisponível */
+      })
+      .finally(() => {
+        if (!cancelled) setAccessServerReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [access, accessServerReady, intelligence.tenantId, storageReady]);
+
+  useEffect(() => {
+    if (!accessServerReady) return;
+    const timer = window.setTimeout(() => {
+      void saveAccessDirectory(intelligence.tenantId, access).catch(() => {
+        /* o estado local continua disponível e uma próxima alteração tenta novamente */
+      });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [access, accessServerReady, intelligence.tenantId]);
 
   useEffect(() => {
     if (storageReady) saveJourneyBar(showJourney);

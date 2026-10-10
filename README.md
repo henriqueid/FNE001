@@ -1,6 +1,6 @@
 # STRATO · Receivables OS
 
-Plataforma operacional de recebíveis para factoring, securitizadora, FIDC e ESC. O produto está na transição de protótipo navegável para aplicação persistente: os dados operacionais ainda são fictícios no navegador, enquanto a trilha de decisões do Copiloto já usa uma API com Cloudflare D1, segregação por tenant e autorização no servidor.
+Plataforma operacional de recebíveis para factoring, securitizadora, FIDC e ESC. O produto está na transição de protótipo navegável para aplicação persistente: os dados operacionais ainda são fictícios no navegador, enquanto a trilha de decisões, as sessões e o diretório de acessos já usam API com Cloudflare D1, segregação por tenant e autorização no servidor.
 
 ## Rodar
 
@@ -22,16 +22,16 @@ npm run build          # build de produção
 
 ## Módulos
 
-| Menu | O que faz | Código |
-|---|---|---|
-| Visão geral | Resultado, carteira, caixa, pendências por perfil (Gestão, Operação, Risco) | `src/features/home` |
-| Operações | Central, nova operação e workspace com 6 etapas (Entrada, Risco, Lastro, Preço, Aprovação, Liberação) | `src/features/operations` |
-| Carteira | Títulos adquiridos, atraso, por cedente e por comercial | `src/features/portfolio` |
-| Comercial | Metas, carteira, negócios, visitas, funil, comitês e comissões | `src/features/commercial` |
-| Financeiro | Caixa e fluxo, a pagar e a receber, liberações, extrato, conciliação OFX, contábil, bancos | `src/features/finance` |
-| Cadastros | Pessoas PF/PJ com papéis: cedente, sacado, fornecedor, representante, debenturista, cotista, avalista, prestador | `src/features/registry` |
-| Configurações | Usuários, acessos, empresas, padrões operacionais, políticas, integrações e interface | `src/features/settings` |
-| Copiloto | Resumo diário, Central do Dia, consultas e Mesa Inteligente demonstrativa | `src/features/copilot` |
+| Menu          | O que faz                                                                                                        | Código                    |
+| ------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| Visão geral   | Resultado, carteira, caixa, pendências por perfil (Gestão, Operação, Risco)                                      | `src/features/home`       |
+| Operações     | Central, nova operação e workspace com 6 etapas (Entrada, Risco, Lastro, Preço, Aprovação, Liberação)            | `src/features/operations` |
+| Carteira      | Títulos adquiridos, atraso, por cedente e por comercial                                                          | `src/features/portfolio`  |
+| Comercial     | Metas, carteira, negócios, visitas, funil, comitês e comissões                                                   | `src/features/commercial` |
+| Financeiro    | Caixa e fluxo, a pagar e a receber, liberações, extrato, conciliação OFX, contábil, bancos                       | `src/features/finance`    |
+| Cadastros     | Pessoas PF/PJ com papéis: cedente, sacado, fornecedor, representante, debenturista, cotista, avalista, prestador | `src/features/registry`   |
+| Configurações | Usuários, acessos, empresas, padrões operacionais, políticas, integrações e interface                            | `src/features/settings`   |
+| Copiloto      | Resumo diário, Central do Dia, consultas e Mesa Inteligente demonstrativa                                        | `src/features/copilot`    |
 
 ## Documentação
 

@@ -282,6 +282,33 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
               })}
             </div>
           </section>
+
+          <section className="access-permissions">
+            <header>
+              <div>
+                <small>ALÇADAS FORMAIS</small>
+                <b>Competências de decisão</b>
+              </div>
+              <span>{selected.authorityIds?.length ?? 0} alçada(s)</span>
+            </header>
+            <div>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={selected.authorityIds?.includes("credit-director") ?? false}
+                  onChange={() => {
+                    const assigned = selected.authorityIds ?? [];
+                    save({
+                      authorityIds: assigned.includes("credit-director")
+                        ? assigned.filter(item => item !== "credit-director")
+                        : [...assigned, "credit-director"],
+                    });
+                  }}
+                />
+                <span>Diretoria de crédito · aprovar ou rejeitar exceções</span>
+              </label>
+            </div>
+          </section>
         </section>
       </div>
     </div>

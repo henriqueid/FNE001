@@ -37,11 +37,11 @@ seleciona ferramentas autorizadas e apresenta os resultados.
 
 ### Limitações atuais
 
-- Dados operacionais ainda persistidos em `localStorage`; a trilha de decisões já usa API e Cloudflare D1.
+- Dados operacionais ainda persistidos em `localStorage`; a trilha de decisões e o diretório de acesso já usam API e Cloudflare D1.
 - Perguntas interpretadas por regras locais, sem modelo de linguagem externo.
 - Arquivos reconhecidos pelo nome/extensão, sem leitura real do conteúdo na Mesa Inteligente.
 - Títulos, birô e resultados externos demonstrativos.
-- Sem autenticação real ou fila; a identidade ainda é demonstrativa, embora a API de decisões já valide tenant e permissão.
+- Sem integração com provedor de identidade ou fila; a sessão opaca já é validada no servidor, mas seu bootstrap automático existe apenas em `localhost`.
 - Sem avaliação contínua de qualidade, custos ou segurança das respostas.
 
 ### Avanço de implementação · 10/10/2026
@@ -55,14 +55,16 @@ A primeira entrega da fase **IA-0 — Fundação** já está disponível no prot
 - filtragem da carteira e das tarefas pelo perfil, departamento, responsabilidade operacional e vínculo comercial;
 - proteção efetiva da navegação, busca global, links diretos, empresa de trabalho e criação de operações;
 - separação entre a identidade autenticada e o perfil simulado, com retorno seguro à sessão administrativa;
-- persistência e migração do estado de acesso no navegador, com cobertura automatizada das regras.
+- persistência e migração inicial do estado de acesso do navegador para o D1, com cobertura automatizada das regras;
 - ledger de decisões persistido no D1, append-only e ordenado por versão no servidor;
-- tenant, ator e horário atribuídos no servidor, com bloqueio de acesso cruzado e de decisões sem alçada;
+- token opaco em cookie `HttpOnly`, somente o hash no banco, e identidade do cliente ignorada nos cabeçalhos;
+- usuários, vínculos, escopos empresariais, permissões e alçadas formais persistidos no D1;
+- tenant, ator e horário atribuídos no servidor, com bloqueio de acesso cruzado e de decisões sem permissão ou alçada;
 - API do Copiloto conectada ao ledger e capaz de reler a trilha após recarregar a página.
 
-Esta entrega valida o modelo funcional, a experiência e o primeiro backend auditável. Autenticação real, persistência
-dos usuários e alçadas, outbox/idempotência e implantação do D1 no ambiente definitivo continuam como próximos
-componentes da IA-0 antes do uso produtivo.
+Esta entrega valida o modelo funcional, a experiência e o primeiro backend auditável. Integração com provedor de
+identidade, gravações transacionais com outbox/idempotência e implantação do D1 no ambiente definitivo continuam
+como próximos componentes da IA-0 antes do uso produtivo.
 
 ## 3. Princípios obrigatórios
 
@@ -141,14 +143,14 @@ Categorias previstas:
 Cada ferramenta possui nome, descrição, esquema de entrada e saída, permissão, nível de risco, idempotência e regra
 de confirmação. Primeira lista:
 
-| Grupo | Ferramentas iniciais | Efeito |
-|---|---|---|
-| Consulta | carteira, cedente, sacado, operação, política, histórico e pendências | Somente leitura |
-| Documento | classificar, extrair, validar e relacionar evidências | Cria rascunho |
-| Simulação | preço, concentração, limite e composição da operação | Não altera o oficial |
-| Fluxo | criar tarefa, solicitar documento e encaminhar para alçada | Interno e auditado |
-| Comunicação | preparar e enviar contato ao cliente ou sacado | Envio exige confirmação |
-| Decisão | registrar decisão dentro da alçada | Confirmação forte e motivo |
+| Grupo       | Ferramentas iniciais                                                  | Efeito                     |
+| ----------- | --------------------------------------------------------------------- | -------------------------- |
+| Consulta    | carteira, cedente, sacado, operação, política, histórico e pendências | Somente leitura            |
+| Documento   | classificar, extrair, validar e relacionar evidências                 | Cria rascunho              |
+| Simulação   | preço, concentração, limite e composição da operação                  | Não altera o oficial       |
+| Fluxo       | criar tarefa, solicitar documento e encaminhar para alçada            | Interno e auditado         |
+| Comunicação | preparar e enviar contato ao cliente ou sacado                        | Envio exige confirmação    |
+| Decisão     | registrar decisão dentro da alçada                                    | Confirmação forte e motivo |
 
 Ferramentas financeiras, pagamento, alteração bancária, liberação e exclusão nunca serão executadas apenas por uma
 resposta textual do modelo.
@@ -205,13 +207,13 @@ operacionais continuam vindo do banco relacional. A resposta deve distinguir:
 
 ## 6. Níveis de autonomia
 
-| Nível | Comportamento | Exemplos |
-|---|---|---|
-| 0 — Informativo | Explica a tela e consulta dados | Resumir carteira |
-| 1 — Assistido | Gera sugestão ou rascunho | Sugerir próxima ação |
-| 2 — Supervisionado | Prepara uma alteração e pede confirmação | Criar tarefa, enviar mensagem |
-| 3 — Automático por política | Executa ação reversível dentro de limites explícitos | Classificar documento confiável |
-| 4 — Proibido à IA | Exige fluxo humano independente | Liberar dinheiro, mudar conta bancária |
+| Nível                       | Comportamento                                        | Exemplos                               |
+| --------------------------- | ---------------------------------------------------- | -------------------------------------- |
+| 0 — Informativo             | Explica a tela e consulta dados                      | Resumir carteira                       |
+| 1 — Assistido               | Gera sugestão ou rascunho                            | Sugerir próxima ação                   |
+| 2 — Supervisionado          | Prepara uma alteração e pede confirmação             | Criar tarefa, enviar mensagem          |
+| 3 — Automático por política | Executa ação reversível dentro de limites explícitos | Classificar documento confiável        |
+| 4 — Proibido à IA           | Exige fluxo humano independente                      | Liberar dinheiro, mudar conta bancária |
 
 O nível é configurado por empresa, processo, ferramenta, valor e alçada. O padrão inicial é o nível mais restritivo.
 
@@ -245,17 +247,17 @@ Dados sensíveis podem ser protegidos na visualização dos registros, sem elimi
 
 ## 8. Modelo mínimo de persistência
 
-| Entidade | Finalidade |
-|---|---|
-| `ai_conversation` | Conversa vinculada ao usuário, empresa e contexto |
-| `ai_message` | Mensagens e respostas estruturadas |
-| `ai_run` | Execução reproduzível com modelo, prompt, custo e estado |
-| `ai_tool_call` | Ferramenta, argumentos, permissão, confirmação e resultado |
-| `ai_source` | Fonte e versão usadas em cada afirmação |
-| `document` | Arquivo original, hash, tipo, proprietário e retenção |
-| `document_extraction` | Campos extraídos, evidência, confiança e revisão |
-| `ai_feedback` | Avaliação e correção do usuário |
-| `ai_evaluation` | Resultado dos testes de qualidade e segurança |
+| Entidade              | Finalidade                                                 |
+| --------------------- | ---------------------------------------------------------- |
+| `ai_conversation`     | Conversa vinculada ao usuário, empresa e contexto          |
+| `ai_message`          | Mensagens e respostas estruturadas                         |
+| `ai_run`              | Execução reproduzível com modelo, prompt, custo e estado   |
+| `ai_tool_call`        | Ferramenta, argumentos, permissão, confirmação e resultado |
+| `ai_source`           | Fonte e versão usadas em cada afirmação                    |
+| `document`            | Arquivo original, hash, tipo, proprietário e retenção      |
+| `document_extraction` | Campos extraídos, evidência, confiança e revisão           |
+| `ai_feedback`         | Avaliação e correção do usuário                            |
+| `ai_evaluation`       | Resultado dos testes de qualidade e segurança              |
 
 As tabelas operacionais permanecem independentes. Uma execução de IA aponta para elas e nunca se torna a única fonte
 de um dado financeiro ou decisão.

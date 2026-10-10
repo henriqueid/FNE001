@@ -14,7 +14,7 @@ function failure(error: unknown) {
 
 export async function GET(request: Request) {
   try {
-    const principal = decisionPrincipal(request.headers);
+    const principal = await decisionPrincipal(env.DB, request.headers);
     assertDecisionPermission(principal.user);
     const decisionId = new URL(request.url).searchParams.get("decisionId")?.trim();
     if (!decisionId) return json({ error: "Decisão não informada." }, 400);
@@ -27,9 +27,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const principal = decisionPrincipal(request.headers);
+    const principal = await decisionPrincipal(env.DB, request.headers);
     const draft = parseDecisionEventDraft(await request.json());
-    assertDecisionPermission(principal.user, draft.eventType as DecisionEventType);
+    assertDecisionPermission(principal.user, draft.eventType as DecisionEventType, draft.authorityId);
     const event = await appendDecisionEvent(
       env.DB,
       { tenantId: principal.tenantId, actorId: principal.user.id, actorRole: principal.user.role },

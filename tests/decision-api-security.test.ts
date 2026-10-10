@@ -1,21 +1,44 @@
 import { describe, expect, it } from "vitest";
-import { seedAccessState } from "@/src/domain/access/model";
-import { assertDecisionPermission, DecisionAccessError, decisionPrincipal } from "@/src/server/decisions/access";
+import { type Permission } from "@/src/domain/access/model";
+import { type ServerPrincipal } from "@/src/server/access/repository";
+import { cookieValue, hashSessionToken } from "@/src/server/access/session";
+import { assertDecisionPermission } from "@/src/server/decisions/access";
 import { parseDecisionEventDraft } from "@/src/server/decisions/validation";
 
-const headersFor = (userId: string, tenantId = "strato-demo") =>
-  new Headers({ "x-strato-user-id": userId, "x-strato-tenant-id": tenantId });
+const principal = (permissions: Permission[], authorityIds: string[] = []): ServerPrincipal => ({
+  id: "user-1",
+  name: "Usuário",
+  role: "Operador",
+  status: "active",
+  tenantId: "strato-demo",
+  permissions,
+  authorityIds,
+});
 
 describe("seguranca da API de decisoes", () => {
-  it("aceita somente empresas vinculadas ao usuario", () => {
-    const admin = seedAccessState().users[0];
-    expect(decisionPrincipal(headersFor(admin.id)).tenantId).toBe("strato-demo");
-    expect(() => decisionPrincipal(headersFor(admin.id, "outra-empresa"))).toThrow(DecisionAccessError);
+  it("usa token opaco do cookie em vez de identidade enviada pelo navegador", async () => {
+    const headers = new Headers({ cookie: "tema=dark; strato_session=token-secreto; outro=1" });
+    expect(cookieValue(headers, "strato_session")).toBe("token-secreto");
+    expect(await hashSessionToken("token-secreto")).not.toContain("token-secreto");
   });
 
   it("recusa decisao de alcada sem permissao de risco", () => {
-    const operator = seedAccessState().users.find(user => user.department === "Operações")!;
-    expect(() => assertDecisionPermission(operator, "EXCEPTION_APPROVED")).toThrow("sem permissão");
+    expect(() => assertDecisionPermission(principal(["operations:view"]), "EXCEPTION_APPROVED")).toThrow(
+      "sem permissão",
+    );
+  });
+
+  it("exige permissao e atribuicao da alcada", () => {
+    expect(() =>
+      assertDecisionPermission(principal(["operations:view", "risk:decide"]), "EXCEPTION_APPROVED", "credit-director"),
+    ).toThrow("sem a alçada");
+    expect(() =>
+      assertDecisionPermission(
+        principal(["operations:view", "risk:decide"], ["credit-director"]),
+        "EXCEPTION_APPROVED",
+        "credit-director",
+      ),
+    ).not.toThrow();
   });
 
   it("valida o contrato antes de persistir", () => {

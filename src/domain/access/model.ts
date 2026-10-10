@@ -18,6 +18,7 @@ export type AccessUser = AppUserProfile & {
   email: string;
   status: "active" | "suspended";
   tenantIds: string[];
+  authorityIds?: string[];
   companyScopes: string[];
   managerUserId?: string;
   substituteUserId?: string;
@@ -90,6 +91,7 @@ export const seedAccessState = (): AccessState => ({
       access: "admin",
       status: "active",
       tenantIds: ["strato-demo"],
+      authorityIds: ["credit-director"],
       responsibilities: ["Visão consolidada", "Alçadas", "Metas", "Risco", "Liquidez"],
       companyScopes: allCompanies,
       permissions: adminPermissions,

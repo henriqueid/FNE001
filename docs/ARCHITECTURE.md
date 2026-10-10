@@ -1,6 +1,6 @@
 # Arquitetura do STRATO
 
-Aplicação navegável de uma plataforma operacional de recebíveis (factoring, securitizadora, FIDC). Nesta etapa, os dados operacionais são demonstrativos e ficam no `localStorage`. A trilha de decisões do Copiloto já passa por API, autorização no servidor e Cloudflare D1 append-only; autenticação real e a migração dos demais estados continuam nas próximas etapas.
+Aplicação navegável de uma plataforma operacional de recebíveis (factoring, securitizadora, FIDC). Nesta etapa, os dados operacionais são demonstrativos e ficam no `localStorage`. A trilha de decisões, as sessões opacas e o diretório de acesso já passam por API e Cloudflare D1; a integração com o provedor de identidade e a migração dos demais estados continuam nas próximas etapas.
 
 ## 1. Visão em camadas
 
@@ -39,12 +39,12 @@ flowchart TB
 
 Regras de dependência (valem como contrato):
 
-| Camada | Pode importar | Não pode importar |
-|---|---|---|
-| `src/domain` | outros módulos de `src/domain` | React, `src/features`, `src/app`, `src/ui` |
-| `src/features/<x>` | `src/domain`, `src/ui`, `src/app/registry-context`, `src/features/shell/shell-context` e peças compartilhadas de outra feature quando explícito (ex.: `finance-ui`) | estado de outra feature |
-| `src/app` | tudo acima | — |
-| `app/` (rotas) | `src/app`, `src/features/shell/theme` | — |
+| Camada             | Pode importar                                                                                                                                                       | Não pode importar                          |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `src/domain`       | outros módulos de `src/domain`                                                                                                                                      | React, `src/features`, `src/app`, `src/ui` |
+| `src/features/<x>` | `src/domain`, `src/ui`, `src/app/registry-context`, `src/features/shell/shell-context` e peças compartilhadas de outra feature quando explícito (ex.: `finance-ui`) | estado de outra feature                    |
+| `src/app`          | tudo acima                                                                                                                                                          | —                                          |
+| `app/` (rotas)     | `src/app`, `src/features/shell/theme`                                                                                                                               | —                                          |
 
 Isso deixa o domínio testável sem navegador (ver `tests/`) e permite trocar a origem dos dados sem mexer nas telas.
 
@@ -101,19 +101,21 @@ Cada arquivo começa com um comentário dizendo o que ele faz. Nenhum arquivo de
 
 `src/app/strato-app.tsx` é o único dono do estado global:
 
-| Estado | Tipo | Chave no localStorage |
-|---|---|---|
-| operações | `Operation[]` | `lastro-mvp-operations-v3` |
-| sacados | `Debtor[]` | `lastro-mvp-debtors-v1` |
-| financeiro | `FinanceState` | `strato-finance-v2` |
-| comercial | `CommercialState` | `strato-commercial-v1` |
-| pessoas do Cadastro | `Party[]` | `strato-parties-v1` |
-| usuários e acessos | `AccessState` | `strato-access-v1` |
-| tarefas e notificações | `TaskState` | `strato-tasks-v1` |
-| explicações na interface | `boolean` | `lastro-interface-guidance-v1` |
+| Estado                              | Tipo                    | Chave no localStorage           |
+| ----------------------------------- | ----------------------- | ------------------------------- |
+| operações                           | `Operation[]`           | `lastro-mvp-operations-v3`      |
+| sacados                             | `Debtor[]`              | `lastro-mvp-debtors-v1`         |
+| financeiro                          | `FinanceState`          | `strato-finance-v2`             |
+| comercial                           | `CommercialState`       | `strato-commercial-v1`          |
+| pessoas do Cadastro                 | `Party[]`               | `strato-parties-v1`             |
+| usuários e acessos                  | `AccessState`           | `strato-access-v1`              |
+| tarefas e notificações              | `TaskState`             | `strato-tasks-v1`               |
+| explicações na interface            | `boolean`               | `lastro-interface-guidance-v1`  |
 | tema, perfil/período da Visão geral | preferências do usuário | `strato-theme`, `strato-home-*` |
 
-A trilha de decisões é a primeira exceção a esse armazenamento local: `app/api/decisions/route.ts` valida tenant e permissão, e `src/server/decisions/repository.ts` grava eventos versionados na tabela D1 `decision_events`. A migração está em `drizzle/0001_decision_ledger.sql`; gatilhos recusam atualização e exclusão.
+A trilha de decisões é a primeira exceção a esse armazenamento local: `app/api/decisions/route.ts` valida tenant, sessão, permissão e alçada, e `src/server/decisions/repository.ts` grava eventos versionados na tabela D1 `decision_events`. A migração está em `drizzle/0001_decision_ledger.sql`; gatilhos recusam atualização e exclusão.
+
+O diretório de identidade e autorização também é sincronizado com o D1 por `app/api/access/users/route.ts`. `src/server/access/session.ts` emite token opaco em cookie `HttpOnly` e persiste somente o hash; `src/server/access/repository.ts` resolve vínculo, escopo, permissões e alçadas. A migração está em `drizzle/0002_access_directory.sql`. O bootstrap automático existe somente em `localhost` para a demonstração; produção deve fornecer a identidade por um provedor corporativo.
 
 - A restauração acontece uma vez, depois de montar (`loadPersistedState`), e mescla o que foi salvo com os dados de demonstração atuais (migração tolerante a campos novos).
 - "Restaurar dados de demonstração" (busca global) chama `clearPersistedState` e recria o seed.
@@ -191,7 +193,7 @@ npm test          # Vitest (tests/*.test.ts)
 
 ## 9. Limitações conhecidas
 
-- A trilha de decisões já possui backend D1; autenticação, usuários, alçadas e os demais dados operacionais ainda são demonstrativos ou locais.
+- A trilha de decisões, a sessão e o diretório de usuários, permissões e alçadas já possuem backend D1; o login ainda usa bootstrap local e os demais dados operacionais continuam demonstrativos ou locais.
 - Integrações (Receita, SEFAZ, bureaus, bancos, assinatura) são simuladas.
 - A Mesa Inteligente ainda reconhece arquivos por nome e extensão; leitura real de conteúdo, OCR e modelo externo pertencem às fases seguintes.
 - A ordem de evolução está em [architecture/PLANO_ESTRUTURA_IA.md](./architecture/PLANO_ESTRUTURA_IA.md).

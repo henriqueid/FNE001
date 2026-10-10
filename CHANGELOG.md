@@ -4,6 +4,7 @@
 
 - Nova identidade visual para o Copiloto, com painel translúcido, cabeçalho STRATO Intelligence, abertura fluida e lançador com estados de atividade.
 - Tela inicial orientada a decisões, com atalhos categorizados, fontes rastreáveis e indicação explícita de decisão humana.
+- Recomendação operacional reescrita com plural natural, maior operação realmente ordenada por valor e quantidade objetiva de impedimentos.
 - Conversa ganhou respostas identificadas, cartões mais claros, campo multilinha e envio por `Enter` ou quebra de linha com `Shift + Enter`.
 - Análise em segundo plano agora apresenta etapa atual, percentual de avanço e barra de progresso animada.
 - Experiência responsiva revisada para desktop e celular, com suporte à preferência de redução de movimento.

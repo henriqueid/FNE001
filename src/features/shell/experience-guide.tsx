@@ -1,6 +1,7 @@
 "use client";
 
 import { type Operation } from "@/src/domain/core/types";
+import { operationalSuggestion } from "@/src/domain/copilot/operational-suggestion";
 import { Copilot } from "@/src/features/copilot/copilot";
 import { ArrowIcon, CheckIcon } from "@/src/ui/icons";
 import { useState } from "react";
@@ -92,36 +93,7 @@ export function ExperienceGuide({
   const [explained, setExplained] = useState(false);
   const current = guide[active] ?? guide.Operações;
   const activeStep = journey.findIndex(step => step.active === active);
-  const blocked = operations.filter(operation => operation.blockers > 0 && operation.status !== "Cancelada");
-  const ready = operations.filter(operation => operation.status === "Pronta para liberar");
-  const delayed = signals.filter(signal => signal.tone === "warning");
-  const suggestion = blocked.length
-    ? {
-        title: `${blocked.length} decisão(ões) destravam o maior valor agora`,
-        body: `${blocked[0].cedent} concentra a primeira exceção. A IA recomenda revisar o bloqueio antes de iniciar novas análises.`,
-        action: "Revisar operações",
-        view: "operations" as AppView,
-      }
-    : ready.length
-      ? {
-          title: `${ready.length} operação(ões) pronta(s) para liberar`,
-          body: "Os requisitos anteriores estão concluídos. Confirme favorecidos e janela bancária.",
-          action: "Abrir financeiro",
-          view: "finance" as AppView,
-        }
-      : delayed.length
-        ? {
-            title: "O ritmo de uma operação saiu do padrão",
-            body: "A recomendação considera o tempo atual comparado ao histórico do mesmo cliente.",
-            action: "Ver a exceção",
-            view: "operations" as AppView,
-          }
-        : {
-            title: "Fluxo dentro do padrão esperado",
-            body: "Nenhuma exceção crítica nova. Continue pela etapa destacada na jornada.",
-            action: "Ver visão geral",
-            view: "home" as AppView,
-          };
+  const suggestion = operationalSuggestion(operations, signals);
 
   return (
     <>

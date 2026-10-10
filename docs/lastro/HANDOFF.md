@@ -13,7 +13,8 @@ Versão: MVP v0.1 + protótipo funcional v5 · 25/09/2026 · Autor do produto: H
 5. **O diferencial do produto é o ciclo fechado.** O que a checagem, a cobrança e a controladoria descobrem volta para o score, o limite e a aprovação da próxima operação.
 6. **Diretriz central de experiência:** o Lastro deve ser semiautomático. O sistema busca, cruza, valida, calcula e prepara a decisão; o usuário atua nas exceções, nas aprovações e nos casos em que existe julgamento real. Não reproduzir a sequência de telas dos ERPs atuais.
 7. **Direção estratégica de mercado:** o Lastro será uma plataforma operacional de recebíveis orientada por eventos e exceções, e não uma coleção de módulos. A análise de concorrentes, arquitetura-alvo, segurança, diferenciais e roadmap estão em [PESQUISA_MERCADO_ESTRATEGIA.md](./PESQUISA_MERCADO_ESTRATEGIA.md).
-8. **Direção visual:** aparência corporativa e institucional, com azul-marinho, azul aço, branco e cinzas frios. Verde, âmbar e vermelho ficam reservados para estados semânticos. Tipografia sans-serif nítida, textos operacionais legíveis e alta densidade sem fontes minúsculas.
+8. **Estrutura de IA:** o plano técnico do Copiloto, da Mesa Inteligente e do processamento de documentos está em [PLANO_ESTRUTURA_IA.md](../architecture/PLANO_ESTRUTURA_IA.md). O plano preserva os motores determinísticos, exige fontes, permissões, auditoria e aprovação humana proporcional ao risco.
+9. **Direção visual:** aparência corporativa e institucional, com azul-marinho, azul aço, branco e cinzas frios. Verde, âmbar e vermelho ficam reservados para estados semânticos. Tipografia sans-serif nítida, textos operacionais legíveis e alta densidade sem fontes minúsculas.
 
 ## 2. Público e tipos de empresa
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## Não lançado — 10/10/2026 · Plano técnico da estrutura de IA
+
+- Formalizada a arquitetura-alvo do Copiloto, da Mesa Inteligente e do processamento assistido de documentos.
+- Definidos limites entre IA e motores determinísticos, catálogo de ferramentas, níveis de autonomia, segurança, auditoria, persistência, avaliações e observabilidade.
+- Organizada a implantação nas fases IA-0 a IA-4, cada uma com critérios de aceite e dependências explícitas.
+
 ## Não lançado — 09/10/2026 · Cadastro P0 — auditoria por campo
 
 - Toda edição cadastral exige motivo e grava uma linha imutável para cada campo alterado, com valor anterior, novo valor, autor, data e origem.

@@ -227,6 +227,9 @@ O copiloto trabalha somente sobre dados autorizados e rastreáveis. Casos de uso
 - detecção de anomalias e relacionamentos incomuns;
 - rascunho de contato com cliente ou sacado.
 
+O desenho técnico, os níveis de autonomia, a governança e as fases de implantação estão detalhados em
+[PLANO_ESTRUTURA_IA.md](../architecture/PLANO_ESTRUTURA_IA.md).
+
 ## 8. Segurança como característica comercial
 
 O produto precisa oferecer desde a primeira versão real:

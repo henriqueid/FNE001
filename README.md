@@ -36,6 +36,7 @@ npm run build:artifact # gera uma página única publicável em .preview/dist-ar
 ## Documentação
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — camadas, mapa de pastas, estado, vínculos entre módulos, estilos, testes.
+- [docs/architecture/PLANO_ESTRUTURA_IA.md](docs/architecture/PLANO_ESTRUTURA_IA.md) — arquitetura, segurança, governança e fases da inteligência assistiva.
 - [docs/CONVENTIONS.md](docs/CONVENTIONS.md) — padrões de código.
 - [INSTRUCOES.md](INSTRUCOES.md) — roteiro de demonstração.
 - [docs/produto/](docs/produto/) — contexto de produto, revisão v6 e pesquisa de mercado.

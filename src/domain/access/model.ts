@@ -24,10 +24,25 @@ export type AccessUser = AppUserProfile & {
 };
 
 export type AccessState = {
-  version: 1;
-  activeUserId: string;
+  version: 2;
+  /** Identidade real da sessão. Não muda durante uma simulação administrativa. */
+  authenticatedUserId: string;
+  /** Perfil cuja experiência está sendo simulada pelo administrador. */
+  previewUserId?: string;
   users: AccessUser[];
 };
+
+export type AccessView =
+  | "home"
+  | "operations"
+  | "controlleria"
+  | "portfolio"
+  | "commercial"
+  | "finance"
+  | "registry"
+  | "policies"
+  | "integrations"
+  | "settings";
 
 const allCompanies = destinations.map(destination => destination.name);
 const adminPermissions: Permission[] = [
@@ -62,8 +77,8 @@ export function permissionsFor(department: UserDepartment, access: AppUserProfil
 }
 
 export const seedAccessState = (): AccessState => ({
-  version: 1,
-  activeUserId: "user-henrique-admin",
+  version: 2,
+  authenticatedUserId: "user-henrique-admin",
   users: [
     {
       id: "user-henrique-admin",
@@ -146,31 +161,80 @@ export const seedAccessState = (): AccessState => ({
 });
 
 export function activeUser(state: AccessState): AccessUser {
-  return state.users.find(user => user.id === state.activeUserId && user.status === "active") ?? state.users[0];
+  const userId = state.previewUserId ?? state.authenticatedUserId;
+  return state.users.find(user => user.id === userId && user.status === "active") ?? authenticatedUser(state);
+}
+
+export function authenticatedUser(state: AccessState): AccessUser {
+  return state.users.find(user => user.id === state.authenticatedUserId && user.status === "active") ?? state.users[0];
 }
 
 export function can(user: AccessUser, permission: Permission) {
   return user.status === "active" && user.permissions.includes(permission);
 }
 
+const viewPermissions: Record<AccessView, Permission[]> = {
+  home: ["dashboard:view"],
+  operations: ["operations:view"],
+  controlleria: ["controlleria:formalize"],
+  portfolio: ["portfolio:manage"],
+  commercial: ["portfolio:manage"],
+  finance: ["finance:view"],
+  registry: ["registry:edit"],
+  policies: ["settings:manage"],
+  integrations: ["settings:manage"],
+  settings: ["settings:manage"],
+};
+
+export function canAccessView(user: AccessUser, view: AccessView) {
+  return viewPermissions[view].some(permission => can(user, permission));
+}
+
+export function defaultViewFor(user: AccessUser): AccessView {
+  const preferred: AccessView[] = [
+    "home",
+    "operations",
+    "controlleria",
+    "portfolio",
+    "commercial",
+    "finance",
+    "registry",
+    "settings",
+  ];
+  return preferred.find(view => canAccessView(user, view)) ?? "home";
+}
+
 export function updateAccessUser(state: AccessState, user: AccessUser): AccessState {
   return { ...state, users: state.users.map(current => (current.id === user.id ? user : current)) };
 }
 
-export function activateUser(state: AccessState, userId: string): AccessState {
+export function startUserPreview(state: AccessState, userId: string): AccessState {
   const user = state.users.find(candidate => candidate.id === userId);
-  return user?.status === "active" ? { ...state, activeUserId: userId } : state;
+  const actor = authenticatedUser(state);
+  if (!user || user.status !== "active" || !can(actor, "users:manage")) return state;
+  return { ...state, previewUserId: user.id === actor.id ? undefined : user.id };
+}
+
+export function stopUserPreview(state: AccessState): AccessState {
+  return state.previewUserId ? { ...state, previewUserId: undefined } : state;
 }
 
 export function migrateAccessState(value: unknown): AccessState {
   const seeded = seedAccessState();
   if (!value || typeof value !== "object") return seeded;
-  const candidate = value as Partial<AccessState>;
-  if (candidate.version !== 1 || !Array.isArray(candidate.users)) return seeded;
+  const candidate = value as Omit<Partial<AccessState>, "version"> & { version?: number; activeUserId?: string };
+  if ((candidate.version !== 1 && candidate.version !== 2) || !Array.isArray(candidate.users)) return seeded;
   const known = new Map(candidate.users.map(user => [user.id, user]));
   const users = seeded.users.map(user => ({ ...user, ...known.get(user.id) }));
-  const activeUserId = users.some(user => user.id === candidate.activeUserId && user.status === "active")
-    ? candidate.activeUserId!
-    : seeded.activeUserId;
-  return { version: 1, activeUserId, users };
+  const legacyActiveUserId = candidate.activeUserId;
+  const requestedActor = candidate.authenticatedUserId ?? seeded.authenticatedUserId;
+  const authenticatedUserId = users.some(user => user.id === requestedActor && user.status === "active")
+    ? requestedActor
+    : seeded.authenticatedUserId;
+  const requestedPreview =
+    candidate.previewUserId ?? (legacyActiveUserId !== authenticatedUserId ? legacyActiveUserId : undefined);
+  const previewUserId = users.some(user => user.id === requestedPreview && user.status === "active")
+    ? requestedPreview
+    : undefined;
+  return { version: 2, authenticatedUserId, previewUserId, users };
 }

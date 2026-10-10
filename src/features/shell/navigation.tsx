@@ -5,6 +5,7 @@
  * barra superior; o restante de "Plataforma" fica em "Plataforma ▾".
  */
 import { type AppView } from "./shell-context";
+import { canAccessView, type AccessUser } from "@/src/domain/access/model";
 import {
   ActivityIcon,
   BankIcon,
@@ -80,3 +81,7 @@ export const desktopNav = allNav.filter(item => item.view !== "integrations");
 export const bottomNav = allNav.filter(item =>
   ["home", "operations", "portfolio", "finance"].includes(item.view ?? ""),
 );
+
+export function visibleNavigation(items: NavItem[], user: AccessUser) {
+  return items.filter(item => !item.view || canAccessView(user, item.view));
+}

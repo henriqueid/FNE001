@@ -6,14 +6,15 @@
  */
 import { CommandPalette } from "./command-palette";
 import { ModuleMenu } from "./module-menu";
-import { type NavItem, bottomNav, desktopNav } from "./navigation";
+import { type NavItem, bottomNav, desktopNav, visibleNavigation } from "./navigation";
 import { NotificationsPopover, isOpen, operationSignals } from "./notifications";
 import { type AppView, ShellContext } from "./shell-context";
 import { useTheme } from "./use-theme";
 import { UserMenu } from "./user-menu";
 import { ExperienceGuide } from "./experience-guide";
 import { DailyBriefing } from "@/src/features/copilot/daily-briefing";
-import { type AppUserProfile, type DailyBriefingData } from "@/src/domain/copilot/daily-briefing";
+import { type DailyBriefingData } from "@/src/domain/copilot/daily-briefing";
+import { can, type AccessUser } from "@/src/domain/access/model";
 import { type AttentionItem } from "@/src/domain/copilot/attention-center";
 import { AttentionCenter } from "@/src/features/copilot/attention-center";
 import { type ManagedTask, type TaskCommand } from "@/src/domain/tasks/model";
@@ -49,6 +50,8 @@ export function Shell({
   taskItems,
   onTaskCommand,
   briefingReady = false,
+  previewedBy,
+  onEndPreview,
 }: {
   children: ReactNode;
   active?: string;
@@ -59,12 +62,14 @@ export function Shell({
   onNavigate?: (target: AppView) => void;
   /** Barra da jornada ("Você está em" e "Entenda esta tela"); ligada nas Configurações. */
   showJourney?: boolean;
-  currentUser: AppUserProfile;
+  currentUser: AccessUser;
   dailyBriefing: DailyBriefingData;
   attentionItems: AttentionItem[];
   taskItems: ManagedTask[];
   onTaskCommand: (id: string, command: TaskCommand) => void;
   briefingReady?: boolean;
+  previewedBy?: string;
+  onEndPreview?: () => void;
 }) {
   const context = useContext(ShellContext);
   const { preference, setPreference } = useTheme();
@@ -80,6 +85,8 @@ export function Shell({
   const operations = useMemo(() => context?.operations ?? [], [context?.operations]);
   const openCount = operationCount ?? operations.filter(isOpen).length;
   const signals = useMemo(() => operationSignals(operations), [operations]);
+  const desktopItems = useMemo(() => visibleNavigation(desktopNav, currentUser), [currentUser]);
+  const bottomItems = useMemo(() => visibleNavigation(bottomNav, currentUser), [currentUser]);
   const openAttention = useCallback((itemId?: string) => {
     setBriefingOpen(false);
     setBellOpen(false);
@@ -184,7 +191,7 @@ export function Shell({
             />
           </div>
           <nav className="lx-nav" aria-label="Módulos">
-            {desktopNav.map(item => (
+            {desktopItems.map(item => (
               <button
                 key={item.label}
                 type="button"
@@ -244,9 +251,20 @@ export function Shell({
               onOpenSettings={onOpenSettings}
               onResetDemo={context?.resetDemo}
               onOpenDailyBriefing={() => setBriefingOpen(true)}
+              canOpenSettings={can(currentUser, "settings:manage")}
             />
           </div>
         </header>
+        {previewedBy && onEndPreview && (
+          <div className="sx-access-preview" role="status">
+            <span>
+              <b>Visão simulada:</b> você está conferindo o sistema como {currentUser.name}.
+            </span>
+            <button type="button" onClick={onEndPreview}>
+              Voltar para {previewedBy}
+            </button>
+          </div>
+        )}
         {taskTabs.length > 0 && (
           <nav className="sx-task-tabs" aria-label="Abas de trabalho">
             <button
@@ -276,7 +294,9 @@ export function Shell({
             ))}
           </nav>
         )}
-        {menuOpen && <ModuleMenu active={active} openCount={openCount} onGo={go} onClose={closeMenu} />}
+        {menuOpen && (
+          <ModuleMenu active={active} openCount={openCount} onGo={go} onClose={closeMenu} user={currentUser} />
+        )}
         <ExperienceGuide
           showJourney={showJourney}
           active={active}
@@ -290,7 +310,7 @@ export function Shell({
         <main className="sx-content">{children}</main>
       </div>
       <nav className="sx-bottom-nav" aria-label="Navegação rápida">
-        {bottomNav.map(item => (
+        {bottomItems.map(item => (
           <button
             key={item.label}
             type="button"
@@ -333,6 +353,7 @@ export function Shell({
             setPaletteOpen(false);
             context?.resetDemo();
           }}
+          user={currentUser}
         />
       )}
       {briefingOpen && (

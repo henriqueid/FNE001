@@ -45,6 +45,7 @@ export function UserMenu({
   onOpenSettings,
   onResetDemo,
   onOpenDailyBriefing,
+  canOpenSettings = true,
 }: {
   user: AppUserProfile;
   companyScope: string;
@@ -54,9 +55,14 @@ export function UserMenu({
   onOpenSettings: () => void;
   onResetDemo?: () => void;
   onOpenDailyBriefing?: () => void;
+  canOpenSettings?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const allowedDestinations = destinations.filter(
+    destination => user.companyScopes?.includes(destination.name) ?? true,
+  );
+  const canConsolidate = user.access === "admin";
   const scopeLabel = companyScope === "Consolidado" ? "Consolidado" : companyScope;
 
   useEffect(() => {
@@ -111,8 +117,11 @@ export function UserMenu({
           <section>
             <span className="lx-label">Empresa de trabalho</span>
             <div className="lx-company-list" role="listbox" aria-label="Empresas e veículos">
-              {[{ name: "Consolidado", detail: `Todas as ${destinations.length} empresas e veículos` }]
-                .concat(destinations.map(d => ({ name: d.name, detail: `${d.institution} · ${d.detail}` })))
+              {(canConsolidate
+                ? [{ name: "Consolidado", detail: `${allowedDestinations.length} empresas e veículos autorizados` }]
+                : []
+              )
+                .concat(allowedDestinations.map(d => ({ name: d.name, detail: `${d.institution} · ${d.detail}` })))
                 .map(option => (
                   <button
                     key={option.name}
@@ -166,15 +175,17 @@ export function UserMenu({
                 <SparkIcon /> Resumo do dia
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onOpenSettings();
-              }}
-            >
-              <SlidersIcon /> Preferências de interface
-            </button>
+            {canOpenSettings && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onOpenSettings();
+                }}
+              >
+                <SlidersIcon /> Preferências de interface
+              </button>
+            )}
             {onResetDemo && (
               <button
                 type="button"

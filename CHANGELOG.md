@@ -5,8 +5,11 @@
 - Nova central de usuários e acessos em Configurações, com função, departamento, nível de acesso, gestor direto, vínculo comercial e gerente da conta.
 - Escopo configurável por empresa ou veículo e permissões por ação, mantendo o administrador com acesso integral.
 - Modo de teste permite alternar a visão do usuário e conferir imediatamente como Copiloto, Central do Dia, carteira e alertas são filtrados.
+- Sessão administrativa e visão simulada agora são identidades separadas, com faixa persistente para encerrar o teste e retornar ao administrador sem perder o controle.
+- Menu principal, menu completo, busca global, links diretos, seleção de empresa e criação de operações passam a respeitar as permissões e o escopo do perfil ativo.
+- A busca global recebe somente as operações autorizadas e deixa de sugerir módulos ou ações indisponíveis para o usuário.
 - A posição original do administrador foi preservada ao fim do teste; a entrega permanece como protótipo local até a conexão com autenticação e autorização no servidor.
-- Cinco testes novos cobrem permissões, escopo empresarial, atualização de perfil, troca de visão e migração do estado; suíte ampliada para 167 testes.
+- Sete testes cobrem permissões, módulos, escopo empresarial, atualização de perfil, simulação segura e migração do estado; suíte ampliada para 169 testes.
 
 ## Não lançado — 10/10/2026 · Central do Dia integrada
 

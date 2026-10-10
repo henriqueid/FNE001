@@ -5136,6 +5136,39 @@ a.fn-btn:not([href]) {
 .access-active-user p {
   margin: 0;
 }
+.access-active-user > button,
+.sx-access-preview button {
+  justify-self: end;
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid color-mix(in srgb, var(--brand) 36%, var(--line));
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.sx-access-preview {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  min-height: 42px;
+  padding: 6px 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-warning) 35%, var(--line));
+  background: color-mix(in srgb, var(--ds-warning) 9%, var(--surface));
+  color: var(--text);
+  font-size: 12px;
+}
+.sx-access-preview button {
+  justify-self: auto;
+  min-height: 30px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+}
 .access-workspace {
   display: grid;
   grid-template-columns: minmax(250px, 0.75fr) minmax(0, 1.75fr);

@@ -53,6 +53,8 @@ A primeira entrega da fase **IA-0 — Fundação** já está disponível no prot
 - escopo por empresa ou veículo e catálogo de permissões por ação;
 - simulação da visão de cada usuário para validar Copiloto, Central do Dia e alertas;
 - filtragem da carteira e das tarefas pelo perfil, departamento, responsabilidade operacional e vínculo comercial;
+- proteção efetiva da navegação, busca global, links diretos, empresa de trabalho e criação de operações;
+- separação entre a identidade autenticada e o perfil simulado, com retorno seguro à sessão administrativa;
 - persistência e migração do estado de acesso no navegador, com cobertura automatizada das regras.
 
 Esta entrega valida o modelo funcional e a experiência. Autenticação real, autorização no servidor, isolamento

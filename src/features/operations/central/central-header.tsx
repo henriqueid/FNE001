@@ -8,7 +8,7 @@ import { destinations } from "@/src/domain/core/demo/companies";
 import { Badge } from "@/src/features/operations/components/status";
 import { PlusIcon, SparkIcon } from "@/src/ui/icons";
 
-export function CentralHeader({ companyScope, onNew }: { companyScope: string; onNew: () => void }) {
+export function CentralHeader({ companyScope, onNew }: { companyScope: string; onNew?: () => void }) {
   return (
     <div className="page-heading">
       <div>
@@ -19,11 +19,13 @@ export function CentralHeader({ companyScope, onNew }: { companyScope: string; o
         <h1>Operações em andamento</h1>
         <p>Filas, etapas e responsáveis das operações abertas.</p>
       </div>
-      <div className="heading-actions">
-        <button className="primary-action" onClick={onNew}>
-          <PlusIcon /> Nova operação
-        </button>
-      </div>
+      {onNew && (
+        <div className="heading-actions">
+          <button className="primary-action" onClick={onNew}>
+            <PlusIcon /> Nova operação
+          </button>
+        </div>
+      )}
     </div>
   );
 }

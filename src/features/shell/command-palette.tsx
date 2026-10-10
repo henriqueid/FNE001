@@ -7,6 +7,8 @@ import { money } from "@/src/domain/core/format";
 import { stages } from "@/src/domain/core/stages";
 import { type Operation } from "@/src/domain/core/types";
 import { allNav } from "./navigation";
+import { visibleNavigation } from "./navigation";
+import { can, type AccessUser } from "@/src/domain/access/model";
 import { isOpen } from "./notifications";
 import { type AppView } from "./shell-context";
 import { type ThemePreference } from "./use-theme";
@@ -48,6 +50,7 @@ export function CommandPalette({
   onNew,
   onSettings,
   onReset,
+  user,
 }: {
   operations: Operation[];
   themePreference: ThemePreference;
@@ -58,6 +61,7 @@ export function CommandPalette({
   onNew: () => void;
   onSettings: () => void;
   onReset: () => void;
+  user: AccessUser;
 }) {
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
@@ -105,7 +109,7 @@ export function CommandPalette({
         detail: `Aditivo ${operation.aditivoNumber} · Borderô ${operation.borderoNumber} · ${stages.find(item => item.id === operation.stage)?.short ?? ""} · ${money.format(operation.amount)}`,
         run: () => onOpen(operation),
       }));
-    const navItems: PaletteItem[] = allNav
+    const navItems: PaletteItem[] = visibleNavigation(allNav, user)
       .filter(item => item.view)
       .map(item => ({
         id: `nav-${item.view}`,
@@ -117,15 +121,19 @@ export function CommandPalette({
         run: () => onNavigate(item.view!),
       }));
     const actions: PaletteItem[] = [
-      {
-        id: "new",
-        group: "Ações",
-        label: "Nova operação",
-        detail: "Escolher cedente, origem e destino",
-        icon: <PlusIcon />,
-        keywords: "nova operacao criar bordero",
-        run: onNew,
-      },
+      ...(can(user, "operations:edit")
+        ? [
+            {
+              id: "new",
+              group: "Ações",
+              label: "Nova operação",
+              detail: "Escolher cedente, origem e destino",
+              icon: <PlusIcon />,
+              keywords: "nova operacao criar bordero",
+              run: onNew,
+            } satisfies PaletteItem,
+          ]
+        : []),
       {
         id: "theme-light",
         group: "Ações",
@@ -153,26 +161,34 @@ export function CommandPalette({
         keywords: "tema sistema automatico aparencia",
         run: () => onTheme("system"),
       },
-      {
-        id: "settings",
-        group: "Ações",
-        label: "Preferências da interface",
-        icon: <SlidersIcon />,
-        keywords: "configuracoes preferencias explicacoes",
-        run: onSettings,
-      },
-      {
-        id: "reset",
-        group: "Ações",
-        label: "Restaurar dados de demonstração",
-        icon: <UndoIcon />,
-        keywords: "restaurar reset demonstracao limpar",
-        run: onReset,
-      },
+      ...(can(user, "settings:manage")
+        ? [
+            {
+              id: "settings",
+              group: "Ações",
+              label: "Preferências da interface",
+              icon: <SlidersIcon />,
+              keywords: "configuracoes preferencias explicacoes",
+              run: onSettings,
+            } satisfies PaletteItem,
+          ]
+        : []),
+      ...(user.access === "admin"
+        ? [
+            {
+              id: "reset",
+              group: "Ações",
+              label: "Restaurar dados de demonstração",
+              icon: <UndoIcon />,
+              keywords: "restaurar reset demonstracao limpar",
+              run: onReset,
+            } satisfies PaletteItem,
+          ]
+        : []),
     ];
     const match = (item: PaletteItem) => !q || item.keywords.includes(q) || normalize(item.label).includes(q);
     return [...opItems, ...navItems.filter(match), ...actions.filter(match)];
-  }, [operations, query, themePreference, onNavigate, onOpen, onNew, onSettings, onReset, onTheme]);
+  }, [operations, query, themePreference, onNavigate, onOpen, onNew, onSettings, onReset, onTheme, user]);
 
   const safeCursor = Math.min(cursor, Math.max(0, items.length - 1));
   useEffect(() => {

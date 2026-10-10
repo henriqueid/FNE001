@@ -44,7 +44,7 @@ export default function HomeDashboard({
   companyScope: string;
   onOpen: (op: Operation) => void;
   onGoOperations: () => void;
-  onNew: () => void;
+  onNew?: () => void;
   revenueGoals: OperationalDefaultsState["revenueGoals"];
 }) {
   const { period, setPeriod, profile, chooseProfile, now, positionDate, setPositionDate } = useHomePreferences();

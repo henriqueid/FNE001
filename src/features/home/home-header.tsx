@@ -27,7 +27,7 @@ export function HomeHeader({
   profile: HomeProfile;
   onProfileChange: (profile: HomeProfile) => void;
   companyScope: string;
-  onNew: () => void;
+  onNew?: () => void;
 }) {
   const { labels, periodEmpty } = metrics;
   const today = new Date().toLocaleDateString("sv-SE");
@@ -64,11 +64,13 @@ export function HomeHeader({
           </div>
           <p>{perspectiveIntro[profile]}</p>
         </div>
-        <div className="vg-controls">
-          <button className="primary-action" onClick={onNew}>
-            <PlusIcon /> Nova operação
-          </button>
-        </div>
+        {onNew && (
+          <div className="vg-controls">
+            <button className="primary-action" onClick={onNew}>
+              <PlusIcon /> Nova operação
+            </button>
+          </div>
+        )}
       </header>
 
       <div className="vg-context-bar">

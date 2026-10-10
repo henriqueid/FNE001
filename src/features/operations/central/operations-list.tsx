@@ -27,7 +27,7 @@ export function OperationsList({
   operations: Operation[];
   companyScope: string;
   onOpen: (op: Operation) => void;
-  onNew: () => void;
+  onNew?: () => void;
   onReset: () => void;
 }) {
   const filters = useOperationsFilters(operations, companyScope);

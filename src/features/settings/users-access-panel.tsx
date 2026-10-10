@@ -1,8 +1,10 @@
 "use client";
 
 import {
-  activateUser,
+  authenticatedUser,
   permissionsFor,
+  startUserPreview,
+  stopUserPreview,
   updateAccessUser,
   type AccessState,
   type AccessUser,
@@ -44,9 +46,10 @@ const initials = (name: string) =>
     .join("");
 
 export function UsersAccessPanel({ state, onState }: { state: AccessState; onState: (state: AccessState) => void }) {
-  const [selectedId, setSelectedId] = useState(state.activeUserId);
+  const [selectedId, setSelectedId] = useState(state.previewUserId ?? state.authenticatedUserId);
   const selected = state.users.find(user => user.id === selectedId) ?? state.users[0];
-  const active = state.users.find(user => user.id === state.activeUserId) ?? state.users[0];
+  const active = state.users.find(user => user.id === state.previewUserId) ?? authenticatedUser(state);
+  const actor = authenticatedUser(state);
   const managers = useMemo(
     () => state.users.filter(user => user.access !== "operator" && user.status === "active"),
     [state.users],
@@ -88,13 +91,21 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
 
       <div className="access-active-user">
         <div>
-          <small>VISÃO EM TESTE</small>
+          <small>{state.previewUserId ? "VISÃO EM TESTE" : "SESSÃO ATUAL"}</small>
           <b>{active.name}</b>
           <span>
             {active.role} · {active.department}
           </span>
         </div>
-        <p>Trocar a visão atualiza imediatamente o Copiloto e a Central do Dia conforme este usuário.</p>
+        {state.previewUserId ? (
+          <button type="button" onClick={() => onState(stopUserPreview(state))}>
+            Encerrar teste e voltar para {actor.name}
+          </button>
+        ) : (
+          <p>
+            Testar um perfil atualiza Copiloto, módulos, busca e Central do Dia sem alterar a sessão do administrador.
+          </p>
+        )}
       </div>
 
       <div className="access-workspace">
@@ -131,10 +142,10 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
             </div>
             <button
               type="button"
-              disabled={selected.status !== "active" || selected.id === state.activeUserId}
-              onClick={() => onState(activateUser(state, selected.id))}
+              disabled={selected.status !== "active" || selected.id === active.id}
+              onClick={() => onState(startUserPreview(state, selected.id))}
             >
-              {selected.id === state.activeUserId ? "Visão atual" : "Testar visão deste usuário"}
+              {selected.id === active.id ? "Visão atual" : "Testar visão deste usuário"}
             </button>
           </header>
 

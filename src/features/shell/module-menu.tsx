@@ -5,7 +5,8 @@
  * descrição por módulo. No tablet abre como painel sob a barra superior; no celular, como
  * folha que sobe da barra inferior.
  */
-import { type NavItem, navGroups } from "./navigation";
+import { type NavItem, navGroups, visibleNavigation } from "./navigation";
+import { type AccessUser } from "@/src/domain/access/model";
 
 import { CloseIcon } from "@/src/ui/icons";
 import { useEffect } from "react";
@@ -15,11 +16,13 @@ export function ModuleMenu({
   openCount,
   onGo,
   onClose,
+  user,
 }: {
   active: string;
   openCount: number;
   onGo: (item: NavItem) => void;
   onClose: () => void;
+  user: AccessUser;
 }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
@@ -36,29 +39,32 @@ export function ModuleMenu({
             <CloseIcon />
           </button>
         </header>
-        {navGroups.map(group => (
-          <section key={group.title}>
-            <span className="lx-label">{group.title}</span>
-            <div className="lx-module-grid">
-              {group.items.map(item => (
-                <button
-                  key={item.label}
-                  type="button"
-                  className={active === item.label ? "is-active" : ""}
-                  aria-current={active === item.label ? "page" : undefined}
-                  onClick={() => onGo(item)}
-                >
-                  <span className="lx-module-icon">{item.icon}</span>
-                  <span className="lx-module-text">
-                    <b>{item.label}</b>
-                    <small>{item.hint}</small>
-                  </span>
-                  {item.label === "Operações" && openCount > 0 && <i className="lx-count">{openCount}</i>}
-                </button>
-              ))}
-            </div>
-          </section>
-        ))}
+        {navGroups
+          .map(group => ({ ...group, items: visibleNavigation(group.items, user) }))
+          .filter(group => group.items.length > 0)
+          .map(group => (
+            <section key={group.title}>
+              <span className="lx-label">{group.title}</span>
+              <div className="lx-module-grid">
+                {group.items.map(item => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    className={active === item.label ? "is-active" : ""}
+                    aria-current={active === item.label ? "page" : undefined}
+                    onClick={() => onGo(item)}
+                  >
+                    <span className="lx-module-icon">{item.icon}</span>
+                    <span className="lx-module-text">
+                      <b>{item.label}</b>
+                      <small>{item.hint}</small>
+                    </span>
+                    {item.label === "Operações" && openCount > 0 && <i className="lx-count">{openCount}</i>}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
       </div>
     </>
   );

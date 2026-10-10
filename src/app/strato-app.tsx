@@ -57,7 +57,7 @@ import SettingsModule from "@/src/features/settings/settings-module";
 import { seedIntegrationState } from "@/src/domain/integrations/model";
 import { IntegrationProvider } from "./integration-context";
 import { seedOperationalDefaults } from "@/src/domain/registry/operational-profile";
-import { buildDailyBriefing, demoAdminUser } from "@/src/domain/copilot/daily-briefing";
+import { buildDailyBriefing, demoAdminUser, operationsForUser } from "@/src/domain/copilot/daily-briefing";
 import { buildAttentionItems } from "@/src/domain/copilot/attention-center";
 import {
   actionableAttentionItems,
@@ -68,7 +68,15 @@ import {
   type TaskCommand,
   visibleTasksForUser,
 } from "@/src/domain/tasks/model";
-import { activeUser, seedAccessState } from "@/src/domain/access/model";
+import {
+  activeUser,
+  authenticatedUser,
+  can,
+  canAccessView,
+  defaultViewFor,
+  seedAccessState,
+  stopUserPreview,
+} from "@/src/domain/access/model";
 
 const COMPANY_SCOPE_KEY = "strato-company-scope";
 
@@ -83,8 +91,12 @@ export default function StratoApp() {
   const [showGuidance, setShowGuidance] = useState(true);
   const [showJourney, setShowJourney] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [access, setAccess] = useState(() => seedAccessState());
+  const currentUser = useMemo(() => activeUser(access), [access]);
+  const sessionUser = useMemo(() => authenticatedUser(access), [access]);
   const [view, setView] = useState<AppView>("home");
   const navigate = (target: AppView) => {
+    if (!canAccessView(currentUser, target)) return;
     setSelected(null);
     setView(target);
   };
@@ -99,8 +111,6 @@ export default function StratoApp() {
   const [operationalDefaults, setOperationalDefaults] = useState(() => seedOperationalDefaults());
   const [tasks, setTasks] = useState(() => seedTaskState());
   const [taskClock, setTaskClock] = useState(() => Date.now());
-  const [access, setAccess] = useState(() => seedAccessState());
-  const currentUser = useMemo(() => activeUser(access), [access]);
   // Resultado financeiro de cada operação, pela mesma precificação da etapa Preço, para a Visão geral.
   const homeFinancials = useMemo(
     () =>
@@ -136,6 +146,7 @@ export default function StratoApp() {
     setPortfolio(current => syncPortfolio(current, operations));
   }, [operations]);
   function applyFinanceEffects(effects: Effect[]) {
+    if (!can(currentUser, "finance:release")) return;
     setOperations(current =>
       current.map(operation => {
         const mine = effects.filter(effect => effect.operationId === operation.id);
@@ -167,6 +178,7 @@ export default function StratoApp() {
     );
   }
   function patchOperation(id: string, patch: Partial<Operation>) {
+    if (!can(currentUser, "finance:release")) return;
     setOperations(current => current.map(operation => (operation.id === id ? { ...operation, ...patch } : operation)));
   }
   // A empresa do título acompanha a projeção de caixa do Financeiro (antes entrava em qualquer recorte).
@@ -288,11 +300,19 @@ export default function StratoApp() {
   }, [storageReady, operations]);
 
   function updateOperation(updated: Operation) {
+    if (
+      !can(currentUser, "operations:edit") &&
+      !can(currentUser, "risk:decide") &&
+      !can(currentUser, "controlleria:formalize") &&
+      !can(currentUser, "finance:release")
+    )
+      return;
     setOperations(current => current.map(operation => (operation.id === updated.id ? updated : operation)));
     setSelected(updated);
   }
 
   function registerDebtor(debtor: Debtor) {
+    if (!can(currentUser, "operations:edit") && !can(currentUser, "registry:edit")) return;
     setDebtors(current => [
       debtor,
       ...current.filter(item => item.document.replace(/\D/g, "") !== debtor.document.replace(/\D/g, "")),
@@ -320,6 +340,7 @@ export default function StratoApp() {
     setSelected(null);
   }
   function createOperation(input: NewOperationInput) {
+    if (!can(currentUser, "operations:edit")) return;
     const next = buildNewOperation(input, operations, commercial, new Date().toISOString().slice(0, 10));
     // Sacados novos do arquivo são cadastrados automaticamente ao iniciar a operação.
     const importedDebtors = input.entryIntake?.newDebtors ?? [];
@@ -333,9 +354,6 @@ export default function StratoApp() {
     setShowNew(false);
     setSelected(next);
   }
-  const activeCount = operations.filter(
-    operation => operation.status !== "Cancelada" && operation.status !== "Liberada ao financeiro",
-  ).length;
   const openSettings = () => navigate("settings");
   const carteiraEvents = useMemo(() => repurchaseEvents(operations), [operations]);
   const commercialLive = useMemo(() => ({ ...commercial, carteiraEvents }), [commercial, carteiraEvents]);
@@ -403,6 +421,7 @@ export default function StratoApp() {
       operationalDefaults,
       parties,
       saveParty: (party, reason) => {
+        if (!can(currentUser, "registry:edit")) return { error: "Seu perfil não permite editar cadastros." };
         const result = savePartyRecord({
           party,
           saved: savedParties,
@@ -421,12 +440,23 @@ export default function StratoApp() {
         return { message: result.message };
       },
       onCommercial: next => {
+        if (!can(currentUser, "portfolio:manage")) return;
         const { carteiraEvents: _drop, ...rest } = next;
         void _drop;
         setCommercial(rest as CommercialState);
       },
     }),
-    [commercialLive, scoredCedents, parties, savedParties, debtors, commercial, operationalDefaults, today],
+    [
+      commercialLive,
+      scoredCedents,
+      parties,
+      savedParties,
+      debtors,
+      commercial,
+      operationalDefaults,
+      today,
+      currentUser,
+    ],
   );
   const userScope = useMemo(
     () => ({
@@ -436,6 +466,31 @@ export default function StratoApp() {
     }),
     [commercial, today],
   );
+  const scopedOperations = useMemo(
+    () => operationsForUser(operations, currentUser, userScope),
+    [operations, currentUser, userScope],
+  );
+  const activeCount = scopedOperations.filter(
+    operation => operation.status !== "Cancelada" && operation.status !== "Liberada ao financeiro",
+  ).length;
+  useEffect(() => {
+    if (!storageReady) return;
+    const allowedCompanies = currentUser.companyScopes ?? [];
+    if (
+      currentUser.access !== "admin" &&
+      (companyScope === "Consolidado" || !allowedCompanies.includes(companyScope)) &&
+      allowedCompanies[0]
+    ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- corrige o escopo ao trocar a visão simulada
+      setCompanyScope(allowedCompanies[0]);
+    }
+    if (!canAccessView(currentUser, view)) {
+      setSelected(null);
+      setView(defaultViewFor(currentUser));
+      return;
+    }
+    if (selected && !scopedOperations.some(operation => operation.id === selected.id)) setSelected(null);
+  }, [currentUser, companyScope, scopedOperations, selected, storageReady, view]);
   const dailyBriefing = useMemo(
     () =>
       buildDailyBriefing({
@@ -493,10 +548,14 @@ export default function StratoApp() {
   const runTaskCommand = (id: string, command: TaskCommand) =>
     setTasks(current => applyTaskCommand(current, id, command, new Date().toISOString()));
   const shellContext = {
-    operations,
+    operations: scopedOperations,
     navigate,
-    openOperation: (operation: Operation) => setSelected(operation),
-    newOperation: () => setShowNew(true),
+    openOperation: (operation: Operation) => {
+      if (scopedOperations.some(candidate => candidate.id === operation.id)) setSelected(operation);
+    },
+    newOperation: () => {
+      if (can(currentUser, "operations:edit")) setShowNew(true);
+    },
     openSettings,
     resetDemo,
   };
@@ -539,7 +598,7 @@ export default function StratoApp() {
         onState={setFinance}
         onEffects={applyFinanceEffects}
         onPatchOperation={patchOperation}
-        operations={operations}
+        operations={scopedOperations}
         carteira={carteiraFlows}
         companyScope={companyScope}
         onOpenOperation={setSelected}
@@ -550,7 +609,7 @@ export default function StratoApp() {
       <CommercialModule
         state={registryValue.commercial}
         onState={registryValue.onCommercial}
-        operations={operations}
+        operations={scopedOperations}
         financials={homeFinancials}
         finance={finance}
         onFinance={setFinance}
@@ -561,7 +620,7 @@ export default function StratoApp() {
   else if (view === "home")
     page = (
       <HomeDashboard
-        operations={operations}
+        operations={scopedOperations}
         debtors={scoredDebtors}
         financials={homeFinancials}
         finance={finance}
@@ -570,7 +629,7 @@ export default function StratoApp() {
         companyScope={companyScope}
         onOpen={setSelected}
         onGoOperations={() => navigate("operations")}
-        onNew={() => setShowNew(true)}
+        onNew={can(currentUser, "operations:edit") ? () => setShowNew(true) : undefined}
         revenueGoals={operationalDefaults.revenueGoals}
       />
     );
@@ -578,7 +637,7 @@ export default function StratoApp() {
     page = (
       <RegistryModule
         debtors={scoredDebtors}
-        operations={operations}
+        operations={scopedOperations}
         onOpenOperation={setSelected}
         onNavigate={navigate}
       />
@@ -595,7 +654,7 @@ export default function StratoApp() {
   else if (view === "controlleria")
     page = (
       <ControlleriaModule
-        operations={operations}
+        operations={scopedOperations}
         portfolio={portfolio}
         onPortfolio={setPortfolio}
         companyScope={companyScope}
@@ -623,10 +682,10 @@ export default function StratoApp() {
   else
     page = (
       <OperationsList
-        operations={operations}
+        operations={scopedOperations}
         companyScope={companyScope}
         onOpen={setSelected}
-        onNew={() => setShowNew(true)}
+        onNew={can(currentUser, "operations:edit") ? () => setShowNew(true) : undefined}
         onReset={resetDemo}
       />
     );
@@ -641,6 +700,11 @@ export default function StratoApp() {
                 operationCount={activeCount}
                 companyScope={selected?.vehicle ?? companyScope}
                 onCompanyScopeChange={scope => {
+                  if (
+                    currentUser.access !== "admin" &&
+                    (scope === "Consolidado" || !currentUser.companyScopes.includes(scope))
+                  )
+                    return;
                   setCompanyScope(scope);
                   if (selected) setSelected(null);
                 }}
@@ -653,10 +717,15 @@ export default function StratoApp() {
                 taskItems={taskItems}
                 onTaskCommand={runTaskCommand}
                 briefingReady={storageReady}
+                previewedBy={access.previewUserId ? sessionUser.name : undefined}
+                onEndPreview={() => {
+                  setAccess(current => stopUserPreview(current));
+                  setCompanyScope("Consolidado");
+                }}
               >
                 {page}
               </Shell>
-              {showNew && (
+              {showNew && can(currentUser, "operations:edit") && (
                 <NewOperationModal
                   defaultDestination={companyScope}
                   operations={operations}

@@ -346,7 +346,7 @@ function ManagementFocus(props: FocusProps) {
 function OperationFocus(props: FocusProps) {
   const { metrics: m, onOpen, onGoOperations, onGoFinance } = props;
   const topNeed = m.needs[0];
-  const period = m.labels.tab === "Hoje" ? "dia" : m.labels.tab === "Semana" ? "semana" : "mes";
+  const period = m.labels.tab === "Dia" ? "dia" : m.labels.tab === "Semana" ? "semana" : "mes";
   const headline = m.blockedOps.length
     ? `${m.blockedOps.length} ${m.blockedOps.length === 1 ? "operação bloqueada" : "operações bloqueadas"} na esteira`
     : m.ready.length

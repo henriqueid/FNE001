@@ -5292,28 +5292,57 @@ a.fn-btn:not([href]) {
 }
 
 /* ---------- Visão geral · posição e ritmo de receita ---------- */
+.vg-time-filter {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: end;
+  gap: 5px 10px;
+  margin-left: auto;
+  padding: 8px 9px;
+  border: 1px solid var(--ds-border);
+  border-radius: 13px;
+  background: var(--ds-surface);
+}
+.vg-time-filter-title {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ds-accent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.vg-time-filter-title svg {
+  width: 13px;
+}
+.vg-time-filter > label {
+  gap: 3px;
+}
+.vg-time-filter > label > span {
+  font-size: 9px;
+}
+.vg-time-filter > label select {
+  min-width: 112px;
+  height: 36px;
+}
 .vg-position {
   display: flex;
   align-items: center;
   gap: 6px;
   min-height: 48px;
-  margin-left: auto;
-  padding: 5px 7px 5px 12px;
-  border: 1px solid var(--ds-accent-line);
-  border-radius: 12px;
-  background: var(--ds-accent-soft);
+  margin-left: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 .vg-position > div {
   display: grid;
-  grid-template-columns: 16px auto;
-  column-gap: 7px;
-  min-width: 198px;
-}
-.vg-position > div svg {
-  grid-row: 1 / 3;
-  align-self: center;
-  width: 16px;
-  color: var(--ds-accent);
+  grid-template-columns: 1fr;
+  gap: 1px;
+  min-width: 185px;
 }
 .vg-position > div span {
   font-size: 9px;
@@ -5773,7 +5802,7 @@ a.fn-btn:not([href]) {
     align-items: stretch;
     flex-wrap: wrap;
   }
-  .vg-position {
+  .vg-time-filter {
     width: 100%;
     margin-left: 0;
   }

@@ -7,7 +7,7 @@ export type HomePeriod = "dia" | "semana" | "mes";
 export type HomeProfile = "gestao" | "operacao" | "risco";
 
 export const periodLabels: Record<HomePeriod, { tab: string; compare: string; range: string }> = {
-  dia: { tab: "Hoje", compare: "vs. ontem", range: "hoje" },
+  dia: { tab: "Dia", compare: "vs. dia anterior", range: "na posição" },
   semana: { tab: "Semana", compare: "vs. semana anterior", range: "nesta semana" },
   mes: { tab: "Mês", compare: "vs. mês anterior", range: "neste mês" },
 };

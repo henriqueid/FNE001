@@ -82,46 +82,51 @@ export function HomeHeader({
             ))}
           </select>
         </label>
-        <label>
-          <span>Período</span>
-          <select value={period} onChange={event => onPeriodChange(event.target.value as HomePeriod)}>
-            {(Object.keys(periodLabels) as HomePeriod[]).map(id => (
-              <option key={id} value={id}>
-                {periodLabels[id].tab}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="vg-position" aria-label="Data da posição">
-          <div>
+        <div className="vg-time-filter" aria-label="Recorte temporal">
+          <span className="vg-time-filter-title">
             <ClockIcon />
-            <span>Posição</span>
-            <b>{dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}</b>
-          </div>
-          <button type="button" aria-label="Posição anterior" onClick={() => movePosition(-1)}>
-            <ArrowIcon />
-          </button>
-          <input
-            type="date"
-            value={positionDate}
-            max={today}
-            onChange={event => onPositionDateChange(event.target.value)}
-            aria-label="Escolher data da posição"
-          />
-          <button
-            type="button"
-            className="next"
-            aria-label="Próxima posição"
-            disabled={positionDate >= today}
-            onClick={() => movePosition(1)}
-          >
-            <ArrowIcon />
-          </button>
-          {positionDate !== today && (
-            <button type="button" className="today" onClick={() => onPositionDateChange(today)}>
-              Voltar para hoje
+            Recorte temporal
+          </span>
+          <label>
+            <span>Período</span>
+            <select value={period} onChange={event => onPeriodChange(event.target.value as HomePeriod)}>
+              {(Object.keys(periodLabels) as HomePeriod[]).map(id => (
+                <option key={id} value={id}>
+                  {periodLabels[id].tab}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="vg-position" aria-label="Data da posição">
+            <div>
+              <span>Data-base</span>
+              <b>{dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}</b>
+            </div>
+            <button type="button" aria-label="Posição anterior" onClick={() => movePosition(-1)}>
+              <ArrowIcon />
             </button>
-          )}
+            <input
+              type="date"
+              value={positionDate}
+              max={today}
+              onChange={event => onPositionDateChange(event.target.value)}
+              aria-label="Escolher data da posição"
+            />
+            <button
+              type="button"
+              className="next"
+              aria-label="Próxima posição"
+              disabled={positionDate >= today}
+              onClick={() => movePosition(1)}
+            >
+              <ArrowIcon />
+            </button>
+            {positionDate !== today && (
+              <button type="button" className="today" onClick={() => onPositionDateChange(today)}>
+                Hoje
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

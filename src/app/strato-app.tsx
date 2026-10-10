@@ -57,6 +57,7 @@ import SettingsModule from "@/src/features/settings/settings-module";
 import { seedIntegrationState } from "@/src/domain/integrations/model";
 import { IntegrationProvider } from "./integration-context";
 import { seedOperationalDefaults } from "@/src/domain/registry/operational-profile";
+import { buildDailyBriefing, demoAdminUser } from "@/src/domain/copilot/daily-briefing";
 
 const COMPANY_SCOPE_KEY = "strato-company-scope";
 
@@ -370,6 +371,18 @@ export default function StratoApp() {
     }),
     [commercialLive, scoredCedents, parties, savedParties, debtors, commercial, operationalDefaults, today],
   );
+  const dailyBriefing = useMemo(
+    () =>
+      buildDailyBriefing({
+        user: demoAdminUser,
+        operations,
+        financials: homeFinancials,
+        titles: portfolioTitles(operations),
+        referenceDate: today,
+        revenueTarget: operationalDefaults.revenueGoals.consolidated.mes,
+      }),
+    [operations, homeFinancials, today, operationalDefaults.revenueGoals.consolidated.mes],
+  );
   const shellContext = {
     operations,
     navigate,
@@ -523,6 +536,9 @@ export default function StratoApp() {
                 onOpenSettings={openSettings}
                 onNavigate={navigate}
                 showJourney={showJourney}
+                currentUser={demoAdminUser}
+                dailyBriefing={dailyBriefing}
+                briefingReady={storageReady}
               >
                 {page}
               </Shell>

@@ -12,6 +12,8 @@ import { type AppView, ShellContext } from "./shell-context";
 import { useTheme } from "./use-theme";
 import { UserMenu } from "./user-menu";
 import { ExperienceGuide } from "./experience-guide";
+import { DailyBriefing } from "@/src/features/copilot/daily-briefing";
+import { type AppUserProfile, type DailyBriefingData } from "@/src/domain/copilot/daily-briefing";
 
 import { BellIcon, MenuIcon, SearchIcon } from "@/src/ui/icons";
 import { type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -27,6 +29,9 @@ export function Shell({
   onOpenSettings,
   onNavigate,
   showJourney = false,
+  currentUser,
+  dailyBriefing,
+  briefingReady = false,
 }: {
   children: ReactNode;
   active?: string;
@@ -37,15 +42,38 @@ export function Shell({
   onNavigate?: (target: AppView) => void;
   /** Barra da jornada ("Você está em" e "Entenda esta tela"); ligada nas Configurações. */
   showJourney?: boolean;
+  currentUser: AppUserProfile;
+  dailyBriefing: DailyBriefingData;
+  briefingReady?: boolean;
 }) {
   const context = useContext(ShellContext);
   const { preference, setPreference } = useTheme();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [briefingOpen, setBriefingOpen] = useState(false);
   const operations = useMemo(() => context?.operations ?? [], [context?.operations]);
   const openCount = operationCount ?? operations.filter(isOpen).length;
   const signals = useMemo(() => operationSignals(operations), [operations]);
+  const briefingStorageKey = `strato-daily-briefing-v1-${currentUser.id}`;
+  const closeBriefing = useCallback(() => {
+    setBriefingOpen(false);
+    try {
+      window.localStorage.setItem(briefingStorageKey, dailyBriefing.referenceDate);
+    } catch {
+      /* sem armazenamento: fecha apenas nesta sessão */
+    }
+  }, [briefingStorageKey, dailyBriefing.referenceDate]);
+  useEffect(() => {
+    if (!briefingReady) return;
+    try {
+      if (window.localStorage.getItem(briefingStorageKey) === dailyBriefing.referenceDate) return;
+    } catch {
+      /* sem armazenamento: ainda apresenta o resumo */
+    }
+    const timer = window.setTimeout(() => setBriefingOpen(true), 550);
+    return () => window.clearTimeout(timer);
+  }, [briefingReady, briefingStorageKey, dailyBriefing.referenceDate]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -160,12 +188,14 @@ export function Shell({
               )}
             </div>
             <UserMenu
+              user={currentUser}
               companyScope={companyScope}
               onCompanyScopeChange={onCompanyScopeChange}
               theme={preference}
               onTheme={setPreference}
               onOpenSettings={onOpenSettings}
               onResetDemo={context?.resetDemo}
+              onOpenDailyBriefing={() => setBriefingOpen(true)}
             />
           </div>
         </header>
@@ -223,6 +253,13 @@ export function Shell({
             setPaletteOpen(false);
             context?.resetDemo();
           }}
+        />
+      )}
+      {briefingOpen && (
+        <DailyBriefing
+          briefing={dailyBriefing}
+          onClose={closeBriefing}
+          onNavigate={view => (onNavigate ?? context?.navigate)?.(view)}
         />
       )}
     </div>

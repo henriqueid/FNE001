@@ -1,5 +1,12 @@
 # Changelog
 
+## Não lançado — 10/10/2026 · Abertura diária do Copiloto
+
+- Ao entrar no sistema, o Copiloto apresenta uma abertura do dia com prioridades, posição da carteira, vencidos e ritmo da meta de receita.
+- O resumo aparece automaticamente uma vez por dia e pode ser reaberto pelo menu do usuário.
+- A seleção dos dados respeita nível de acesso, departamento, responsabilidades, responsável operacional e vínculo comercial; o administrador recebe a visão consolidada.
+- A agenda permite seguir diretamente para operações, carteira, financeiro ou visão geral conforme a prioridade escolhida.
+
 ## Não lançado — 10/10/2026 · Copiloto operacional — experiência v3
 
 - Nova identidade visual para o Copiloto, com painel translúcido, cabeçalho STRATO Intelligence, abertura fluida e lançador com estados de atividade.

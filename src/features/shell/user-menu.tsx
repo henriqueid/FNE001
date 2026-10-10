@@ -5,9 +5,19 @@
  * aparência (claro, escuro, sistema), preferências e restaurar a demonstração.
  */
 import { type ThemePreference } from "./use-theme";
+import { type AppUserProfile } from "@/src/domain/copilot/daily-briefing";
 
 import { destinations } from "@/src/domain/core/demo/companies";
-import { CheckIcon, LayersIcon, MonitorIcon, MoonIcon, SlidersIcon, SunIcon, UndoIcon } from "@/src/ui/icons";
+import {
+  CheckIcon,
+  LayersIcon,
+  MonitorIcon,
+  MoonIcon,
+  SlidersIcon,
+  SparkIcon,
+  SunIcon,
+  UndoIcon,
+} from "@/src/ui/icons";
 import { useEffect, useRef, useState } from "react";
 
 export function initials(name: string) {
@@ -27,19 +37,23 @@ const themes: { id: ThemePreference; label: string; icon: React.ReactNode }[] = 
 ];
 
 export function UserMenu({
+  user,
   companyScope,
   onCompanyScopeChange,
   theme,
   onTheme,
   onOpenSettings,
   onResetDemo,
+  onOpenDailyBriefing,
 }: {
+  user: AppUserProfile;
   companyScope: string;
   onCompanyScopeChange?: (scope: string) => void;
   theme: ThemePreference;
   onTheme: (theme: ThemePreference) => void;
   onOpenSettings: () => void;
   onResetDemo?: () => void;
+  onOpenDailyBriefing?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -72,12 +86,12 @@ export function UserMenu({
         className="lx-user"
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label={`Henrique, ${scopeLabel}. Abrir menu do usuário`}
+        aria-label={`${user.name}, ${scopeLabel}. Abrir menu do usuário`}
         onClick={() => setOpen(v => !v)}
       >
-        <span className="lx-avatar">HF</span>
+        <span className="lx-avatar">{initials(user.name)}</span>
         <span className="lx-user-text">
-          <strong>Henrique</strong>
+          <strong>{user.name}</strong>
           <small>{scopeLabel}</small>
         </span>
         <i className="sx-trigger-caret" aria-hidden="true" />
@@ -85,10 +99,12 @@ export function UserMenu({
       {open && (
         <div className="lx-drop lx-user-menu" role="dialog" aria-label="Menu do usuário">
           <header>
-            <span className="lx-avatar">HF</span>
+            <span className="lx-avatar">{initials(user.name)}</span>
             <div>
-              <strong>Henrique</strong>
-              <small>Administrador · sessão de demonstração</small>
+              <strong>{user.name}</strong>
+              <small>
+                {user.role} · {user.department}
+              </small>
             </div>
           </header>
 
@@ -139,6 +155,17 @@ export function UserMenu({
           </section>
 
           <footer>
+            {onOpenDailyBriefing && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onOpenDailyBriefing();
+                }}
+              >
+                <SparkIcon /> Resumo do dia
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {

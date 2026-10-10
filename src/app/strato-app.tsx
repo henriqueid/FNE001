@@ -68,6 +68,7 @@ import {
   type TaskCommand,
   visibleTasksForUser,
 } from "@/src/domain/tasks/model";
+import { activeUser, seedAccessState } from "@/src/domain/access/model";
 
 const COMPANY_SCOPE_KEY = "strato-company-scope";
 
@@ -98,6 +99,8 @@ export default function StratoApp() {
   const [operationalDefaults, setOperationalDefaults] = useState(() => seedOperationalDefaults());
   const [tasks, setTasks] = useState(() => seedTaskState());
   const [taskClock, setTaskClock] = useState(() => Date.now());
+  const [access, setAccess] = useState(() => seedAccessState());
+  const currentUser = useMemo(() => activeUser(access), [access]);
   // Resultado financeiro de cada operação, pela mesma precificação da etapa Preço, para a Visão geral.
   const homeFinancials = useMemo(
     () =>
@@ -187,6 +190,7 @@ export default function StratoApp() {
     if (stored.integrations) setIntegrations(stored.integrations);
     if (stored.operationalDefaults) setOperationalDefaults(stored.operationalDefaults);
     if (stored.tasks) setTasks(stored.tasks);
+    if (stored.access) setAccess(stored.access);
     if (stored.guidance !== undefined) setShowGuidance(stored.guidance);
     if (stored.journey !== undefined) setShowJourney(stored.journey);
     try {
@@ -216,6 +220,7 @@ export default function StratoApp() {
         integrations,
         operationalDefaults,
         tasks,
+        access,
       });
   }, [
     operations,
@@ -228,6 +233,7 @@ export default function StratoApp() {
     integrations,
     operationalDefaults,
     tasks,
+    access,
     storageReady,
   ]);
 
@@ -310,6 +316,7 @@ export default function StratoApp() {
     setIntegrations(seedIntegrationState());
     setOperationalDefaults(seedOperationalDefaults());
     setTasks(seedTaskState());
+    setAccess(seedAccessState());
     setSelected(null);
   }
   function createOperation(input: NewOperationInput) {
@@ -432,7 +439,7 @@ export default function StratoApp() {
   const dailyBriefing = useMemo(
     () =>
       buildDailyBriefing({
-        user: demoAdminUser,
+        user: currentUser,
         operations,
         financials: homeFinancials,
         titles: portfolioTitles(operations),
@@ -440,9 +447,9 @@ export default function StratoApp() {
         revenueTarget: operationalDefaults.revenueGoals.consolidated.mes,
         scope: userScope,
       }),
-    [operations, homeFinancials, today, operationalDefaults.revenueGoals.consolidated.mes, userScope],
+    [operations, homeFinancials, today, operationalDefaults.revenueGoals.consolidated.mes, userScope, currentUser],
   );
-  const detectedAttentionItems = useMemo(
+  const systemAttentionItems = useMemo(
     () =>
       buildAttentionItems({
         operations,
@@ -453,20 +460,32 @@ export default function StratoApp() {
       }),
     [operations, today, userScope],
   );
+  const detectedAttentionItems = useMemo(
+    () =>
+      buildAttentionItems({
+        operations,
+        titles: portfolioTitles(operations),
+        user: currentUser,
+        referenceDate: today,
+        scope: userScope,
+      }),
+    [operations, today, userScope, currentUser],
+  );
   useEffect(() => {
     if (!storageReady) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reconcilia alertas automáticos com o histórico persistido
-    setTasks(current => reconcileTasks(current, detectedAttentionItems, new Date().toISOString()));
-  }, [detectedAttentionItems, storageReady]);
-  const taskItems = useMemo(
-    () =>
-      visibleTasksForUser(
-        managedTasks(tasks, detectedAttentionItems, new Date(taskClock).toISOString()),
-        demoAdminUser,
-        userScope,
-      ),
-    [tasks, detectedAttentionItems, taskClock, userScope],
-  );
+    setTasks(current => reconcileTasks(current, systemAttentionItems, new Date().toISOString()));
+  }, [systemAttentionItems, storageReady]);
+  const taskItems = useMemo(() => {
+    const allManaged = managedTasks(
+      tasks,
+      [...systemAttentionItems, ...detectedAttentionItems],
+      new Date(taskClock).toISOString(),
+    );
+    const visible = new Set(visibleTasksForUser(allManaged, currentUser, userScope).map(task => task.id));
+    const detected = new Set(detectedAttentionItems.map(item => item.id));
+    return allManaged.filter(task => visible.has(task.id) || detected.has(task.id));
+  }, [tasks, systemAttentionItems, detectedAttentionItems, taskClock, userScope, currentUser]);
   const attentionItems = useMemo(
     () => actionableAttentionItems(taskItems, new Date(taskClock).toISOString()),
     [taskItems, taskClock],
@@ -596,6 +615,8 @@ export default function StratoApp() {
         onIntegrations={setIntegrations}
         operationalDefaults={operationalDefaults}
         onOperationalDefaults={setOperationalDefaults}
+        access={access}
+        onAccess={setAccess}
       />
     );
   else if (view in roadmapViews) page = <ModuleRoadmap view={view as keyof typeof roadmapViews} />;
@@ -626,7 +647,7 @@ export default function StratoApp() {
                 onOpenSettings={openSettings}
                 onNavigate={navigate}
                 showJourney={showJourney}
-                currentUser={demoAdminUser}
+                currentUser={currentUser}
                 dailyBriefing={dailyBriefing}
                 attentionItems={attentionItems}
                 taskItems={taskItems}

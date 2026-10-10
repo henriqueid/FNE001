@@ -1,5 +1,13 @@
 # Changelog
 
+## Não lançado — 10/10/2026 · IA-0 — identidade, acesso e escopo
+
+- Nova central de usuários e acessos em Configurações, com função, departamento, nível de acesso, gestor direto, vínculo comercial e gerente da conta.
+- Escopo configurável por empresa ou veículo e permissões por ação, mantendo o administrador com acesso integral.
+- Modo de teste permite alternar a visão do usuário e conferir imediatamente como Copiloto, Central do Dia, carteira e alertas são filtrados.
+- A posição original do administrador foi preservada ao fim do teste; a entrega permanece como protótipo local até a conexão com autenticação e autorização no servidor.
+- Cinco testes novos cobrem permissões, escopo empresarial, atualização de perfil, troca de visão e migração do estado; suíte ampliada para 167 testes.
+
 ## Não lançado — 10/10/2026 · Central do Dia integrada
 
 - Copiloto e sino agora compartilham a mesma fila de atenção, atualizada automaticamente conforme operações e carteira mudam.

@@ -1,6 +1,6 @@
 # Plano técnico da estrutura de IA
 
-Status: plano técnico v1 concluído para orientar a implementação incremental  
+Status: plano técnico v1 concluído; execução incremental iniciada pela fundação IA-0
 Versão: 1.0 · 10/10/2026  
 Escopo: Copiloto operacional, Mesa Inteligente e processamento assistido de documentos
 
@@ -43,6 +43,20 @@ seleciona ferramentas autorizadas e apresenta os resultados.
 - Títulos, birô e resultados externos demonstrativos.
 - Sem autenticação, isolamento multiempresa, fila, backend ou auditoria persistente.
 - Sem avaliação contínua de qualidade, custos ou segurança das respostas.
+
+### Avanço de implementação · 10/10/2026
+
+A primeira entrega da fase **IA-0 — Fundação** já está disponível no protótipo:
+
+- cadastro central de usuários, função, departamento, nível de acesso e gestor direto;
+- vínculo do usuário com agente/comercial e gerente da conta;
+- escopo por empresa ou veículo e catálogo de permissões por ação;
+- simulação da visão de cada usuário para validar Copiloto, Central do Dia e alertas;
+- filtragem da carteira e das tarefas pelo perfil, departamento, responsabilidade operacional e vínculo comercial;
+- persistência e migração do estado de acesso no navegador, com cobertura automatizada das regras.
+
+Esta entrega valida o modelo funcional e a experiência. Autenticação real, autorização no servidor, isolamento
+multiempresa persistente e auditoria imutável continuam como próximos componentes da IA-0 antes do uso produtivo.
 
 ## 3. Princípios obrigatórios
 

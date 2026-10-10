@@ -18,6 +18,8 @@ export type AppUserProfile = {
   accountManagerId?: string;
   /** Cedentes atribuídos diretamente ao usuário, quando houver uma carteira nominal. */
   cedentDocuments?: string[];
+  /** Empresas e veículos liberados para este usuário. Vazio significa nenhum escopo. */
+  companyScopes?: string[];
   revenueGoalShare?: number;
 };
 
@@ -57,6 +59,7 @@ const digits = (value: string) => value.replace(/\D/g, "");
 
 export function operationBelongsToUser(operation: Operation, user: AppUserProfile, scope?: UserScopeContext) {
   if (user.access === "admin" || user.department === "Diretoria") return true;
+  if (user.companyScopes && !user.companyScopes.includes(operation.vehicle)) return false;
   const directDocuments = new Set((user.cedentDocuments ?? []).map(digits));
   if (directDocuments.has(digits(operation.document))) return true;
   const repId = operation.commercialRepId ?? scope?.repOfCedent?.(operation.document, scope.referenceDate);

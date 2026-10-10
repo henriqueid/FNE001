@@ -9,6 +9,8 @@ import { type IntegrationState, updateIntegrationMode } from "@/src/domain/integ
 import type { OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
 import { OperationalParametersEditor } from "@/src/features/registry/operational-parameters-editor";
 import { homeSettings, type HomePeriod } from "@/src/domain/home/settings";
+import { type AccessState } from "@/src/domain/access/model";
+import { UsersAccessPanel } from "./users-access-panel";
 
 const goalPeriods: Array<{ id: HomePeriod; label: string }> = [
   { id: "dia", label: "Dia" },
@@ -16,7 +18,7 @@ const goalPeriods: Array<{ id: HomePeriod; label: string }> = [
   { id: "mes", label: "Mês" },
 ];
 
-type SettingsSection = "overview" | "operational" | "policies" | "companies" | "integrations" | "interface";
+type SettingsSection = "overview" | "access" | "operational" | "policies" | "companies" | "integrations" | "interface";
 
 type SettingsItem = {
   id: SettingsSection;
@@ -32,7 +34,10 @@ const menuGroups: Array<{ label: string; items: SettingsItem[] }> = [
   },
   {
     label: "ESTRUTURA",
-    items: [{ id: "companies", label: "Empresas e veículos", description: "Ambiente multiempresa", marker: "02" }],
+    items: [
+      { id: "access", label: "Usuários e acesso", description: "Perfis, carteiras e permissões", marker: "02" },
+      { id: "companies", label: "Empresas e veículos", description: "Ambiente multiempresa", marker: "03" },
+    ],
   },
   {
     label: "RISCO E OPERAÇÕES",
@@ -41,18 +46,18 @@ const menuGroups: Array<{ label: string; items: SettingsItem[] }> = [
         id: "operational",
         label: "Padrões operacionais",
         description: "Taxas, tarifas, limites e lastro",
-        marker: "03",
+        marker: "04",
       },
-      { id: "policies", label: "Políticas e motor", description: "Regras, alçadas e vigências", marker: "04" },
+      { id: "policies", label: "Políticas e motor", description: "Regras, alçadas e vigências", marker: "05" },
     ],
   },
   {
     label: "CONEXÕES",
-    items: [{ id: "integrations", label: "Integrações", description: "Fontes de dados externas", marker: "05" }],
+    items: [{ id: "integrations", label: "Integrações", description: "Fontes de dados externas", marker: "06" }],
   },
   {
     label: "PREFERÊNCIAS",
-    items: [{ id: "interface", label: "Interface", description: "Orientação e visualização", marker: "06" }],
+    items: [{ id: "interface", label: "Interface", description: "Orientação e visualização", marker: "07" }],
   },
 ];
 
@@ -63,6 +68,13 @@ const shortcuts: Array<{
   description: string;
   action: string;
 }> = [
+  {
+    section: "access",
+    eyebrow: "IA-0 · FUNDAÇÃO",
+    title: "Usuários e acesso",
+    description: "Controle perfis, departamentos, carteiras, empresas e permissões efetivas.",
+    action: "Gerenciar acessos",
+  },
   {
     section: "operational",
     eyebrow: "OPERAÇÕES",
@@ -111,6 +123,8 @@ export default function SettingsModule({
   onIntegrations,
   operationalDefaults,
   onOperationalDefaults,
+  access,
+  onAccess,
 }: {
   policies: EligibilityPolicyState;
   onPolicies: (state: EligibilityPolicyState) => void;
@@ -122,6 +136,8 @@ export default function SettingsModule({
   onIntegrations: (state: IntegrationState) => void;
   operationalDefaults: OperationalDefaultsState;
   onOperationalDefaults: (state: OperationalDefaultsState) => void;
+  access: AccessState;
+  onAccess: (state: AccessState) => void;
 }) {
   const [section, setSection] = useState<SettingsSection>("overview");
   const activePolicies = policies.policies.filter(policy => policy.status === "ATIVA").length;
@@ -270,6 +286,8 @@ export default function SettingsModule({
           )}
 
           {section === "policies" && <PoliciesModule state={policies} onState={onPolicies} embedded />}
+
+          {section === "access" && <UsersAccessPanel state={access} onState={onAccess} />}
 
           {section === "operational" && (
             <div className="settings-section-card settings-operational-defaults">

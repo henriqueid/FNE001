@@ -7139,6 +7139,17 @@ table th {
   color: #16865c;
   background: rgb(22 134 92 / 10%);
 }
+.attn-list li[data-status="completed"] {
+  opacity: 0.68;
+}
+.attn-list li[data-status="completed"] .attn-task-icon {
+  color: #16865c;
+  background: rgb(22 134 92 / 10%);
+}
+.attn-list li[data-status="snoozed"] .attn-task-icon {
+  color: #6d5bd0;
+  background: rgb(109 91 208 / 11%);
+}
 .attn-task-icon svg {
   width: 18px;
   height: 18px;
@@ -7268,6 +7279,164 @@ table th {
   margin: 0;
   font-weight: 700;
   text-align: right;
+}
+.attn-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin: 14px 0;
+}
+.attn-actions button {
+  min-height: 37px;
+  padding: 7px 8px;
+  border: 1px solid var(--ds-border);
+  border-radius: 10px;
+  color: var(--ds-text-2);
+  background: var(--ds-elev);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.attn-actions button:hover {
+  border-color: color-mix(in srgb, var(--ds-accent) 38%, var(--ds-border));
+  background: var(--ds-surface-2);
+}
+.attn-actions button.is-primary {
+  border-color: #16865c;
+  color: #fff;
+  background: #16865c;
+}
+.attn-action-panel {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 16px;
+  padding: 13px;
+  border: 1px solid color-mix(in srgb, var(--ds-accent) 24%, var(--ds-border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ds-accent-soft) 28%, var(--ds-elev));
+  animation: attn-action-enter 0.18s ease-out;
+}
+@keyframes attn-action-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+.attn-action-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.attn-action-panel > header b {
+  font-size: 12px;
+}
+.attn-action-panel > header button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ds-text-3);
+  background: transparent;
+  cursor: pointer;
+}
+.attn-action-panel > header svg {
+  width: 14px;
+}
+.attn-action-panel label {
+  display: grid;
+  gap: 5px;
+  color: var(--ds-text-3);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.attn-action-panel select,
+.attn-action-panel input,
+.attn-action-panel textarea {
+  width: 100%;
+  border: 1px solid var(--ds-border);
+  border-radius: 9px;
+  color: var(--ds-text);
+  background: var(--ds-elev);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.attn-action-panel select,
+.attn-action-panel input {
+  height: 36px;
+  padding: 0 9px;
+}
+.attn-action-panel textarea {
+  min-height: 58px;
+  padding: 9px;
+  resize: vertical;
+}
+.attn-confirm-action {
+  min-height: 36px;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  background: var(--ds-accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.attn-history {
+  margin: 17px 0;
+  padding-top: 15px;
+  border-top: 1px solid var(--ds-border);
+}
+.attn-history > small {
+  color: var(--ds-text-3);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+.attn-history ol {
+  display: grid;
+  gap: 11px;
+  margin: 11px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.attn-history li {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr);
+  gap: 9px;
+}
+.attn-history li > i {
+  width: 7px;
+  height: 7px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--ds-accent);
+  box-shadow: 0 0 0 3px var(--ds-accent-soft);
+}
+.attn-history li div {
+  display: grid;
+  gap: 2px;
+}
+.attn-history li b {
+  font-size: 10.5px;
+}
+.attn-history li p {
+  margin: 0;
+  color: var(--ds-text-2);
+  font-size: 10px;
+  line-height: 1.35;
+}
+.attn-history li span {
+  color: var(--ds-text-3);
+  font-size: 9px;
 }
 .attn-open-tab {
   height: 44px;

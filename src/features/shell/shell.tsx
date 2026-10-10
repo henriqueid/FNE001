@@ -16,6 +16,7 @@ import { DailyBriefing } from "@/src/features/copilot/daily-briefing";
 import { type AppUserProfile, type DailyBriefingData } from "@/src/domain/copilot/daily-briefing";
 import { type AttentionItem } from "@/src/domain/copilot/attention-center";
 import { AttentionCenter } from "@/src/features/copilot/attention-center";
+import { type ManagedTask, type TaskCommand } from "@/src/domain/tasks/model";
 
 import { BellIcon, CloseIcon, MenuIcon, SearchIcon } from "@/src/ui/icons";
 import { type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -45,6 +46,8 @@ export function Shell({
   currentUser,
   dailyBriefing,
   attentionItems,
+  taskItems,
+  onTaskCommand,
   briefingReady = false,
 }: {
   children: ReactNode;
@@ -59,6 +62,8 @@ export function Shell({
   currentUser: AppUserProfile;
   dailyBriefing: DailyBriefingData;
   attentionItems: AttentionItem[];
+  taskItems: ManagedTask[];
+  onTaskCommand: (id: string, command: TaskCommand) => void;
   briefingReady?: boolean;
 }) {
   const context = useContext(ShellContext);
@@ -340,11 +345,13 @@ export function Shell({
       )}
       {attentionOpen && (
         <AttentionCenter
-          items={attentionItems}
+          items={taskItems}
           briefing={dailyBriefing}
+          currentUser={currentUser}
           initialItemId={attentionSelectedId}
           onClose={() => setAttentionOpen(false)}
           onOpenTask={openTask}
+          onTaskCommand={onTaskCommand}
         />
       )}
     </div>

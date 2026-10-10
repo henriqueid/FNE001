@@ -59,6 +59,14 @@ import { IntegrationProvider } from "./integration-context";
 import { seedOperationalDefaults } from "@/src/domain/registry/operational-profile";
 import { buildDailyBriefing, demoAdminUser } from "@/src/domain/copilot/daily-briefing";
 import { buildAttentionItems } from "@/src/domain/copilot/attention-center";
+import {
+  actionableAttentionItems,
+  applyTaskCommand,
+  managedTasks,
+  reconcileTasks,
+  seedTaskState,
+  type TaskCommand,
+} from "@/src/domain/tasks/model";
 
 const COMPANY_SCOPE_KEY = "strato-company-scope";
 
@@ -87,6 +95,8 @@ export default function StratoApp() {
   const [policies, setPolicies] = useState(() => seedEligibilityPolicies());
   const [integrations, setIntegrations] = useState(() => seedIntegrationState());
   const [operationalDefaults, setOperationalDefaults] = useState(() => seedOperationalDefaults());
+  const [tasks, setTasks] = useState(() => seedTaskState());
+  const [taskClock, setTaskClock] = useState(() => Date.now());
   // Resultado financeiro de cada operação, pela mesma precificação da etapa Preço, para a Visão geral.
   const homeFinancials = useMemo(
     () =>
@@ -175,6 +185,7 @@ export default function StratoApp() {
     if (stored.policies) setPolicies(stored.policies);
     if (stored.integrations) setIntegrations(stored.integrations);
     if (stored.operationalDefaults) setOperationalDefaults(stored.operationalDefaults);
+    if (stored.tasks) setTasks(stored.tasks);
     if (stored.guidance !== undefined) setShowGuidance(stored.guidance);
     if (stored.journey !== undefined) setShowJourney(stored.journey);
     try {
@@ -203,6 +214,7 @@ export default function StratoApp() {
         policies,
         integrations,
         operationalDefaults,
+        tasks,
       });
   }, [
     operations,
@@ -214,6 +226,7 @@ export default function StratoApp() {
     policies,
     integrations,
     operationalDefaults,
+    tasks,
     storageReady,
   ]);
 
@@ -224,6 +237,11 @@ export default function StratoApp() {
   useEffect(() => {
     if (storageReady) saveJourneyBar(showJourney);
   }, [showJourney, storageReady]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setTaskClock(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!storageReady) return;
@@ -290,6 +308,7 @@ export default function StratoApp() {
     setPolicies(seedEligibilityPolicies());
     setIntegrations(seedIntegrationState());
     setOperationalDefaults(seedOperationalDefaults());
+    setTasks(seedTaskState());
     setSelected(null);
   }
   function createOperation(input: NewOperationInput) {
@@ -413,7 +432,7 @@ export default function StratoApp() {
       }),
     [operations, homeFinancials, today, operationalDefaults.revenueGoals.consolidated.mes],
   );
-  const attentionItems = useMemo(
+  const detectedAttentionItems = useMemo(
     () =>
       buildAttentionItems({
         operations,
@@ -423,6 +442,21 @@ export default function StratoApp() {
       }),
     [operations, today],
   );
+  useEffect(() => {
+    if (!storageReady) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reconcilia alertas automáticos com o histórico persistido
+    setTasks(current => reconcileTasks(current, detectedAttentionItems, new Date().toISOString()));
+  }, [detectedAttentionItems, storageReady]);
+  const taskItems = useMemo(
+    () => managedTasks(tasks, detectedAttentionItems, new Date(taskClock).toISOString()),
+    [tasks, detectedAttentionItems, taskClock],
+  );
+  const attentionItems = useMemo(
+    () => actionableAttentionItems(taskItems, new Date(taskClock).toISOString()),
+    [taskItems, taskClock],
+  );
+  const runTaskCommand = (id: string, command: TaskCommand) =>
+    setTasks(current => applyTaskCommand(current, id, command, new Date().toISOString()));
   const shellContext = {
     operations,
     navigate,
@@ -579,6 +613,8 @@ export default function StratoApp() {
                 currentUser={demoAdminUser}
                 dailyBriefing={dailyBriefing}
                 attentionItems={attentionItems}
+                taskItems={taskItems}
+                onTaskCommand={runTaskCommand}
                 briefingReady={storageReady}
               >
                 {page}

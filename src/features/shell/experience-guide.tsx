@@ -1,6 +1,8 @@
 "use client";
 
 import { type Operation } from "@/src/domain/core/types";
+import { type AttentionItem } from "@/src/domain/copilot/attention-center";
+import { type DailyBriefingData } from "@/src/domain/copilot/daily-briefing";
 import { operationalSuggestion } from "@/src/domain/copilot/operational-suggestion";
 import { Copilot } from "@/src/features/copilot/copilot";
 import { ArrowIcon, CheckIcon } from "@/src/ui/icons";
@@ -82,11 +84,17 @@ export function ExperienceGuide({
   active,
   operations,
   signals,
+  dailyBriefing,
+  attentionItems,
+  onOpenAttention,
   onNavigate,
 }: {
   active: string;
   operations: Operation[];
   signals: Signal[];
+  dailyBriefing: DailyBriefingData;
+  attentionItems: AttentionItem[];
+  onOpenAttention: (itemId?: string) => void;
   onNavigate: (view: AppView) => void;
   showJourney: boolean;
 }) {
@@ -171,6 +179,9 @@ export function ExperienceGuide({
       )}
 
       <Copilot
+        dailyBriefing={dailyBriefing}
+        attentionItems={attentionItems}
+        onOpenAttention={onOpenAttention}
         suggestion={{
           title: suggestion.title,
           body: suggestion.body,

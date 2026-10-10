@@ -6,6 +6,7 @@
 import { money } from "@/src/domain/core/format";
 import { stages } from "@/src/domain/core/stages";
 import { type Operation } from "@/src/domain/core/types";
+import { type AttentionItem } from "@/src/domain/copilot/attention-center";
 import { AlertIcon, ArrowIcon, ClockIcon } from "@/src/ui/icons";
 import { useEffect, useRef } from "react";
 
@@ -55,14 +56,14 @@ export function operationSignals(operations: Operation[]): Signal[] {
 }
 
 export function NotificationsPopover({
-  signals,
+  items,
   onClose,
-  onOpen,
+  onInspect,
   onSeeAll,
 }: {
-  signals: Signal[];
+  items: AttentionItem[];
   onClose: () => void;
-  onOpen: (operation: Operation) => void;
+  onInspect: (item: AttentionItem) => void;
   onSeeAll: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -81,39 +82,39 @@ export function NotificationsPopover({
     };
   }, [onClose]);
   return (
-    <div className="sx-popover" ref={ref} role="dialog" aria-label="Alertas operacionais">
+    <div className="sx-popover" ref={ref} role="dialog" aria-label="Central de notificações">
       <header>
-        <strong>Alertas operacionais</strong>
-        <small>{signals.length ? `${signals.length} item(ns) pedem atenção` : "Nenhum alerta"}</small>
+        <strong>Central de notificações</strong>
+        <small>
+          {items.length
+            ? items.length === 1
+              ? "1 tarefa pede atenção"
+              : `${items.length} tarefas pedem atenção`
+            : "Seu dia está em ordem"}
+        </small>
       </header>
-      {signals.length ? (
+      {items.length ? (
         <ul>
-          {signals.slice(0, 6).map(signal => (
-            <li key={signal.id}>
-              <button type="button" onClick={() => onOpen(signal.operation)}>
-                <span className={`sx-signal ${signal.tone}`}>
-                  {signal.tone === "critical" ? (
-                    <AlertIcon />
-                  ) : signal.tone === "warning" ? (
-                    <ClockIcon />
-                  ) : (
-                    <ArrowIcon />
-                  )}
+          {items.slice(0, 6).map(item => (
+            <li key={item.id}>
+              <button type="button" onClick={() => onInspect(item)}>
+                <span className={`sx-signal ${item.tone}`}>
+                  {item.tone === "critical" ? <AlertIcon /> : item.tone === "warning" ? <ClockIcon /> : <ArrowIcon />}
                 </span>
                 <span>
-                  <b>{signal.title}</b>
-                  <small>{signal.detail}</small>
+                  <b>{item.title}</b>
+                  <small>{item.summary}</small>
                 </span>
               </button>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="sx-empty">Nenhuma operação com bloqueio, liberação pendente ou ritmo fora do padrão.</p>
+        <p className="sx-empty">Nenhuma decisão, atraso, liberação ou cobrança pendente no seu escopo.</p>
       )}
       <footer>
         <button type="button" onClick={onSeeAll}>
-          Abrir Central de Operações <ArrowIcon />
+          Abrir Central do Dia <ArrowIcon />
         </button>
       </footer>
     </div>

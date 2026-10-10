@@ -9,13 +9,15 @@
 import { useEligibilityPolicies } from "@/src/app/eligibility-policy-context";
 import { useCedents } from "@/src/app/registry-context";
 import { deskSuggestions } from "@/src/domain/copilot/desk-assistant";
+import { type AttentionItem } from "@/src/domain/copilot/attention-center";
+import { type DailyBriefingData } from "@/src/domain/copilot/daily-briefing";
 import { type SystemKnowledge, systemSuggestions } from "@/src/domain/copilot/system-query";
 import { masterRuleCatalog } from "@/src/domain/eligibility/master-rule-catalog";
 import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
 import { seedEligibilityPolicies } from "@/src/domain/eligibility/policy-library";
 import { isoDate, portfolioTitles } from "@/src/domain/home/metrics";
 import { ShellContext } from "@/src/features/shell/shell-context";
-import { CloseIcon, ExpandIcon, SendIcon, SparkIcon, UndoIcon } from "@/src/ui/icons";
+import { ArrowIcon, CloseIcon, ExpandIcon, SendIcon, SparkIcon, UndoIcon } from "@/src/ui/icons";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { CopilotAnalysis } from "./copilot-analysis";
 import { type CopilotSuggestion, ProgressCard, ReplyBubble, ResultCard, StartCard } from "./copilot-thread";
@@ -23,7 +25,17 @@ import { useCopilotDesk } from "./use-copilot-desk";
 
 export type { CopilotSuggestion } from "./copilot-thread";
 
-export function Copilot({ suggestion }: { suggestion?: CopilotSuggestion }) {
+export function Copilot({
+  suggestion,
+  dailyBriefing,
+  attentionItems,
+  onOpenAttention,
+}: {
+  suggestion?: CopilotSuggestion;
+  dailyBriefing: DailyBriefingData;
+  attentionItems: AttentionItem[];
+  onOpenAttention: (itemId?: string) => void;
+}) {
   const cedents = useCedents();
   const operations = useContext(ShellContext)?.operations;
   const policies = useEligibilityPolicies();
@@ -46,6 +58,14 @@ export function Copilot({ suggestion }: { suggestion?: CopilotSuggestion }) {
   const threadRef = useRef<HTMLDivElement>(null);
   const cedent = cedents.find(item => item.id === (desk.cedent || cedents[0]?.id));
   const hasResult = desk.scenarios.length > 0;
+  const criticalCount = attentionItems.filter(item => item.tone === "critical").length;
+  const attentionReminder = criticalCount
+    ? criticalCount === 1
+      ? "1 decisão aguarda você"
+      : `${criticalCount} decisões aguardam você`
+    : attentionItems.length === 1
+      ? "1 tarefa ainda pede atenção"
+      : `${attentionItems.length} tarefas ainda pedem atenção`;
   const { clearUnread } = desk;
 
   useEffect(() => {
@@ -207,6 +227,24 @@ export function Copilot({ suggestion }: { suggestion?: CopilotSuggestion }) {
               <CloseIcon />
             </button>
           </header>
+          <button type="button" className="cpl-live-day" onClick={() => onOpenAttention()}>
+            <span className="cpl-live-day-icon">
+              <SparkIcon />
+            </span>
+            <span>
+              <small>SEU DIA · ATUALIZADO AGORA</small>
+              <b>
+                {attentionItems.length
+                  ? `${attentionItems.length} tarefas pedem sua atenção`
+                  : "Nenhuma pendência crítica"}
+              </b>
+            </span>
+            <span className="cpl-live-day-meta">
+              <b>{Math.round(dailyBriefing.revenueAttainment)}%</b>
+              <small>da meta</small>
+            </span>
+            <ArrowIcon />
+          </button>
           {expanded ? (
             <div className="cpl-split">
               <CopilotAnalysis desk={desk} cedent={cedent} knowledge={knowledge} />
@@ -232,11 +270,20 @@ export function Copilot({ suggestion }: { suggestion?: CopilotSuggestion }) {
         onClick={() => setOpen(value => !value)}
       >
         {open ? <CloseIcon /> : <SparkIcon />}
-        {!open && desk.unread && <i className="cpl-badge" aria-hidden="true" />}
+        {!open && (desk.unread || attentionItems.length > 0) && (
+          <i className="cpl-badge" aria-label={`${attentionItems.length} tarefas pendentes`}>
+            {attentionItems.length || ""}
+          </i>
+        )}
       </button>
-      {!open && desk.unread && (
-        <button type="button" className="cpl-nudge" onClick={() => setOpen(true)}>
-          {desk.waitingAuth ? "Preciso da sua autorização" : "Análise concluída"}
+      {!open && (desk.unread || attentionItems.length > 0) && (
+        <button
+          type="button"
+          className="cpl-nudge"
+          data-tone={criticalCount ? "critical" : undefined}
+          onClick={() => (desk.unread ? setOpen(true) : onOpenAttention(attentionItems[0]?.id))}
+        >
+          {desk.waitingAuth ? "Preciso da sua autorização" : desk.unread ? "Análise concluída" : attentionReminder}
         </button>
       )}
     </>

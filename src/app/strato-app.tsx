@@ -14,7 +14,7 @@ import { OperationWorkspace } from "@/src/features/operations/workspace/operatio
 import CommercialModule from "@/src/features/commercial/commercial-module";
 import FinanceModule from "@/src/features/finance/finance-module";
 import HomeDashboard from "@/src/features/home/home-dashboard";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   clearPersistedState,
   loadPersistedState,
@@ -58,10 +58,12 @@ import { seedIntegrationState } from "@/src/domain/integrations/model";
 import { IntegrationProvider } from "./integration-context";
 import { seedOperationalDefaults } from "@/src/domain/registry/operational-profile";
 import { buildDailyBriefing, demoAdminUser } from "@/src/domain/copilot/daily-briefing";
+import { buildAttentionItems } from "@/src/domain/copilot/attention-center";
 
 const COMPANY_SCOPE_KEY = "strato-company-scope";
 
 export default function StratoApp() {
+  const deepLinkHandled = useRef(false);
   const [operations, setOperations] = useState(initialOperations);
   const [debtors, setDebtors] = useState(initialDebtors);
   const [selected, setSelected] = useState<Operation | null>(null);
@@ -232,6 +234,34 @@ export default function StratoApp() {
     }
   }, [companyScope, storageReady]);
 
+  useEffect(() => {
+    if (!storageReady || deepLinkHandled.current) return;
+    deepLinkHandled.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const operationId = params.get("operation");
+    const targetView = params.get("view") as AppView | null;
+    const operation = operationId ? operations.find(item => item.id === operationId) : undefined;
+    if (operation) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- aplica uma única vez o endereço de uma aba de trabalho compartilhada
+      setSelected(operation);
+      setView("operations");
+      return;
+    }
+    const validViews: AppView[] = [
+      "home",
+      "operations",
+      "controlleria",
+      "portfolio",
+      "commercial",
+      "finance",
+      "registry",
+      "policies",
+      "integrations",
+      "settings",
+    ];
+    if (targetView && validViews.includes(targetView)) setView(targetView);
+  }, [storageReady, operations]);
+
   function updateOperation(updated: Operation) {
     setOperations(current => current.map(operation => (operation.id === updated.id ? updated : operation)));
     setSelected(updated);
@@ -382,6 +412,16 @@ export default function StratoApp() {
         revenueTarget: operationalDefaults.revenueGoals.consolidated.mes,
       }),
     [operations, homeFinancials, today, operationalDefaults.revenueGoals.consolidated.mes],
+  );
+  const attentionItems = useMemo(
+    () =>
+      buildAttentionItems({
+        operations,
+        titles: portfolioTitles(operations),
+        user: demoAdminUser,
+        referenceDate: today,
+      }),
+    [operations, today],
   );
   const shellContext = {
     operations,
@@ -538,6 +578,7 @@ export default function StratoApp() {
                 showJourney={showJourney}
                 currentUser={demoAdminUser}
                 dailyBriefing={dailyBriefing}
+                attentionItems={attentionItems}
                 briefingReady={storageReady}
               >
                 {page}

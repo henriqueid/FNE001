@@ -1,5 +1,13 @@
 # Changelog
 
+## Não lançado — 10/10/2026 · Central do Dia integrada
+
+- Copiloto e sino agora compartilham a mesma fila de atenção, atualizada automaticamente conforme operações e carteira mudam.
+- A Central do Dia organiza decisões, liberações, desvios de ritmo e cobrança com filtros, impacto, responsável e próxima melhor ação.
+- O Copiloto mantém o resumo acessível durante todo o expediente, exibe a quantidade pendente e lembra o usuário das decisões prioritárias.
+- Cada tarefa pode ser aberta em uma aba de trabalho interna, preservando a tela de origem e permitindo alternar ou fechar atividades sem perder contexto.
+- A fila respeita perfil, departamento, responsável operacional e vínculo comercial do usuário.
+
 ## Não lançado — 10/10/2026 · Abertura diária do Copiloto
 
 - Ao entrar no sistema, o Copiloto apresenta uma abertura do dia com prioridades, posição da carteira, vencidos e ritmo da meta de receita.

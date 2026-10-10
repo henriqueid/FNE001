@@ -18,10 +18,12 @@ export function DailyBriefing({
   briefing,
   onClose,
   onNavigate,
+  onOpenAttention,
 }: {
   briefing: DailyBriefingData;
   onClose: () => void;
   onNavigate: (view: AppView) => void;
+  onOpenAttention: () => void;
 }) {
   const firstName = briefing.user.name.split(" ")[0];
   useEffect(() => {
@@ -35,6 +37,10 @@ export function DailyBriefing({
     onNavigate(view);
   };
   const firstPriority = briefing.priorities[0];
+  const openAttention = () => {
+    onClose();
+    onOpenAttention();
+  };
   return (
     <div className="cpl-day-backdrop" role="presentation">
       <section className="cpl-day" role="dialog" aria-modal="true" aria-labelledby="cpl-day-title">
@@ -125,7 +131,7 @@ export function DailyBriefing({
               <ol>
                 {briefing.priorities.map((priority, index) => (
                   <li key={priority.id} data-tone={priority.tone}>
-                    <button type="button" onClick={() => go(priority.view)}>
+                    <button type="button" onClick={openAttention}>
                       <i>{String(index + 1).padStart(2, "0")}</i>
                       <span>
                         <b>{priority.title}</b>
@@ -172,7 +178,11 @@ export function DailyBriefing({
             <button type="button" className="cpl-day-secondary" onClick={() => go("home")}>
               Ver visão geral
             </button>
-            <button type="button" className="cpl-day-primary" onClick={() => go(firstPriority?.view ?? "home")}>
+            <button
+              type="button"
+              className="cpl-day-primary"
+              onClick={firstPriority ? openAttention : () => go("home")}
+            >
               Começar pelas prioridades <ArrowIcon />
             </button>
           </div>

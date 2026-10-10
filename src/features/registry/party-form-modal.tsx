@@ -32,11 +32,48 @@ type Props = {
 
 const areas = ["Operações", "Financeiro", "Cobrança", "Jurídico", "Contabilidade", "Diretoria"];
 const newId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 8)}`;
+const auditFieldLabels: Record<string, string> = {
+  cadastro: "Cadastro",
+  kind: "Tipo de pessoa",
+  document: "CPF/CNPJ",
+  name: "Razão social / nome",
+  tradeName: "Nome fantasia",
+  birthOrFoundation: "Nascimento / abertura",
+  stateRegistration: "Inscrição estadual",
+  email: "E-mail principal",
+  phone: "Telefone",
+  roles: "Papéis",
+  status: "Situação",
+  inactiveReason: "Motivo da inativação",
+  notes: "Observações",
+  "address.zipCode": "Endereço · CEP",
+  "address.street": "Endereço · logradouro",
+  "address.number": "Endereço · número",
+  "address.complement": "Endereço · complemento",
+  "address.district": "Endereço · bairro",
+  "address.city": "Endereço · cidade",
+  "address.state": "Endereço · UF",
+  "roleData.cedente.creditLimit": "Cedente · limite de crédito",
+  "roleData.cedente.monthlyRate": "Cedente · taxa mensal",
+  "roleData.cedente.repId": "Cedente · comercial responsável",
+  "roleData.cedente.contractUntil": "Cedente · vigência do contrato",
+  "roleData.cedente.guarantee": "Cedente · garantia",
+  "roleData.sacado.creditLimit": "Sacado · limite de crédito",
+  "roleData.sacado.confirmationContact": "Sacado · contato de confirmação",
+};
+const auditFieldLabel = (field: string) =>
+  auditFieldLabels[field] ??
+  field
+    .replace(/^roleData\./, "")
+    .replace(/^contacts\[/, "Contato [")
+    .replace(/^bankAccounts\[/, "Conta bancária [")
+    .replaceAll(".", " · ");
 
 export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Props) {
   const { parties, saveParty } = useRegistry();
   const [draft, setDraft] = useState<Party>(party);
   const [error, setError] = useState("");
+  const [changeReason, setChangeReason] = useState("");
   const [attempted, setAttempted] = useState(false);
   const set = (patch: Partial<Party>) => setDraft(current => ({ ...current, ...patch }));
   const setAddress = (patch: Partial<Party["address"]>) =>
@@ -72,8 +109,12 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
 
   function submit() {
     setAttempted(true);
+    if (!isNew && !changeReason.trim()) {
+      setError("Informe o motivo da alteração para manter a auditoria.");
+      return;
+    }
     if (issues.some(i => i.blocking)) return;
-    const result = saveParty(draft);
+    const result = saveParty(draft, changeReason);
     if (result.error) {
       setError(result.error);
       return;
@@ -410,20 +451,35 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
             <Field label="Observações" wide>
               <textarea id="party-notes" rows={3} value={draft.notes} onChange={e => set({ notes: e.target.value })} />
             </Field>
+            {!isNew && (
+              <Field label="Motivo da alteração" wide hint="Obrigatório. Será gravado em cada campo alterado.">
+                <textarea
+                  id="party-change-reason"
+                  rows={2}
+                  value={changeReason}
+                  onChange={e => {
+                    setChangeReason(e.target.value);
+                    setError("");
+                  }}
+                  placeholder="Ex.: atualização solicitada pelo cliente em 09/10/2026"
+                />
+              </Field>
+            )}
           </div>
-          {draft.history.length > 0 && (
+          {(draft.history ?? []).length > 0 && (
             <ul className="rg-list rg-history">
-              {draft.history
-                .slice(-5)
-                .reverse()
-                .map((h, i) => (
-                  <li key={i}>
-                    <span>{br(h.at)}</span>
-                    <b>
-                      {h.action} · {h.by}
-                    </b>
-                  </li>
-                ))}
+              {[...(draft.history ?? [])].reverse().map((h, i) => (
+                <li key={i}>
+                  <span>
+                    {br(h.at)} · {h.by}
+                  </span>
+                  <b>
+                    {h.field ? `${auditFieldLabel(h.field)}: ${h.from ?? "—"} → ${h.to ?? "—"}` : h.action}
+                    {h.reason && <small> · {h.reason}</small>}
+                    {h.origin && <small> · origem: {h.origin}</small>}
+                  </b>
+                </li>
+              ))}
             </ul>
           )}
         </fieldset>

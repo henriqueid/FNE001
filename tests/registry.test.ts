@@ -11,7 +11,7 @@ import {
   seedParties,
   validateParty,
 } from "@/src/domain/registry/parties";
-import { saveParty } from "@/src/domain/registry/party-save";
+import { partyChanges, saveParty } from "@/src/domain/registry/party-save";
 import { describe, expect, it } from "vitest";
 
 describe("documentos", () => {
@@ -104,5 +104,79 @@ describe("gravação e propagação", () => {
     const party = { ...emptyParty("fornecedor"), document: "123", name: "X" };
     const result = saveParty({ ...base, party, all: [...all, party] });
     expect(result.ok).toBe(false);
+  });
+  it("grava uma linha imutável por campo alterado com autor, motivo e origem", () => {
+    const original = {
+      ...emptyParty("fornecedor"),
+      id: "auditado",
+      document: "11.222.333/0001-81",
+      name: "Fornecedor Original",
+      email: "antes@exemplo.com",
+    };
+    const party = { ...original, name: "Fornecedor Atualizado", email: "depois@exemplo.com" };
+    const result = saveParty({
+      ...base,
+      saved: [original],
+      all: [party],
+      party,
+      reason: "Correção solicitada pelo fornecedor",
+      source: "Cadastro",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const entries = result.saved[0].history;
+    expect(entries).toHaveLength(2);
+    expect(entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "name",
+          from: "Fornecedor Original",
+          to: "Fornecedor Atualizado",
+          by: "Teste",
+          at: "2026-09-30",
+          reason: "Correção solicitada pelo fornecedor",
+          origin: "Cadastro",
+        }),
+        expect.objectContaining({ field: "email", from: "antes@exemplo.com", to: "depois@exemplo.com" }),
+      ]),
+    );
+  });
+  it("preserva histórico antigo e exige motivo em edições", () => {
+    const original = {
+      ...emptyParty("fornecedor"),
+      id: "legado",
+      document: "11.222.333/0001-81",
+      name: "Fornecedor",
+      history: [{ at: "2026-01-01", by: "Sistema", action: "Cadastro importado" }],
+    };
+    const party = { ...original, phone: "11999999999" };
+    const withoutReason = saveParty({ ...base, saved: [original], all: [party], party });
+    expect(withoutReason).toEqual({ ok: false, error: "Informe o motivo da alteração para manter a auditoria." });
+    const withReason = saveParty({ ...base, saved: [original], all: [party], party, reason: "Contato atualizado" });
+    expect(withReason.ok).toBe(true);
+    if (withReason.ok) {
+      expect(withReason.saved[0].history[0]).toEqual(original.history[0]);
+      expect(withReason.saved[0].history[1]).toEqual(expect.objectContaining({ field: "phone" }));
+    }
+  });
+  it("detecta alterações em campos aninhados e valores removidos", () => {
+    const before = {
+      ...emptyParty("cedente"),
+      address: { ...emptyParty().address, city: "Curitiba", state: "PR" },
+      notes: "Observação anterior",
+    };
+    const after = {
+      ...before,
+      address: { ...before.address, city: "São Paulo" },
+      notes: "",
+      roleData: { ...before.roleData, cedente: { ...before.roleData.cedente!, creditLimit: 250000 } },
+    };
+    expect(partyChanges(before, after)).toEqual(
+      expect.arrayContaining([
+        { field: "address.city", from: "Curitiba", to: "São Paulo" },
+        { field: "notes", from: "Observação anterior", to: "—" },
+        { field: "roleData.cedente.creditLimit", from: "0", to: "250000" },
+      ]),
+    );
   });
 });

@@ -20,7 +20,7 @@ export type RegistryValue = {
   /** Pessoas do Cadastro (salvas + derivadas dos módulos), uma por documento. */
   parties: Party[];
   /** Valida, grava e propaga para Operação, Comercial e sacados. */
-  saveParty: (party: Party) => { error?: string; message?: string };
+  saveParty: (party: Party, reason?: string) => { error?: string; message?: string };
 };
 
 export const RegistryContext = createContext<RegistryValue | null>(null);

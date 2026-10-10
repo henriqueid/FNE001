@@ -322,7 +322,7 @@ export default function StratoApp() {
         return commercialLive.reps.find(rep => rep.id === id);
       },
       parties,
-      saveParty: party => {
+      saveParty: (party, reason) => {
         const result = savePartyRecord({
           party,
           saved: savedParties,
@@ -331,6 +331,8 @@ export default function StratoApp() {
           commercial,
           today,
           by: "Henrique",
+          reason,
+          source: "Cadastro",
         });
         if (!result.ok) return { error: result.error };
         setSavedParties(result.saved);

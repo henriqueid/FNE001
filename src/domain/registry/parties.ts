@@ -109,6 +109,21 @@ export type PartyRoleData = {
   prestador?: ProviderRoleData;
 };
 
+/**
+ * Evento imutável da ficha cadastral. Os campos detalhados são opcionais para
+ * manter compatibilidade com históricos gravados antes da auditoria por campo.
+ */
+export type PartyHistoryEntry = {
+  at: string;
+  by: string;
+  action: string;
+  field?: string;
+  from?: string;
+  to?: string;
+  reason?: string;
+  origin?: string;
+};
+
 export type Party = {
   id: string;
   kind: PersonKind;
@@ -131,7 +146,7 @@ export type Party = {
   origin: "Cadastro" | "Operações" | "Comercial";
   createdAt: string;
   updatedAt: string;
-  history: { at: string; by: string; action: string }[];
+  history: PartyHistoryEntry[];
 };
 
 /* ---------------------------------------------------------------- documentos */

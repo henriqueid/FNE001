@@ -7,7 +7,14 @@ import { linkClient, saveRep, transferClient } from "@/src/domain/commercial/act
 import { repAt } from "@/src/domain/commercial/rules";
 import type { CommercialState } from "@/src/domain/commercial/types";
 import type { Debtor } from "@/src/domain/core/types";
-import { onlyDigits, partyToDebtor, partyToSalesRep, validateParty, type Party } from "./parties";
+import {
+  onlyDigits,
+  partyToDebtor,
+  partyToSalesRep,
+  validateParty,
+  type Party,
+  type PartyHistoryEntry,
+} from "./parties";
 
 export type PartySaveInput = {
   party: Party;
@@ -17,24 +24,77 @@ export type PartySaveInput = {
   commercial: CommercialState;
   today: string;
   by: string;
+  reason?: string;
+  source?: string;
 };
 export type PartySaveResult =
   | { ok: false; error: string }
   | { ok: true; saved: Party[]; debtors: Debtor[]; commercial: CommercialState; message: string };
 
-export function saveParty({ party, saved, all, debtors, commercial, today, by }: PartySaveInput): PartySaveResult {
+const auditIgnored = new Set(["history", "createdAt", "updatedAt", "origin"]);
+
+function auditValue(value: unknown): string {
+  if (value === undefined || value === null || value === "") return "—";
+  if (typeof value === "boolean") return value ? "Sim" : "Não";
+  if (typeof value === "number") return String(value);
+  return String(value);
+}
+
+function flattenParty(value: unknown, path = "", target = new Map<string, string>()): Map<string, string> {
+  if (Array.isArray(value)) {
+    if (value.every(item => typeof item !== "object" || item === null)) {
+      target.set(path, value.length ? value.map(auditValue).join(", ") : "—");
+      return target;
+    }
+    value.forEach((item, index) => {
+      const key = typeof item === "object" && item && "id" in item ? String(item.id) : String(index + 1);
+      flattenParty(item, `${path}[${key}]`, target);
+    });
+    if (!value.length) target.set(path, "—");
+    return target;
+  }
+  if (typeof value === "object" && value !== null) {
+    Object.entries(value).forEach(([key, child]) => {
+      if (!path && auditIgnored.has(key)) return;
+      if (key === "id" && path.includes("[")) return;
+      flattenParty(child, path ? `${path}.${key}` : key, target);
+    });
+    return target;
+  }
+  target.set(path, auditValue(value));
+  return target;
+}
+
+export function partyChanges(before: Party, after: Party) {
+  const previous = flattenParty(before);
+  const current = flattenParty(after);
+  return [...new Set([...previous.keys(), ...current.keys()])]
+    .map(field => ({ field, from: previous.get(field) ?? "—", to: current.get(field) ?? "—" }))
+    .filter(change => change.from !== change.to);
+}
+
+export function saveParty({
+  party,
+  saved,
+  all,
+  debtors,
+  commercial,
+  today,
+  by,
+  reason,
+  source = "Cadastro",
+}: PartySaveInput): PartySaveResult {
   const blocking = validateParty(party, all).filter(issue => issue.blocking);
   if (blocking.length) return { ok: false, error: blocking[0].message };
 
-  const isNew = !saved.some(p => p.id === party.id);
+  const previous = saved.find(p => p.id === party.id);
+  const isNew = !previous;
+  if (!isNew && !reason?.trim()) return { ok: false, error: "Informe o motivo da alteração para manter a auditoria." };
   let next: Party = {
     ...party,
     origin: "Cadastro",
     updatedAt: today,
-    history: [
-      ...party.history,
-      { at: today, by, action: isNew && party.origin === "Cadastro" ? "Cadastro criado" : "Cadastro atualizado" },
-    ],
+    history: previous?.history ?? party.history ?? [],
   };
   let nextCommercial = commercial;
   let nextDebtors = debtors;
@@ -90,6 +150,31 @@ export function saveParty({ party, saved, all, debtors, commercial, today, by }:
       effects.push("cedente transferido de comercial");
     }
   }
+
+  const history: PartyHistoryEntry[] = isNew
+    ? [
+        ...next.history,
+        {
+          at: today,
+          by,
+          action: party.origin === "Cadastro" ? "Cadastro criado" : "Cadastro consolidado",
+          field: "cadastro",
+          from: "—",
+          to: "Criado",
+          reason: "Cadastro inicial",
+          origin: source,
+        },
+      ]
+    : partyChanges(previous, next).map(change => ({
+        at: today,
+        by,
+        action: "Campo alterado",
+        ...change,
+        reason: reason!.trim(),
+        origin: source,
+      }));
+  if (!isNew && !history.length) return { ok: false, error: "Nenhuma alteração foi identificada no cadastro." };
+  next = { ...next, history: isNew ? history : [...next.history, ...history] };
 
   const nextSaved = isNew ? [...saved, next] : saved.map(p => (p.id === next.id ? next : p));
   const message = `${next.name} ${isNew && party.origin === "Cadastro" ? "cadastrado" : "atualizado"}${effects.length ? `: ${effects.join(", ")}` : ""}.`;

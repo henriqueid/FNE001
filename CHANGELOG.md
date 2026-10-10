@@ -1,5 +1,12 @@
 # Changelog
 
+## Não lançado — 09/10/2026 · Cadastro P0 — auditoria por campo
+
+- Toda edição cadastral exige motivo e grava uma linha imutável para cada campo alterado, com valor anterior, novo valor, autor, data e origem.
+- A ficha mostra a linha do tempo completa com nomes de campos legíveis e mantém compatibilidade com eventos antigos que possuíam apenas uma descrição geral.
+- A comparação cobre identificação, endereço, papéis, dados específicos de cada papel, contatos e contas bancárias, inclusive valores removidos.
+- Três testes novos cobrem alterações simples e aninhadas, preservação de histórico legado e obrigatoriedade do motivo; suíte ampliada para 139 testes.
+
 ## Não lançado — 09/10/2026 · Copiloto flutuante e Mesa Inteligente (demonstração)
 
 - O Copiloto vira um ícone redondo flutuante que abre uma caixa de diálogo de conversa no canto da tela, no lugar do botão largo antigo. A sugestão do momento continua no topo da conversa.

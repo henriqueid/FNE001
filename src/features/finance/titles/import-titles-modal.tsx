@@ -8,7 +8,7 @@ import { todayIso, type Result } from "@/src/domain/finance/ledger";
 import type { FinanceState } from "@/src/domain/finance/model";
 import { createTitle } from "@/src/domain/finance/titles";
 import { br, BY, Field, Modal, money } from "@/src/features/finance/finance-ui";
-import { num } from "@/src/features/finance/tabs/titles-tab";
+import { parseMoneyBR as num } from "@/src/features/finance/finance-ui";
 import { useState } from "react";
 
 /* aplica uma função a vários lançamentos, acumulando o estado e os erros */

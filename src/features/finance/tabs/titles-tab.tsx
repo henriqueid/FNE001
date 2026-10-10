@@ -20,11 +20,9 @@ import { addDays, todayIso, type Result } from "@/src/domain/finance/ledger";
 import type { FinanceState, FinanceTitle } from "@/src/domain/finance/model";
 import { CheckIcon, ClockIcon, PlusIcon, SearchIcon, SlidersIcon, UndoIcon } from "@/src/ui/icons";
 import { useState } from "react";
-import { Field, StatusChip, br, money, parseMoneyBR, type Action } from "@/src/features/finance/finance-ui";
+import { Field, StatusChip, br, money, type Action } from "@/src/features/finance/finance-ui";
 import { saveFile } from "@/src/ui/download";
 
-export const num = (v: string) => parseMoneyBR(v);
-export const moneyInput = (v: string) => v.replace(/[^\d.,]/g, "");
 /* aplica uma função a vários lançamentos, acumulando o estado e os erros */
 
 export function TitlesTab({

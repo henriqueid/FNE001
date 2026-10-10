@@ -1,14 +1,12 @@
 # STRATO · Receivables OS — protótipo navegável
 
-Plataforma operacional de recebíveis para factoring, securitizadora, FIDC e ESC. Os dados são fictícios e todas as ações são simuladas no navegador (sem backend).
+Plataforma operacional de recebíveis para factoring, securitizadora, FIDC e ESC. Os dados operacionais ainda são fictícios e persistidos no navegador; identidade, escopos e permissões da IA-0 já podem ser simulados por usuário.
 
 ## Executar
 
 1. Instale o Node.js 22 ou superior.
 2. Nesta pasta, rode `npm install` e depois `npm run dev`.
 3. Abra o endereço exibido no terminal.
-
-Pré-visualização rápida sem Cloudflare/vinext: `npm run preview` (porta 5188).
 
 ## Roteiro de demonstração (5 minutos)
 

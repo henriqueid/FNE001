@@ -38,6 +38,8 @@ export function parseMoneyBR(input: string | number): number {
   const n = Number(v);
   return Number.isFinite(n) ? (negative ? -n : n) : 0;
 }
+
+export const moneyInput = (value: string) => value.replace(/[^\d.,]/g, "");
 export const formatMoneyInput = (v: number) =>
   v ? v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
 

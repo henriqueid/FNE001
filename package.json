@@ -7,10 +7,8 @@
   },
   "scripts": {
     "dev": "vinext dev",
-    "build": "vinext build",
+    "build": "vite build",
     "start": "vinext start",
-    "preview": "vite --config .preview/vite.config.mjs",
-    "build:artifact": "vite build --config .preview/vite.artifact.mjs",
     "typecheck": "tsc --noEmit -p .",
     "lint": "eslint src app tests",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"app/**/*.{ts,tsx,css}\" \"tests/**/*.ts\"",

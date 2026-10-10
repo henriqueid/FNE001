@@ -1,5 +1,13 @@
 # Changelog
 
+## Não lançado — 10/10/2026 · Revisão de prontidão e limpeza técnica
+
+- Build tornou-se reproduzível em um clone limpo: o plugin de empacotamento saiu de uma pasta ignorada e passou a ser versionado em `tools/`.
+- Removidos três HTMLs legados sem referência, três ícones padrão sem uso, uma amostra desconectada e dois componentes TypeScript não alcançáveis pela aplicação.
+- Eliminados ciclos de importação no Copiloto e nas telas de títulos financeiros, separando ações compartilhadas e utilitários monetários.
+- Scripts e documentação foram alinhados ao fluxo atual; referências a pré-visualização, pastas e comandos inexistentes foram retiradas.
+- Auditoria das dependências de produção sem vulnerabilidades; riscos remanescentes estão restritos às ferramentas de desenvolvimento e não possuem correção compatível publicada.
+
 ## Não lançado — 10/10/2026 · IA-0 — identidade, acesso e escopo
 
 - Nova central de usuários e acessos em Configurações, com função, departamento, nível de acesso, gestor direto, vínculo comercial e gerente da conta.

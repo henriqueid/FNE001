@@ -8,7 +8,7 @@ import { addDays, round2, todayIso, type Effect, type Result } from "@/src/domai
 import type { FinanceState, FinanceTitle } from "@/src/domain/finance/model";
 import { createTitle } from "@/src/domain/finance/titles";
 import { BY, Field, Modal, money } from "@/src/features/finance/finance-ui";
-import { moneyInput, num } from "@/src/features/finance/tabs/titles-tab";
+import { moneyInput, parseMoneyBR as num } from "@/src/features/finance/finance-ui";
 import { useMemo, useState } from "react";
 
 export const addMonths = (iso: string, n: number) => {

@@ -7,7 +7,7 @@ import { type Result } from "@/src/domain/finance/ledger";
 import type { FinanceState, FinanceTitle } from "@/src/domain/finance/model";
 import { editTitle } from "@/src/domain/finance/titles";
 import { BY, Field, Modal } from "@/src/features/finance/finance-ui";
-import { moneyInput, num } from "@/src/features/finance/tabs/titles-tab";
+import { moneyInput, parseMoneyBR as num } from "@/src/features/finance/finance-ui";
 import { AlertIcon } from "@/src/ui/icons";
 import { useState } from "react";
 /* aplica uma função a vários lançamentos, acumulando o estado e os erros */

@@ -1,6 +1,6 @@
 # Arquitetura do STRATO
 
-Protótipo navegável de uma plataforma operacional de recebíveis (factoring, securitizadora, FIDC). Roda inteiro no navegador: não há backend, os dados são de demonstração e o estado fica no `localStorage`. O código já está organizado como seria numa aplicação real, para que a troca por uma API seja localizada.
+Aplicação navegável de uma plataforma operacional de recebíveis (factoring, securitizadora, FIDC). Nesta etapa, os dados operacionais são demonstrativos e ficam no `localStorage`. A fundação IA-0 acrescenta identidade, perfis, escopo empresarial e autorização efetiva na interface; autenticação e autorização no servidor são a próxima etapa.
 
 ## 1. Visão em camadas
 
@@ -25,6 +25,7 @@ flowchart TB
     COM[commercial<br/>metas, comitês, comissão]
     REG[registry<br/>pessoas, papéis, vínculos]
     HM[home<br/>métricas]
+    AC[access<br/>identidade, escopos e permissões]
   end
   UI["src/ui/ (ícones, hooks, a11y)"]
   P --> R
@@ -73,6 +74,7 @@ src/
                              parâmetros dos indicadores), rolagem, safras, concentração (HHI) e cobrança
     indicators/              Indicadores de mercado por tela (carteira, originação, esteira, comercial,
                              financeiro, cadastro), funções puras com teste em tests/indicators.test.ts
+    access/                  Usuários, identidade autenticada, visão simulada, escopos e permissões por módulo/ação
   features/
     shell/                   Barra superior com módulos (menu responsivo: Plataforma ▾, painel no tablet,
                              folha no celular), menu do usuário (empresa e tema), busca Ctrl K, alertas
@@ -83,14 +85,14 @@ src/
     commercial/              Comercial (painel, carteira, negócios, contas novas, visitas, funil, comitês, comissões)
     finance/                 Financeiro (caixa, títulos, liberações, extrato, conciliação, contábil, bancos)
     registry/                Cadastros (pessoas com papéis, cedentes, sacados)
-    settings/                Preferências da interface
+    settings/                Usuários e acesso, empresas, padrões, políticas, integrações e preferências
     risk/                    Painel de Risco: qualidade dos clientes, cobrança, rolagem, safras, critérios
     indicators/              IndicatorGrid (grade de indicadores com a fonte de cada número)
   ui/                        Ícones, pressable (a11y), useElementWidth
 tests/                       Vitest: documentos, cadastro, preço, financeiro, comercial
 tools/theme_tokens.py        Gera tokens claro/escuro a partir de cores literais do CSS
-.preview/                    Vite puro (sem Next) para rodar e para gerar a página única publicável
-docs/                        Esta documentação e os documentos de produto (docs/produto)
+tools/sites-vite-plugin.ts   Empacota os metadados opcionais da hospedagem no build
+docs/                        Arquitetura, testes, plano de IA e referências do produto
 ```
 
 Cada arquivo começa com um comentário dizendo o que ele faz. Nenhum arquivo de componente passa de ~700 linhas; os painéis grandes foram divididos em subcomponentes, um hook de estado (`use-*.ts`) e um modelo puro (`*-model.ts`) na mesma pasta.
@@ -106,12 +108,14 @@ Cada arquivo começa com um comentário dizendo o que ele faz. Nenhum arquivo de
 | financeiro | `FinanceState` | `strato-finance-v2` |
 | comercial | `CommercialState` | `strato-commercial-v1` |
 | pessoas do Cadastro | `Party[]` | `strato-parties-v1` |
+| usuários e acessos | `AccessState` | `strato-access-v1` |
+| tarefas e notificações | `TaskState` | `strato-tasks-v1` |
 | explicações na interface | `boolean` | `lastro-interface-guidance-v1` |
 | tema, perfil/período da Visão geral | preferências do usuário | `strato-theme`, `strato-home-*` |
 
 - A restauração acontece uma vez, depois de montar (`loadPersistedState`), e mescla o que foi salvo com os dados de demonstração atuais (migração tolerante a campos novos).
 - "Restaurar dados de demonstração" (busca global) chama `clearPersistedState` e recria o seed.
-- Não há roteador de URL: `view` (`home`, `operations`, `portfolio`, `commercial`, `finance`, `registry`, `policies`, `integrations`) escolhe o módulo e `selected` abre o workspace de uma operação.
+- A navegação usa `view` e aceita links diretos controlados por permissão; `selected` abre o workspace de uma operação autorizada.
 
 Dois contextos descem da raiz:
 
@@ -172,7 +176,7 @@ npm test          # Vitest (tests/*.test.ts)
 
 - Testes cobrem as regras que mais custam caro se quebrarem: dígitos de CPF/CNPJ, validação e propagação do cadastro, métodos de deságio, partidas dobradas e estorno, parser monetário, atribuição e comissão.
 - ESLint roda sem erros nem avisos. As poucas exceções (`eslint-disable`) têm o motivo escrito ao lado — em geral, restauração do localStorage depois de montar.
-- `worker/` e `vite.config.ts` ficam fora do typecheck: dependem de tipos do Cloudflare e de `build/sites-vite-plugin`, que é gerado pelo ambiente de hospedagem e não vem no repositório.
+- `worker/` e `vite.config.ts` ficam fora do typecheck principal por dependerem dos tipos do ambiente Cloudflare; o build de produção valida essa camada e o plugin de empacotamento está versionado em `tools/`.
 
 ## 8. Como fazer mudanças comuns
 
@@ -185,7 +189,7 @@ npm test          # Vitest (tests/*.test.ts)
 
 ## 9. Limitações conhecidas
 
-- Sem backend, autenticação, perfis ou trilha de auditoria real; o usuário é fixo ("Henrique").
+- Sem backend, autenticação real ou trilha de auditoria persistente; perfis e permissões ainda são uma simulação local da fundação IA-0.
 - Integrações (Receita, SEFAZ, bureaus, bancos, assinatura) são simuladas.
-- Políticas e Integrações ainda são páginas de escopo; parâmetros de crédito e preço estão no código das etapas.
-- Backlog detalhado em [produto/REVISAO_V6.md](./produto/REVISAO_V6.md) e [produto/HANDOFF.md](./produto/HANDOFF.md).
+- A Mesa Inteligente ainda reconhece arquivos por nome e extensão; leitura real de conteúdo, OCR e modelo externo pertencem às fases seguintes.
+- A ordem de evolução está em [architecture/PLANO_ESTRUTURA_IA.md](./architecture/PLANO_ESTRUTURA_IA.md).

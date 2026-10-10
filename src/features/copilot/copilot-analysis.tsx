@@ -9,7 +9,7 @@ import { buildDeskSummary } from "@/src/domain/copilot/desk-summary";
 import { type SystemKnowledge } from "@/src/domain/copilot/system-query";
 import { type Cedent } from "@/src/domain/core/types";
 import { OperationSummary } from "./copilot-summary";
-import { DecisionBar } from "./copilot-thread";
+import { DecisionBar } from "./copilot-decision-bar";
 import { type CopilotDesk } from "./use-copilot-desk";
 
 const severityLabel = { impedimento: "Impedimento", alcada: "Exige alçada", info: "Informação" } as const;

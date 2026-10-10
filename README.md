@@ -1,6 +1,6 @@
 # STRATO · Receivables OS
 
-Plataforma operacional de recebíveis para factoring, securitizadora, FIDC e ESC (codinome **Lastro**). Este repositório é um protótipo navegável completo: todas as telas funcionam no navegador com dados fictícios e sem backend.
+Plataforma operacional de recebíveis para factoring, securitizadora, FIDC e ESC. O produto está na transição de protótipo navegável para aplicação persistente: as telas e regras funcionam com dados fictícios no navegador, enquanto a fundação de identidade e autorização da fase IA-0 já pode ser validada por perfil.
 
 ## Rodar
 
@@ -8,8 +8,7 @@ Requer Node.js 22+.
 
 ```bash
 npm install
-npm run preview        # Vite puro, http://localhost:5188 (recomendado para testar)
-npm run dev            # Next/vinext (precisa de build/sites-vite-plugin do ambiente de hospedagem)
+npm run dev            # desenvolvimento com vinext
 ```
 
 Scripts de qualidade:
@@ -18,7 +17,7 @@ Scripts de qualidade:
 npm run check          # typecheck + lint + formatação + testes
 npm test               # testes unitários (Vitest)
 npm run format         # Prettier
-npm run build:artifact # gera uma página única publicável em .preview/dist-artifact
+npm run build          # build de produção
 ```
 
 ## Módulos
@@ -31,7 +30,8 @@ npm run build:artifact # gera uma página única publicável em .preview/dist-ar
 | Comercial | Metas, carteira, negócios, visitas, funil, comitês e comissões | `src/features/commercial` |
 | Financeiro | Caixa e fluxo, a pagar e a receber, liberações, extrato, conciliação OFX, contábil, bancos | `src/features/finance` |
 | Cadastros | Pessoas PF/PJ com papéis: cedente, sacado, fornecedor, representante, debenturista, cotista, avalista, prestador | `src/features/registry` |
-| Políticas, Integrações | Escopo da próxima fase | `src/features/shell/module-roadmap.tsx` |
+| Configurações | Usuários, acessos, empresas, padrões operacionais, políticas, integrações e interface | `src/features/settings` |
+| Copiloto | Resumo diário, Central do Dia, consultas e Mesa Inteligente demonstrativa | `src/features/copilot` |
 
 ## Documentação
 
@@ -39,5 +39,5 @@ npm run build:artifact # gera uma página única publicável em .preview/dist-ar
 - [docs/architecture/PLANO_ESTRUTURA_IA.md](docs/architecture/PLANO_ESTRUTURA_IA.md) — arquitetura, segurança, governança e fases da inteligência assistiva.
 - [docs/CONVENTIONS.md](docs/CONVENTIONS.md) — padrões de código.
 - [INSTRUCOES.md](INSTRUCOES.md) — roteiro de demonstração.
-- [docs/produto/](docs/produto/) — contexto de produto, revisão v6 e pesquisa de mercado.
+- [docs/lastro/](docs/lastro/) — pesquisa de mercado, contexto e histórico da evolução do produto.
 - [CHANGELOG.md](CHANGELOG.md) — o que mudou em cada versão.

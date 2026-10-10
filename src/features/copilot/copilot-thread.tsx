@@ -9,6 +9,7 @@ import { type Cedent } from "@/src/domain/core/types";
 import { AlertIcon, ArrowIcon, CheckIcon, ExpandIcon, FolderIcon, SparkIcon } from "@/src/ui/icons";
 import { type DragEvent, useState } from "react";
 import { DeskGate, DeskMoney } from "./copilot-analysis";
+import { DecisionBar } from "./copilot-decision-bar";
 import { type CopilotDesk, DESK_STAGES } from "./use-copilot-desk";
 
 export type CopilotSuggestion = { title: string; body: string; action: string; onAction: () => void };
@@ -295,51 +296,6 @@ export function ReplyBubble({ reply }: { reply: DeskReply }) {
             </tbody>
           </table>
         </div>
-      )}
-    </div>
-  );
-}
-
-export function DecisionBar({ desk }: { desk: CopilotDesk }) {
-  const scenario = desk.scenarios[desk.scenarios.length - 1];
-  if (!scenario) return null;
-  const { result } = scenario;
-  if (desk.decision === "pending")
-    return (
-      <div className="cpl-decision">
-        <span>Na alçada da Diretoria de crédito. Nesta demonstração você decide por ela.</span>
-        <button type="button" className="cpl-primary is-small" onClick={() => desk.authorityDecides(true)}>
-          Aprovar como Diretoria
-        </button>
-        <button type="button" className="cpl-ghost" onClick={() => desk.authorityDecides(false)}>
-          Reprovar
-        </button>
-      </div>
-    );
-  if (desk.decision)
-    return (
-      <div className="cpl-decision" data-tone={desk.decision === "approved" ? "good" : "bad"}>
-        <span>
-          {desk.decision === "approved"
-            ? "Aprovada e na fila de formalização manual."
-            : "Reprovada pela alçada. Motivo registrado."}
-        </span>
-        <button type="button" className="cpl-ghost" onClick={desk.reset}>
-          Nova análise
-        </button>
-      </div>
-    );
-  if (result.blockers.length) return null;
-  return (
-    <div className="cpl-decision">
-      {result.fastTrack ? (
-        <button type="button" className="cpl-primary is-small" onClick={desk.approveFast}>
-          Aprovar operação <ArrowIcon />
-        </button>
-      ) : (
-        <button type="button" className="cpl-primary is-small" onClick={desk.sendToAuthority}>
-          Enviar para alçada <ArrowIcon />
-        </button>
       )}
     </div>
   );

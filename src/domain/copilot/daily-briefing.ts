@@ -14,7 +14,17 @@ export type AppUserProfile = {
   responsibilities: string[];
   operationOwner?: string;
   commercialRepId?: string;
+  /** Vínculo do gerente responsável pela operação recorrente e pelo pós-venda. */
+  accountManagerId?: string;
+  /** Cedentes atribuídos diretamente ao usuário, quando houver uma carteira nominal. */
+  cedentDocuments?: string[];
   revenueGoalShare?: number;
+};
+
+export type UserScopeContext = {
+  referenceDate: string;
+  repOfCedent?: (document: string, date: string) => string | undefined;
+  managerOfCedent?: (document: string) => string | undefined;
 };
 
 export const demoAdminUser: AppUserProfile = {
@@ -43,25 +53,50 @@ const money = (value: number) =>
     maximumFractionDigits: 2,
   });
 
-export function operationsForUser(operations: Operation[], user: AppUserProfile) {
-  if (user.access === "admin" || user.department === "Diretoria") return operations;
+const digits = (value: string) => value.replace(/\D/g, "");
+
+export function operationBelongsToUser(operation: Operation, user: AppUserProfile, scope?: UserScopeContext) {
+  if (user.access === "admin" || user.department === "Diretoria") return true;
+  const directDocuments = new Set((user.cedentDocuments ?? []).map(digits));
+  if (directDocuments.has(digits(operation.document))) return true;
+  const repId = operation.commercialRepId ?? scope?.repOfCedent?.(operation.document, scope.referenceDate);
+  const managerId = operation.accountManagerId ?? scope?.managerOfCedent?.(operation.document);
+
+  if (user.department === "Comercial") {
+    return (
+      (!!user.commercialRepId && repId === user.commercialRepId) ||
+      (!!user.accountManagerId && managerId === user.accountManagerId)
+    );
+  }
+
+  if (user.access === "manager") {
+    if (user.department === "Operações") return true;
+    if (user.department === "Risco e crédito")
+      return operation.blockers > 0 || operation.alerts > 0 || operation.stage === 2;
+    if (user.department === "Controladoria") return operation.stage >= 3 && operation.stage <= 5;
+    if (user.department === "Financeiro")
+      return operation.status === "Pronta para liberar" || operation.status === "Liberada ao financeiro";
+    if (user.department === "Cadastro") return operation.stage === 1;
+  }
+
   switch (user.department) {
     case "Risco e crédito":
-      return operations.filter(operation => operation.blockers > 0 || operation.alerts > 0 || operation.stage === 2);
+      return operation.blockers > 0 || operation.alerts > 0 || operation.stage === 2;
     case "Controladoria":
-      return operations.filter(operation => operation.stage >= 3 && operation.stage <= 5);
+      return operation.stage >= 3 && operation.stage <= 5;
     case "Financeiro":
-      return operations.filter(
-        operation => operation.status === "Pronta para liberar" || operation.status === "Liberada ao financeiro",
-      );
-    case "Comercial":
-      return operations.filter(operation => operation.commercialRepId === user.commercialRepId);
+      return operation.status === "Pronta para liberar" || operation.status === "Liberada ao financeiro";
     case "Cadastro":
-      return operations.filter(operation => operation.stage === 1);
+      return operation.stage === 1;
     case "Operações":
     default:
-      return operations.filter(operation => operation.owner === (user.operationOwner ?? user.name));
+      return operation.owner === (user.operationOwner ?? user.name);
   }
+}
+
+export function operationsForUser(operations: Operation[], user: AppUserProfile, scope?: UserScopeContext) {
+  if (user.access === "admin" || user.department === "Diretoria") return operations;
+  return operations.filter(operation => operationBelongsToUser(operation, user, scope));
 }
 
 export function buildDailyBriefing({
@@ -71,6 +106,7 @@ export function buildDailyBriefing({
   titles,
   referenceDate,
   revenueTarget,
+  scope,
 }: {
   user: AppUserProfile;
   operations: Operation[];
@@ -78,9 +114,15 @@ export function buildDailyBriefing({
   titles: PortfolioTitle[];
   referenceDate: string;
   revenueTarget: number;
+  scope?: UserScopeContext;
 }) {
-  const scopedOperations = operationsForUser(operations, user).filter(operation => operation.status !== "Cancelada");
-  const documents = new Set(scopedOperations.map(operation => operation.document.replace(/\D/g, "")));
+  const scopedOperations = operationsForUser(operations, user, scope).filter(
+    operation => operation.status !== "Cancelada",
+  );
+  const documents = new Set([
+    ...scopedOperations.map(operation => digits(operation.document)),
+    ...(user.cedentDocuments ?? []).map(digits),
+  ]);
   const scopedTitles =
     user.access === "admin" || user.department === "Diretoria"
       ? titles

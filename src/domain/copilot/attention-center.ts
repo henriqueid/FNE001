@@ -1,4 +1,4 @@
-import { operationsForUser, type AppUserProfile } from "./daily-briefing";
+import { operationsForUser, type AppUserProfile, type UserScopeContext } from "./daily-briefing";
 import { money } from "@/src/domain/core/format";
 import { stages } from "@/src/domain/core/stages";
 import { type Operation } from "@/src/domain/core/types";
@@ -33,13 +33,15 @@ export function buildAttentionItems({
   titles,
   user,
   referenceDate,
+  scope,
 }: {
   operations: Operation[];
   titles: PortfolioTitle[];
   user: AppUserProfile;
   referenceDate: string;
+  scope?: UserScopeContext;
 }) {
-  const scoped = operationsForUser(operations, user).filter(operation => operation.status !== "Cancelada");
+  const scoped = operationsForUser(operations, user, scope).filter(operation => operation.status !== "Cancelada");
   const items: AttentionItem[] = [];
 
   scoped.forEach(operation => {
@@ -106,7 +108,10 @@ export function buildAttentionItems({
       });
   });
 
-  const documents = new Set(scoped.map(operation => operation.document.replace(/\D/g, "")));
+  const documents = new Set([
+    ...scoped.map(operation => operation.document.replace(/\D/g, "")),
+    ...(user.cedentDocuments ?? []).map(document => document.replace(/\D/g, "")),
+  ]);
   const overdue = titles.filter(
     title =>
       title.dueDate < referenceDate &&

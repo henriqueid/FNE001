@@ -66,6 +66,7 @@ import {
   reconcileTasks,
   seedTaskState,
   type TaskCommand,
+  visibleTasksForUser,
 } from "@/src/domain/tasks/model";
 
 const COMPANY_SCOPE_KEY = "strato-company-scope";
@@ -420,6 +421,14 @@ export default function StratoApp() {
     }),
     [commercialLive, scoredCedents, parties, savedParties, debtors, commercial, operationalDefaults, today],
   );
+  const userScope = useMemo(
+    () => ({
+      referenceDate: today,
+      repOfCedent: (document: string, date: string) => repAt(commercial, document, date),
+      managerOfCedent: (document: string) => managerOf(commercial, document),
+    }),
+    [commercial, today],
+  );
   const dailyBriefing = useMemo(
     () =>
       buildDailyBriefing({
@@ -429,8 +438,9 @@ export default function StratoApp() {
         titles: portfolioTitles(operations),
         referenceDate: today,
         revenueTarget: operationalDefaults.revenueGoals.consolidated.mes,
+        scope: userScope,
       }),
-    [operations, homeFinancials, today, operationalDefaults.revenueGoals.consolidated.mes],
+    [operations, homeFinancials, today, operationalDefaults.revenueGoals.consolidated.mes, userScope],
   );
   const detectedAttentionItems = useMemo(
     () =>
@@ -439,8 +449,9 @@ export default function StratoApp() {
         titles: portfolioTitles(operations),
         user: demoAdminUser,
         referenceDate: today,
+        scope: userScope,
       }),
-    [operations, today],
+    [operations, today, userScope],
   );
   useEffect(() => {
     if (!storageReady) return;
@@ -448,8 +459,13 @@ export default function StratoApp() {
     setTasks(current => reconcileTasks(current, detectedAttentionItems, new Date().toISOString()));
   }, [detectedAttentionItems, storageReady]);
   const taskItems = useMemo(
-    () => managedTasks(tasks, detectedAttentionItems, new Date(taskClock).toISOString()),
-    [tasks, detectedAttentionItems, taskClock],
+    () =>
+      visibleTasksForUser(
+        managedTasks(tasks, detectedAttentionItems, new Date(taskClock).toISOString()),
+        demoAdminUser,
+        userScope,
+      ),
+    [tasks, detectedAttentionItems, taskClock, userScope],
   );
   const attentionItems = useMemo(
     () => actionableAttentionItems(taskItems, new Date(taskClock).toISOString()),

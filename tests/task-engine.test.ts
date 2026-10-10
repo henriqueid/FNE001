@@ -7,6 +7,7 @@ import {
   managedTasks,
   reconcileTasks,
   seedTaskState,
+  visibleTasksForUser,
 } from "@/src/domain/tasks/model";
 import { describe, expect, it } from "vitest";
 
@@ -98,5 +99,25 @@ describe("motor de tarefas", () => {
 
     expect(resolved.tasks[0].status).toBe("completed");
     expect(resolved.tasks[0].history.at(-1)?.action).toBe("resolved");
+  });
+
+  it("não expõe tarefas históricas fora da carteira nominal do usuário", () => {
+    const state = reconcileTasks(seedTaskState(), detected, now);
+    const tasks = managedTasks(state, detected, now);
+    const allowedDocument = detected.find(item => item.operation)?.operation?.document;
+    const visible = visibleTasksForUser(tasks, {
+      id: "user-conta",
+      name: "Responsável da conta",
+      role: "Especialista",
+      department: "Operações",
+      access: "operator",
+      responsibilities: ["Conta vinculada"],
+      cedentDocuments: allowedDocument ? [allowedDocument] : [],
+    });
+
+    expect(visible.some(task => task.operation?.document === allowedDocument)).toBe(true);
+    expect(visible.filter(task => task.operation).every(task => task.operation?.document === allowedDocument)).toBe(
+      true,
+    );
   });
 });

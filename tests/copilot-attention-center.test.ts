@@ -3,6 +3,8 @@ import { demoAdminUser } from "@/src/domain/copilot/daily-briefing";
 import { initialOperations } from "@/src/domain/core/demo/operations";
 import { portfolioTitles } from "@/src/domain/home/metrics";
 import { describe, expect, it } from "vitest";
+import { managerOf, repAt } from "@/src/domain/commercial/rules";
+import { seedCommercial } from "@/src/domain/commercial/seed";
 
 describe("Central do Dia", () => {
   it("unifica decisões, ritmo, liberações e cobrança na mesma fila", () => {
@@ -49,5 +51,35 @@ describe("Central do Dia", () => {
 
     expect(href).toContain(`operation=${item.operation?.id}`);
     expect(href).toContain("attention=");
+  });
+
+  it("respeita o vínculo do agente ao cedente ao montar a fila", () => {
+    const commercial = seedCommercial();
+    const items = buildAttentionItems({
+      operations: initialOperations,
+      titles: portfolioTitles(initialOperations),
+      user: {
+        id: "user-rep-1",
+        name: "Rafael Menezes",
+        role: "Executivo comercial",
+        department: "Comercial",
+        access: "operator",
+        responsibilities: ["Originação", "Relacionamento"],
+        commercialRepId: "rep-1",
+      },
+      referenceDate: "2026-10-10",
+      scope: {
+        referenceDate: "2026-10-10",
+        repOfCedent: (document, date) => repAt(commercial, document, date),
+        managerOfCedent: document => managerOf(commercial, document),
+      },
+    });
+
+    expect(items.some(item => item.operation)).toBe(true);
+    expect(
+      items
+        .filter(item => item.operation)
+        .every(item => repAt(commercial, item.operation!.document, "2026-10-10") === "rep-1"),
+    ).toBe(true);
   });
 });

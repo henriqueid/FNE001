@@ -1,4 +1,9 @@
 import { type AttentionItem } from "@/src/domain/copilot/attention-center";
+import {
+  operationBelongsToUser,
+  type AppUserProfile,
+  type UserScopeContext,
+} from "@/src/domain/copilot/daily-briefing";
 
 export type TaskStatus = "open" | "in_progress" | "snoozed" | "completed";
 export type TaskAction = "created" | "assigned" | "started" | "snoozed" | "completed" | "resolved" | "reopened";
@@ -174,6 +179,17 @@ export function actionableAttentionItems(tasks: ManagedTask[], now: string): Att
       view: task.view,
       operation: task.operation,
     }));
+}
+
+/** Última barreira de visibilidade: também protege tarefas históricas já persistidas. */
+export function visibleTasksForUser(tasks: ManagedTask[], user: AppUserProfile, scope?: UserScopeContext) {
+  if (user.access === "admin" || user.department === "Diretoria") return tasks;
+  return tasks.filter(task => {
+    if (task.owner === user.name) return true;
+    if (task.operation) return operationBelongsToUser(task.operation, user, scope);
+    if (user.access === "manager" && task.department === user.department) return true;
+    return task.department === user.department && user.access === "operator";
+  });
 }
 
 export function applyTaskCommand(state: TaskState, id: string, command: TaskCommand, now: string): TaskState {

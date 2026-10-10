@@ -7023,3 +7023,48 @@ a.fn-btn:not([href]) {
     grid-template-columns: 1fr;
   }
 }
+/* Saúde da outbox de decisões em Configurações > Inteligência e IA */
+.settings-outbox {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid var(--ds-border);
+  border-radius: 16px;
+  background: var(--ds-surface-2);
+}
+
+.settings-outbox > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.settings-outbox > header span {
+  display: grid;
+  gap: 4px;
+}
+
+.settings-outbox button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--ds-border-strong);
+  border-radius: 10px;
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-outbox button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.settings-outbox .settings-outbox-retry {
+  justify-self: start;
+  border-color: var(--ds-danger);
+  color: var(--ds-danger);
+}

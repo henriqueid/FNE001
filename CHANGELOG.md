@@ -17,6 +17,9 @@
 - Migrações SQL e testes de segurança cobrem o ledger, a sessão e a autorização persistida.
 - Escritas de decisão agora exigem `Idempotency-Key`: reenvios iguais retornam o evento original e reutilizações com conteúdo diferente são bloqueadas.
 - Cada decisão cria, na mesma transação D1, uma mensagem pendente na outbox para entrega futura a notificações, integrações e serviços de IA.
+- Publicador interno consome a outbox a cada minuto e também durante a atualização da interface, criando tarefas na Central do Dia conforme permissão, departamento e alçada.
+- Entregas usam deduplicação, backoff progressivo e fila de falhas após cinco tentativas; administradores acompanham a saúde e podem reprocessar falhas em Configurações.
+- Eventos de aprovação, rejeição ou cumprimento de condição resolvem automaticamente as notificações abertas da decisão.
 
 ## Não lançado — 10/10/2026 · Revisão de prontidão e limpeza técnica
 

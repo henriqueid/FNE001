@@ -40,6 +40,8 @@ export type ServerPrincipal = {
   id: string;
   name: string;
   role: string;
+  department: AccessUser["department"];
+  access: AccessUser["access"];
   status: "active" | "suspended";
   tenantId: string;
   permissions: Permission[];
@@ -111,6 +113,8 @@ type PrincipalRow = {
   user_id: string;
   name: string;
   role: string;
+  department: AccessUser["department"];
+  access_level: AccessUser["access"];
   status: "active" | "suspended";
   tenant_id: string;
 };
@@ -124,7 +128,7 @@ export async function principalForSession(
   await seedAccessDirectory(db);
   const user = await db
     .prepare(
-      `SELECT u.user_id, u.name, u.role, u.status, m.tenant_id
+      `SELECT u.user_id, u.name, u.role, u.department, u.access_level, u.status, m.tenant_id
        FROM auth_sessions s
        JOIN access_users u ON u.user_id = s.user_id
        JOIN tenant_memberships m ON m.user_id = u.user_id AND m.tenant_id = ?
@@ -148,6 +152,8 @@ export async function principalForSession(
     id: user.user_id,
     name: user.name,
     role: user.role,
+    department: user.department,
+    access: user.access_level,
     status: user.status,
     tenantId: user.tenant_id,
     permissions: permissions.results.map(item => item.permission),

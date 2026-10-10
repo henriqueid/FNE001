@@ -17,6 +17,7 @@ import {
   type AIStatus,
   type IntelligenceState,
 } from "@/src/domain/intelligence/model";
+import { OutboxHealthPanel } from "./outbox-health-panel";
 
 const goalPeriods: Array<{ id: HomePeriod; label: string }> = [
   { id: "dia", label: "Dia" },
@@ -399,6 +400,7 @@ export default function SettingsModule({
                 <b>Regra de segurança:</b> nenhuma decisão, cálculo, desbloqueio de alçada ou movimentação financeira
                 depende da IA. Em falha, o STRATO mantém o resultado determinístico e informa a indisponibilidade.
               </p>
+              <OutboxHealthPanel tenantId={intelligence.tenantId} />
             </div>
           )}
 

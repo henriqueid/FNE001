@@ -78,7 +78,9 @@ import {
   stopUserPreview,
 } from "@/src/domain/access/model";
 import { seedIntelligenceState } from "@/src/domain/intelligence/model";
+import { type PublishedNotification } from "@/src/domain/notifications/model";
 import { loadAccessDirectory, saveAccessDirectory } from "./access-directory-client";
+import { syncPublishedNotifications } from "./notification-client";
 
 const COMPANY_SCOPE_KEY = "strato-company-scope";
 const ACCESS_SERVER_MIGRATION_KEY = "strato-access-server-migrated-v1";
@@ -115,6 +117,7 @@ export default function StratoApp() {
   const [integrations, setIntegrations] = useState(() => seedIntegrationState());
   const [operationalDefaults, setOperationalDefaults] = useState(() => seedOperationalDefaults());
   const [tasks, setTasks] = useState(() => seedTaskState());
+  const [publishedNotifications, setPublishedNotifications] = useState<PublishedNotification[]>([]);
   const [taskClock, setTaskClock] = useState(() => Date.now());
   // Resultado financeiro de cada operação, pela mesma precificação da etapa Preço, para a Visão geral.
   const homeFinancials = useMemo(
@@ -293,6 +296,25 @@ export default function StratoApp() {
     }, 300);
     return () => window.clearTimeout(timer);
   }, [access, accessServerReady, intelligence.tenantId]);
+
+  useEffect(() => {
+    if (!accessServerReady) return;
+    let cancelled = false;
+    const refresh = () =>
+      syncPublishedNotifications(intelligence.tenantId)
+        .then(result => {
+          if (!cancelled) setPublishedNotifications(result.notifications);
+        })
+        .catch(() => {
+          /* mantém a última posição conhecida quando o publicador estiver indisponível */
+        });
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [accessServerReady, intelligence.tenantId]);
 
   useEffect(() => {
     if (storageReady) saveJourneyBar(showJourney);
@@ -568,21 +590,52 @@ export default function StratoApp() {
       }),
     [operations, today, userScope, currentUser],
   );
+  const publishedAttentionItems = useMemo(
+    () =>
+      publishedNotifications.map(notification => ({
+        id: notification.id,
+        kind: notification.kind,
+        tone: notification.tone,
+        title: notification.title,
+        summary: notification.summary,
+        detail: notification.detail,
+        impact: notification.impact,
+        nextAction: notification.nextAction,
+        owner: notification.owner,
+        department: notification.department,
+        timing: notification.timing,
+        view: notification.view,
+        operation: operations.find(operation => operation.id === notification.operationId),
+      })),
+    [operations, publishedNotifications],
+  );
+  const persistentAttentionItems = useMemo(
+    () => [
+      ...systemAttentionItems,
+      ...publishedAttentionItems.filter(
+        published =>
+          !systemAttentionItems.some(
+            detected => detected.kind === published.kind && detected.operation?.id === published.operation?.id,
+          ),
+      ),
+    ],
+    [publishedAttentionItems, systemAttentionItems],
+  );
   useEffect(() => {
     if (!storageReady) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reconcilia alertas automáticos com o histórico persistido
-    setTasks(current => reconcileTasks(current, systemAttentionItems, new Date().toISOString()));
-  }, [systemAttentionItems, storageReady]);
+    setTasks(current => reconcileTasks(current, persistentAttentionItems, new Date().toISOString()));
+  }, [persistentAttentionItems, storageReady]);
   const taskItems = useMemo(() => {
     const allManaged = managedTasks(
       tasks,
-      [...systemAttentionItems, ...detectedAttentionItems],
+      [...persistentAttentionItems, ...detectedAttentionItems],
       new Date(taskClock).toISOString(),
     );
     const visible = new Set(visibleTasksForUser(allManaged, currentUser, userScope).map(task => task.id));
     const detected = new Set(detectedAttentionItems.map(item => item.id));
     return allManaged.filter(task => visible.has(task.id) || detected.has(task.id));
-  }, [tasks, systemAttentionItems, detectedAttentionItems, taskClock, userScope, currentUser]);
+  }, [tasks, persistentAttentionItems, detectedAttentionItems, taskClock, userScope, currentUser]);
   const attentionItems = useMemo(
     () => actionableAttentionItems(taskItems, new Date(taskClock).toISOString()),
     [taskItems, taskClock],

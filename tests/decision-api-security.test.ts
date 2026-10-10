@@ -10,6 +10,8 @@ const principal = (permissions: Permission[], authorityIds: string[] = []): Serv
   id: "user-1",
   name: "Usuário",
   role: "Operador",
+  department: "Operações",
+  access: "operator",
   status: "active",
   tenantId: "strato-demo",
   permissions,

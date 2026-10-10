@@ -113,7 +113,7 @@ Cada arquivo começa com um comentário dizendo o que ele faz. Nenhum arquivo de
 | explicações na interface            | `boolean`               | `lastro-interface-guidance-v1`  |
 | tema, perfil/período da Visão geral | preferências do usuário | `strato-theme`, `strato-home-*` |
 
-A trilha de decisões é a primeira exceção a esse armazenamento local: `app/api/decisions/route.ts` valida tenant, sessão, permissão, alçada e chave de idempotência, e `src/server/decisions/repository.ts` grava eventos versionados na tabela D1 `decision_events`. A migração base está em `drizzle/0001_decision_ledger.sql`; gatilhos recusam atualização e exclusão. `drizzle/0003_decision_outbox.sql` acrescenta a deduplicação por chave e a outbox; evento, reivindicação idempotente e mensagem pendente são gravados no mesmo `batch` transacional do D1.
+A trilha de decisões é a primeira exceção a esse armazenamento local: `app/api/decisions/route.ts` valida tenant, sessão, permissão, alçada e chave de idempotência, e `src/server/decisions/repository.ts` grava eventos versionados na tabela D1 `decision_events`. A migração base está em `drizzle/0001_decision_ledger.sql`; gatilhos recusam atualização e exclusão. `drizzle/0003_decision_outbox.sql` acrescenta a deduplicação por chave e a outbox; evento, reivindicação idempotente e mensagem pendente são gravados no mesmo `batch` transacional do D1. `src/server/outbox/publisher.ts` entrega as mensagens para `decision_notifications`, aplica backoff, encerra após cinco falhas e resolve tarefas por novos eventos. O Worker executa esse publicador a cada minuto; a interface também o aciona para atualização imediata.
 
 O diretório de identidade e autorização também é sincronizado com o D1 por `app/api/access/users/route.ts`. `src/server/access/session.ts` emite token opaco em cookie `HttpOnly` e persiste somente o hash; `src/server/access/repository.ts` resolve vínculo, escopo, permissões e alçadas. A migração está em `drizzle/0002_access_directory.sql`. O bootstrap automático existe somente em `localhost` para a demonstração; produção deve fornecer a identidade por um provedor corporativo.
 
@@ -193,7 +193,7 @@ npm test          # Vitest (tests/*.test.ts)
 
 ## 9. Limitações conhecidas
 
-- A trilha de decisões, sua outbox transacional, a sessão e o diretório de usuários, permissões e alçadas já possuem backend D1; o login ainda usa bootstrap local, a outbox ainda não possui publicador e os demais dados operacionais continuam demonstrativos ou locais.
+- A trilha de decisões, sua outbox e publicador resiliente, a sessão e o diretório de usuários, permissões e alçadas já possuem backend D1; o login ainda usa bootstrap local, destinos externos não estão conectados e os demais dados operacionais continuam demonstrativos ou locais.
 - Integrações (Receita, SEFAZ, bureaus, bancos, assinatura) são simuladas.
 - A Mesa Inteligente ainda reconhece arquivos por nome e extensão; leitura real de conteúdo, OCR e modelo externo pertencem às fases seguintes.
 - A ordem de evolução está em [architecture/PLANO_ESTRUTURA_IA.md](./architecture/PLANO_ESTRUTURA_IA.md).

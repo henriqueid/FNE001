@@ -1,7 +1,8 @@
 "use client";
 
 import { type Operation } from "@/src/domain/core/types";
-import { AlertIcon, ArrowIcon, CheckIcon, CloseIcon, SparkIcon } from "@/src/ui/icons";
+import { Copilot } from "@/src/features/copilot/copilot";
+import { ArrowIcon, CheckIcon } from "@/src/ui/icons";
 import { useState } from "react";
 import { type AppView } from "./shell-context";
 import { type Signal } from "./notifications";
@@ -76,6 +77,7 @@ const guide: Record<string, { verb: string; goal: string; now: string; output: s
 };
 
 export function ExperienceGuide({
+  showJourney,
   active,
   operations,
   signals,
@@ -85,9 +87,9 @@ export function ExperienceGuide({
   operations: Operation[];
   signals: Signal[];
   onNavigate: (view: AppView) => void;
+  showJourney: boolean;
 }) {
   const [explained, setExplained] = useState(false);
-  const [copilotOpen, setCopilotOpen] = useState(false);
   const current = guide[active] ?? guide.Operações;
   const activeStep = journey.findIndex(step => step.active === active);
   const blocked = operations.filter(operation => operation.blockers > 0 && operation.status !== "Cancelada");
@@ -123,127 +125,87 @@ export function ExperienceGuide({
 
   return (
     <>
-      <aside className="xp-guide" aria-label="Jornada STRATO">
-        <div className="xp-guide-main">
-          <div className="xp-guide-context">
-            <span className="xp-context-dot" data-tone={journey[activeStep]?.tone ?? "slate"} />
-            <div>
-              <small>VOCÊ ESTÁ EM · {current.verb.toUpperCase()}</small>
-              <b>{active}</b>
+      {showJourney && (
+        <aside className="xp-guide" aria-label="Jornada STRATO">
+          <div className="xp-guide-main">
+            <div className="xp-guide-context">
+              <span className="xp-context-dot" data-tone={journey[activeStep]?.tone ?? "slate"} />
+              <div>
+                <small>VOCÊ ESTÁ EM · {current.verb.toUpperCase()}</small>
+                <b>{active}</b>
+              </div>
             </div>
-          </div>
-          <nav className="xp-journey" aria-label="Fluxo ponta a ponta">
-            {journey.map((step, index) => (
-              <button
-                type="button"
-                key={step.label}
-                className={index === activeStep ? "is-current" : index < activeStep ? "is-past" : ""}
-                data-tone={step.tone}
-                onClick={() => onNavigate(step.view)}
-                aria-label={`${step.label} · ${step.short}`}
-                title={`${step.label} · ${step.short}`}
-              >
-                <i>{index < activeStep ? <CheckIcon /> : index + 1}</i>
-                <span>
-                  <b>{step.label}</b>
-                  <small>{step.short}</small>
-                </span>
-              </button>
-            ))}
-          </nav>
-          <button
-            className="xp-explain-btn"
-            type="button"
-            aria-expanded={explained}
-            onClick={() => setExplained(value => !value)}
-          >
-            {explained ? "Ocultar orientação" : "Entenda esta tela"}
-            <ArrowIcon />
-          </button>
-        </div>
-        {explained && (
-          <div className="xp-guide-detail">
-            <div>
-              <small>OBJETIVO</small>
-              <b>{current.goal}</b>
-            </div>
-            <div>
-              <small>FAÇA AGORA</small>
-              <b>{current.now}</b>
-            </div>
-            <div>
-              <small>SAÍDA ESPERADA</small>
-              <b>{current.output}</b>
-            </div>
-            <div className="xp-color-key">
-              <small>CORES QUE FALAM</small>
-              <span>
-                <i className="info" /> salvar
-              </span>
-              <span>
-                <i className="attention" /> revisar
-              </span>
-              <span>
-                <i className="blocked" /> excluir
-              </span>
-              <span>
-                <i className="done" /> confirmar
-              </span>
-            </div>
-          </div>
-        )}
-      </aside>
-
-      <div className={`xp-copilot ${copilotOpen ? "is-open" : ""}`}>
-        {copilotOpen && (
-          <section role="dialog" aria-label="Copiloto STRATO">
-            <header>
-              <span>
-                <SparkIcon />
-                <b>Copiloto STRATO</b>
-              </span>
-              <button type="button" aria-label="Fechar copiloto" onClick={() => setCopilotOpen(false)}>
-                <CloseIcon />
-              </button>
-            </header>
-            <div className="xp-ai-label">
-              <i /> RECOMENDAÇÃO CONTEXTUAL
-            </div>
-            <h2>{suggestion.title}</h2>
-            <p>{suggestion.body}</p>
-            <div className="xp-ai-proof">
-              <AlertIcon />
-              <span>
-                <b>Por que isto?</b> Prioridade calculada por bloqueio, valor, prazo e etapa atual.
-              </span>
-            </div>
+            <nav className="xp-journey" aria-label="Fluxo ponta a ponta">
+              {journey.map((step, index) => (
+                <button
+                  type="button"
+                  key={step.label}
+                  className={index === activeStep ? "is-current" : index < activeStep ? "is-past" : ""}
+                  data-tone={step.tone}
+                  onClick={() => onNavigate(step.view)}
+                  aria-label={`${step.label} · ${step.short}`}
+                  title={`${step.label} · ${step.short}`}
+                >
+                  <i>{index < activeStep ? <CheckIcon /> : index + 1}</i>
+                  <span>
+                    <b>{step.label}</b>
+                    <small>{step.short}</small>
+                  </span>
+                </button>
+              ))}
+            </nav>
             <button
+              className="xp-explain-btn"
               type="button"
-              className="xp-ai-action action-warning"
-              onClick={() => {
-                onNavigate(suggestion.view);
-                setCopilotOpen(false);
-              }}
+              aria-expanded={explained}
+              onClick={() => setExplained(value => !value)}
             >
-              {suggestion.action}
+              {explained ? "Ocultar orientação" : "Entenda esta tela"}
               <ArrowIcon />
             </button>
-            <small>A IA orienta; decisões e registros continuam sob controle humano.</small>
-          </section>
-        )}
-        <button
-          type="button"
-          className="xp-copilot-trigger"
-          aria-expanded={copilotOpen}
-          onClick={() => setCopilotOpen(value => !value)}
-        >
-          <SparkIcon />
-          <span>
-            <b>Copiloto</b>
-            <small>{blocked.length ? `${blocked.length} prioridade(s)` : "Fluxo assistido"}</small>
-          </span>
-        </button>
-      </div>
+          </div>
+          {explained && (
+            <div className="xp-guide-detail">
+              <div>
+                <small>OBJETIVO</small>
+                <b>{current.goal}</b>
+              </div>
+              <div>
+                <small>FAÇA AGORA</small>
+                <b>{current.now}</b>
+              </div>
+              <div>
+                <small>SAÍDA ESPERADA</small>
+                <b>{current.output}</b>
+              </div>
+              <div className="xp-color-key">
+                <small>CORES QUE FALAM</small>
+                <span>
+                  <i className="info" /> salvar
+                </span>
+                <span>
+                  <i className="attention" /> revisar
+                </span>
+                <span>
+                  <i className="blocked" /> excluir
+                </span>
+                <span>
+                  <i className="done" /> confirmar
+                </span>
+              </div>
+            </div>
+          )}
+        </aside>
+      )}
+
+      <Copilot
+        suggestion={{
+          title: suggestion.title,
+          body: suggestion.body,
+          action: suggestion.action,
+          onAction: () => onNavigate(suggestion.view),
+        }}
+      />
     </>
   );
 }

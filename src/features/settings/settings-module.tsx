@@ -81,6 +81,8 @@ export default function SettingsModule({
   onPolicies,
   showGuidance,
   onGuidance,
+  showJourney,
+  onJourney,
   integrations,
   onIntegrations,
 }: {
@@ -88,6 +90,8 @@ export default function SettingsModule({
   onPolicies: (state: EligibilityPolicyState) => void;
   showGuidance: boolean;
   onGuidance: (value: boolean) => void;
+  showJourney: boolean;
+  onJourney: (value: boolean) => void;
   integrations: IntegrationState;
   onIntegrations: (state: IntegrationState) => void;
 }) {
@@ -361,6 +365,25 @@ export default function SettingsModule({
                   />
                   <span />
                   <b>{showGuidance ? "Visíveis" : "Ocultas"}</b>
+                </label>
+              </section>
+              <section className="settings-inline-option">
+                <div>
+                  <strong>Barra de jornada e ajuda</strong>
+                  <span>
+                    Mostra no topo das telas onde você está no fluxo e o botão &ldquo;Entenda esta tela&rdquo;.
+                  </span>
+                  <small>Fica oculta por padrão. O Copiloto continua disponível com a barra desligada.</small>
+                </div>
+                <label className="settings-switch">
+                  <input
+                    aria-label="Exibir barra de jornada e ajuda"
+                    type="checkbox"
+                    checked={showJourney}
+                    onChange={event => onJourney(event.target.checked)}
+                  />
+                  <span />
+                  <b>{showJourney ? "Visível" : "Oculta"}</b>
                 </label>
               </section>
             </div>

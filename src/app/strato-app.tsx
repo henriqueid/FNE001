@@ -15,7 +15,13 @@ import CommercialModule from "@/src/features/commercial/commercial-module";
 import FinanceModule from "@/src/features/finance/finance-module";
 import HomeDashboard from "@/src/features/home/home-dashboard";
 import { useEffect, useMemo, useState } from "react";
-import { clearPersistedState, loadPersistedState, saveGuidance, savePersistedState } from "./persistence";
+import {
+  clearPersistedState,
+  loadPersistedState,
+  saveGuidance,
+  saveJourneyBar,
+  savePersistedState,
+} from "./persistence";
 import { buildNewOperation } from "@/src/domain/operations/create-operation";
 
 import { repAt } from "@/src/domain/commercial/rules";
@@ -61,6 +67,7 @@ export default function StratoApp() {
   const [companyScope, setCompanyScope] = useState("Consolidado");
   const [storageReady, setStorageReady] = useState(false);
   const [showGuidance, setShowGuidance] = useState(true);
+  const [showJourney, setShowJourney] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [view, setView] = useState<AppView>("home");
   const navigate = (target: AppView) => {
@@ -163,6 +170,7 @@ export default function StratoApp() {
     if (stored.policies) setPolicies(stored.policies);
     if (stored.integrations) setIntegrations(stored.integrations);
     if (stored.guidance !== undefined) setShowGuidance(stored.guidance);
+    if (stored.journey !== undefined) setShowJourney(stored.journey);
     try {
       const savedScope = window.localStorage.getItem(COMPANY_SCOPE_KEY);
       if (
@@ -194,6 +202,10 @@ export default function StratoApp() {
   useEffect(() => {
     if (storageReady) saveGuidance(showGuidance);
   }, [showGuidance, storageReady]);
+
+  useEffect(() => {
+    if (storageReady) saveJourneyBar(showJourney);
+  }, [showJourney, storageReady]);
 
   useEffect(() => {
     if (!storageReady) return;
@@ -450,6 +462,8 @@ export default function StratoApp() {
         onPolicies={setPolicies}
         showGuidance={showGuidance}
         onGuidance={setShowGuidance}
+        showJourney={showJourney}
+        onJourney={setShowJourney}
         integrations={integrations}
         onIntegrations={setIntegrations}
       />
@@ -481,6 +495,7 @@ export default function StratoApp() {
                 }}
                 onOpenSettings={openSettings}
                 onNavigate={navigate}
+                showJourney={showJourney}
               >
                 {page}
               </Shell>

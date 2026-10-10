@@ -26,6 +26,7 @@ export function Shell({
   onCompanyScopeChange,
   onOpenSettings,
   onNavigate,
+  showJourney = false,
 }: {
   children: ReactNode;
   active?: string;
@@ -34,6 +35,8 @@ export function Shell({
   onCompanyScopeChange?: (scope: string) => void;
   onOpenSettings: () => void;
   onNavigate?: (target: AppView) => void;
+  /** Barra da jornada ("Você está em" e "Entenda esta tela"); ligada nas Configurações. */
+  showJourney?: boolean;
 }) {
   const context = useContext(ShellContext);
   const { preference, setPreference } = useTheme();
@@ -168,6 +171,7 @@ export function Shell({
         </header>
         {menuOpen && <ModuleMenu active={active} openCount={openCount} onGo={go} onClose={closeMenu} />}
         <ExperienceGuide
+          showJourney={showJourney}
           active={active}
           operations={operations}
           signals={signals}

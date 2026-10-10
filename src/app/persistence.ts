@@ -27,6 +27,7 @@ export const STORAGE_KEYS = {
   policies: "strato-eligibility-policies-v2",
   integrations: "strato-integrations-v1",
   guidance: "lastro-interface-guidance-v1",
+  journey: "strato-journey-bar-v1",
 } as const;
 
 export type PersistedState = {
@@ -122,7 +123,7 @@ const read = <T>(key: string): T | null => {
 };
 
 /** Lê o que houver salvo; áreas ausentes ou inválidas voltam como `undefined`. */
-export function loadPersistedState(): Partial<PersistedState> & { guidance?: boolean } {
+export function loadPersistedState(): Partial<PersistedState> & { guidance?: boolean; journey?: boolean } {
   try {
     const operations = read<Operation[]>(STORAGE_KEYS.operations);
     const debtors = read<Debtor[]>(STORAGE_KEYS.debtors);
@@ -134,6 +135,7 @@ export function loadPersistedState(): Partial<PersistedState> & { guidance?: boo
     const integrations = read<unknown>(STORAGE_KEYS.integrations);
     window.localStorage.removeItem("strato-eligibility-policies-v1");
     const guidance = window.localStorage.getItem(STORAGE_KEYS.guidance);
+    const journey = window.localStorage.getItem(STORAGE_KEYS.journey);
     const migratedOperations = operations ? migrateStoredOperations(operations) : undefined;
     return {
       operations: migratedOperations,
@@ -148,6 +150,7 @@ export function loadPersistedState(): Partial<PersistedState> & { guidance?: boo
       policies: migrateEligibilityPolicyState(policies),
       integrations: migrateIntegrationState(integrations),
       guidance: guidance === null ? undefined : guidance === "true",
+      journey: journey === null ? undefined : journey === "true",
     };
   } catch {
     return {};
@@ -174,6 +177,15 @@ export function savePersistedState(state: PersistedState) {
 export function saveGuidance(value: boolean) {
   try {
     window.localStorage.setItem(STORAGE_KEYS.guidance, String(value));
+  } catch {
+    /* sem armazenamento */
+  }
+}
+
+/** Barra da jornada ("Você está em" e "Entenda esta tela"): oculta por padrão, ligada nas Configurações. */
+export function saveJourneyBar(value: boolean) {
+  try {
+    window.localStorage.setItem(STORAGE_KEYS.journey, String(value));
   } catch {
     /* sem armazenamento */
   }

@@ -1,5 +1,21 @@
 # Changelog
 
+## Não lançado — 09/10/2026 · Copiloto flutuante e Mesa Inteligente (demonstração)
+
+- O Copiloto vira um ícone redondo flutuante que abre uma caixa de diálogo de conversa no canto da tela, no lugar do botão largo antigo. A sugestão do momento continua no topo da conversa.
+- Nova análise assistida: escolher o cedente e enviar XML de NF-e, CNAB 240/400 ou XLS no layout padrão de extrato (reconhecidos pela extensão; nesta versão os títulos são de exemplo).
+- Tarefa em segundo plano por etapas, com pedido de autorização para consulta ao birô e aviso discreto ao terminar; a análise continua com a caixa fechada.
+- Analista de Mesa: explica apontamentos com regra e versão da política, simula taxa, retira ou inclui títulos e compara cenários. Cada mudança gera uma versão nova; os valores vêm sempre do motor (`src/domain/copilot/desk-engine.ts`, que usa o `pricingAdjustment` do STRATO).
+- Aprovação rápida só sem impedimentos e dentro da alçada; caso contrário, envio para alçada. Formalização e pagamento seguem manuais.
+- "Expandir" abre a análise completa (valores, apontamentos, score, títulos e histórico de cenários) ao lado da conversa.
+- Perguntas livres sobre a base: resumo da carteira, vencidos, vencimentos, maiores sacados, cedente ou sacado por nome ou CNPJ, uso de limite, score, operações na mesa e regras da política ativa (`src/domain/copilot/system-query.ts`). Cada resposta mostra a fonte consultada.
+- Botão "Nova conversa" no topo do Copiloto e "Nova análise" no cartão do resultado: limpam a conversa e cancelam a tarefa em curso.
+- Análise completa vira resumo da operação (`src/domain/copilot/desk-summary.ts`, `copilot-summary.tsx`): líquido e indicadores, composição do valor, score do cedente em gauge com as faixas da política, motivos do score, posição do cedente (limite usado, esta operação e disponível depois; carteira e vencidos), sacados da operação (participação contra o limite da política e posição de cada um na carteira), prazos e checagem da política.
+- Títulos de exemplo usam sacados que existem na carteira de demonstração, para o cruzamento com a carteira aparecer.
+- A barra de jornada ("Você está em" e "Entenda esta tela") fica oculta por padrão; liga em Configurações › Interface › "Barra de jornada e ajuda" (preferência salva no navegador). O Copiloto continua disponível com ela desligada.
+- Prefixo de CSS `cpl-` (o `cp-` já era usado no painel de cliente do Risco).
+- 20 testes novos (`tests/copilot-desk.test.ts`, `tests/copilot-system-query.test.ts`, `tests/copilot-desk-summary.test.ts`); suíte com 136 testes.
+
 ## Não lançado — 08/10/2026 · Central de cobrança e checagem
 
 - Nova agenda operacional da carteira com priorização automática por promessa vencida, retorno atrasado, faixa de atraso, vencimento e confirmação do sacado.

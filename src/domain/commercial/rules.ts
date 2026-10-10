@@ -34,6 +34,11 @@ export function repAt(state: Pick<CommercialState, "links">, document: string, d
   return owner;
 }
 
+/** Gerente atual da conta, responsável pela operação recorrente e pelo pós-venda. */
+export function managerOf(state: Pick<CommercialState, "links">, document: string): string | undefined {
+  return state.links.find(link => digits(link.document) === digits(document))?.managerId;
+}
+
 /** Data comercial da operação: liberação ao financeiro; sem ela, a data do aditivo. */
 export function dealDate(op: Operation, today: string) {
   const released = op.releaseReview?.releasedAt?.match(/(\d{2})\/(\d{2})\/(\d{4})/);

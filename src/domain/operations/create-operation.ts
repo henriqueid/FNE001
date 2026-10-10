@@ -3,7 +3,7 @@
  * Gera o aditivo (AAAAMMDD + sequência diária) e o borderô (sequência geral), grava o comercial
  * responsável pelo cedente na data e aplica a política padrão do tipo de veículo.
  */
-import { repAt } from "@/src/domain/commercial/rules";
+import { managerOf, repAt } from "@/src/domain/commercial/rules";
 import { type CommercialState } from "@/src/domain/commercial/types";
 import { initialOperations } from "@/src/domain/core/demo/operations";
 import {
@@ -68,6 +68,7 @@ export function buildNewOperation(
   return {
     ...initialOperations[4],
     commercialRepId: repAt(commercial, cedent.document, today),
+    accountManagerId: managerOf(commercial, cedent.document),
     id: `op-${Date.now()}`,
     proposal: `#${borderoSequence}`,
     aditivoNumber,

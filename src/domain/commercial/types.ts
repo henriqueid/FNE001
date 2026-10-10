@@ -20,6 +20,9 @@ export type SalesRep = {
   since: string;
 };
 
+/** Gerentes de conta cuidam da operação recorrente e do pós-venda da carteira. */
+export const isAccountManager = (rep: SalesRep) => rep.role.toLocaleLowerCase("pt-BR").includes("gerente");
+
 export type LinkOrigin = "Prospecção ativa" | "Indicação" | "Inbound" | "Carteira transferida";
 
 export type ClientLink = {
@@ -27,6 +30,8 @@ export type ClientLink = {
   clientName: string;
   document: string;
   repId: string;
+  /** Responsável pelas operações recorrentes e pelo pós-venda da conta. */
+  managerId?: string;
   since: string;
   origin: LinkOrigin;
   status: "Em onboarding" | "Ativo" | "Inativo";

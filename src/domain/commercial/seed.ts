@@ -331,6 +331,7 @@ export function seedCommercial(today = todayIso()): CommercialState {
         clientName: name,
         document,
         repId,
+        managerId: "rep-3",
         since,
         origin,
         status: noOps ? "Em onboarding" : lastOpDays && lastOpDays > 30 ? "Inativo" : "Ativo",

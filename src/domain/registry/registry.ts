@@ -33,6 +33,7 @@ export type ClientRecord = {
   cedent: Cedent;
   link?: ClientLink;
   rep?: SalesRep;
+  manager?: SalesRep;
   status: ClientStatus;
   limitSource: "Comitê" | "Cadastro";
 };
@@ -50,12 +51,14 @@ export function buildRegistry(commercial: CommercialState, cedents: Cedent[]): C
   const records: ClientRecord[] = cedents.map(cedent => {
     const link = commercial.links.find(l => digits(l.document) === digits(cedent.document));
     const rep = link ? commercial.reps.find(r => r.id === link.repId) : undefined;
+    const manager = link ? commercial.reps.find(r => r.id === link.managerId) : undefined;
     return {
       document: cedent.document,
       name: cedent.name,
       cedent,
       link,
       rep,
+      manager,
       status: link ? link.status : "Sem comercial",
       limitSource: link ? "Comitê" : "Cadastro",
     };
@@ -69,6 +72,7 @@ export function buildRegistry(commercial: CommercialState, cedents: Cedent[]): C
         name: link.clientName,
         link,
         rep: commercial.reps.find(r => r.id === link.repId),
+        manager: commercial.reps.find(r => r.id === link.managerId),
         status: link.status,
         limitSource: "Comitê",
         cedent: {

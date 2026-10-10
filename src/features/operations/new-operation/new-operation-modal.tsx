@@ -170,6 +170,10 @@ export function NewOperationModal({
                 <small>Comercial responsável</small>
               </span>
               <span>
+                <b>{registry?.managerOf(cedent.document)?.name ?? "Sem gerente"}</b>
+                <small>Operações e pós-venda</small>
+              </span>
+              <span>
                 <b>Score {cedent.score}</b>
                 <small>
                   {scoreBand(cedent.score) === "Positivo"

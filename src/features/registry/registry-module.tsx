@@ -153,12 +153,13 @@ export default function RegistryModule({ debtors, operations, onOpenOperation, o
         <LinkModal
           record={linkModal.record}
           onClose={() => setLinkModal(null)}
-          onSave={(repId, origin) => {
+          onSave={(repId, managerId, origin) => {
             const { record } = linkModal;
             const result = linkClient(commercial, {
               document: record.document,
               clientName: record.name,
               repId,
+              managerId,
               origin,
               approvedLimit: record.cedent.creditLimit,
             });

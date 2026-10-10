@@ -15,6 +15,7 @@ import {
 } from "@/src/domain/registry/parties";
 import { Field, formatMoneyInput, parseMoneyBR } from "@/src/features/finance/finance-ui";
 import { useState } from "react";
+import { isAccountManager } from "@/src/domain/commercial/types";
 
 const supplierCategories = [
   "Tecnologia",
@@ -80,7 +81,26 @@ export function PartyRoleFields({ party, onChange, issueFor }: Props) {
                       <select id="ced-rep" value={d.repId} onChange={e => update("cedente", { repId: e.target.value })}>
                         <option value="">Sem comercial</option>
                         {commercial.reps
-                          .filter(r => r.active)
+                          .filter(r => r.active && !isAccountManager(r))
+                          .map(r => (
+                            <option key={r.id} value={r.id}>
+                              {r.name}
+                            </option>
+                          ))}
+                      </select>
+                    </Field>
+                    <Field
+                      label="Gerente da conta"
+                      hint={hint("cedente.managerId") ?? "Responsável pelas operações e pelo pós-venda."}
+                    >
+                      <select
+                        id="ced-manager"
+                        value={d.managerId || link?.managerId || ""}
+                        onChange={e => update("cedente", { managerId: e.target.value })}
+                      >
+                        <option value="">Sem gerente definido</option>
+                        {commercial.reps
+                          .filter(r => r.active && isAccountManager(r))
                           .map(r => (
                             <option key={r.id} value={r.id}>
                               {r.name}

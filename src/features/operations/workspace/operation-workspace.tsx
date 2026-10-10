@@ -115,12 +115,16 @@ export function OperationWorkspace({
   const commercialRep =
     workspaceRegistry?.commercial.reps.find(rep => rep.id === operation.commercialRepId) ??
     workspaceRegistry?.repOf(operation.document);
+  const accountManager =
+    workspaceRegistry?.commercial.reps.find(rep => rep.id === operation.accountManagerId) ??
+    workspaceRegistry?.managerOf(operation.document);
   return (
     <>
       <div className="workspace-wrap">
         <WorkspaceHeader
           operation={operation}
           commercialRepName={commercialRep?.name}
+          accountManagerName={accountManager?.name}
           onBack={onBack}
           onCancel={() => setShowCancellation(true)}
           onAdvance={advance}

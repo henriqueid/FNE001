@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { transferClient } from "@/src/domain/commercial/actions";
-import { computeCommission, repAt, tierRate } from "@/src/domain/commercial/rules";
+import { assignAccountManager, transferClient } from "@/src/domain/commercial/actions";
+import { computeCommission, managerOf, repAt, tierRate } from "@/src/domain/commercial/rules";
 import { seedCommercial } from "@/src/domain/commercial/seed";
 import { todayIso } from "@/src/domain/finance/ledger";
 
@@ -22,6 +22,14 @@ describe("regras comerciais", () => {
     expect(repAt(moved, link.document, "2020-01-01")).toBe(link.repId);
     // A transferência vale a partir da data real do sistema (todayIso), não da data fixa do seed.
     expect(repAt(moved, link.document, todayIso())).toBe(other.id);
+  });
+  it("mantém comercial e gerente da conta como responsabilidades independentes", () => {
+    const link = state.links[0];
+    const manager = state.reps.find(rep => rep.role.toLowerCase().includes("gerente"))!;
+    const assigned = assignAccountManager(state, link.id, manager.id);
+    expect(assigned.error).toBeUndefined();
+    expect(repAt(assigned.state, link.document, TODAY)).toBe(link.repId);
+    expect(managerOf(assigned.state, link.document)).toBe(manager.id);
   });
   it("comissão = base × faixa + bônus − estorno", () => {
     const month = TODAY.slice(0, 7);

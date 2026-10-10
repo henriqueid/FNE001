@@ -5,7 +5,7 @@
  * dados de demonstração atuais (migração), para que campos novos não quebrem dados antigos.
  * Tudo é tolerante a falha: sem armazenamento, o app segue só na memória.
  */
-import { type CommercialState } from "@/src/domain/commercial/types";
+import { isAccountManager, type CommercialState } from "@/src/domain/commercial/types";
 import { initialDebtors } from "@/src/domain/core/demo/debtors";
 import { initialOperations } from "@/src/domain/core/demo/operations";
 import { type Debtor, type Operation } from "@/src/domain/core/types";
@@ -122,6 +122,15 @@ const read = <T>(key: string): T | null => {
   return raw ? (JSON.parse(raw) as T) : null;
 };
 
+/** Completa vínculos antigos com um gerente de conta real, preservando os demais dados locais. */
+export function migrateCommercialState(state: CommercialState): CommercialState {
+  const managerId = state.reps.find(rep => rep.active && isAccountManager(rep))?.id;
+  return {
+    ...state,
+    links: state.links.map(link => ({ ...link, managerId: link.managerId ?? managerId })),
+  };
+}
+
 /** Lê o que houver salvo; áreas ausentes ou inválidas voltam como `undefined`. */
 export function loadPersistedState(): Partial<PersistedState> & { guidance?: boolean; journey?: boolean } {
   try {
@@ -141,7 +150,8 @@ export function loadPersistedState(): Partial<PersistedState> & { guidance?: boo
       operations: migratedOperations,
       debtors: debtors ? migrateStoredDebtors(debtors) : undefined,
       finance: finance?.version === 1 && Array.isArray(finance.accounts) ? ensureChart(finance) : undefined,
-      commercial: commercial?.version === 1 && Array.isArray(commercial.reps) ? commercial : undefined,
+      commercial:
+        commercial?.version === 1 && Array.isArray(commercial.reps) ? migrateCommercialState(commercial) : undefined,
       parties: Array.isArray(parties) ? parties : undefined,
       portfolio:
         portfolio && [1, 2, 3].includes(portfolio.version) && Array.isArray(portfolio.titles)

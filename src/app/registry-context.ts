@@ -16,6 +16,7 @@ export type RegistryValue = {
   cedents: Cedent[];
   records: ClientRecord[];
   repOf: (document: string, date?: string) => SalesRep | undefined;
+  managerOf: (document: string) => SalesRep | undefined;
   onCommercial: (next: CommercialState) => void;
   /** Pessoas do Cadastro (salvas + derivadas dos módulos), uma por documento. */
   parties: Party[];

@@ -67,6 +67,7 @@ export type CedentRoleData = {
   creditLimit: number;
   monthlyRate: number;
   repId: string;
+  managerId?: string;
   contractUntil: string;
   guarantee: "Com regresso" | "Sem regresso";
 };
@@ -218,6 +219,8 @@ export function validateParty(party: Party, others: Party[]): PartyIssue[] {
   if (party.roles.includes("cedente")) {
     if (party.kind === "PF") warn("cedente", "Cedente pessoa física: confirme se a política do veículo permite.");
     if (!r.cedente?.repId) warn("cedente.repId", "Cedente sem comercial responsável não gera comissão.");
+    if (!r.cedente?.managerId)
+      warn("cedente.managerId", "Defina o gerente da conta responsável pelas operações e pelo pós-venda.");
     if ((r.cedente?.creditLimit ?? 0) < 0) block("cedente.creditLimit", "Limite não pode ser negativo.");
   }
   if (party.roles.includes("sacado") && (r.sacado?.creditLimit ?? 0) < 0)
@@ -273,7 +276,14 @@ const emptyAddress = (): PartyAddress => ({
 export function defaultRoleData(role: PartyRole): PartyRoleData[PartyRole] {
   switch (role) {
     case "cedente":
-      return { creditLimit: 0, monthlyRate: 2.5, repId: "", contractUntil: "", guarantee: "Com regresso" };
+      return {
+        creditLimit: 0,
+        monthlyRate: 2.5,
+        repId: "",
+        managerId: "",
+        contractUntil: "",
+        guarantee: "Com regresso",
+      };
     case "sacado":
       return { creditLimit: 0, confirmationContact: "" };
     case "fornecedor":
@@ -339,6 +349,7 @@ export function mergeParties(
     debtors: Debtor[];
     reps: SalesRep[];
     repOfCedent: (document: string) => string | undefined;
+    managerOfCedent?: (document: string) => string | undefined;
   },
 ): Party[] {
   const byDoc = new Map<string, Party>();
@@ -354,6 +365,7 @@ export function mergeParties(
       creditLimit: c.creditLimit,
       monthlyRate: 2.5,
       repId: sources.repOfCedent(c.document) ?? "",
+      managerId: sources.managerOfCedent?.(c.document) ?? "",
       contractUntil: "",
       guarantee: "Com regresso",
     };

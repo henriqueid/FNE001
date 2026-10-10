@@ -1,20 +1,11 @@
 "use client";
 
 import { daysBetween, digits, inRange } from "@/src/domain/commercial/calendar";
-import { type CommercialState, type Deal, type SalesRep } from "@/src/domain/commercial/types";
+import { isAccountManager, type CommercialState, type Deal } from "@/src/domain/commercial/types";
 import { type PortfolioTitle } from "@/src/domain/home/metrics";
 import { Avatar } from "@/src/features/commercial/commercial-ui";
 import { br, compact, money } from "@/src/features/finance/finance-ui";
 import { ArrowIcon, CheckIcon, ClockIcon, HandshakeIcon, UsersIcon } from "@/src/ui/icons";
-
-function stableIndex(value: string, size: number) {
-  if (!size) return 0;
-  return [...value].reduce((sum, char) => sum + char.charCodeAt(0), 0) % size;
-}
-
-function isManager(rep: SalesRep) {
-  return rep.role.toLocaleLowerCase("pt-BR").includes("gerente");
-}
 
 export function TeamDynamicsTab({
   state,
@@ -36,21 +27,13 @@ export function TeamDynamicsTab({
   onSelectRep: (repId: string) => void;
 }) {
   const activeReps = state.reps.filter(rep => rep.active);
-  const managers = activeReps.filter(isManager);
-  const agents = activeReps.filter(rep => !isManager(rep));
+  const managers = activeReps.filter(isAccountManager);
+  const agents = activeReps.filter(rep => !isAccountManager(rep));
   const repById = new Map(activeReps.map(rep => [rep.id, rep]));
   const linksByDocument = new Map(state.links.map(link => [digits(link.document), link]));
 
-  const agentFor = (document: string, preferred?: string) => {
-    const direct = preferred ? repById.get(preferred) : undefined;
-    if (direct && !isManager(direct)) return direct;
-    return agents[stableIndex(digits(document) || document, agents.length)];
-  };
-  const managerFor = (document: string, preferred?: string) => {
-    const direct = preferred ? repById.get(preferred) : undefined;
-    if (direct && isManager(direct)) return direct;
-    return managers[stableIndex(digits(document) || document, managers.length)];
-  };
+  const agentFor = (preferred?: string) => (preferred ? repById.get(preferred) : undefined);
+  const managerFor = (preferred?: string) => (preferred ? repById.get(preferred) : undefined);
 
   const periodDeals = deals.filter(deal => inRange(deal.date, from, to));
   const totalVop = periodDeals.reduce((sum, deal) => sum + deal.face, 0);
@@ -65,14 +48,12 @@ export function TeamDynamicsTab({
   const agentRows = agents
     .filter(rep => !repFilter || rep.id === repFilter)
     .map(rep => {
-      const prospects = state.prospects.filter(
-        prospect => agentFor(prospect.document || prospect.id, prospect.repId)?.id === rep.id,
-      );
+      const prospects = state.prospects.filter(prospect => agentFor(prospect.repId)?.id === rep.id);
       const open = prospects.filter(prospect => !prospect.lost && prospect.stage !== "Aprovado");
       const won = prospects.filter(prospect => !prospect.lost && prospect.stage === "Aprovado");
-      const repLinks = state.links.filter(link => agentFor(link.document, link.repId)?.id === rep.id);
+      const repLinks = state.links.filter(link => agentFor(link.repId)?.id === rep.id);
       const repDeals = periodDeals.filter(
-        deal => agentFor(deal.document, linksByDocument.get(digits(deal.document))?.repId)?.id === rep.id,
+        deal => agentFor(linksByDocument.get(digits(deal.document))?.repId)?.id === rep.id,
       );
       const newAccounts = repLinks.filter(link => inRange(link.since, from, to));
       return {
@@ -92,7 +73,7 @@ export function TeamDynamicsTab({
   const managerRows = managers
     .filter(rep => !repFilter || rep.id === repFilter)
     .map(rep => {
-      const links = state.links.filter(link => managerFor(link.document, link.repId)?.id === rep.id);
+      const links = state.links.filter(link => managerFor(link.managerId)?.id === rep.id);
       const documents = new Set(links.map(link => digits(link.document)));
       const managedDeals = periodDeals.filter(deal => documents.has(digits(deal.document)));
       const managedTitles = titles.filter(title => documents.has(digits(title.ownerDocument)));
@@ -104,7 +85,7 @@ export function TeamDynamicsTab({
         const link = visit.document
           ? linksByDocument.get(digits(visit.document))
           : state.links.find(item => item.clientName === visit.target);
-        return visit.repId === rep.id || (link && managerFor(link.document, link.repId)?.id === rep.id);
+        return visit.repId === rep.id || (link && managerFor(link.managerId)?.id === rep.id);
       });
       return {
         rep,
@@ -124,8 +105,8 @@ export function TeamDynamicsTab({
 
   const handoffs = [...state.links]
     .filter(link => {
-      const agent = agentFor(link.document, link.repId);
-      const manager = managerFor(link.document, link.repId);
+      const agent = agentFor(link.repId);
+      const manager = managerFor(link.managerId);
       return !repFilter || agent?.id === repFilter || manager?.id === repFilter;
     })
     .sort((a, b) => b.since.localeCompare(a.since))
@@ -335,8 +316,8 @@ export function TeamDynamicsTab({
             </thead>
             <tbody>
               {handoffs.map(link => {
-                const agent = agentFor(link.document, link.repId);
-                const manager = managerFor(link.document, link.repId);
+                const agent = agentFor(link.repId);
+                const manager = managerFor(link.managerId);
                 const clientDeals = periodDeals.filter(deal => digits(deal.document) === digits(link.document));
                 const vop = clientDeals.reduce((sum, deal) => sum + deal.face, 0);
                 const last = deals.filter(deal => digits(deal.document) === digits(link.document)).at(-1)?.date;

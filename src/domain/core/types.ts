@@ -278,6 +278,8 @@ export type Operation = {
   risk: "Baixo" | "Médio" | "Alto";
   /** Comercial responsável pelo cliente na data da operação (vínculo do cadastro). */
   commercialRepId?: string;
+  /** Gerente da conta responsável pela operação e pelo pós-venda. */
+  accountManagerId?: string;
   automation: number;
   blockers: number;
   alerts: number;

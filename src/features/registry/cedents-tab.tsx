@@ -48,9 +48,12 @@ export function CedentsTab({ operations, onOpenOperation, onNavigate, onEdit, on
   };
   const shown = records.filter(
     r =>
-      (!repFilter || (repFilter === "none" ? !r.rep : r.rep?.id === repFilter)) &&
+      (!repFilter ||
+        (repFilter === "none" ? !r.rep || !r.manager : r.rep?.id === repFilter || r.manager?.id === repFilter)) &&
       (!q ||
-        `${r.name} ${r.document} ${r.rep?.name ?? ""} ${r.link?.city ?? ""}`.toLowerCase().includes(q.toLowerCase())),
+        `${r.name} ${r.document} ${r.rep?.name ?? ""} ${r.manager?.name ?? ""} ${r.link?.city ?? ""}`
+          .toLowerCase()
+          .includes(q.toLowerCase())),
   );
   const totalLimit = records.reduce((s, r) => s + r.cedent.creditLimit, 0);
   const totalUsed = records.reduce((s, r) => s + r.cedent.usedLimit, 0);
@@ -107,7 +110,7 @@ export function CedentsTab({ operations, onOpenOperation, onNavigate, onEdit, on
               <input
                 value={q}
                 onChange={e => setQ(e.target.value)}
-                placeholder="Buscar cedente, CNPJ, comercial, cidade"
+                placeholder="Buscar cedente, CNPJ, comercial, gerente, cidade"
                 aria-label="Buscar cedente"
               />
             </label>
@@ -119,6 +122,7 @@ export function CedentsTab({ operations, onOpenOperation, onNavigate, onEdit, on
               <tr>
                 <th>Cedente</th>
                 <th>Comercial responsável</th>
+                <th>Gerente da conta</th>
                 <th className="num">Score</th>
                 <th className="num">Limite aprovado</th>
                 <th className="num">Usado</th>
@@ -160,6 +164,19 @@ export function CedentsTab({ operations, onOpenOperation, onNavigate, onEdit, on
                           </div>
                         ) : (
                           <span className="fn-chip warn">Sem comercial</span>
+                        )}
+                      </td>
+                      <td>
+                        {record.manager ? (
+                          <div className="cm-rep">
+                            <span className="cm-avatar small">{record.manager.initials}</span>
+                            <div>
+                              <b>{record.manager.name}</b>
+                              <small>operações e pós-venda</small>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="fn-chip warn">Sem gerente</span>
                         )}
                       </td>
                       <td className="num">
@@ -208,7 +225,7 @@ export function CedentsTab({ operations, onOpenOperation, onNavigate, onEdit, on
                     </tr>
                     {open === record.document && (
                       <tr className="cm-expand">
-                        <td colSpan={9}>
+                        <td colSpan={10}>
                           <div className="rg-detail">
                             <div>
                               <h3>Relacionamento</h3>
@@ -217,6 +234,10 @@ export function CedentsTab({ operations, onOpenOperation, onNavigate, onEdit, on
                                   <li>
                                     <span>Comercial</span>
                                     <b>{record.rep?.name ?? "—"}</b>
+                                  </li>
+                                  <li>
+                                    <span>Gerente da conta</span>
+                                    <b>{record.manager?.name ?? "Não definido"} · operações e pós-venda</b>
                                   </li>
                                   <li>
                                     <span>Vínculo</span>
@@ -311,8 +332,8 @@ export function CedentsTab({ operations, onOpenOperation, onNavigate, onEdit, on
           </table>
         </div>
         <p className="fn-note">
-          O limite aprovado é atualizado pela decisão do comitê (Comercial › Comitês). A operação grava o comercial
-          responsável quando nasce; transferir o cliente só muda as operações seguintes.
+          O limite aprovado é atualizado pela decisão do comitê (Comercial › Comitês). Cada nova operação grava o
+          comercial de origem e o gerente da conta responsável pela operação e pelo pós-venda.
         </p>
       </section>
     </>

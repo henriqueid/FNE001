@@ -11,12 +11,14 @@ import { type WorkspaceFeedback, type WorkspaceView } from "./workspace-model";
 export function WorkspaceHeader({
   operation,
   commercialRepName,
+  accountManagerName,
   onBack,
   onCancel,
   onAdvance,
 }: {
   operation: Operation;
   commercialRepName: string | undefined;
+  accountManagerName: string | undefined;
   onBack: () => void;
   onCancel: () => void;
   onAdvance: () => void;
@@ -36,6 +38,7 @@ export function WorkspaceHeader({
           <p>
             Borderô {operation.borderoNumber} <span>•</span> {operation.cedent} <span>•</span> {operation.document}{" "}
             <span>•</span> Comercial: <b className="workspace-rep">{commercialRepName ?? "sem vínculo"}</b>
+            <span>•</span> Gerente da conta: <b className="workspace-rep">{accountManagerName ?? "sem vínculo"}</b>
           </p>
         </div>
         <div className="workspace-actions">

@@ -56,6 +56,7 @@ const auditFieldLabels: Record<string, string> = {
   "roleData.cedente.creditLimit": "Cedente · limite de crédito",
   "roleData.cedente.monthlyRate": "Cedente · taxa mensal",
   "roleData.cedente.repId": "Cedente · comercial responsável",
+  "roleData.cedente.managerId": "Cedente · gerente da conta",
   "roleData.cedente.contractUntil": "Cedente · vigência do contrato",
   "roleData.cedente.guarantee": "Cedente · garantia",
   "roleData.sacado.creditLimit": "Sacado · limite de crédito",

@@ -13,6 +13,7 @@ import {
   type Deal,
   type FunnelStage,
   funnelStages,
+  isAccountManager,
   type LinkOrigin,
   type Prospect,
   type SalesRep,
@@ -232,7 +233,7 @@ export function addProspect(
 export function convertProspect(
   state: CommercialState,
   id: string,
-  input: { document: string; approvedLimit: number; segment: string; city: string },
+  input: { document: string; approvedLimit: number; segment: string; city: string; managerId?: string },
 ): CResult {
   const p = state.prospects.find(x => x.id === id);
   if (!p) return { state, error: "Oportunidade não encontrada." };
@@ -240,11 +241,13 @@ export function convertProspect(
   if (state.links.some(l => digits(l.document) === digits(input.document)))
     return { state, error: "Este CNPJ já está vinculado a um comercial." };
   const s = { ...state, links: [...state.links] };
+  const managerId = input.managerId ?? state.reps.find(rep => rep.active && isAccountManager(rep))?.id;
   s.links.push({
     id: nextId(s, "lk"),
     clientName: p.name,
     document: input.document,
     repId: p.repId,
+    managerId,
     since: todayIso(),
     origin: p.source,
     status: "Em onboarding",
@@ -278,6 +281,22 @@ export function transferClient(
       ),
     },
     message: "Cliente transferido. Os negócios anteriores continuam com o comercial antigo.",
+  };
+}
+
+/** Define quem conduz as operações e o pós-venda, sem alterar a autoria comercial da conta. */
+export function assignAccountManager(state: CommercialState, linkId: string, managerId: string): CResult {
+  const link = state.links.find(item => item.id === linkId);
+  if (!link) return { state, error: "Cliente não encontrado." };
+  const manager = state.reps.find(rep => rep.id === managerId && rep.active && isAccountManager(rep));
+  if (!manager) return { state, error: "Escolha um gerente de conta ativo." };
+  if (link.managerId === managerId) return { state, message: "Gerente da conta mantido." };
+  return {
+    state: {
+      ...state,
+      links: state.links.map(item => (item.id === linkId ? { ...item, managerId } : item)),
+    },
+    message: `${manager.name} agora responde pelas operações e pelo pós-venda desta conta.`,
   };
 }
 
@@ -349,6 +368,7 @@ export function linkClient(
     document: string;
     clientName: string;
     repId: string;
+    managerId?: string;
     origin: LinkOrigin;
     approvedLimit: number;
     segment?: string;
@@ -356,6 +376,8 @@ export function linkClient(
   },
 ): CResult {
   if (!input.repId) return { state, error: "Escolha o comercial responsável." };
+  const managerId = input.managerId ?? state.reps.find(rep => rep.active && isAccountManager(rep))?.id;
+  if (!managerId) return { state, error: "Escolha o gerente da conta responsável pelas operações e pelo pós-venda." };
   if (state.links.some(l => digits(l.document) === digits(input.document)))
     return { state, error: "Este CNPJ já tem comercial responsável. Use Transferir." };
   const s = { ...state, links: [...state.links] };
@@ -364,6 +386,7 @@ export function linkClient(
     clientName: input.clientName,
     document: input.document,
     repId: input.repId,
+    managerId,
     since: todayIso(),
     origin: input.origin,
     status: input.approvedLimit > 0 ? "Ativo" : "Em onboarding",
@@ -374,6 +397,6 @@ export function linkClient(
   });
   return {
     state: s,
-    message: `${input.clientName} vinculado a ${state.reps.find(r => r.id === input.repId)?.name}. Operações novas já nascem com este comercial.`,
+    message: `${input.clientName} vinculado ao comercial ${state.reps.find(r => r.id === input.repId)?.name} e ao gerente ${state.reps.find(r => r.id === managerId)?.name}.`,
   };
 }

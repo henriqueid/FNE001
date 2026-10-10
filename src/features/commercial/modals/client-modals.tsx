@@ -10,6 +10,7 @@ import {
   type CommercialState,
   type LinkOrigin,
   type Prospect,
+  isAccountManager,
 } from "@/src/domain/commercial/types";
 import { inputMoney, num } from "@/src/features/commercial/commercial-ui";
 import { BY, Field, Modal } from "@/src/features/finance/finance-ui";
@@ -26,7 +27,7 @@ export function TransferModal({
   onClose: () => void;
   onApply: (r: CResult) => boolean;
 }) {
-  const [to, setTo] = useState(state.reps.find(r => r.id !== link.repId && r.active)?.id ?? "");
+  const [to, setTo] = useState(state.reps.find(r => r.id !== link.repId && r.active && !isAccountManager(r))?.id ?? "");
   const [reason, setReason] = useState("");
   return (
     <Modal
@@ -53,7 +54,7 @@ export function TransferModal({
         <Field label="Novo comercial">
           <select value={to} onChange={e => setTo(e.target.value)}>
             {state.reps
-              .filter(r => r.id !== link.repId && r.active)
+              .filter(r => r.id !== link.repId && r.active && !isAccountManager(r))
               .map(r => (
                 <option key={r.id} value={r.id}>
                   {r.name}
@@ -173,7 +174,13 @@ export function ConvertModal({
   onApply: (r: CResult) => boolean;
 }) {
   const approved = state.committees.find(c => c.clientName === prospect.name && c.approved);
-  const [form, setForm] = useState({ document: "", limit: inputMoney(approved?.approved ?? 0), segment: "", city: "" });
+  const [form, setForm] = useState({
+    document: "",
+    limit: inputMoney(approved?.approved ?? 0),
+    segment: "",
+    city: "",
+    managerId: state.reps.find(rep => rep.active && isAccountManager(rep))?.id ?? "",
+  });
   return (
     <Modal
       title="Virar conta nova"
@@ -194,6 +201,7 @@ export function ConvertModal({
                     approvedLimit: num(form.limit),
                     segment: form.segment || "—",
                     city: form.city || "—",
+                    managerId: form.managerId,
                   }),
                 )
               )
@@ -225,6 +233,17 @@ export function ConvertModal({
         </Field>
         <Field label="Cidade">
           <input value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} />
+        </Field>
+        <Field label="Gerente da conta" hint="Responsável pelas operações e pelo pós-venda.">
+          <select value={form.managerId} onChange={e => setForm({ ...form, managerId: e.target.value })}>
+            {state.reps
+              .filter(rep => rep.active && isAccountManager(rep))
+              .map(rep => (
+                <option key={rep.id} value={rep.id}>
+                  {rep.name}
+                </option>
+              ))}
+          </select>
         </Field>
       </div>
       <p className="fn-note">

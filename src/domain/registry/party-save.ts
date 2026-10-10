@@ -3,7 +3,7 @@
  * Função pura: recebe o estado atual e devolve o novo estado de cada área, para que
  * o app aplique tudo de uma vez (e para que a regra seja testável sem React).
  */
-import { linkClient, saveRep, transferClient } from "@/src/domain/commercial/actions";
+import { assignAccountManager, linkClient, saveRep, transferClient } from "@/src/domain/commercial/actions";
 import { repAt } from "@/src/domain/commercial/rules";
 import type { CommercialState } from "@/src/domain/commercial/types";
 import type { Debtor } from "@/src/domain/core/types";
@@ -136,6 +136,7 @@ export function saveParty({
         document: next.document,
         clientName: next.name,
         repId: cedente.repId,
+        managerId: cedente.managerId,
         origin: "Prospecção ativa",
         approvedLimit: cedente.creditLimit,
         city: next.address.city ? `${next.address.city}/${next.address.state}` : undefined,
@@ -148,6 +149,13 @@ export function saveParty({
       if (result.error) return { ok: false, error: result.error };
       nextCommercial = result.state;
       effects.push("cedente transferido de comercial");
+    }
+    const currentLink = nextCommercial.links.find(l => onlyDigits(l.document) === doc);
+    if (currentLink && cedente.managerId && currentLink.managerId !== cedente.managerId) {
+      const result = assignAccountManager(nextCommercial, currentLink.id, cedente.managerId);
+      if (result.error) return { ok: false, error: result.error };
+      nextCommercial = result.state;
+      effects.push("gerente da conta atualizado");
     }
   }
 

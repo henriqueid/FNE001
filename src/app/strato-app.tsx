@@ -24,7 +24,7 @@ import {
 } from "./persistence";
 import { buildNewOperation } from "@/src/domain/operations/create-operation";
 
-import { repAt } from "@/src/domain/commercial/rules";
+import { managerOf, repAt } from "@/src/domain/commercial/rules";
 import { seedCommercial } from "@/src/domain/commercial/seed";
 import { type CommercialState } from "@/src/domain/commercial/types";
 import { initialCedents } from "@/src/domain/core/demo/cedents";
@@ -309,6 +309,7 @@ export default function StratoApp() {
         debtors: scoredDebtors,
         reps: commercial.reps,
         repOfCedent: document => repAt(commercial, document, new Date().toISOString().slice(0, 10)),
+        managerOfCedent: document => managerOf(commercial, document),
       }),
     [savedParties, scoredCedents, scoredDebtors, commercial],
   );
@@ -319,6 +320,10 @@ export default function StratoApp() {
       records: buildRegistry(commercialLive, scoredCedents),
       repOf: (document: string, date?: string) => {
         const id = repAt(commercialLive, document, date ?? new Date().toISOString().slice(0, 10));
+        return commercialLive.reps.find(rep => rep.id === id);
+      },
+      managerOf: (document: string) => {
+        const id = managerOf(commercialLive, document);
         return commercialLive.reps.find(rep => rep.id === id);
       },
       parties,

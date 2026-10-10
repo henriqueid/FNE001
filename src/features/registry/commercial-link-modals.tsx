@@ -5,6 +5,7 @@
  */
 import { useRegistry } from "@/src/app/registry-context";
 import { type ClientLink, type LinkOrigin } from "@/src/domain/commercial/types";
+import { isAccountManager } from "@/src/domain/commercial/types";
 import { type ClientRecord } from "@/src/domain/registry/registry";
 import { Field, Modal } from "@/src/features/finance/finance-ui";
 import { useState } from "react";
@@ -18,7 +19,9 @@ export function TransferModal({
   onSave: (to: string, reason: string) => void;
 }) {
   const { commercial } = useRegistry();
-  const [to, setTo] = useState(commercial.reps.find(r => r.id !== link.repId && r.active)?.id ?? "");
+  const [to, setTo] = useState(
+    commercial.reps.find(r => r.id !== link.repId && r.active && !isAccountManager(r))?.id ?? "",
+  );
   const [reason, setReason] = useState("");
   return (
     <Modal
@@ -39,7 +42,7 @@ export function TransferModal({
       <Field label="Novo comercial">
         <select value={to} onChange={e => setTo(e.target.value)}>
           {commercial.reps
-            .filter(r => r.id !== link.repId)
+            .filter(r => r.id !== link.repId && r.active && !isAccountManager(r))
             .map(r => (
               <option key={r.id} value={r.id}>
                 {r.name}
@@ -61,10 +64,11 @@ export function LinkModal({
 }: {
   record: ClientRecord;
   onClose: () => void;
-  onSave: (repId: string, origin: LinkOrigin) => void;
+  onSave: (repId: string, managerId: string, origin: LinkOrigin) => void;
 }) {
   const { commercial } = useRegistry();
-  const [repId, setRepId] = useState(commercial.reps.find(r => r.active)?.id ?? "");
+  const [repId, setRepId] = useState(commercial.reps.find(r => r.active && !isAccountManager(r))?.id ?? "");
+  const [managerId, setManagerId] = useState(commercial.reps.find(r => r.active && isAccountManager(r))?.id ?? "");
   const [origin, setOrigin] = useState<LinkOrigin>("Prospecção ativa");
   return (
     <Modal
@@ -76,7 +80,7 @@ export function LinkModal({
           <button className="fn-btn ghost" onClick={onClose}>
             Cancelar
           </button>
-          <button className="fn-btn primary" onClick={() => onSave(repId, origin)}>
+          <button className="fn-btn primary" onClick={() => onSave(repId, managerId, origin)}>
             Vincular
           </button>
         </>
@@ -85,7 +89,18 @@ export function LinkModal({
       <Field label="Comercial responsável">
         <select value={repId} onChange={e => setRepId(e.target.value)}>
           {commercial.reps
-            .filter(r => r.active)
+            .filter(r => r.active && !isAccountManager(r))
+            .map(r => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+        </select>
+      </Field>
+      <Field label="Gerente da conta" hint="Responsável pelas operações e pelo pós-venda.">
+        <select value={managerId} onChange={e => setManagerId(e.target.value)}>
+          {commercial.reps
+            .filter(r => r.active && isAccountManager(r))
             .map(r => (
               <option key={r.id} value={r.id}>
                 {r.name}

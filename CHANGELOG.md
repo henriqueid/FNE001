@@ -1,5 +1,14 @@
 # Changelog
 
+## Supabase e backend definitivo
+
+- Projeto `STRATO` provisionado no Supabase, região São Paulo, com PostgreSQL 17.
+- Estrutura inicial persistente criada em esquema privado para empresas, usuários, vínculos, permissões, alçadas, eventos de acesso, decisões, idempotência, outbox e notificações.
+- RLS habilitado em todas as tabelas internas, sem exposição direta para `anon` ou `authenticated`.
+- Trilha de decisões e auditoria protegidas contra atualização e exclusão por gatilhos append-only.
+- Dependências oficiais do Supabase e migrações versionadas adicionadas ao repositório.
+- Configuração local preparada para Auth por cookies e chave pública separada das credenciais exclusivas do servidor.
+
 ## Adendo 04 Decisões Alçadas e IA Opcional
 
 - Criado contrato append-only de eventos e decisões auditáveis.

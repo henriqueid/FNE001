@@ -1,6 +1,6 @@
 # Arquitetura do STRATO
 
-Aplicação navegável de uma plataforma operacional de recebíveis (factoring, securitizadora, FIDC). Nesta etapa, os dados operacionais são demonstrativos e ficam no `localStorage`. A trilha de decisões, as sessões opacas e o diretório de acesso já passam por API e Cloudflare D1; a integração com o provedor de identidade e a migração dos demais estados continuam nas próximas etapas.
+Aplicação navegável de uma plataforma operacional de recebíveis (factoring, securitizadora, FIDC). Nesta etapa, os dados operacionais são demonstrativos e ficam no `localStorage`. A trilha de decisões, as sessões opacas e o diretório de acesso já passam por API e Cloudflare D1 no ambiente local. O banco definitivo foi provisionado no Supabase/PostgreSQL e recebeu a estrutura inicial segura; a troca do adaptador D1 pelo PostgreSQL, o login Supabase Auth e a migração dos demais estados são as próximas etapas.
 
 ## 1. Visão em camadas
 
@@ -117,6 +117,8 @@ A trilha de decisões é a primeira exceção a esse armazenamento local: `app/a
 
 O diretório de identidade e autorização também é sincronizado com o D1 por `app/api/access/users/route.ts`. `src/server/access/session.ts` emite token opaco em cookie `HttpOnly` e persiste somente o hash; `src/server/access/repository.ts` resolve vínculo, escopo, permissões e alçadas. A migração está em `drizzle/0002_access_directory.sql`. O bootstrap automático existe somente em `localhost` para a demonstração; produção deve fornecer a identidade por um provedor corporativo.
 
+O ambiente definitivo usa o projeto Supabase `STRATO`, na região de São Paulo. As migrações em `supabase/migrations/` criam o esquema `private`, não exposto pela Data API, e reproduzem o diretório de acesso, o ledger, a idempotência, a outbox e as notificações em PostgreSQL 17. Todas as tabelas internas têm RLS habilitado sem políticas de acesso direto; o backend hospedado na Hostinger será a fronteira autorizadora. A configuração em `src/supabase/` prepara o cliente público e o cliente SSR sem incluir chaves secretas no navegador.
+
 - A restauração acontece uma vez, depois de montar (`loadPersistedState`), e mescla o que foi salvo com os dados de demonstração atuais (migração tolerante a campos novos).
 - "Restaurar dados de demonstração" (busca global) chama `clearPersistedState` e recria o seed.
 - A navegação usa `view` e aceita links diretos controlados por permissão; `selected` abre o workspace de uma operação autorizada.
@@ -193,7 +195,7 @@ npm test          # Vitest (tests/*.test.ts)
 
 ## 9. Limitações conhecidas
 
-- A trilha de decisões, sua outbox e publicador resiliente, a sessão e o diretório de usuários, permissões e alçadas já possuem backend D1; o login ainda usa bootstrap local, destinos externos não estão conectados e os demais dados operacionais continuam demonstrativos ou locais.
+- A trilha de decisões, sua outbox e publicador resiliente, a sessão e o diretório de usuários, permissões e alçadas já possuem backend D1 local e esquema PostgreSQL definitivo validado no Supabase. O login ainda usa bootstrap local até a troca para Supabase Auth; destinos externos não estão conectados e os demais dados operacionais continuam demonstrativos ou locais.
 - Integrações (Receita, SEFAZ, bureaus, bancos, assinatura) são simuladas.
 - A Mesa Inteligente ainda reconhece arquivos por nome e extensão; leitura real de conteúdo, OCR e modelo externo pertencem às fases seguintes.
 - A ordem de evolução está em [architecture/PLANO_ESTRUTURA_IA.md](./architecture/PLANO_ESTRUTURA_IA.md).

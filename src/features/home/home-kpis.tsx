@@ -12,6 +12,8 @@ function kpiSets({
   labels,
   cur,
   prev,
+  positionDay,
+  previousPositionDay,
   target,
   volumePct,
   freeCash,
@@ -69,10 +71,16 @@ function kpiSets({
     ],
     operacao: [
       {
-        label: `Operações ${labels.range}`,
-        value: String(cur.count),
-        delta: <Delta value={cur.count} previous={prev.count} label={labels.compare} />,
-        hint: `${cur.cedents} cedente(s) · ${compact(cur.volume)}`,
+        label: "Receita na posição",
+        value: compact(positionDay.revenue),
+        delta: <Delta value={positionDay.revenue} previous={previousPositionDay.revenue} label="vs. dia anterior" />,
+        hint: `${pct(positionDay.volume ? (positionDay.revenue / positionDay.volume) * 100 : 0, 2)} sobre o volume`,
+      },
+      {
+        label: "Operações na posição",
+        value: String(positionDay.count),
+        delta: <Delta value={positionDay.count} previous={previousPositionDay.count} label="vs. dia anterior" />,
+        hint: `${positionDay.cedents} cedente(s) · ${compact(positionDay.volume)}`,
       },
       {
         label: "Prontas para liberar",
@@ -81,15 +89,10 @@ function kpiSets({
         hint: `${ready.length} operação(ões) · corte TED ${homeSettings.schedule.tedCutoff}`,
       },
       {
-        label: "Intervenções abertas",
-        value: String(interventions.length),
-        tone: blockedOps.length ? "bad" : "",
-        hint: `${blockedOps.length} com bloqueio · ${active.length} em andamento`,
-      },
-      {
-        label: `Liberadas ${labels.range}`,
-        value: compact(cur.released),
-        hint: `${cur.releasedCount} operação(ões) enviadas ao financeiro`,
+        label: "Ritmo operacional",
+        value: blockedOps.length ? `${blockedOps.length} bloqueada(s)` : `${active.length} em andamento`,
+        tone: blockedOps.length ? "bad" : "good",
+        hint: `${interventions.length} intervenção(ões) aberta(s)`,
       },
     ],
     risco: [

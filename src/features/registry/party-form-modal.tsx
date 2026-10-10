@@ -24,16 +24,19 @@ import { useMemo, useState } from "react";
 import { PartyRoleFields } from "./party-role-fields";
 import { CedentProfileFields } from "./cedent-profile-fields";
 
-type CedentSection = "overview" | "relationship" | "contract" | "parameters" | "limits" | "compliance" | "history";
+type PartySection =
+  "overview" | "responsibilities" | "relationship" | "contract" | "parameters" | "limits" | "compliance" | "history";
 
-const cedentSections: Array<{ id: CedentSection; label: string }> = [
-  { id: "overview", label: "Visão geral" },
-  { id: "relationship", label: "Cadastro e relacionamento" },
-  { id: "contract", label: "Contrato" },
-  { id: "parameters", label: "Parâmetros operacionais" },
-  { id: "limits", label: "Limites e tranches" },
-  { id: "compliance", label: "Risco e conformidade" },
-  { id: "history", label: "Histórico" },
+const baseSections: Array<{ id: PartySection; label: string; hint: string }> = [
+  { id: "overview", label: "Identificação", hint: "Dados principais" },
+  { id: "responsibilities", label: "Papéis e responsáveis", hint: "Função e gestão" },
+  { id: "relationship", label: "Relacionamento", hint: "Endereço, contatos e bancos" },
+];
+const cedentSections: Array<{ id: PartySection; label: string; hint: string }> = [
+  { id: "contract", label: "Contrato", hint: "Vigência e produtos" },
+  { id: "parameters", label: "Parâmetros", hint: "Taxas, tarifas e lastro" },
+  { id: "limits", label: "Limites e tranches", hint: "Crédito e alocação" },
+  { id: "compliance", label: "Risco e conformidade", hint: "KYC, COAF e revisões" },
 ];
 
 type Props = {
@@ -89,7 +92,7 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
   const [error, setError] = useState("");
   const [changeReason, setChangeReason] = useState("");
   const [attempted, setAttempted] = useState(false);
-  const [activeSection, setActiveSection] = useState<CedentSection>("overview");
+  const [activeSection, setActiveSection] = useState<PartySection>("overview");
   const set = (patch: Partial<Party>) => setDraft(current => ({ ...current, ...patch }));
   const setAddress = (patch: Partial<Party["address"]>) =>
     setDraft(current => ({ ...current, address: { ...current.address, ...patch } }));
@@ -103,6 +106,18 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
   );
   const isNew = !parties.some(p => p.id === party.id);
   const isCedent = draft.roles.includes("cedente");
+  const sections = [
+    ...baseSections,
+    ...(isCedent ? cedentSections : []),
+    ...(!isNew ? [{ id: "history" as const, label: "Histórico", hint: "Alterações e auditoria" }] : []),
+  ];
+  const requiredChecks = [
+    Boolean(draft.document),
+    Boolean(draft.name),
+    draft.roles.length > 0,
+    Boolean(draft.address.city),
+  ];
+  const completeness = Math.round((requiredChecks.filter(Boolean).length / requiredChecks.length) * 100);
 
   const toggleRole = (role: PartyRole) =>
     setDraft(current => {
@@ -162,23 +177,35 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
         </>
       }
     >
-      <div className="rg-form">
-        {isCedent && (
-          <nav className="rg-profile-tabs" aria-label="Seções do cadastro do cedente">
-            {cedentSections.map(section => (
+      <div className="rg-form-workspace">
+        <aside className="rg-form-sidebar">
+          <div className="rg-form-status">
+            <span>{isNew ? "NOVO CADASTRO" : "CADASTRO EXISTENTE"}</span>
+            <strong>{completeness}% essencial preenchido</strong>
+            <i>
+              <b style={{ width: `${completeness}%` }} />
+            </i>
+            <small>Complete os dados essenciais e avance pelas etapas.</small>
+          </div>
+          <nav className="rg-profile-tabs" aria-label="Seções do cadastro">
+            {sections.map((section, index) => (
               <button
                 type="button"
                 key={section.id}
                 className={activeSection === section.id ? "active" : ""}
                 onClick={() => setActiveSection(section.id)}
               >
-                {section.label}
+                <b>{String(index + 1).padStart(2, "0")}</b>
+                <span>
+                  {section.label}
+                  <small>{section.hint}</small>
+                </span>
               </button>
             ))}
           </nav>
-        )}
-        {(!isCedent || activeSection === "overview") && (
-          <>
+        </aside>
+        <div className="rg-form-content">
+          {activeSection === "overview" && (
             <fieldset className="rg-fieldset">
               <legend>Identificação</legend>
               <div className="fn-form">
@@ -264,319 +291,323 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
                 </Field>
               </div>
             </fieldset>
+          )}
 
-            <fieldset className="rg-fieldset">
-              <legend>Papéis</legend>
-              <div className="rg-role-picker" role="group" aria-label="Papéis da pessoa">
-                {partyRoles.map(role => (
-                  <button
-                    key={role.id}
-                    type="button"
-                    aria-pressed={draft.roles.includes(role.id)}
-                    className={draft.roles.includes(role.id) ? "active" : ""}
-                    onClick={() => toggleRole(role.id)}
-                    title={role.hint}
-                  >
-                    {draft.roles.includes(role.id) ? <CheckIcon /> : <PlusIcon />} {role.label}
-                  </button>
-                ))}
-              </div>
-              {issueFor("roles") && <p className="rg-issue bad">{issueFor("roles")}</p>}
-            </fieldset>
-
-            <PartyRoleFields party={draft} onChange={roleData => set({ roleData })} issueFor={issueFor} />
-          </>
-        )}
-
-        {isCedent && ["contract", "parameters", "limits", "compliance"].includes(activeSection) && (
-          <CedentProfileFields
-            section={activeSection as "contract" | "parameters" | "limits" | "compliance"}
-            data={draft.roleData.cedente ?? (defaultRoleData("cedente") as NonNullable<Party["roleData"]["cedente"]>)}
-            defaults={operationalDefaults}
-            onChange={cedente => set({ roleData: { ...draft.roleData, cedente } })}
-          />
-        )}
-
-        {(!isCedent || activeSection === "relationship") && (
-          <>
-            <fieldset className="rg-fieldset">
-              <legend>Endereço</legend>
-              <div className="fn-form">
-                <Field label="CEP" hint={issueFor("zipCode")}>
-                  <input
-                    id="addr-zip"
-                    inputMode="numeric"
-                    value={draft.address.zipCode}
-                    onChange={e => setAddress({ zipCode: formatZip(e.target.value) })}
-                    placeholder="00000-000"
-                  />
-                </Field>
-                <Field label="Logradouro" wide>
-                  <input
-                    id="addr-street"
-                    value={draft.address.street}
-                    onChange={e => setAddress({ street: e.target.value })}
-                  />
-                </Field>
-                <Field label="Número">
-                  <input
-                    id="addr-number"
-                    value={draft.address.number}
-                    onChange={e => setAddress({ number: e.target.value })}
-                  />
-                </Field>
-                <Field label="Complemento">
-                  <input
-                    id="addr-comp"
-                    value={draft.address.complement}
-                    onChange={e => setAddress({ complement: e.target.value })}
-                  />
-                </Field>
-                <Field label="Bairro">
-                  <input
-                    id="addr-district"
-                    value={draft.address.district}
-                    onChange={e => setAddress({ district: e.target.value })}
-                  />
-                </Field>
-                <Field label="Cidade" hint={issueFor("city")}>
-                  <input
-                    id="addr-city"
-                    value={draft.address.city}
-                    onChange={e => setAddress({ city: e.target.value })}
-                  />
-                </Field>
-                <Field label="UF">
-                  <input
-                    id="addr-uf"
-                    maxLength={2}
-                    value={draft.address.state}
-                    onChange={e => setAddress({ state: e.target.value.toUpperCase() })}
-                  />
-                </Field>
-              </div>
-            </fieldset>
-
-            <fieldset className="rg-fieldset">
-              <legend>Contatos por área</legend>
-              {draft.contacts.map(contact => (
-                <div className="rg-row" key={contact.id}>
-                  <input
-                    aria-label="Nome do contato"
-                    placeholder="Nome"
-                    value={contact.name}
-                    onChange={e => updateContact(contact.id, { name: e.target.value })}
-                  />
-                  <select
-                    aria-label="Área"
-                    value={contact.area}
-                    onChange={e => updateContact(contact.id, { area: e.target.value })}
-                  >
-                    {areas.map(a => (
-                      <option key={a}>{a}</option>
-                    ))}
-                  </select>
-                  <input
-                    aria-label="E-mail do contato"
-                    placeholder="E-mail"
-                    value={contact.email}
-                    onChange={e => updateContact(contact.id, { email: e.target.value })}
-                  />
-                  <input
-                    aria-label="Telefone do contato"
-                    placeholder="Telefone"
-                    value={contact.phone}
-                    onChange={e => updateContact(contact.id, { phone: e.target.value })}
-                  />
-                  <button
-                    type="button"
-                    className="fn-btn small ghost"
-                    aria-label="Remover contato"
-                    onClick={() => set({ contacts: draft.contacts.filter(c => c.id !== contact.id) })}
-                  >
-                    <CloseIcon />
-                  </button>
+          {activeSection === "responsibilities" && (
+            <>
+              <fieldset className="rg-fieldset">
+                <legend>Papéis</legend>
+                <div className="rg-role-picker" role="group" aria-label="Papéis da pessoa">
+                  {partyRoles.map(role => (
+                    <button
+                      key={role.id}
+                      type="button"
+                      aria-pressed={draft.roles.includes(role.id)}
+                      className={draft.roles.includes(role.id) ? "active" : ""}
+                      onClick={() => toggleRole(role.id)}
+                      title={role.hint}
+                    >
+                      {draft.roles.includes(role.id) ? <CheckIcon /> : <PlusIcon />} {role.label}
+                    </button>
+                  ))}
                 </div>
-              ))}
-              <button
-                type="button"
-                className="fn-btn small ghost"
-                onClick={() =>
-                  set({
-                    contacts: [
-                      ...draft.contacts,
-                      { id: newId("ct"), name: "", area: "Financeiro", email: "", phone: "" },
-                    ],
-                  })
-                }
-              >
-                <PlusIcon /> Adicionar contato
-              </button>
-            </fieldset>
+                {issueFor("roles") && <p className="rg-issue bad">{issueFor("roles")}</p>}
+              </fieldset>
 
-            <fieldset className="rg-fieldset">
-              <legend>Contas bancárias</legend>
-              {issueFor("bankAccounts") && <p className="rg-issue warn">{issueFor("bankAccounts")}</p>}
-              {draft.bankAccounts.map(account => (
-                <div className="rg-row" key={account.id}>
-                  <input
-                    aria-label="Banco"
-                    placeholder="Banco (ex.: 341 · Itaú)"
-                    value={account.bank}
-                    onChange={e => updateAccount(account.id, { bank: e.target.value })}
-                  />
-                  <input
-                    aria-label="Agência"
-                    placeholder="Agência"
-                    value={account.agency}
-                    onChange={e => updateAccount(account.id, { agency: e.target.value })}
-                  />
-                  <input
-                    aria-label="Conta"
-                    placeholder="Conta com dígito"
-                    value={account.account}
-                    onChange={e => updateAccount(account.id, { account: e.target.value })}
-                  />
-                  <input
-                    aria-label="Chave Pix"
-                    placeholder="Chave Pix"
-                    value={account.pixKey}
-                    onChange={e => updateAccount(account.id, { pixKey: e.target.value })}
-                  />
-                  <label className="rg-check">
+              <PartyRoleFields party={draft} onChange={roleData => set({ roleData })} issueFor={issueFor} />
+            </>
+          )}
+
+          {isCedent && ["contract", "parameters", "limits", "compliance"].includes(activeSection) && (
+            <CedentProfileFields
+              section={activeSection as "contract" | "parameters" | "limits" | "compliance"}
+              data={draft.roleData.cedente ?? (defaultRoleData("cedente") as NonNullable<Party["roleData"]["cedente"]>)}
+              defaults={operationalDefaults}
+              onChange={cedente => set({ roleData: { ...draft.roleData, cedente } })}
+            />
+          )}
+
+          {activeSection === "relationship" && (
+            <>
+              <fieldset className="rg-fieldset">
+                <legend>Endereço</legend>
+                <div className="fn-form">
+                  <Field label="CEP" hint={issueFor("zipCode")}>
                     <input
-                      type="radio"
-                      name="main-account"
-                      checked={account.main}
-                      onChange={() => updateAccount(account.id, { main: true })}
-                    />{" "}
-                    Principal
-                  </label>
-                  <button
-                    type="button"
-                    className="fn-btn small ghost"
-                    aria-label="Remover conta"
-                    onClick={() => set({ bankAccounts: draft.bankAccounts.filter(a => a.id !== account.id) })}
-                  >
-                    <CloseIcon />
-                  </button>
+                      id="addr-zip"
+                      inputMode="numeric"
+                      value={draft.address.zipCode}
+                      onChange={e => setAddress({ zipCode: formatZip(e.target.value) })}
+                      placeholder="00000-000"
+                    />
+                  </Field>
+                  <Field label="Logradouro" wide>
+                    <input
+                      id="addr-street"
+                      value={draft.address.street}
+                      onChange={e => setAddress({ street: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Número">
+                    <input
+                      id="addr-number"
+                      value={draft.address.number}
+                      onChange={e => setAddress({ number: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Complemento">
+                    <input
+                      id="addr-comp"
+                      value={draft.address.complement}
+                      onChange={e => setAddress({ complement: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Bairro">
+                    <input
+                      id="addr-district"
+                      value={draft.address.district}
+                      onChange={e => setAddress({ district: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Cidade" hint={issueFor("city")}>
+                    <input
+                      id="addr-city"
+                      value={draft.address.city}
+                      onChange={e => setAddress({ city: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="UF">
+                    <input
+                      id="addr-uf"
+                      maxLength={2}
+                      value={draft.address.state}
+                      onChange={e => setAddress({ state: e.target.value.toUpperCase() })}
+                    />
+                  </Field>
                 </div>
-              ))}
-              <button
-                type="button"
-                className="fn-btn small ghost"
-                onClick={() =>
-                  set({
-                    bankAccounts: [
-                      ...draft.bankAccounts,
-                      {
-                        id: newId("ba"),
-                        bank: "",
-                        agency: "",
-                        account: "",
-                        pixKey: "",
-                        holderDocument: draft.document,
-                        main: !draft.bankAccounts.length,
-                      },
-                    ],
-                  })
-                }
-              >
-                <PlusIcon /> Adicionar conta
-              </button>
-            </fieldset>
-          </>
-        )}
+              </fieldset>
 
-        {(!isCedent || activeSection === "overview") && (
-          <fieldset className="rg-fieldset">
-            <legend>Situação e observações</legend>
-            <div className="fn-form">
-              <Field label="Situação">
-                <select
-                  id="party-status"
-                  value={draft.status}
-                  onChange={e => set({ status: e.target.value as Party["status"] })}
+              <fieldset className="rg-fieldset">
+                <legend>Contatos por área</legend>
+                {draft.contacts.map(contact => (
+                  <div className="rg-row" key={contact.id}>
+                    <input
+                      aria-label="Nome do contato"
+                      placeholder="Nome"
+                      value={contact.name}
+                      onChange={e => updateContact(contact.id, { name: e.target.value })}
+                    />
+                    <select
+                      aria-label="Área"
+                      value={contact.area}
+                      onChange={e => updateContact(contact.id, { area: e.target.value })}
+                    >
+                      {areas.map(a => (
+                        <option key={a}>{a}</option>
+                      ))}
+                    </select>
+                    <input
+                      aria-label="E-mail do contato"
+                      placeholder="E-mail"
+                      value={contact.email}
+                      onChange={e => updateContact(contact.id, { email: e.target.value })}
+                    />
+                    <input
+                      aria-label="Telefone do contato"
+                      placeholder="Telefone"
+                      value={contact.phone}
+                      onChange={e => updateContact(contact.id, { phone: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      className="fn-btn small ghost"
+                      aria-label="Remover contato"
+                      onClick={() => set({ contacts: draft.contacts.filter(c => c.id !== contact.id) })}
+                    >
+                      <CloseIcon />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="fn-btn small ghost"
+                  onClick={() =>
+                    set({
+                      contacts: [
+                        ...draft.contacts,
+                        { id: newId("ct"), name: "", area: "Financeiro", email: "", phone: "" },
+                      ],
+                    })
+                  }
                 >
-                  <option>Ativo</option>
-                  <option>Inativo</option>
-                </select>
-              </Field>
-              {draft.status === "Inativo" && (
-                <Field label="Motivo da inativação" wide>
-                  <input
-                    id="party-inactive"
-                    value={draft.inactiveReason ?? ""}
-                    onChange={e => set({ inactiveReason: e.target.value })}
-                    placeholder="O cadastro não é apagado; fica consultável"
-                  />
+                  <PlusIcon /> Adicionar contato
+                </button>
+              </fieldset>
+
+              <fieldset className="rg-fieldset">
+                <legend>Contas bancárias</legend>
+                {issueFor("bankAccounts") && <p className="rg-issue warn">{issueFor("bankAccounts")}</p>}
+                {draft.bankAccounts.map(account => (
+                  <div className="rg-row" key={account.id}>
+                    <input
+                      aria-label="Banco"
+                      placeholder="Banco (ex.: 341 · Itaú)"
+                      value={account.bank}
+                      onChange={e => updateAccount(account.id, { bank: e.target.value })}
+                    />
+                    <input
+                      aria-label="Agência"
+                      placeholder="Agência"
+                      value={account.agency}
+                      onChange={e => updateAccount(account.id, { agency: e.target.value })}
+                    />
+                    <input
+                      aria-label="Conta"
+                      placeholder="Conta com dígito"
+                      value={account.account}
+                      onChange={e => updateAccount(account.id, { account: e.target.value })}
+                    />
+                    <input
+                      aria-label="Chave Pix"
+                      placeholder="Chave Pix"
+                      value={account.pixKey}
+                      onChange={e => updateAccount(account.id, { pixKey: e.target.value })}
+                    />
+                    <label className="rg-check">
+                      <input
+                        type="radio"
+                        name="main-account"
+                        checked={account.main}
+                        onChange={() => updateAccount(account.id, { main: true })}
+                      />{" "}
+                      Principal
+                    </label>
+                    <button
+                      type="button"
+                      className="fn-btn small ghost"
+                      aria-label="Remover conta"
+                      onClick={() => set({ bankAccounts: draft.bankAccounts.filter(a => a.id !== account.id) })}
+                    >
+                      <CloseIcon />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="fn-btn small ghost"
+                  onClick={() =>
+                    set({
+                      bankAccounts: [
+                        ...draft.bankAccounts,
+                        {
+                          id: newId("ba"),
+                          bank: "",
+                          agency: "",
+                          account: "",
+                          pixKey: "",
+                          holderDocument: draft.document,
+                          main: !draft.bankAccounts.length,
+                        },
+                      ],
+                    })
+                  }
+                >
+                  <PlusIcon /> Adicionar conta
+                </button>
+              </fieldset>
+            </>
+          )}
+
+          {activeSection === "responsibilities" && (
+            <fieldset className="rg-fieldset">
+              <legend>Situação e observações</legend>
+              <div className="fn-form">
+                <Field label="Situação">
+                  <select
+                    id="party-status"
+                    value={draft.status}
+                    onChange={e => set({ status: e.target.value as Party["status"] })}
+                  >
+                    <option>Ativo</option>
+                    <option>Inativo</option>
+                  </select>
                 </Field>
-              )}
-              <Field label="Observações" wide>
-                <textarea
-                  id="party-notes"
-                  rows={3}
-                  value={draft.notes}
-                  onChange={e => set({ notes: e.target.value })}
-                />
-              </Field>
-              {!isNew && (
-                <Field label="Motivo da alteração" wide hint="Obrigatório. Será gravado em cada campo alterado.">
+                {draft.status === "Inativo" && (
+                  <Field label="Motivo da inativação" wide>
+                    <input
+                      id="party-inactive"
+                      value={draft.inactiveReason ?? ""}
+                      onChange={e => set({ inactiveReason: e.target.value })}
+                      placeholder="O cadastro não é apagado; fica consultável"
+                    />
+                  </Field>
+                )}
+                <Field label="Observações" wide>
                   <textarea
-                    id="party-change-reason"
-                    rows={2}
-                    value={changeReason}
-                    onChange={e => {
-                      setChangeReason(e.target.value);
-                      setError("");
-                    }}
-                    placeholder="Ex.: atualização solicitada pelo cliente em 09/10/2026"
+                    id="party-notes"
+                    rows={3}
+                    value={draft.notes}
+                    onChange={e => set({ notes: e.target.value })}
                   />
                 </Field>
-              )}
-            </div>
-          </fieldset>
-        )}
+                {!isNew && (
+                  <Field label="Motivo da alteração" wide hint="Obrigatório. Será gravado em cada campo alterado.">
+                    <textarea
+                      id="party-change-reason"
+                      rows={2}
+                      value={changeReason}
+                      onChange={e => {
+                        setChangeReason(e.target.value);
+                        setError("");
+                      }}
+                      placeholder="Ex.: atualização solicitada pelo cliente em 09/10/2026"
+                    />
+                  </Field>
+                )}
+              </div>
+            </fieldset>
+          )}
 
-        {(!isCedent || activeSection === "history") && (draft.history ?? []).length > 0 && (
-          <fieldset className="rg-fieldset">
-            <legend>Histórico e auditoria</legend>
-            <ul className="rg-list rg-history">
-              {[...(draft.history ?? [])].reverse().map((h, i) => (
-                <li key={i}>
-                  <span>
-                    {br(h.at)} · {h.by}
-                  </span>
-                  <b>
-                    {h.field ? `${auditFieldLabel(h.field)}: ${h.from ?? "—"} → ${h.to ?? "—"}` : h.action}
-                    {h.reason && <small> · {h.reason}</small>}
-                    {h.origin && <small> · origem: {h.origin}</small>}
-                  </b>
-                </li>
+          {(!isCedent || activeSection === "history") && (draft.history ?? []).length > 0 && (
+            <fieldset className="rg-fieldset">
+              <legend>Histórico e auditoria</legend>
+              <ul className="rg-list rg-history">
+                {[...(draft.history ?? [])].reverse().map((h, i) => (
+                  <li key={i}>
+                    <span>
+                      {br(h.at)} · {h.by}
+                    </span>
+                    <b>
+                      {h.field ? `${auditFieldLabel(h.field)}: ${h.from ?? "—"} → ${h.to ?? "—"}` : h.action}
+                      {h.reason && <small> · {h.reason}</small>}
+                      {h.origin && <small> · origem: {h.origin}</small>}
+                    </b>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
+          )}
+
+          {isCedent && activeSection === "history" && !(draft.history ?? []).length && (
+            <p className="fn-note">O histórico será iniciado quando o cadastro for salvo.</p>
+          )}
+
+          {(attempted || !isNew) && (blocking.length > 0 || warnings.length > 0 || error) && (
+            <div className="rg-issues" aria-live="polite">
+              {error && <p className="rg-issue bad">{error}</p>}
+              {blocking.map(i => (
+                <p key={i.field + i.message} className="rg-issue bad">
+                  {i.message}
+                </p>
               ))}
-            </ul>
-          </fieldset>
-        )}
-
-        {isCedent && activeSection === "history" && !(draft.history ?? []).length && (
-          <p className="fn-note">O histórico será iniciado quando o cadastro for salvo.</p>
-        )}
-
-        {(attempted || !isNew) && (blocking.length > 0 || warnings.length > 0 || error) && (
-          <div className="rg-issues" aria-live="polite">
-            {error && <p className="rg-issue bad">{error}</p>}
-            {blocking.map(i => (
-              <p key={i.field + i.message} className="rg-issue bad">
-                {i.message}
-              </p>
-            ))}
-            {warnings.map(i => (
-              <p key={i.field + i.message} className="rg-issue warn">
-                {i.message}
-              </p>
-            ))}
-          </div>
-        )}
+              {warnings.map(i => (
+                <p key={i.field + i.message} className="rg-issue warn">
+                  {i.message}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </Modal>
   );

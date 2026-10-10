@@ -43,10 +43,12 @@ import { collectionMonth, concentration, rollRates, vintages } from "@/src/domai
 import { qualityRankings } from "@/src/domain/risk/quality";
 import { type QualityPolicy, provisionRate } from "@/src/domain/risk/quality-policy";
 import { originationIndicators } from "@/src/domain/indicators/origination";
+import { buildRevenuePace } from "@/src/domain/home/revenue-pace";
 import { financeIndicators } from "@/src/domain/indicators/finance";
 import { pipelineIndicators } from "@/src/domain/indicators/pipeline";
 import { daysFrom } from "@/src/domain/indicators/portfolio";
 import { useMemo } from "react";
+import type { OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
 
 export type HomeMetricsInput = {
   operations: Operation[];
@@ -59,6 +61,7 @@ export type HomeMetricsInput = {
   profile: HomeProfile;
   now: Date;
   qualityPolicy: QualityPolicy;
+  revenueGoals: OperationalDefaultsState["revenueGoals"];
 };
 
 export type HealthTone = "critical" | "watch" | "ok";
@@ -76,6 +79,7 @@ export function useHomeMetrics({
   profile,
   now,
   qualityPolicy,
+  revenueGoals,
 }: HomeMetricsInput) {
   const registryCedents = useCedents();
   const fin = financials;
@@ -90,9 +94,25 @@ export function useHomeMetrics({
   const win = useMemo(() => periodWindow(period, now), [period, now]);
   const cur = useMemo(() => origination(scoped, fin, win.from, win.to, today), [scoped, fin, win, today]);
   const prev = useMemo(() => origination(scoped, fin, win.prevFrom, win.prevTo, today), [scoped, fin, win, today]);
+  const previousPositionDate = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  const positionDay = useMemo(() => origination(scoped, fin, today, today, today), [scoped, fin, today]);
+  const previousPositionDay = useMemo(
+    () => origination(scoped, fin, previousPositionDate, previousPositionDate, today),
+    [scoped, fin, previousPositionDate, today],
+  );
   const target =
     homeSettings.volumeTarget[period] *
     (companyScope === "Consolidado" ? 1 : (homeSettings.vehicleTargetShare[companyScope] ?? 0));
+  const revenueTarget =
+    companyScope === "Consolidado"
+      ? revenueGoals.consolidated[period]
+      : (revenueGoals.byVehicle[companyScope]?.[period] ??
+        revenueGoals.consolidated[period] * (homeSettings.vehicleTargetShare[companyScope] ?? 0));
+  const revenuePace = useMemo(
+    () =>
+      buildRevenuePace({ operations: scoped, financials: fin, period, referenceDate: today, target: revenueTarget }),
+    [scoped, fin, period, today, revenueTarget],
+  );
 
   // carteira: títulos em aberto + títulos das operações liberadas ao financeiro
   const titles = useMemo(
@@ -406,7 +426,11 @@ export function useHomeMetrics({
     win,
     cur,
     prev,
+    positionDay,
+    previousPositionDay,
     target,
+    revenueTarget,
+    revenuePace,
     volumePct,
     lastDate,
     periodEmpty,

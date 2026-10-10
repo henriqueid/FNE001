@@ -4,12 +4,14 @@
  * localStorage) e o relógio que atualiza a cada minuto a saudação, os marcos e o rodapé.
  */
 import type { HomePeriod, HomeProfile } from "@/src/domain/home/settings";
+import { isoDate } from "@/src/domain/home/metrics";
 import { useEffect, useState } from "react";
 
 export function useHomePreferences() {
   const [period, setPeriodState] = useState<HomePeriod>("mes");
   const [profile, setProfile] = useState<HomeProfile>("gestao");
   const [now, setNow] = useState(() => new Date());
+  const [positionDate, setPositionDate] = useState(() => isoDate(new Date()));
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem("strato-home-profile");
@@ -39,5 +41,6 @@ export function useHomePreferences() {
       /* sem armazenamento */
     }
   };
-  return { period, setPeriod, profile, chooseProfile, now };
+  const changePositionDate = (date: string) => setPositionDate(date || isoDate(new Date()));
+  return { period, setPeriod, profile, chooseProfile, now, positionDate, setPositionDate: changePositionDate };
 }

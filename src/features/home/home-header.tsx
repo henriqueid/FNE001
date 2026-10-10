@@ -5,12 +5,13 @@
  */
 import { destinations } from "@/src/domain/core/demo/companies";
 import { periodLabels, profileLabels, type HomePeriod, type HomeProfile } from "@/src/domain/home/settings";
-import { ClockIcon, FolderIcon, GridIcon, PlusIcon } from "@/src/ui/icons";
+import { ArrowIcon, ClockIcon, FolderIcon, GridIcon, PlusIcon } from "@/src/ui/icons";
 import type { HomeMetrics } from "./use-home-metrics";
 
 export function HomeHeader({
   metrics,
-  now,
+  positionDate,
+  onPositionDateChange,
   period,
   onPeriodChange,
   profile,
@@ -19,7 +20,8 @@ export function HomeHeader({
   onNew,
 }: {
   metrics: HomeMetrics;
-  now: Date;
+  positionDate: string;
+  onPositionDateChange: (date: string) => void;
   period: HomePeriod;
   onPeriodChange: (period: HomePeriod) => void;
   profile: HomeProfile;
@@ -28,7 +30,14 @@ export function HomeHeader({
   onNew: () => void;
 }) {
   const { labels, periodEmpty } = metrics;
-  const dateLabel = now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+  const today = new Date().toLocaleDateString("sv-SE");
+  const position = new Date(`${positionDate}T12:00:00`);
+  const dateLabel = position.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+  const movePosition = (days: number) => {
+    const moved = new Date(position);
+    moved.setDate(moved.getDate() + days);
+    onPositionDateChange(moved.toLocaleDateString("sv-SE"));
+  };
   const perspectiveIntro: Record<HomeProfile, string> = {
     gestao: "Resultado, liquidez e exposição para decidir onde crescer e onde conter.",
     operacao: "Fila, bloqueios, prazos e liberações para comandar o trabalho do dia.",
@@ -83,7 +92,37 @@ export function HomeHeader({
             ))}
           </select>
         </label>
-        <span className="lx-date">{dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}</span>
+        <div className="vg-position" aria-label="Data da posição">
+          <div>
+            <ClockIcon />
+            <span>Posição</span>
+            <b>{dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}</b>
+          </div>
+          <button type="button" aria-label="Posição anterior" onClick={() => movePosition(-1)}>
+            <ArrowIcon />
+          </button>
+          <input
+            type="date"
+            value={positionDate}
+            max={today}
+            onChange={event => onPositionDateChange(event.target.value)}
+            aria-label="Escolher data da posição"
+          />
+          <button
+            type="button"
+            className="next"
+            aria-label="Próxima posição"
+            disabled={positionDate >= today}
+            onClick={() => movePosition(1)}
+          >
+            <ArrowIcon />
+          </button>
+          {positionDate !== today && (
+            <button type="button" className="today" onClick={() => onPositionDateChange(today)}>
+              Voltar para hoje
+            </button>
+          )}
+        </div>
       </div>
 
       {periodEmpty && (

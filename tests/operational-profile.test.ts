@@ -24,5 +24,6 @@ describe("herança dos parâmetros operacionais", () => {
     const migrated = migrateOperationalDefaults({ version: 1, general: { monthlyRate: 1.99 } });
     expect(migrated.general.monthlyRate).toBe(1.99);
     expect(migrated.general.minimumConfirmationCountPercent).toBeGreaterThan(0);
+    expect(migrated.revenueGoals.consolidated.mes).toBeGreaterThan(0);
   });
 });

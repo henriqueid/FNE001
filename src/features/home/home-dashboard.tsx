@@ -18,6 +18,7 @@ import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { type CarteiraFlow } from "@/src/domain/finance/reports";
 import type { FinanceState } from "@/src/domain/finance/model";
 import type { OpFinancial } from "@/src/domain/home/metrics";
+import type { OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
 
 export { layouts, type SectionId } from "./home-sections-map";
 
@@ -32,6 +33,7 @@ export default function HomeDashboard({
   onOpen,
   onGoOperations,
   onNew,
+  revenueGoals,
 }: {
   operations: Operation[];
   debtors: Debtor[];
@@ -43,8 +45,10 @@ export default function HomeDashboard({
   onOpen: (op: Operation) => void;
   onGoOperations: () => void;
   onNew: () => void;
+  revenueGoals: OperationalDefaultsState["revenueGoals"];
 }) {
-  const { period, setPeriod, profile, chooseProfile, now } = useHomePreferences();
+  const { period, setPeriod, profile, chooseProfile, now, positionDate, setPositionDate } = useHomePreferences();
+  const position = new Date(`${positionDate}T12:00:00`);
   const quality = useQualityPolicy();
   const metrics = useHomeMetrics({
     operations,
@@ -55,15 +59,17 @@ export default function HomeDashboard({
     companyScope,
     period,
     profile,
-    now,
+    now: position,
     qualityPolicy: quality.policy,
+    revenueGoals,
   });
 
   return (
     <div className="page-wrap vg">
       <HomeHeader
         metrics={metrics}
-        now={now}
+        positionDate={positionDate}
+        onPositionDateChange={setPositionDate}
         period={period}
         onPeriodChange={setPeriod}
         profile={profile}
@@ -83,8 +89,8 @@ export default function HomeDashboard({
       />
 
       <p className="vg-footnote">
-        Calculado a partir das operações, da carteira, dos cadastros e do financeiro · atualizado às{" "}
-        {now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+        Posição em {position.toLocaleDateString("pt-BR")} · calculado a partir das operações, da carteira, dos cadastros
+        e do financeiro · atualizado às {now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
       </p>
     </div>
   );

@@ -115,6 +115,88 @@ function MetricRow({ label, value, tone }: { label: string; value: string; tone?
   );
 }
 
+function RevenuePace({ metrics: m }: { metrics: HomeMetrics }) {
+  const pace = m.revenuePace;
+  const trendLabel =
+    pace.trend === "above" ? "Acima do ritmo" : pace.trend === "on-track" ? "Dentro da projeção" : "Abaixo do ritmo";
+  return (
+    <section className="vg-focus-card vg-revenue-pace" aria-label="Meta e ritmo de receita">
+      <header>
+        <div>
+          <span>META E RITMO</span>
+          <h2>Receita do período</h2>
+          <p>Meta distribuída pelos dias úteis e apurada até a data da posição.</p>
+        </div>
+        <b className={`vg-pace-status ${pace.trend}`}>{trendLabel}</b>
+      </header>
+      <div className="vg-pace-summary">
+        <div className="primary">
+          <span>Realizado até a posição</span>
+          <strong>{compact(pace.revenue)}</strong>
+          <small>
+            {pct(pace.attainment, 0)} da meta de {compact(pace.target)}
+          </small>
+          <div className="vg-pace-progress" aria-label={`${pct(pace.attainment, 0)} da meta`}>
+            <i style={{ width: `${Math.min(100, pace.attainment)}%` }} />
+            <em style={{ left: `${Math.min(100, pace.expectedAttainment)}%` }} title="Esperado até a posição" />
+          </div>
+        </div>
+        <div>
+          <span>Esperado até a posição</span>
+          <b>{compact(pace.elapsedTarget)}</b>
+          <small>{compact(pace.dailyTarget)} por dia útil</small>
+        </div>
+        <div>
+          <span>Projeção de fechamento</span>
+          <b className={pace.projected >= pace.target ? "good" : "bad"}>{compact(pace.projected)}</b>
+          <small>
+            {pace.projected >= pace.target ? "meta projetada" : `${compact(pace.remaining)} ainda necessários`}
+          </small>
+        </div>
+        <div>
+          <span>Ritmo necessário</span>
+          <b>{pace.remainingDays ? compact(pace.requiredDailyPace) : "—"}</b>
+          <small>{pace.remainingDays} dia(s) útil(eis) restante(s)</small>
+        </div>
+        <div>
+          <span>Dias atingidos</span>
+          <b className="good">{pace.metDays}</b>
+          <small>de {pace.totalCompletedDays} dias concluídos</small>
+        </div>
+        <div>
+          <span>Dias abaixo</span>
+          <b className={pace.missedDays ? "bad" : "good"}>{pace.missedDays}</b>
+          <small>meta diária não alcançada</small>
+        </div>
+      </div>
+      <div className="vg-pace-calendar" aria-label="Desempenho diário da receita">
+        {pace.days.map(day => (
+          <div
+            key={day.date}
+            className={day.status}
+            title={`${day.label}: ${compact(day.revenue)} de ${compact(day.target)}`}
+          >
+            <span>{day.label}</span>
+            <i
+              style={{ height: `${Math.max(5, Math.min(100, day.target ? (day.revenue / day.target) * 100 : 0))}%` }}
+            />
+            <b>{day.status === "future" ? "—" : compact(day.revenue)}</b>
+          </div>
+        ))}
+      </div>
+      <footer>
+        <span>
+          Melhor dia: <b>{pace.bestDay ? `${pace.bestDay.label} · ${compact(pace.bestDay.revenue)}` : "—"}</b>
+        </span>
+        <span>
+          Média realizada: <b>{compact(pace.currentDailyAverage)}</b>
+        </span>
+        <small>A linha no progresso indica o esperado até a posição.</small>
+      </footer>
+    </section>
+  );
+}
+
 function DeepDive({ children }: { children: ReactNode }) {
   return (
     <section className="vg-deep-dive" aria-labelledby="vg-deep-title">
@@ -272,6 +354,7 @@ function OperationFocus(props: FocusProps) {
       : "A esteira está fluindo dentro do padrão";
   return (
     <>
+      <RevenuePace metrics={m} />
       <DayStatus
         eyebrow="COMANDO OPERACIONAL"
         headline={headline}

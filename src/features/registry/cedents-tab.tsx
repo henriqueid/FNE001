@@ -60,7 +60,7 @@ export function CedentsTab({ operations, onOpenOperation, onNavigate, onEdit, on
 
   return (
     <>
-      <div className="fn-kpis">
+      <div className="fn-kpis rg-overview-strip">
         <div>
           <span>Cedentes</span>
           <strong>{records.length}</strong>
@@ -121,11 +121,9 @@ export function CedentsTab({ operations, onOpenOperation, onNavigate, onEdit, on
             <thead>
               <tr>
                 <th>Cedente</th>
-                <th>Comercial responsável</th>
-                <th>Gerente da conta</th>
+                <th>Relacionamento</th>
                 <th className="num">Score</th>
-                <th className="num">Limite aprovado</th>
-                <th className="num">Usado</th>
+                <th className="num">Crédito</th>
                 <th className="num">Carteira em aberto</th>
                 <th className="num">Em andamento</th>
                 <th>Situação</th>
@@ -150,47 +148,27 @@ export function CedentsTab({ operations, onOpenOperation, onNavigate, onEdit, on
                         </small>
                       </td>
                       <td>
-                        {record.rep ? (
-                          <div className="cm-rep">
-                            <span className={`cm-avatar small ${record.rep.kind === "Agente autônomo" ? "agent" : ""}`}>
-                              {record.rep.initials}
-                            </span>
-                            <div>
-                              <b>{record.rep.name}</b>
-                              <small>
-                                desde {br(record.link?.since)} · {record.link?.origin}
-                              </small>
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="fn-chip warn">Sem comercial</span>
-                        )}
-                      </td>
-                      <td>
-                        {record.manager ? (
-                          <div className="cm-rep">
-                            <span className="cm-avatar small">{record.manager.initials}</span>
-                            <div>
-                              <b>{record.manager.name}</b>
-                              <small>operações e pós-venda</small>
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="fn-chip warn">Sem gerente</span>
-                        )}
+                        <div className="rg-relationship-cell">
+                          <span>
+                            <small>Comercial</small>
+                            <b>{record.rep?.name ?? "Não definido"}</b>
+                          </span>
+                          <span>
+                            <small>Gerente da conta</small>
+                            <b>{record.manager?.name ?? "Não definido"}</b>
+                          </span>
+                        </div>
                       </td>
                       <td className="num">
                         <b className={scoreTone(record.cedent.score)}>{record.cedent.score || "—"}</b>
                       </td>
                       <td className="num">
-                        {record.cedent.creditLimit ? compact(record.cedent.creditLimit) : "—"}
-                        <small>{record.limitSource === "Comitê" ? "comitê" : "cadastro"}</small>
-                      </td>
-                      <td className="num">
-                        <span className={usage >= 0.9 ? "bad" : usage >= 0.75 ? "warn" : ""}>
-                          {record.cedent.creditLimit ? `${Math.round(usage * 100)}%` : "—"}
-                        </span>
-                        <small>{compact(record.cedent.usedLimit)}</small>
+                        <b>{record.cedent.creditLimit ? compact(record.cedent.creditLimit) : "—"}</b>
+                        <small className={usage >= 0.9 ? "bad" : usage >= 0.75 ? "warn" : ""}>
+                          {record.cedent.creditLimit
+                            ? `${Math.round(usage * 100)}% utilizado · ${record.limitSource.toLowerCase()}`
+                            : "sem limite"}
+                        </small>
                       </td>
                       <td className="num">
                         {c.open ? compact(c.open) : "—"}
@@ -225,7 +203,7 @@ export function CedentsTab({ operations, onOpenOperation, onNavigate, onEdit, on
                     </tr>
                     {open === record.document && (
                       <tr className="cm-expand">
-                        <td colSpan={10}>
+                        <td colSpan={8}>
                           <div className="rg-detail">
                             <div>
                               <h3>Relacionamento</h3>

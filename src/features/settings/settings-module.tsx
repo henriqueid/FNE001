@@ -8,6 +8,13 @@ import { useState } from "react";
 import { type IntegrationState, updateIntegrationMode } from "@/src/domain/integrations/model";
 import type { OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
 import { OperationalParametersEditor } from "@/src/features/registry/operational-parameters-editor";
+import { homeSettings, type HomePeriod } from "@/src/domain/home/settings";
+
+const goalPeriods: Array<{ id: HomePeriod; label: string }> = [
+  { id: "dia", label: "Dia" },
+  { id: "semana", label: "Semana" },
+  { id: "mes", label: "Mês" },
+];
 
 type SettingsSection = "overview" | "operational" | "policies" | "companies" | "integrations" | "interface";
 
@@ -285,6 +292,94 @@ export default function SettingsModule({
                   })
                 }
               />
+              <section className="settings-revenue-goals">
+                <header>
+                  <span>META DE RECEITA</span>
+                  <h3>Metas por período e veículo</h3>
+                  <p>
+                    A meta consolidada é distribuída pelos dias úteis. Valores específicos por veículo têm prioridade.
+                  </p>
+                </header>
+                <div className="settings-goal-row heading">
+                  <b>Escopo</b>
+                  {goalPeriods.map(period => (
+                    <b key={period.id}>{period.label}</b>
+                  ))}
+                </div>
+                <div className="settings-goal-row">
+                  <span>
+                    <strong>Consolidado</strong>
+                    <small>Meta geral do grupo</small>
+                  </span>
+                  {goalPeriods.map(period => (
+                    <label key={period.id}>
+                      <small>R$</small>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        aria-label={`Meta consolidada de receita por ${period.label.toLowerCase()}`}
+                        value={operationalDefaults.revenueGoals.consolidated[period.id]}
+                        onChange={event =>
+                          onOperationalDefaults({
+                            ...operationalDefaults,
+                            revenueGoals: {
+                              ...operationalDefaults.revenueGoals,
+                              consolidated: {
+                                ...operationalDefaults.revenueGoals.consolidated,
+                                [period.id]: Number(event.target.value),
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </label>
+                  ))}
+                </div>
+                {destinations.map(destination => (
+                  <div className="settings-goal-row" key={destination.name}>
+                    <span>
+                      <strong>{destination.name}</strong>
+                      <small>{destination.institution}</small>
+                    </span>
+                    {goalPeriods.map(period => {
+                      const fallback =
+                        operationalDefaults.revenueGoals.consolidated[period.id] *
+                        (homeSettings.vehicleTargetShare[destination.name] ?? 0.25);
+                      return (
+                        <label key={period.id}>
+                          <small>R$</small>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1000"
+                            aria-label={`Meta de ${destination.name} por ${period.label.toLowerCase()}`}
+                            value={
+                              operationalDefaults.revenueGoals.byVehicle[destination.name]?.[period.id] ??
+                              Math.round(fallback)
+                            }
+                            onChange={event =>
+                              onOperationalDefaults({
+                                ...operationalDefaults,
+                                revenueGoals: {
+                                  ...operationalDefaults.revenueGoals,
+                                  byVehicle: {
+                                    ...operationalDefaults.revenueGoals.byVehicle,
+                                    [destination.name]: {
+                                      ...operationalDefaults.revenueGoals.byVehicle[destination.name],
+                                      [period.id]: Number(event.target.value),
+                                    },
+                                  },
+                                },
+                              })
+                            }
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+                ))}
+              </section>
             </div>
           )}
 

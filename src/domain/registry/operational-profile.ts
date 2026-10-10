@@ -1,4 +1,5 @@
 import type { InstitutionType } from "@/src/domain/core/types";
+import type { HomePeriod } from "@/src/domain/home/settings";
 
 export type CalculationMethod = "Nominal" | "Efetiva" | "Mista" | "Composta Mista";
 export type ConfirmationFailureAction = "Bloquear" | "Enviar para alçada" | "Solicitar nova amostra" | "Alertar";
@@ -86,6 +87,10 @@ export type ClientComplianceProfile = {
 export type OperationalDefaultsState = {
   version: 1;
   general: OperationalParameters;
+  revenueGoals: {
+    consolidated: Record<HomePeriod, number>;
+    byVehicle: Record<string, Partial<Record<HomePeriod, number>>>;
+  };
 };
 
 export const defaultOperationalParameters: OperationalParameters = {
@@ -130,6 +135,10 @@ export const defaultOperationalParameters: OperationalParameters = {
 export const seedOperationalDefaults = (): OperationalDefaultsState => ({
   version: 1,
   general: { ...defaultOperationalParameters },
+  revenueGoals: {
+    consolidated: { dia: 30_000, semana: 150_000, mes: 600_000 },
+    byVehicle: {},
+  },
 });
 
 export function migrateOperationalDefaults(value: unknown): OperationalDefaultsState {
@@ -138,6 +147,13 @@ export function migrateOperationalDefaults(value: unknown): OperationalDefaultsS
   return {
     version: 1,
     general: { ...defaultOperationalParameters, ...(stored.general ?? {}) },
+    revenueGoals: {
+      consolidated: {
+        ...seedOperationalDefaults().revenueGoals.consolidated,
+        ...(stored.revenueGoals?.consolidated ?? {}),
+      },
+      byVehicle: stored.revenueGoals?.byVehicle ?? {},
+    },
   };
 }
 

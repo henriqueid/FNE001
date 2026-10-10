@@ -449,6 +449,7 @@ export default function StratoApp() {
         onOpen={setSelected}
         onGoOperations={() => navigate("operations")}
         onNew={() => setShowNew(true)}
+        revenueGoals={operationalDefaults.revenueGoals}
       />
     );
   else if (view === "registry")

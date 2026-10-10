@@ -62,6 +62,7 @@ export default function RegistryModule({ debtors, operations, onOpenOperation, o
     return true;
   };
   const tabs: [Tab, string][] = [["todos", "Todos"], ...partyRoles.map(r => [r.id, r.plural] as [Tab, string])];
+  const selectedRole = tab === "todos" ? null : partyRoles.find(role => role.id === tab);
 
   return (
     <div className="page-wrap fn-page rg-page">
@@ -71,10 +72,7 @@ export default function RegistryModule({ debtors, operations, onOpenOperation, o
             <UsersIcon /> CADASTRO E KYC
           </span>
           <h1>Cadastros</h1>
-          <p>
-            Uma pessoa por CPF/CNPJ, com todos os papéis que ela tem: cedente, sacado, fornecedor, representante,
-            investidor, avalista ou prestador.
-          </p>
+          <p>Central única de clientes, contrapartes, responsáveis e dados operacionais.</p>
         </div>
         <div className="fn-heading-actions">
           {tab === "cedente" && (
@@ -92,7 +90,7 @@ export default function RegistryModule({ debtors, operations, onOpenOperation, o
             </label>
           )}
           <button className="fn-btn primary" onClick={newForTab}>
-            <PlusIcon /> Novo cadastro
+            <PlusIcon /> {selectedRole ? `Novo ${selectedRole.label.toLowerCase()}` : "Novo cadastro"}
           </button>
         </div>
       </div>
@@ -104,6 +102,17 @@ export default function RegistryModule({ debtors, operations, onOpenOperation, o
         onChange={setTab}
         tabs={tabs.map(([id, label]) => ({ id, label, count: countOf(id), tone: "neutral" as const }))}
       />
+      <section className="rg-directory-context">
+        <div className="rg-directory-icon">
+          <UsersIcon />
+        </div>
+        <div>
+          <span>DIRETÓRIO ATUAL</span>
+          <h2>{selectedRole?.plural ?? "Todas as pessoas"}</h2>
+          <p>{selectedRole?.hint ?? "Consulte todos os cadastros e os papéis vinculados a cada CPF ou CNPJ."}</p>
+        </div>
+        <b>{countOf(tab)} cadastro(s) ativo(s)</b>
+      </section>
       {toast && (
         <div className={`fn-toast ${toast.tone}`} role="status">
           {toast.tone === "error" ? <AlertIcon /> : <CheckIcon />}

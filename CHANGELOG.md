@@ -2,6 +2,11 @@
 
 ## Supabase e backend definitivo
 
+- Nova tela de acesso conectada ao Supabase Auth, com validação de sessão no servidor e saída pelo menu do usuário.
+- Diretório de acesso migrado para o PostgreSQL: seis perfis iniciais, empresa, departamentos, permissões, alçadas e escopos empresariais.
+- Vínculo explícito entre a identidade do Supabase e o cadastro interno, conferindo identificador e e-mail corporativo.
+- Funções públicas mínimas fazem a ponte com o esquema privado; chamadas anônimas não possuem permissão de execução.
+- A demonstração local continua disponível somente em `localhost`, sem bloquear os testes durante a transição.
 - Projeto `STRATO` provisionado no Supabase, região São Paulo, com PostgreSQL 17.
 - Estrutura inicial persistente criada em esquema privado para empresas, usuários, vínculos, permissões, alçadas, eventos de acesso, decisões, idempotência, outbox e notificações.
 - RLS habilitado em todas as tabelas internas, sem exposição direta para `anon` ou `authenticated`.

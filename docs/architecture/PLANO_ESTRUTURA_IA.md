@@ -66,11 +66,13 @@ A primeira entrega da fase **IA-0 — Fundação** já está disponível no prot
 - API do Copiloto conectada ao ledger e capaz de reler a trilha após recarregar a página.
 - projeto Supabase `STRATO` ativo em São Paulo, com PostgreSQL 17, esquema privado, RLS e migrações versionadas;
 - estrutura definitiva de tenants, usuários, vínculos, permissões, alçadas, ledger, idempotência, outbox e notificações validada no banco remoto.
+- autenticação real integrada ao Supabase Auth, com vínculo explícito ao perfil e ao e-mail corporativo autorizado e diretório de acesso já operando no PostgreSQL;
+- tela de login, encerramento de sessão e alternativa de demonstração restrita ao ambiente local.
 
 Esta entrega valida o modelo funcional, a experiência e o primeiro backend auditável. A infraestrutura definitiva do
-banco já está implantada no Supabase. A troca dos adaptadores D1 por PostgreSQL, o login com Supabase Auth, os
-adaptadores para destinos externos e a migração dos demais domínios continuam como próximos componentes da IA-0
-antes do uso produtivo.
+banco já está implantada no Supabase e a identidade e o diretório de acesso já foram migrados. A troca do ledger,
+outbox e notificações do adaptador D1 para PostgreSQL, os adaptadores para destinos externos e a migração dos demais
+domínios continuam como próximos componentes da IA-0 antes do uso produtivo.
 
 ## 3. Princípios obrigatórios
 

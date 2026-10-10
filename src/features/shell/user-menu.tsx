@@ -6,6 +6,7 @@
  */
 import { type ThemePreference } from "./use-theme";
 import { type AppUserProfile } from "@/src/domain/copilot/daily-briefing";
+import { useStratoAuth } from "@/src/features/auth/auth-context";
 
 import { destinations } from "@/src/domain/core/demo/companies";
 import {
@@ -17,6 +18,7 @@ import {
   SparkIcon,
   SunIcon,
   UndoIcon,
+  CloseIcon,
 } from "@/src/ui/icons";
 import { useEffect, useRef, useState } from "react";
 
@@ -57,6 +59,7 @@ export function UserMenu({
   onOpenDailyBriefing?: () => void;
   canOpenSettings?: boolean;
 }) {
+  const auth = useStratoAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const allowedDestinations = destinations.filter(
@@ -195,6 +198,17 @@ export function UserMenu({
                 }}
               >
                 <UndoIcon /> Restaurar demonstração
+              </button>
+            )}
+            {auth && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  void auth.signOut();
+                }}
+              >
+                <CloseIcon /> Sair do STRATO
               </button>
             )}
           </footer>

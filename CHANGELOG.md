@@ -1,5 +1,14 @@
 # Changelog
 
+## Adendo 04 Decisões Alçadas e IA Opcional
+
+- Criado contrato append-only de eventos e decisões auditáveis.
+- Implementado cálculo conservador de exposição: promessa não reduz limite antes da liquidação confirmada.
+- Exceções agora exigem competência, justificativa e escopo por operação, cedente, política, valor e validade.
+- Copiloto ganhou trilha de decisão e separação visual entre motor determinístico e IA.
+- Configurações ganharam licenciamento, estado operacional e orçamento da IA por organização.
+- Modo sem IA mantém cálculos, políticas, relatórios e análise estruturada em funcionamento.
+
 ## Não lançado — 10/10/2026 · Revisão de prontidão e limpeza técnica
 
 - Build tornou-se reproduzível em um clone limpo: o plugin de empacotamento saiu de uma pasta ignorada e passou a ser versionado em `tools/`.

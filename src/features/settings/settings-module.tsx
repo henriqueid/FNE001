@@ -11,6 +11,12 @@ import { OperationalParametersEditor } from "@/src/features/registry/operational
 import { homeSettings, type HomePeriod } from "@/src/domain/home/settings";
 import { type AccessState } from "@/src/domain/access/model";
 import { UsersAccessPanel } from "./users-access-panel";
+import {
+  aiStatusLabel,
+  effectiveAIStatus,
+  type AIStatus,
+  type IntelligenceState,
+} from "@/src/domain/intelligence/model";
 
 const goalPeriods: Array<{ id: HomePeriod; label: string }> = [
   { id: "dia", label: "Dia" },
@@ -18,7 +24,8 @@ const goalPeriods: Array<{ id: HomePeriod; label: string }> = [
   { id: "mes", label: "Mês" },
 ];
 
-type SettingsSection = "overview" | "access" | "operational" | "policies" | "companies" | "integrations" | "interface";
+type SettingsSection =
+  "overview" | "access" | "operational" | "policies" | "companies" | "integrations" | "intelligence" | "interface";
 
 type SettingsItem = {
   id: SettingsSection;
@@ -53,11 +60,14 @@ const menuGroups: Array<{ label: string; items: SettingsItem[] }> = [
   },
   {
     label: "CONEXÕES",
-    items: [{ id: "integrations", label: "Integrações", description: "Fontes de dados externas", marker: "06" }],
+    items: [
+      { id: "integrations", label: "Integrações", description: "Fontes de dados externas", marker: "06" },
+      { id: "intelligence", label: "Inteligência e IA", description: "Licença, estado e orçamento", marker: "07" },
+    ],
   },
   {
     label: "PREFERÊNCIAS",
-    items: [{ id: "interface", label: "Interface", description: "Orientação e visualização", marker: "07" }],
+    items: [{ id: "interface", label: "Interface", description: "Orientação e visualização", marker: "08" }],
   },
 ];
 
@@ -104,6 +114,13 @@ const shortcuts: Array<{
     action: "Ver integrações",
   },
   {
+    section: "intelligence",
+    eyebrow: "GOVERNANÇA",
+    title: "Inteligência e IA",
+    description: "Controle a disponibilidade da IA sem afetar o motor financeiro determinístico.",
+    action: "Configurar inteligência",
+  },
+  {
     section: "interface",
     eyebrow: "PREFERÊNCIAS",
     title: "Interface",
@@ -125,6 +142,8 @@ export default function SettingsModule({
   onOperationalDefaults,
   access,
   onAccess,
+  intelligence,
+  onIntelligence,
 }: {
   policies: EligibilityPolicyState;
   onPolicies: (state: EligibilityPolicyState) => void;
@@ -138,6 +157,8 @@ export default function SettingsModule({
   onOperationalDefaults: (state: OperationalDefaultsState) => void;
   access: AccessState;
   onAccess: (state: AccessState) => void;
+  intelligence: IntelligenceState;
+  onIntelligence: (state: IntelligenceState) => void;
 }) {
   const [section, setSection] = useState<SettingsSection>("overview");
   const activePolicies = policies.policies.filter(policy => policy.status === "ATIVA").length;
@@ -288,6 +309,98 @@ export default function SettingsModule({
           {section === "policies" && <PoliciesModule state={policies} onState={onPolicies} embedded />}
 
           {section === "access" && <UsersAccessPanel state={access} onState={onAccess} />}
+
+          {section === "intelligence" && (
+            <div className="settings-section-card">
+              <header>
+                <span>IA OPCIONAL POR ORGANIZAÇÃO</span>
+                <h2>Inteligência e IA</h2>
+                <p>
+                  O motor de políticas, os cálculos, as filas e as aprovações continuam funcionando mesmo quando a IA
+                  estiver desativada ou indisponível.
+                </p>
+              </header>
+              <div className="settings-integration-legend" role="status">
+                <span>
+                  <b>{effectiveAIStatus(intelligence).replace("AI_", "")}</b> estado efetivo
+                </span>
+                <span>
+                  <b>{intelligence.usedTokens.toLocaleString("pt-BR")}</b> tokens utilizados
+                </span>
+                <span>
+                  <b>{intelligence.monthlyTokenBudget.toLocaleString("pt-BR")}</b> orçamento mensal
+                </span>
+              </div>
+              <div className="settings-interface-grid">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={intelligence.contracted}
+                    onChange={event =>
+                      onIntelligence({
+                        ...intelligence,
+                        contracted: event.target.checked,
+                        updatedAt: new Date().toISOString(),
+                      })
+                    }
+                  />
+                  <span>
+                    <strong>IA contratada</strong>
+                    <small>Habilita o recurso para esta organização.</small>
+                  </span>
+                  <b>{intelligence.contracted ? "Contratada" : "Não contratada"}</b>
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={intelligence.enabled}
+                    disabled={!intelligence.contracted}
+                    onChange={event =>
+                      onIntelligence({
+                        ...intelligence,
+                        enabled: event.target.checked,
+                        updatedAt: new Date().toISOString(),
+                      })
+                    }
+                  />
+                  <span>
+                    <strong>Copiloto habilitado</strong>
+                    <small>Controla conversa e sínteses; não controla o motor financeiro.</small>
+                  </span>
+                  <b>{intelligence.enabled && intelligence.contracted ? "Ativo" : "Inativo"}</b>
+                </label>
+              </div>
+              <div className="settings-goal-row">
+                <span>
+                  <strong>Estado operacional da IA</strong>
+                  <small>{aiStatusLabel(intelligence)}</small>
+                </span>
+                <label>
+                  <select
+                    aria-label="Estado operacional da IA"
+                    value={intelligence.status}
+                    onChange={event =>
+                      onIntelligence({
+                        ...intelligence,
+                        status: event.target.value as AIStatus,
+                        updatedAt: new Date().toISOString(),
+                      })
+                    }
+                  >
+                    <option value="AI_AVAILABLE">Disponível</option>
+                    <option value="AI_DEGRADED">Capacidade reduzida</option>
+                    <option value="AI_UNAVAILABLE">Indisponível</option>
+                    <option value="AI_PROCESSING">Processando</option>
+                    <option value="AI_DISABLED">Desativada</option>
+                  </select>
+                </label>
+              </div>
+              <p className="settings-integration-requirements">
+                <b>Regra de segurança:</b> nenhuma decisão, cálculo, desbloqueio de alçada ou movimentação financeira
+                depende da IA. Em falha, o STRATO mantém o resultado determinístico e informa a indisponibilidade.
+              </p>
+            </div>
+          )}
 
           {section === "operational" && (
             <div className="settings-section-card settings-operational-defaults">

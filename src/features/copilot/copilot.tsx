@@ -22,6 +22,8 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { CopilotAnalysis } from "./copilot-analysis";
 import { type CopilotSuggestion, ProgressCard, ReplyBubble, ResultCard, StartCard } from "./copilot-thread";
 import { useCopilotDesk } from "./use-copilot-desk";
+import { type AccessUser } from "@/src/domain/access/model";
+import { aiStatusLabel, type IntelligenceState } from "@/src/domain/intelligence/model";
 
 export type { CopilotSuggestion } from "./copilot-thread";
 
@@ -30,11 +32,15 @@ export function Copilot({
   dailyBriefing,
   attentionItems,
   onOpenAttention,
+  currentUser,
+  intelligence,
 }: {
   suggestion?: CopilotSuggestion;
   dailyBriefing: DailyBriefingData;
   attentionItems: AttentionItem[];
   onOpenAttention: (itemId?: string) => void;
+  currentUser: AccessUser;
+  intelligence: IntelligenceState;
 }) {
   const cedents = useCedents();
   const operations = useContext(ShellContext)?.operations;
@@ -51,7 +57,7 @@ export function Copilot({
     }),
     [operations, cedents, policies],
   );
-  const desk = useCopilotDesk(knowledge);
+  const desk = useCopilotDesk(knowledge, currentUser, intelligence);
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState("");
@@ -111,7 +117,7 @@ export function Copilot({
           cedents={cedents}
           suggestion={suggestion}
           onAsk={send}
-          showPrompts={!desk.messages.length}
+          showPrompts={!desk.messages.length && desk.aiAvailable}
         />
       )}
       {desk.messages.map(message =>
@@ -136,7 +142,7 @@ export function Copilot({
       {(hasResult || desk.messages.length > 0) && (
         <div className="cpl-chips">
           {chips.map(item => (
-            <button type="button" key={item} onClick={() => send(item)}>
+            <button type="button" key={item} onClick={() => send(item)} disabled={!desk.aiAvailable}>
               {item}
             </button>
           ))}
@@ -162,10 +168,13 @@ export function Copilot({
               send(draft);
             }
           }}
-          placeholder="Pergunte, investigue ou simule um cenário…"
+          placeholder={
+            desk.aiAvailable ? "Pergunte, investigue ou simule um cenário…" : "IA indisponível nesta organização"
+          }
           aria-label="Mensagem para o Copiloto"
+          disabled={!desk.aiAvailable}
         />
-        <button type="submit" aria-label="Enviar" disabled={!draft.trim()}>
+        <button type="submit" aria-label="Enviar" disabled={!draft.trim() || !desk.aiAvailable}>
           <SendIcon />
         </button>
         <small className="cpl-input-hint">Enter envia · Shift + Enter quebra a linha</small>
@@ -245,6 +254,10 @@ export function Copilot({
             </span>
             <ArrowIcon />
           </button>
+          <div className="cpl-ai-state" data-enabled={desk.aiAvailable || undefined} role="status">
+            <b>{desk.aiAvailable ? "Insight com apoio de IA" : "Análise do motor de políticas · sem IA"}</b>
+            <span>{aiStatusLabel(intelligence)} · cálculos e alçadas permanecem determinísticos.</span>
+          </div>
           {expanded ? (
             <div className="cpl-split">
               <CopilotAnalysis desk={desk} cedent={cedent} knowledge={knowledge} />

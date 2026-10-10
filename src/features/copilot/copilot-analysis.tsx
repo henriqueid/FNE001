@@ -140,7 +140,9 @@ export function CopilotAnalysis({
               <span className="cpl-tag">{severityLabel[finding.severity]}</span>
               <div>
                 <b>{finding.title}</b>
-                <small className="cpl-evidence">{finding.evidence}</small>
+                <small className="cpl-evidence">
+                  {finding.kind} · {finding.evidence}
+                </small>
                 <p>{finding.detail}</p>
               </div>
               {finding.question && (
@@ -239,6 +241,22 @@ export function CopilotAnalysis({
         <p className="cpl-note">
           Cada mudança cria uma versão nova com autor, política {policy.name} v{policy.version} e diferença no líquido.
           Nenhuma versão é sobrescrita.
+        </p>
+      </section>
+
+      <section>
+        <h3>Trilha de decisão</h3>
+        <ol className="cpl-scenarios">
+          {desk.decisionLedger.events.map(event => (
+            <li key={event.eventId}>
+              <b>v{event.eventVersion}</b>
+              <span>{event.eventType.replaceAll("_", " ")}</span>
+              <strong>{event.outcome}</strong>
+            </li>
+          ))}
+        </ol>
+        <p className="cpl-note">
+          Registro somente de acréscimo. Correções e revisões entram como novos eventos, sem apagar a decisão anterior.
         </p>
       </section>
     </div>

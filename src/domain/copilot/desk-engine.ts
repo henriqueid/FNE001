@@ -37,11 +37,13 @@ export type DeskPolicy = {
 
 export type DeskSeverity = "impedimento" | "alcada" | "info";
 export type DeskEvidence = "Fato" | "Inferência" | "Sem dados";
+export type DeskInsightKind = "FATO" | "REGRA" | "TENDÊNCIA" | "HIPÓTESE" | "SUGESTÃO";
 
 export type DeskFinding = {
   id: string;
   severity: DeskSeverity;
   evidence: DeskEvidence;
+  kind: DeskInsightKind;
   title: string;
   detail: string;
   /** Pergunta pronta para o Copiloto explicar o apontamento. */
@@ -125,6 +127,7 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
         id: `dup-${title.id}`,
         severity: "impedimento",
         evidence: "Fato",
+        kind: "REGRA",
         title: `${title.document} já está na carteira`,
         detail: "Mesmo sacado e número de documento de um título já adquirido. Regra INTAKE-DUP-001.",
         question: `Por que o ${title.document} foi bloqueado?`,
@@ -137,6 +140,7 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
       id: "bureau",
       severity: "impedimento",
       evidence: "Sem dados",
+      kind: "REGRA",
       title: `${newDebtor} sem consulta`,
       detail: "Sacado novo. A política exige consulta ao birô antes de aprovar.",
       question: `O que falta sobre a ${newDebtor}?`,
@@ -146,6 +150,7 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
       id: "concentration",
       severity: "alcada",
       evidence: "Fato",
+      kind: "REGRA",
       title: `${top.debtor} concentra ${percentBR(top.share)} da operação`,
       detail: `Limite da política ${policy.name} v${policy.version}: ${policy.concentrationLimit}%. Exige alçada ou ajuste.`,
       question: `Por que a ${top.debtor} foi sinalizada?`,
@@ -155,6 +160,7 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
       id: "rate-floor",
       severity: "alcada",
       evidence: "Fato",
+      kind: "REGRA",
       title: `Taxa de ${percentBR(ratePercent, 2)} a.m. abaixo do piso`,
       detail: `Piso da política para este risco: ${percentBR(policy.rateFloor, 2)} a.m. Exige alçada comercial.`,
       question: "Por que a taxa precisa de alçada?",
@@ -166,6 +172,7 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
         id: `term-${title.id}`,
         severity: "info",
         evidence: "Fato",
+        kind: "FATO",
         title: `${title.document} vence em ${title.days} dias`,
         detail: `Abaixo do prazo de referência de ${policy.minDays} dias. Não bloqueia; vale conferir com o cedente.`,
         question: `O ${title.document} vence cedo, isso é problema?`,
@@ -176,6 +183,7 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
       id: "bureau-ok",
       severity: "info",
       evidence: "Fato",
+      kind: "FATO",
       title: `${newDebtor} consultada`,
       detail: "Birô de demonstração: score 688, sem restrições. O score do birô fica em campo separado.",
     });

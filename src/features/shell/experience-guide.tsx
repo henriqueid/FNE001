@@ -9,6 +9,8 @@ import { ArrowIcon, CheckIcon } from "@/src/ui/icons";
 import { useState } from "react";
 import { type AppView } from "./shell-context";
 import { type Signal } from "./notifications";
+import { type AccessUser } from "@/src/domain/access/model";
+import { type IntelligenceState } from "@/src/domain/intelligence/model";
 
 type JourneyStep = {
   label: string;
@@ -88,6 +90,8 @@ export function ExperienceGuide({
   attentionItems,
   onOpenAttention,
   onNavigate,
+  currentUser,
+  intelligence,
 }: {
   active: string;
   operations: Operation[];
@@ -97,6 +101,8 @@ export function ExperienceGuide({
   onOpenAttention: (itemId?: string) => void;
   onNavigate: (view: AppView) => void;
   showJourney: boolean;
+  currentUser: AccessUser;
+  intelligence: IntelligenceState;
 }) {
   const [explained, setExplained] = useState(false);
   const current = guide[active] ?? guide.Operações;
@@ -188,6 +194,8 @@ export function ExperienceGuide({
           action: suggestion.action,
           onAction: () => onNavigate(suggestion.view),
         }}
+        currentUser={currentUser}
+        intelligence={intelligence}
       />
     </>
   );

@@ -19,6 +19,7 @@ import { migrateOperationalDefaults, type OperationalDefaultsState } from "@/src
 import { migrateIntegrationState, type IntegrationState } from "@/src/domain/integrations/model";
 import { migrateTaskState, type TaskState } from "@/src/domain/tasks/model";
 import { migrateAccessState, type AccessState } from "@/src/domain/access/model";
+import { migrateIntelligenceState, type IntelligenceState } from "@/src/domain/intelligence/model";
 
 export const STORAGE_KEYS = {
   operations: "lastro-mvp-operations-v3",
@@ -32,6 +33,7 @@ export const STORAGE_KEYS = {
   operationalDefaults: "strato-operational-defaults-v1",
   tasks: "strato-tasks-v1",
   access: "strato-access-v1",
+  intelligence: "strato-intelligence-v1",
   guidance: "lastro-interface-guidance-v1",
   journey: "strato-journey-bar-v1",
 } as const;
@@ -48,6 +50,7 @@ export type PersistedState = {
   operationalDefaults: OperationalDefaultsState;
   tasks: TaskState;
   access: AccessState;
+  intelligence: IntelligenceState;
 };
 
 /** Mescla operações salvas com a versão atual dos dados de demonstração. */
@@ -154,6 +157,7 @@ export function loadPersistedState(): Partial<PersistedState> & { guidance?: boo
     const operationalDefaults = read<unknown>(STORAGE_KEYS.operationalDefaults);
     const tasks = read<unknown>(STORAGE_KEYS.tasks);
     const access = read<unknown>(STORAGE_KEYS.access);
+    const intelligence = read<unknown>(STORAGE_KEYS.intelligence);
     window.localStorage.removeItem("strato-eligibility-policies-v1");
     const guidance = window.localStorage.getItem(STORAGE_KEYS.guidance);
     const journey = window.localStorage.getItem(STORAGE_KEYS.journey);
@@ -174,6 +178,7 @@ export function loadPersistedState(): Partial<PersistedState> & { guidance?: boo
       operationalDefaults: migrateOperationalDefaults(operationalDefaults),
       tasks: migrateTaskState(tasks),
       access: migrateAccessState(access),
+      intelligence: migrateIntelligenceState(intelligence),
       guidance: guidance === null ? undefined : guidance === "true",
       journey: journey === null ? undefined : journey === "true",
     };
@@ -197,6 +202,7 @@ export function savePersistedState(state: PersistedState) {
     window.localStorage.setItem(STORAGE_KEYS.operationalDefaults, JSON.stringify(state.operationalDefaults));
     window.localStorage.setItem(STORAGE_KEYS.tasks, JSON.stringify(state.tasks));
     window.localStorage.setItem(STORAGE_KEYS.access, JSON.stringify(state.access));
+    window.localStorage.setItem(STORAGE_KEYS.intelligence, JSON.stringify(state.intelligence));
   } catch {
     /* sem armazenamento: a demonstração segue só na memória */
   }
@@ -234,6 +240,7 @@ export function clearPersistedState() {
       STORAGE_KEYS.operationalDefaults,
       STORAGE_KEYS.tasks,
       STORAGE_KEYS.access,
+      STORAGE_KEYS.intelligence,
     ].forEach(key => window.localStorage.removeItem(key));
   } catch {
     /* sem armazenamento */

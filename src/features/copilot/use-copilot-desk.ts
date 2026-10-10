@@ -17,6 +17,10 @@ import {
   nextScenario,
 } from "@/src/domain/copilot/desk-engine";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { can, type AccessUser } from "@/src/domain/access/model";
+import { appendDecisionEvent, createAuthorityGrant, decisionFingerprint } from "@/src/domain/decisions/engine";
+import { emptyDecisionLedger } from "@/src/domain/decisions/model";
+import { canUseGenerativeAI, type IntelligenceState } from "@/src/domain/intelligence/model";
 
 export type DeskStage = "idle" | "recebida" | "validando" | "extraindo" | "calculando" | "concluida";
 export type DeskDecision = "pending" | "approved" | "rejected" | null;
@@ -38,7 +42,7 @@ type WithoutId<T> = T extends unknown ? Omit<T, "id"> : never;
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export function useCopilotDesk(knowledge: SystemKnowledge) {
+export function useCopilotDesk(knowledge: SystemKnowledge, actor: AccessUser, intelligence: IntelligenceState) {
   const [cedent, setCedent] = useState("");
   const [files, setFiles] = useState<DeskFile[]>([]);
   const [userFiles, setUserFiles] = useState(false);
@@ -50,10 +54,13 @@ export function useCopilotDesk(knowledge: SystemKnowledge) {
   const [messages, setMessages] = useState<DeskMessage[]>([]);
   const [decision, setDecision] = useState<DeskDecision>(null);
   const [unread, setUnread] = useState(false);
+  const [decisionLedger, setDecisionLedger] = useState(emptyDecisionLedger);
+  const [decisionError, setDecisionError] = useState("");
   const alive = useRef(true);
   /** Identifica a tarefa em curso; limpar a conversa invalida a anterior. */
   const run = useRef(0);
   const nextId = useRef(1);
+  const nextEventId = useRef(1);
 
   useEffect(() => {
     alive.current = true;
@@ -73,6 +80,69 @@ export function useCopilotDesk(knowledge: SystemKnowledge) {
   }, []);
 
   const context: DeskContext = { titles: deskDemoTitles, policy: deskDemoPolicy, bureauChecked };
+  const aiAvailable = canUseGenerativeAI(intelligence);
+  const operationId = `copilot-${cedent || "unassigned"}`;
+
+  const recordEvent = useCallback(
+    (
+      eventType:
+        | "ANALYSIS_REQUESTED"
+        | "ANALYSIS_COMPLETED"
+        | "POLICY_BLOCKED"
+        | "EXCEPTION_REQUESTED"
+        | "EXCEPTION_APPROVED"
+        | "EXCEPTION_REJECTED"
+        | "OPERATION_SENT_TO_FORMALIZATION",
+      outcome: "PENDING" | "WITHIN_POLICY" | "BLOCKED" | "APPROVED" | "REJECTED",
+      reasonCodes: string[],
+      humanRationale?: string,
+      snapshot?: { version: number; metrics: Record<string, number | string | boolean> },
+    ) => {
+      const now = new Date().toISOString();
+      const eventNumber = nextEventId.current++;
+      setDecisionLedger(current =>
+        appendDecisionEvent(current, {
+          eventId: `decision-event-${eventNumber}`,
+          eventType,
+          decisionId: `decision-${operationId}`,
+          tenantId: intelligence.tenantId,
+          operationId,
+          entityRefs: cedent ? [cedent] : [],
+          decisionType: "OPERATION_ELIGIBILITY",
+          requestedAction: eventType,
+          actorId: actor.id,
+          actorRole: actor.role,
+          authorityId: eventType.includes("EXCEPTION") ? "credit-director" : undefined,
+          policyId: deskDemoPolicy.name,
+          policyVersion: deskDemoPolicy.version,
+          inputSnapshotId: `scenario-${snapshot?.version ?? scenarios.at(-1)?.version ?? 0}`,
+          inputSnapshotHash: decisionFingerprint({
+            files: files.map(file => ({ name: file.name, format: file.format })),
+            scenario: snapshot?.version ?? scenarios.at(-1)?.version ?? 0,
+            policy: `${deskDemoPolicy.name}:${deskDemoPolicy.version}`,
+          }),
+          computedMetrics:
+            snapshot?.metrics ??
+            (scenarios.length
+              ? {
+                  faceCents: scenarios.at(-1)?.result.faceCents ?? 0,
+                  netCents: scenarios.at(-1)?.result.netCents ?? 0,
+                }
+              : {}),
+          reasonCodes,
+          humanRationale,
+          supportingEvidenceRefs: files.map(file => file.name),
+          priorDecisionRefs: current.events.length ? [current.events.at(-1)?.eventId ?? ""] : [],
+          outcome,
+          conditions: [],
+          validFrom: now,
+          createdAt: now,
+          correlationId: `copilot-run-${run.current}`,
+        }),
+      );
+    },
+    [actor.id, actor.role, cedent, files, intelligence.tenantId, operationId, scenarios],
+  );
 
   const loadExamples = () => {
     setFiles(deskDemoFiles);
@@ -93,9 +163,12 @@ export function useCopilotDesk(knowledge: SystemKnowledge) {
     setDecision(null);
     setBureauChecked(false);
     setLogs({});
+    setDecisionLedger(emptyDecisionLedger());
+    setDecisionError("");
     push({ role: "me", text: `Analisar ${files.length} arquivo(s)` });
     push({ role: "card", card: "progress" });
-    log("recebida", `${files.length} arquivo(s) guardado(s) com SHA-256.`);
+    recordEvent("ANALYSIS_REQUESTED", "PENDING", []);
+    log("recebida", `${files.length} arquivo(s) identificado(s) e preservado(s) para análise.`);
     await wait(900);
     if (stale()) return;
     log("validando", "XML NF-e, CNAB 400 e XLS no layout padrão reconhecidos. 1 título já existe na carteira.");
@@ -130,6 +203,32 @@ export function useCopilotDesk(knowledge: SystemKnowledge) {
     const scenario = firstScenario({ ...context, bureauChecked: allowed });
     setScenarios([scenario]);
     const { result } = scenario;
+    recordEvent(
+      "ANALYSIS_COMPLETED",
+      result.fastTrack ? "WITHIN_POLICY" : "BLOCKED",
+      [...result.blockers.map(item => item.id), ...result.exceptions.map(item => item.id)],
+      undefined,
+      {
+        version: scenario.version,
+        metrics: {
+          faceCents: result.faceCents,
+          netCents: result.netCents,
+          blockerCount: result.blockers.length,
+          exceptionCount: result.exceptions.length,
+        },
+      },
+    );
+    if (result.blockers.length || result.exceptions.length)
+      recordEvent(
+        "POLICY_BLOCKED",
+        "BLOCKED",
+        [...result.blockers.map(item => item.id), ...result.exceptions.map(item => item.id)],
+        undefined,
+        {
+          version: scenario.version,
+          metrics: { blockerCount: result.blockers.length, exceptionCount: result.exceptions.length },
+        },
+      );
     log(
       "concluida",
       `${result.blockers.length} impedimento(s), ${result.exceptions.length} ponto(s) de alçada, líquido ${centsToBRL(result.netCents)}.`,
@@ -152,6 +251,17 @@ export function useCopilotDesk(knowledge: SystemKnowledge) {
   /** Pergunta livre: primeiro sobre o cenário em análise (se houver); senão, consulta a base e a política. */
   const ask = (text: string) => {
     push({ role: "me", text });
+    if (!aiAvailable) {
+      push({
+        role: "ai",
+        reply: {
+          paragraphs: [
+            "A IA está desativada ou indisponível para esta organização. O motor determinístico e o relatório estruturado continuam disponíveis.",
+          ],
+        },
+      });
+      return;
+    }
     if (scenarios.length && !locked) {
       const answer = answerDesk(text, context, scenarios);
       if (!answer.fallback) {
@@ -185,6 +295,7 @@ export function useCopilotDesk(knowledge: SystemKnowledge) {
   const approveFast = () => {
     const current = scenarios[scenarios.length - 1];
     setDecision("approved");
+    recordEvent("OPERATION_SENT_TO_FORMALIZATION", "APPROVED", []);
     push({
       role: "ai",
       reply: {
@@ -199,6 +310,12 @@ export function useCopilotDesk(knowledge: SystemKnowledge) {
   const sendToAuthority = () => {
     const current = scenarios[scenarios.length - 1];
     setDecision("pending");
+    setDecisionError("");
+    recordEvent(
+      "EXCEPTION_REQUESTED",
+      "PENDING",
+      current.result.exceptions.map(item => item.id),
+    );
     push({
       role: "ai",
       reply: {
@@ -210,8 +327,44 @@ export function useCopilotDesk(knowledge: SystemKnowledge) {
     });
   };
 
-  const authorityDecides = (approved: boolean) => {
+  const authorityDecides = (approved: boolean, rationale: string) => {
+    setDecisionError("");
+    const current = scenarios[scenarios.length - 1];
+    if (!current) return false;
+    if (!can(actor, "risk:decide")) {
+      setDecisionError("Seu perfil não possui competência para esta alçada.");
+      return false;
+    }
+    try {
+      if (approved) {
+        const now = new Date();
+        createAuthorityGrant({
+          actor: { id: actor.id, role: actor.role, authorityIds: ["credit-director"] },
+          authorityId: "credit-director",
+          operationId,
+          cedentDocument: cedent || "nao-informado",
+          policyId: context.policy.name,
+          policyVersion: context.policy.version,
+          additionalExposureCents: current.result.faceCents,
+          maximumAdditionalExposureCents: current.result.faceCents,
+          validFrom: now.toISOString(),
+          validUntil: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+          rationale,
+        });
+      } else if (rationale.trim().length < 12) {
+        throw new Error("Informe uma justificativa objetiva para a decisão.");
+      }
+    } catch (error) {
+      setDecisionError(error instanceof Error ? error.message : "Não foi possível registrar a decisão.");
+      return false;
+    }
     setDecision(approved ? "approved" : "rejected");
+    recordEvent(
+      approved ? "EXCEPTION_APPROVED" : "EXCEPTION_REJECTED",
+      approved ? "APPROVED" : "REJECTED",
+      current.result.exceptions.map(item => item.id),
+      rationale.trim(),
+    );
     push({
       role: "ai",
       reply: {
@@ -222,6 +375,7 @@ export function useCopilotDesk(knowledge: SystemKnowledge) {
         ],
       },
     });
+    return true;
   };
 
   const reset = () => {
@@ -235,6 +389,8 @@ export function useCopilotDesk(knowledge: SystemKnowledge) {
     setDecision(null);
     setWaitingAuth(false);
     setLogs({});
+    setDecisionLedger(emptyDecisionLedger());
+    setDecisionError("");
   };
 
   return {
@@ -250,6 +406,9 @@ export function useCopilotDesk(knowledge: SystemKnowledge) {
     scenarios,
     messages,
     decision,
+    decisionLedger,
+    decisionError,
+    aiAvailable,
     locked,
     unread,
     clearUnread: () => setUnread(false),

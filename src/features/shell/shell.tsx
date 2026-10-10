@@ -18,6 +18,7 @@ import { can, type AccessUser } from "@/src/domain/access/model";
 import { type AttentionItem } from "@/src/domain/copilot/attention-center";
 import { AttentionCenter } from "@/src/features/copilot/attention-center";
 import { type ManagedTask, type TaskCommand } from "@/src/domain/tasks/model";
+import { type IntelligenceState } from "@/src/domain/intelligence/model";
 
 import { BellIcon, CloseIcon, MenuIcon, SearchIcon } from "@/src/ui/icons";
 import { type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -45,6 +46,7 @@ export function Shell({
   onNavigate,
   showJourney = false,
   currentUser,
+  intelligence,
   dailyBriefing,
   attentionItems,
   taskItems,
@@ -63,6 +65,7 @@ export function Shell({
   /** Barra da jornada ("Você está em" e "Entenda esta tela"); ligada nas Configurações. */
   showJourney?: boolean;
   currentUser: AccessUser;
+  intelligence: IntelligenceState;
   dailyBriefing: DailyBriefingData;
   attentionItems: AttentionItem[];
   taskItems: ManagedTask[];
@@ -304,6 +307,8 @@ export function Shell({
           signals={signals}
           dailyBriefing={dailyBriefing}
           attentionItems={attentionItems}
+          currentUser={currentUser}
+          intelligence={intelligence}
           onOpenAttention={openAttention}
           onNavigate={view => (onNavigate ?? context?.navigate)?.(view)}
         />

@@ -6,7 +6,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "vinext dev",
+    "dev": "vite dev",
     "build": "vite build",
     "start": "vinext start",
     "typecheck": "tsc --noEmit -p .",

@@ -77,6 +77,7 @@ import {
   seedAccessState,
   stopUserPreview,
 } from "@/src/domain/access/model";
+import { seedIntelligenceState } from "@/src/domain/intelligence/model";
 
 const COMPANY_SCOPE_KEY = "strato-company-scope";
 
@@ -92,6 +93,7 @@ export default function StratoApp() {
   const [showJourney, setShowJourney] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [access, setAccess] = useState(() => seedAccessState());
+  const [intelligence, setIntelligence] = useState(() => seedIntelligenceState());
   const currentUser = useMemo(() => activeUser(access), [access]);
   const sessionUser = useMemo(() => authenticatedUser(access), [access]);
   const [view, setView] = useState<AppView>("home");
@@ -203,6 +205,7 @@ export default function StratoApp() {
     if (stored.operationalDefaults) setOperationalDefaults(stored.operationalDefaults);
     if (stored.tasks) setTasks(stored.tasks);
     if (stored.access) setAccess(stored.access);
+    if (stored.intelligence) setIntelligence(stored.intelligence);
     if (stored.guidance !== undefined) setShowGuidance(stored.guidance);
     if (stored.journey !== undefined) setShowJourney(stored.journey);
     try {
@@ -233,6 +236,7 @@ export default function StratoApp() {
         operationalDefaults,
         tasks,
         access,
+        intelligence,
       });
   }, [
     operations,
@@ -246,6 +250,7 @@ export default function StratoApp() {
     operationalDefaults,
     tasks,
     access,
+    intelligence,
     storageReady,
   ]);
 
@@ -337,6 +342,7 @@ export default function StratoApp() {
     setOperationalDefaults(seedOperationalDefaults());
     setTasks(seedTaskState());
     setAccess(seedAccessState());
+    setIntelligence(seedIntelligenceState());
     setSelected(null);
   }
   function createOperation(input: NewOperationInput) {
@@ -676,6 +682,8 @@ export default function StratoApp() {
         onOperationalDefaults={setOperationalDefaults}
         access={access}
         onAccess={setAccess}
+        intelligence={intelligence}
+        onIntelligence={setIntelligence}
       />
     );
   else if (view in roadmapViews) page = <ModuleRoadmap view={view as keyof typeof roadmapViews} />;
@@ -712,6 +720,7 @@ export default function StratoApp() {
                 onNavigate={navigate}
                 showJourney={showJourney}
                 currentUser={currentUser}
+                intelligence={intelligence}
                 dailyBriefing={dailyBriefing}
                 attentionItems={attentionItems}
                 taskItems={taskItems}

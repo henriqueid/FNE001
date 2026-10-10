@@ -1,6 +1,6 @@
 # Arquitetura do STRATO
 
-Aplicação navegável de uma plataforma operacional de recebíveis (factoring, securitizadora, FIDC). Nesta etapa, os dados operacionais são demonstrativos e ficam no `localStorage`. A fundação IA-0 acrescenta identidade, perfis, escopo empresarial e autorização efetiva na interface; autenticação e autorização no servidor são a próxima etapa.
+Aplicação navegável de uma plataforma operacional de recebíveis (factoring, securitizadora, FIDC). Nesta etapa, os dados operacionais são demonstrativos e ficam no `localStorage`. A trilha de decisões do Copiloto já passa por API, autorização no servidor e Cloudflare D1 append-only; autenticação real e a migração dos demais estados continuam nas próximas etapas.
 
 ## 1. Visão em camadas
 
@@ -113,6 +113,8 @@ Cada arquivo começa com um comentário dizendo o que ele faz. Nenhum arquivo de
 | explicações na interface | `boolean` | `lastro-interface-guidance-v1` |
 | tema, perfil/período da Visão geral | preferências do usuário | `strato-theme`, `strato-home-*` |
 
+A trilha de decisões é a primeira exceção a esse armazenamento local: `app/api/decisions/route.ts` valida tenant e permissão, e `src/server/decisions/repository.ts` grava eventos versionados na tabela D1 `decision_events`. A migração está em `drizzle/0001_decision_ledger.sql`; gatilhos recusam atualização e exclusão.
+
 - A restauração acontece uma vez, depois de montar (`loadPersistedState`), e mescla o que foi salvo com os dados de demonstração atuais (migração tolerante a campos novos).
 - "Restaurar dados de demonstração" (busca global) chama `clearPersistedState` e recria o seed.
 - A navegação usa `view` e aceita links diretos controlados por permissão; `selected` abre o workspace de uma operação autorizada.
@@ -189,7 +191,7 @@ npm test          # Vitest (tests/*.test.ts)
 
 ## 9. Limitações conhecidas
 
-- Sem backend, autenticação real ou trilha de auditoria persistente; perfis e permissões ainda são uma simulação local da fundação IA-0.
+- A trilha de decisões já possui backend D1; autenticação, usuários, alçadas e os demais dados operacionais ainda são demonstrativos ou locais.
 - Integrações (Receita, SEFAZ, bureaus, bancos, assinatura) são simuladas.
 - A Mesa Inteligente ainda reconhece arquivos por nome e extensão; leitura real de conteúdo, OCR e modelo externo pertencem às fases seguintes.
 - A ordem de evolução está em [architecture/PLANO_ESTRUTURA_IA.md](./architecture/PLANO_ESTRUTURA_IA.md).

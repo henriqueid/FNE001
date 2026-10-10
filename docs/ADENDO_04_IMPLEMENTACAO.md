@@ -2,7 +2,7 @@
 
 ## Situação da implementação
 
-O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como capacidades separadas. A primeira fatia vertical do Adendo 04 está implementada no protótipo e preparada para migração ao backend transacional.
+O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como capacidades separadas. A primeira fatia vertical do Adendo 04 está implementada com persistência da trilha no backend Cloudflare D1.
 
 ## Implementado nesta fase
 
@@ -18,6 +18,11 @@ O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como 
 - fallback seguro: sem IA, comandos conversacionais ficam indisponíveis e o motor determinístico continua operacional;
 - identificação visual entre resultado do motor de políticas e insight com apoio de IA;
 - classificação explícita de apontamentos como fato, regra, tendência, hipótese ou sugestão.
+- API de decisões com empresa e ator derivados da sessão recebida pelo servidor;
+- persistência D1 com sequência por decisão e índices por tenant, decisão e operação;
+- gatilhos de banco que recusam `UPDATE` e `DELETE`, preservando o contrato append-only;
+- autorização no servidor para leitura, aprovação de exceção, formalização e confirmação de pagamento;
+- bloqueio de acesso cruzado entre tenants antes de qualquer consulta ou gravação.
 
 ## Já existente e preservado
 
@@ -31,15 +36,15 @@ O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como 
 
 ## Próxima fatia para produção
 
-1. Persistir decisões e eventos em banco relacional com isolamento por tenant.
+1. Trocar a identidade demonstrativa por autenticação real e sessão assinada.
 2. Criar outbox transacional e idempotency keys no servidor.
-3. Mover permissões, alçadas e validações de exceção para APIs autenticadas.
+3. Persistir o catálogo de usuários, vínculos, permissões e alçadas no backend.
 4. Implementar condições precedentes e impedir formalização enquanto estiverem pendentes.
 5. Registrar liquidações, promessas e desfechos como eventos compensatórios.
 6. Conectar o provedor de IA somente depois de entitlement, orçamento, consentimento e autorização por ação.
 7. Executar shadow mode comparando decisão humana, motor, tempo, divergência e desfecho.
-8. Adicionar testes de isolamento entre tenants, concorrência, timeout e desligamento da IA.
+8. Ampliar testes de concorrência, timeout, recuperação e desligamento da IA.
 
 ## Limite desta entrega
 
-A governança está funcional no protótipo e coberta por testes de domínio. A persistência ainda usa o navegador; portanto, a trilha atual demonstra o contrato e o comportamento, mas a garantia de imutabilidade, retenção e segregação exigida para produção será concluída na camada de backend.
+A trilha de decisões deixou o navegador e está funcional no D1 local, com imutabilidade e segregação aplicadas no banco e na API. Os demais estados operacionais continuam no navegador. Antes do uso produtivo ainda é necessário implantar o banco no ambiente definitivo e substituir os cabeçalhos da sessão demonstrativa por autenticação real e verificável.

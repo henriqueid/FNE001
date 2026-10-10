@@ -18,9 +18,10 @@ import {
 } from "@/src/domain/copilot/desk-engine";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { can, type AccessUser } from "@/src/domain/access/model";
-import { appendDecisionEvent, createAuthorityGrant, decisionFingerprint } from "@/src/domain/decisions/engine";
-import { emptyDecisionLedger } from "@/src/domain/decisions/model";
+import { createAuthorityGrant, decisionFingerprint } from "@/src/domain/decisions/engine";
+import { emptyDecisionLedger, type DecisionEventDraft } from "@/src/domain/decisions/model";
 import { canUseGenerativeAI, type IntelligenceState } from "@/src/domain/intelligence/model";
+import { loadDecisionLedger, persistDecisionEvent } from "./decision-ledger-client";
 
 export type DeskStage = "idle" | "recebida" | "validando" | "extraindo" | "calculando" | "concluida";
 export type DeskDecision = "pending" | "approved" | "rejected" | null;
@@ -41,9 +42,16 @@ export const DESK_STAGES: { key: Exclude<DeskStage, "idle">; label: string }[] =
 type WithoutId<T> = T extends unknown ? Omit<T, "id"> : never;
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const uniqueId = (prefix: string) =>
+  `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
 
-export function useCopilotDesk(knowledge: SystemKnowledge, actor: AccessUser, intelligence: IntelligenceState) {
-  const [cedent, setCedent] = useState("");
+export function useCopilotDesk(
+  knowledge: SystemKnowledge,
+  actor: AccessUser,
+  intelligence: IntelligenceState,
+  defaultCedentId = "",
+) {
+  const [cedent, setCedent] = useState(defaultCedentId);
   const [files, setFiles] = useState<DeskFile[]>([]);
   const [userFiles, setUserFiles] = useState(false);
   const [stage, setStage] = useState<DeskStage>("idle");
@@ -60,7 +68,9 @@ export function useCopilotDesk(knowledge: SystemKnowledge, actor: AccessUser, in
   /** Identifica a tarefa em curso; limpar a conversa invalida a anterior. */
   const run = useRef(0);
   const nextId = useRef(1);
-  const nextEventId = useRef(1);
+  const correlationId = useRef(uniqueId("copilot-run"));
+  const latestPersistedEventId = useRef<string | undefined>(undefined);
+  const persistenceQueue = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     alive.current = true;
@@ -82,6 +92,25 @@ export function useCopilotDesk(knowledge: SystemKnowledge, actor: AccessUser, in
   const context: DeskContext = { titles: deskDemoTitles, policy: deskDemoPolicy, bureauChecked };
   const aiAvailable = canUseGenerativeAI(intelligence);
   const operationId = `copilot-${cedent || "unassigned"}`;
+  const decisionId = `decision-${operationId}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    loadDecisionLedger(actor, intelligence.tenantId, decisionId)
+      .then(ledger => {
+        if (cancelled) return;
+        setDecisionError("");
+        setDecisionLedger(ledger);
+        latestPersistedEventId.current = ledger.events.at(-1)?.eventId;
+      })
+      .catch(error => {
+        if (!cancelled)
+          setDecisionError(error instanceof Error ? error.message : "Não foi possível carregar a trilha de decisões.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [actor, decisionId, intelligence.tenantId]);
 
   const recordEvent = useCallback(
     (
@@ -99,49 +128,56 @@ export function useCopilotDesk(knowledge: SystemKnowledge, actor: AccessUser, in
       snapshot?: { version: number; metrics: Record<string, number | string | boolean> },
     ) => {
       const now = new Date().toISOString();
-      const eventNumber = nextEventId.current++;
-      setDecisionLedger(current =>
-        appendDecisionEvent(current, {
-          eventId: `decision-event-${eventNumber}`,
-          eventType,
-          decisionId: `decision-${operationId}`,
-          tenantId: intelligence.tenantId,
-          operationId,
-          entityRefs: cedent ? [cedent] : [],
-          decisionType: "OPERATION_ELIGIBILITY",
-          requestedAction: eventType,
-          actorId: actor.id,
-          actorRole: actor.role,
-          authorityId: eventType.includes("EXCEPTION") ? "credit-director" : undefined,
-          policyId: deskDemoPolicy.name,
-          policyVersion: deskDemoPolicy.version,
-          inputSnapshotId: `scenario-${snapshot?.version ?? scenarios.at(-1)?.version ?? 0}`,
-          inputSnapshotHash: decisionFingerprint({
-            files: files.map(file => ({ name: file.name, format: file.format })),
-            scenario: snapshot?.version ?? scenarios.at(-1)?.version ?? 0,
-            policy: `${deskDemoPolicy.name}:${deskDemoPolicy.version}`,
-          }),
-          computedMetrics:
-            snapshot?.metrics ??
-            (scenarios.length
-              ? {
-                  faceCents: scenarios.at(-1)?.result.faceCents ?? 0,
-                  netCents: scenarios.at(-1)?.result.netCents ?? 0,
-                }
-              : {}),
-          reasonCodes,
-          humanRationale,
-          supportingEvidenceRefs: files.map(file => file.name),
-          priorDecisionRefs: current.events.length ? [current.events.at(-1)?.eventId ?? ""] : [],
-          outcome,
-          conditions: [],
-          validFrom: now,
-          createdAt: now,
-          correlationId: `copilot-run-${run.current}`,
+      const event: DecisionEventDraft = {
+        eventId: uniqueId("decision-event"),
+        eventType,
+        decisionId,
+        operationId,
+        entityRefs: cedent ? [cedent] : [],
+        decisionType: "OPERATION_ELIGIBILITY",
+        requestedAction: eventType,
+        authorityId: eventType.includes("EXCEPTION") ? "credit-director" : undefined,
+        policyId: deskDemoPolicy.name,
+        policyVersion: deskDemoPolicy.version,
+        inputSnapshotId: `scenario-${snapshot?.version ?? scenarios.at(-1)?.version ?? 0}`,
+        inputSnapshotHash: decisionFingerprint({
+          files: files.map(file => ({ name: file.name, format: file.format })),
+          scenario: snapshot?.version ?? scenarios.at(-1)?.version ?? 0,
+          policy: `${deskDemoPolicy.name}:${deskDemoPolicy.version}`,
         }),
-      );
+        computedMetrics:
+          snapshot?.metrics ??
+          (scenarios.length
+            ? {
+                faceCents: scenarios.at(-1)?.result.faceCents ?? 0,
+                netCents: scenarios.at(-1)?.result.netCents ?? 0,
+              }
+            : {}),
+        reasonCodes,
+        humanRationale,
+        supportingEvidenceRefs: files.map(file => file.name),
+        priorDecisionRefs: latestPersistedEventId.current ? [latestPersistedEventId.current] : [],
+        outcome,
+        conditions: [],
+        validFrom: now,
+        correlationId: correlationId.current,
+      };
+      persistenceQueue.current = persistenceQueue.current
+        .then(async () => {
+          const persisted = await persistDecisionEvent(actor, intelligence.tenantId, event);
+          latestPersistedEventId.current = persisted.eventId;
+          setDecisionLedger(current => ({
+            ...current,
+            events: [...current.events.filter(item => item.eventId !== persisted.eventId), persisted].sort(
+              (left, right) => left.eventVersion - right.eventVersion,
+            ),
+          }));
+        })
+        .catch(error => {
+          setDecisionError(error instanceof Error ? error.message : "Não foi possível persistir a decisão.");
+        });
     },
-    [actor.id, actor.role, cedent, files, intelligence.tenantId, operationId, scenarios],
+    [actor, cedent, decisionId, files, intelligence.tenantId, operationId, scenarios],
   );
 
   const loadExamples = () => {
@@ -158,12 +194,12 @@ export function useCopilotDesk(knowledge: SystemKnowledge, actor: AccessUser, in
 
   const start = async () => {
     const token = ++run.current;
+    correlationId.current = uniqueId("copilot-run");
     const stale = () => !alive.current || token !== run.current;
     setScenarios([]);
     setDecision(null);
     setBureauChecked(false);
     setLogs({});
-    setDecisionLedger(emptyDecisionLedger());
     setDecisionError("");
     push({ role: "me", text: `Analisar ${files.length} arquivo(s)` });
     push({ role: "card", card: "progress" });
@@ -389,7 +425,6 @@ export function useCopilotDesk(knowledge: SystemKnowledge, actor: AccessUser, in
     setDecision(null);
     setWaitingAuth(false);
     setLogs({});
-    setDecisionLedger(emptyDecisionLedger());
     setDecisionError("");
   };
 

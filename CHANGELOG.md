@@ -8,6 +8,10 @@
 - Copiloto ganhou trilha de decisão e separação visual entre motor determinístico e IA.
 - Configurações ganharam licenciamento, estado operacional e orçamento da IA por organização.
 - Modo sem IA mantém cálculos, políticas, relatórios e análise estruturada em funcionamento.
+- Trilha do Copiloto migrada do estado efêmero da tela para uma API com Cloudflare D1.
+- Eventos recebem empresa, ator, horário e versão no servidor; gatilhos do banco impedem alteração e exclusão.
+- API valida escopo por tenant e bloqueia aprovação, formalização ou pagamento sem a permissão correspondente.
+- Migração SQL e testes de segurança cobrem o contrato da persistência; a autenticação ainda usa a identidade demonstrativa.
 
 ## Não lançado — 10/10/2026 · Revisão de prontidão e limpeza técnica
 

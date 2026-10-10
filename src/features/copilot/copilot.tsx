@@ -57,7 +57,7 @@ export function Copilot({
     }),
     [operations, cedents, policies],
   );
-  const desk = useCopilotDesk(knowledge, currentUser, intelligence);
+  const desk = useCopilotDesk(knowledge, currentUser, intelligence, cedents[0]?.id ?? "");
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState("");

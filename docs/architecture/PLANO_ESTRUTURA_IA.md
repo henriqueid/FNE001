@@ -37,11 +37,11 @@ seleciona ferramentas autorizadas e apresenta os resultados.
 
 ### Limitações atuais
 
-- Execução inteiramente no navegador e persistência em `localStorage`.
+- Dados operacionais ainda persistidos em `localStorage`; a trilha de decisões já usa API e Cloudflare D1.
 - Perguntas interpretadas por regras locais, sem modelo de linguagem externo.
 - Arquivos reconhecidos pelo nome/extensão, sem leitura real do conteúdo na Mesa Inteligente.
 - Títulos, birô e resultados externos demonstrativos.
-- Sem autenticação, isolamento multiempresa, fila, backend ou auditoria persistente.
+- Sem autenticação real ou fila; a identidade ainda é demonstrativa, embora a API de decisões já valide tenant e permissão.
 - Sem avaliação contínua de qualidade, custos ou segurança das respostas.
 
 ### Avanço de implementação · 10/10/2026
@@ -56,9 +56,13 @@ A primeira entrega da fase **IA-0 — Fundação** já está disponível no prot
 - proteção efetiva da navegação, busca global, links diretos, empresa de trabalho e criação de operações;
 - separação entre a identidade autenticada e o perfil simulado, com retorno seguro à sessão administrativa;
 - persistência e migração do estado de acesso no navegador, com cobertura automatizada das regras.
+- ledger de decisões persistido no D1, append-only e ordenado por versão no servidor;
+- tenant, ator e horário atribuídos no servidor, com bloqueio de acesso cruzado e de decisões sem alçada;
+- API do Copiloto conectada ao ledger e capaz de reler a trilha após recarregar a página.
 
-Esta entrega valida o modelo funcional e a experiência. Autenticação real, autorização no servidor, isolamento
-multiempresa persistente e auditoria imutável continuam como próximos componentes da IA-0 antes do uso produtivo.
+Esta entrega valida o modelo funcional, a experiência e o primeiro backend auditável. Autenticação real, persistência
+dos usuários e alçadas, outbox/idempotência e implantação do D1 no ambiente definitivo continuam como próximos
+componentes da IA-0 antes do uso produtivo.
 
 ## 3. Princípios obrigatórios
 

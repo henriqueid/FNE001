@@ -17,6 +17,7 @@ export type Permission =
 export type AccessUser = AppUserProfile & {
   email: string;
   status: "active" | "suspended";
+  tenantIds: string[];
   companyScopes: string[];
   managerUserId?: string;
   substituteUserId?: string;
@@ -88,6 +89,7 @@ export const seedAccessState = (): AccessState => ({
       department: "Diretoria",
       access: "admin",
       status: "active",
+      tenantIds: ["strato-demo"],
       responsibilities: ["Visão consolidada", "Alçadas", "Metas", "Risco", "Liquidez"],
       companyScopes: allCompanies,
       permissions: adminPermissions,
@@ -100,6 +102,7 @@ export const seedAccessState = (): AccessState => ({
       department: "Operações",
       access: "operator",
       status: "active",
+      tenantIds: ["strato-demo"],
       responsibilities: ["Esteira", "Pendências operacionais"],
       operationOwner: "Marina Alves",
       companyScopes: allCompanies,
@@ -114,6 +117,7 @@ export const seedAccessState = (): AccessState => ({
       department: "Operações",
       access: "manager",
       status: "active",
+      tenantIds: ["strato-demo"],
       responsibilities: ["Equipe operacional", "SLA", "Escalonamentos"],
       companyScopes: allCompanies,
       permissions: permissionsFor("Operações", "manager"),
@@ -126,6 +130,7 @@ export const seedAccessState = (): AccessState => ({
       department: "Comercial",
       access: "operator",
       status: "active",
+      tenantIds: ["strato-demo"],
       responsibilities: ["Originação", "Relacionamento"],
       commercialRepId: "rep-1",
       companyScopes: allCompanies,
@@ -140,6 +145,7 @@ export const seedAccessState = (): AccessState => ({
       department: "Comercial",
       access: "manager",
       status: "active",
+      tenantIds: ["strato-demo"],
       responsibilities: ["Operações recorrentes", "Pós-venda", "Carteira"],
       accountManagerId: "rep-3",
       companyScopes: allCompanies,
@@ -153,6 +159,7 @@ export const seedAccessState = (): AccessState => ({
       department: "Risco e crédito",
       access: "operator",
       status: "active",
+      tenantIds: ["strato-demo"],
       responsibilities: ["Elegibilidade", "Exceções"],
       companyScopes: [allCompanies[0], allCompanies[1]],
       permissions: permissionsFor("Risco e crédito", "operator"),

@@ -51,6 +51,12 @@ export type DecisionEvent = {
   correlationId: string;
 };
 
+/** Campos propostos pelo cliente; empresa, ator, horário e versão são definidos pelo servidor. */
+export type DecisionEventDraft = Omit<
+  DecisionEvent,
+  "eventVersion" | "tenantId" | "actorId" | "actorRole" | "createdAt"
+>;
+
 export type DecisionCondition = {
   id: string;
   type: "PAYMENT_CONFIRMED" | "DOCUMENT_RECEIVED" | "MANUAL_REVIEW";

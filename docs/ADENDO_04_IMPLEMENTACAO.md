@@ -27,6 +27,9 @@ O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como 
 - diretório D1 de usuários, vínculos com o tenant, permissões, escopos empresariais e alçadas formais;
 - autorização de decisões a partir da permissão e da alçada persistidas, sem confiar em cabeçalhos de identidade do cliente;
 - bootstrap demonstrativo de sessão limitado a `localhost`, recusado fora do ambiente local.
+- idempotência no servidor com assinatura canônica do tenant, ator e conteúdo da decisão;
+- reenvio seguro que devolve o evento original sem duplicar a trilha;
+- outbox D1 gravada atomicamente com o evento e preparada para publicação assíncrona.
 
 ## Já existente e preservado
 
@@ -41,7 +44,7 @@ O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como 
 ## Próxima fatia para produção
 
 1. Integrar um provedor de identidade corporativo ao emissor das sessões opacas já implementadas.
-2. Criar outbox transacional e idempotency keys no servidor.
+2. Implementar o publicador da outbox, repetição com backoff e fila de falhas.
 3. Tornar a gravação do diretório de acesso transacional e registrar somente alterações efetivas.
 4. Implementar condições precedentes e impedir formalização enquanto estiverem pendentes.
 5. Registrar liquidações, promessas e desfechos como eventos compensatórios.
@@ -51,4 +54,4 @@ O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como 
 
 ## Limite desta entrega
 
-A trilha de decisões e o diretório de acesso deixaram o navegador e estão funcionais no D1 local, com imutabilidade e segregação aplicadas no banco e na API. A identidade usada pela API já vem de cookie opaco verificável, mas o login automático é apenas um bootstrap local; antes do uso produtivo ainda é necessário integrar o provedor de identidade e implantar o banco no ambiente definitivo. Os demais estados operacionais continuam no navegador.
+A trilha de decisões e o diretório de acesso deixaram o navegador e estão funcionais no D1 local, com imutabilidade, segregação, idempotência e outbox transacional aplicadas no banco e na API. A identidade usada pela API já vem de cookie opaco verificável, mas o login automático é apenas um bootstrap local; antes do uso produtivo ainda é necessário integrar o provedor de identidade, publicar a outbox com retentativas e implantar o banco no ambiente definitivo. Os demais estados operacionais continuam no navegador.

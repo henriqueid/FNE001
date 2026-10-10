@@ -1,6 +1,6 @@
 # STRATO · Receivables OS
 
-Plataforma operacional de recebíveis para factoring, securitizadora, FIDC e ESC. O produto está na transição de protótipo navegável para aplicação persistente: os dados operacionais ainda são fictícios no navegador, enquanto a trilha de decisões, as sessões e o diretório de acessos já usam API com Cloudflare D1, segregação por tenant e autorização no servidor.
+Plataforma operacional de recebíveis para factoring, securitizadora, FIDC e ESC. O produto está na transição de protótipo navegável para aplicação persistente: os dados operacionais ainda são fictícios no navegador, enquanto a trilha de decisões, as sessões e o diretório de acessos já usam API com Cloudflare D1, segregação por tenant, autorização no servidor, idempotência e outbox transacional.
 
 ## Rodar
 

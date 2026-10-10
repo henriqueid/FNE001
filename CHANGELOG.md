@@ -15,6 +15,8 @@
 - Usuários, vínculos, escopos empresariais, permissões e alçadas formais passam a ser carregados e gravados no D1.
 - A criação automática de sessão demonstrativa fica restrita a `localhost`; o ambiente produtivo continua exigindo integração com um provedor de identidade.
 - Migrações SQL e testes de segurança cobrem o ledger, a sessão e a autorização persistida.
+- Escritas de decisão agora exigem `Idempotency-Key`: reenvios iguais retornam o evento original e reutilizações com conteúdo diferente são bloqueadas.
+- Cada decisão cria, na mesma transação D1, uma mensagem pendente na outbox para entrega futura a notificações, integrações e serviços de IA.
 
 ## Não lançado — 10/10/2026 · Revisão de prontidão e limpeza técnica
 

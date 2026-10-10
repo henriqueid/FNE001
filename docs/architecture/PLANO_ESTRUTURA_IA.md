@@ -60,11 +60,13 @@ A primeira entrega da fase **IA-0 — Fundação** já está disponível no prot
 - token opaco em cookie `HttpOnly`, somente o hash no banco, e identidade do cliente ignorada nos cabeçalhos;
 - usuários, vínculos, escopos empresariais, permissões e alçadas formais persistidos no D1;
 - tenant, ator e horário atribuídos no servidor, com bloqueio de acesso cruzado e de decisões sem permissão ou alçada;
+- reenvio idempotente com assinatura canônica e conflito explícito quando a mesma chave representa outro conteúdo;
+- outbox gravada atomicamente com cada decisão, pronta para um publicador assíncrono;
 - API do Copiloto conectada ao ledger e capaz de reler a trilha após recarregar a página.
 
 Esta entrega valida o modelo funcional, a experiência e o primeiro backend auditável. Integração com provedor de
-identidade, gravações transacionais com outbox/idempotência e implantação do D1 no ambiente definitivo continuam
-como próximos componentes da IA-0 antes do uso produtivo.
+identidade, publicador da outbox com retentativas e implantação do D1 no ambiente definitivo continuam como
+próximos componentes da IA-0 antes do uso produtivo.
 
 ## 3. Princípios obrigatórios
 

@@ -6,19 +6,20 @@ import {
   type DecisionOutcome,
 } from "@/src/domain/decisions/model";
 
+export type DecisionStatement = {
+  bind(...values: unknown[]): DecisionStatement;
+  first<T = unknown>(): Promise<T | null>;
+  all<T = unknown>(): Promise<{ results: T[] }>;
+  run(): Promise<{ success: boolean }>;
+};
+
 export type DecisionDatabase = {
-  prepare(query: string): {
-    bind(...values: unknown[]): {
-      first<T = unknown>(): Promise<T | null>;
-      all<T = unknown>(): Promise<{ results: T[] }>;
-      run(): Promise<{ success: boolean }>;
-    };
-    first<T = unknown>(): Promise<T | null>;
-    all<T = unknown>(): Promise<{ results: T[] }>;
-    run(): Promise<{ success: boolean }>;
-  };
+  prepare(query: string): DecisionStatement;
+  batch<T = unknown>(statements: DecisionStatement[]): Promise<T[]>;
   exec(query: string): Promise<unknown>;
 };
+
+export class DecisionConflictError extends Error {}
 
 const schema = [
   `CREATE TABLE IF NOT EXISTS decision_events (
@@ -37,6 +38,19 @@ const schema = [
   "CREATE INDEX IF NOT EXISTS decision_events_tenant_operation_idx ON decision_events (tenant_id, operation_id, created_at)",
   "CREATE TRIGGER IF NOT EXISTS decision_events_prevent_update BEFORE UPDATE ON decision_events BEGIN SELECT RAISE(ABORT, 'decision_events is append-only'); END",
   "CREATE TRIGGER IF NOT EXISTS decision_events_prevent_delete BEFORE DELETE ON decision_events BEGIN SELECT RAISE(ABORT, 'decision_events is append-only'); END",
+  `CREATE TABLE IF NOT EXISTS decision_idempotency (
+    tenant_id TEXT NOT NULL, idempotency_key TEXT NOT NULL, event_id TEXT NOT NULL,
+    request_hash TEXT NOT NULL, created_at TEXT NOT NULL,
+    PRIMARY KEY (tenant_id, idempotency_key)
+  )`,
+  `CREATE TABLE IF NOT EXISTS decision_outbox (
+    tenant_id TEXT NOT NULL, outbox_id TEXT NOT NULL, topic TEXT NOT NULL,
+    aggregate_id TEXT NOT NULL, event_id TEXT NOT NULL, payload_json TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING', attempts INTEGER NOT NULL DEFAULT 0,
+    available_at TEXT NOT NULL, created_at TEXT NOT NULL, published_at TEXT, last_error TEXT,
+    PRIMARY KEY (tenant_id, outbox_id), UNIQUE (tenant_id, event_id, topic)
+  )`,
+  "CREATE INDEX IF NOT EXISTS decision_outbox_pending_idx ON decision_outbox (status, available_at, tenant_id)",
 ];
 
 type DecisionRow = {
@@ -116,12 +130,53 @@ export async function listDecisionEvents(db: DecisionDatabase, tenantId: string,
   return result.results.map(eventFromRow);
 }
 
+const stable = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(stable);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, stable(item)]),
+    );
+  return value;
+};
+
+const hex = (bytes: Uint8Array) => Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+
+export async function decisionRequestHash(scope: { tenantId: string; actorId: string }, draft: DecisionEventDraft) {
+  const body = JSON.stringify(stable({ tenantId: scope.tenantId, actorId: scope.actorId, draft }));
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
+  return hex(new Uint8Array(digest));
+}
+
+type IdempotencyRow = { event_id: string; request_hash: string };
+
+async function replayedEvent(db: DecisionDatabase, tenantId: string, idempotencyKey: string, requestHash: string) {
+  const claim = await db
+    .prepare("SELECT event_id, request_hash FROM decision_idempotency WHERE tenant_id = ? AND idempotency_key = ?")
+    .bind(tenantId, idempotencyKey)
+    .first<IdempotencyRow>();
+  if (!claim) return null;
+  if (claim.request_hash !== requestHash)
+    throw new DecisionConflictError("A chave de idempotência já foi usada com outro conteúdo.");
+  const row = await db
+    .prepare("SELECT * FROM decision_events WHERE tenant_id = ? AND event_id = ?")
+    .bind(tenantId, claim.event_id)
+    .first<DecisionRow>();
+  if (!row) throw new Error("A chave de idempotência não possui evento associado.");
+  return eventFromRow(row);
+}
+
 export async function appendDecisionEvent(
   db: DecisionDatabase,
   scope: { tenantId: string; actorId: string; actorRole: string },
   draft: DecisionEventDraft,
+  idempotencyKey: string,
 ) {
   await ensureDecisionSchema(db);
+  const requestHash = await decisionRequestHash(scope, draft);
+  const replay = await replayedEvent(db, scope.tenantId, idempotencyKey, requestHash);
+  if (replay) return { event: replay, replayed: true } as const;
   const createdAt = new Date().toISOString();
   for (let attempt = 0; attempt < 3; attempt++) {
     const latest = await db
@@ -139,7 +194,7 @@ export async function appendDecisionEvent(
       eventVersion: Number(latest?.version ?? 0) + 1,
     };
     try {
-      await db
+      const eventInsert = db
         .prepare(
           `INSERT INTO decision_events (
             tenant_id, event_id, event_version, event_type, decision_id, operation_id,
@@ -177,12 +232,38 @@ export async function appendDecisionEvent(
           event.validUntil ?? null,
           event.createdAt,
           event.correlationId,
+        );
+      const idempotencyInsert = db
+        .prepare(
+          `INSERT INTO decision_idempotency
+            (tenant_id, idempotency_key, event_id, request_hash, created_at)
+           VALUES (?, ?, ?, ?, ?)`,
         )
-        .run();
-      return event;
+        .bind(scope.tenantId, idempotencyKey, event.eventId, requestHash, createdAt);
+      const outboxInsert = db
+        .prepare(
+          `INSERT INTO decision_outbox (
+            tenant_id, outbox_id, topic, aggregate_id, event_id, payload_json,
+            status, attempts, available_at, created_at, published_at, last_error
+          ) VALUES (?, ?, 'decision.event.recorded', ?, ?, ?, 'PENDING', 0, ?, ?, NULL, NULL)`,
+        )
+        .bind(
+          scope.tenantId,
+          crypto.randomUUID(),
+          event.decisionId,
+          event.eventId,
+          JSON.stringify(event),
+          createdAt,
+          createdAt,
+        );
+      await db.batch([eventInsert, idempotencyInsert, outboxInsert]);
+      return { event, replayed: false } as const;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (message.includes("event_id") || message.includes("PRIMARY KEY")) throw new Error("Evento já registrado.");
+      const concurrentReplay = await replayedEvent(db, scope.tenantId, idempotencyKey, requestHash);
+      if (concurrentReplay) return { event: concurrentReplay, replayed: true } as const;
+      if (message.includes("event_id") || message.includes("PRIMARY KEY"))
+        throw new DecisionConflictError("Evento já registrado.");
       if (attempt === 2 || !message.includes("UNIQUE")) throw error;
     }
   }

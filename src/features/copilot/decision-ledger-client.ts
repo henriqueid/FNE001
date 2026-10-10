@@ -19,7 +19,7 @@ export async function loadDecisionLedger(tenantId: string, decisionId: string) {
 export async function persistDecisionEvent(tenantId: string, event: DecisionEventDraft) {
   const response = await authenticatedFetch(
     "/api/decisions",
-    { method: "POST", body: JSON.stringify(event) },
+    { method: "POST", headers: { "idempotency-key": event.eventId }, body: JSON.stringify(event) },
     tenantId,
   );
   return (await bodyOrError<{ event: DecisionEvent }>(response)).event;

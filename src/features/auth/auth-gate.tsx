@@ -173,7 +173,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     <main className={styles.stage}>
       <section className={styles.card} aria-labelledby="auth-title">
         <div className={styles.brand}>
-          <img src="/brand/strato-logo-horizontal-negative.png" alt="STRATO" />
+          <img src="/brand/strato-logo-horizontal-color.png" alt="STRATO" />
           <span>Receivables OS</span>
         </div>
         <div className={styles.intro}>

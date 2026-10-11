@@ -1,16 +1,13 @@
 .stage {
-  --auth-accent: #60a5fa;
-  --auth-accent-soft: #bfdbfe;
-  --auth-ink: #08111f;
+  --auth-accent: #2563eb;
+  --auth-accent-soft: #dbeafe;
+  --auth-ink: #090b0f;
   min-height: 100vh;
   display: grid;
   grid-template-columns: minmax(420px, 0.86fr) minmax(520px, 1.14fr);
   overflow: hidden;
-  color: #f7f8fa;
-  background:
-    radial-gradient(circle at 14% 12%, rgb(96 165 250 / 22%), transparent 34%),
-    radial-gradient(circle at 88% 86%, rgb(79 70 229 / 16%), transparent 38%),
-    linear-gradient(145deg, #07111f 0%, #0c1b31 54%, #122544 100%);
+  color: #f8fafc;
+  background: #07090d;
 }
 
 .card {
@@ -20,9 +17,9 @@
   justify-content: center;
   gap: 34px;
   padding: clamp(42px, 7vw, 108px);
-  background: rgb(7 17 31 / 78%);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(24px);
+  color: var(--auth-ink);
+  background: #fff;
+  border-right: 1px solid #e5e7eb;
   overflow-y: auto;
 }
 
@@ -40,8 +37,8 @@
 
 .brand span {
   padding-left: 16px;
-  border-left: 1px solid rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.58);
+  border-left: 1px solid #d1d5db;
+  color: #6b7280;
   font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -54,7 +51,7 @@
 .intro > span,
 .demo > span,
 .signal > span {
-  color: var(--auth-accent-soft);
+  color: var(--auth-accent);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -71,7 +68,7 @@
 .intro p {
   margin: 0;
   max-width: 460px;
-  color: rgba(255, 255, 255, 0.62);
+  color: #5d6470;
   font-size: 16px;
   line-height: 1.6;
 }
@@ -88,7 +85,7 @@
 }
 
 .form label > span {
-  color: rgba(255, 255, 255, 0.72);
+  color: #313640;
   font-size: 12px;
   font-weight: 700;
 }
@@ -98,9 +95,9 @@
   width: 100%;
   min-height: 54px;
   padding: 0 16px;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.055);
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  color: #111318;
+  background: #f7f8fa;
+  border: 1px solid #d9dde3;
   border-radius: 14px;
   outline: none;
   transition: 160ms ease;
@@ -109,8 +106,8 @@
 .form select {
   appearance: none;
   background-image:
-    linear-gradient(45deg, transparent 50%, var(--auth-accent-soft) 50%),
-    linear-gradient(135deg, var(--auth-accent-soft) 50%, transparent 50%);
+    linear-gradient(45deg, transparent 50%, #525866 50%),
+    linear-gradient(135deg, #525866 50%, transparent 50%);
   background-position:
     calc(100% - 19px) 24px,
     calc(100% - 14px) 24px;
@@ -119,14 +116,15 @@
 }
 
 .form select option {
-  color: #e2e8f0;
-  background: #0c1b31;
+  color: #111318;
+  background: #fff;
 }
 
 .form input:focus,
 .form select:focus {
-  border-color: rgb(96 165 250 / 76%);
-  box-shadow: 0 0 0 4px rgb(96 165 250 / 12%);
+  background: #fff;
+  border-color: var(--auth-accent);
+  box-shadow: 0 0 0 4px rgb(37 99 235 / 10%);
 }
 
 .password {
@@ -142,7 +140,7 @@
   top: 50%;
   right: 12px;
   padding: 7px;
-  color: var(--auth-accent-soft);
+  color: #252a33;
   background: transparent;
   border: 0;
   transform: translateY(-50%);
@@ -152,13 +150,20 @@
 .submit {
   min-height: 54px;
   margin-top: 4px;
-  color: var(--auth-ink);
-  background: linear-gradient(145deg, #ffffff 0%, var(--auth-accent-soft) 100%);
+  color: #fff;
+  background: #0a0c10;
   border: 0;
   border-radius: 14px;
   font-weight: 850;
   cursor: pointer;
-  box-shadow: 0 18px 46px rgb(37 99 235 / 24%);
+  box-shadow: 0 14px 34px rgb(10 12 16 / 16%);
+  transition: 160ms ease;
+}
+
+.submit:hover:not(:disabled) {
+  background: #1d4ed8;
+  box-shadow: 0 16px 38px rgb(37 99 235 / 22%);
+  transform: translateY(-1px);
 }
 
 .submit:disabled,
@@ -192,7 +197,7 @@
 .switchMode {
   justify-self: center;
   padding: 7px 10px;
-  color: var(--auth-accent-soft);
+  color: #20242c;
   background: transparent;
   border: 0;
   font-weight: 750;
@@ -206,14 +211,14 @@
   gap: 16px;
   max-width: 470px;
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid #e5e7eb;
 }
 
 .demo button {
   padding: 10px 14px;
-  color: rgba(255, 255, 255, 0.82);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.11);
+  color: #20242c;
+  background: #f5f6f8;
+  border: 1px solid #d9dde3;
   border-radius: 10px;
   cursor: pointer;
 }
@@ -222,7 +227,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: rgba(255, 255, 255, 0.36);
+  color: #8a909b;
   font-size: 11px;
 }
 
@@ -240,16 +245,20 @@
   min-height: 100vh;
   isolation: isolate;
   overflow: hidden;
+  background:
+    radial-gradient(circle at 52% 50%, rgb(37 99 235 / 13%), transparent 27%),
+    radial-gradient(circle at 100% 100%, rgb(37 99 235 / 9%), transparent 38%),
+    linear-gradient(145deg, #05070a 0%, #0a0d12 58%, #11151d 100%);
 }
 
 .grid {
   position: absolute;
   inset: 0;
   z-index: -3;
-  opacity: 0.2;
+  opacity: 0.28;
   background-image:
-    linear-gradient(rgb(148 163 184 / 10%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(148 163 184 / 10%) 1px, transparent 1px);
+    linear-gradient(rgb(255 255 255 / 7%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 7%) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(circle at center, #000 8%, transparent 72%);
 }
@@ -257,7 +266,7 @@
 .orbitOne,
 .orbitTwo {
   position: absolute;
-  border: 1px solid rgb(96 165 250 / 20%);
+  border: 1px solid rgb(255 255 255 / 13%);
   border-radius: 50%;
 }
 
@@ -265,7 +274,7 @@
   width: min(58vw, 780px);
   aspect-ratio: 1;
   box-shadow:
-    inset 0 0 80px rgb(59 130 246 / 5%),
+    inset 0 0 80px rgb(255 255 255 / 2%),
     0 0 100px rgb(37 99 235 / 8%);
 }
 
@@ -282,8 +291,8 @@
   position: absolute;
   width: 8px;
   height: 8px;
-  background: #93c5fd;
-  border: 3px solid rgb(15 33 58);
+  background: #3b82f6;
+  border: 3px solid #10141b;
   border-radius: 50%;
   box-shadow: 0 0 20px rgb(96 165 250 / 90%);
 }
@@ -306,7 +315,7 @@
 .glow {
   width: min(24vw, 320px);
   aspect-ratio: 1;
-  background: radial-gradient(circle, rgb(96 165 250 / 42%), rgb(79 70 229 / 16%) 45%, transparent 72%);
+  background: radial-gradient(circle, rgb(37 99 235 / 34%), rgb(37 99 235 / 8%) 45%, transparent 72%);
   border-radius: 50%;
   filter: blur(2px);
   animation: pulse 4s ease-in-out infinite;
@@ -343,14 +352,14 @@
   place-content: center;
   text-align: center;
   background:
-    radial-gradient(circle at 38% 32%, rgb(191 219 254 / 28%), transparent 26%),
-    linear-gradient(145deg, rgb(15 41 75 / 96%), rgb(7 19 38 / 88%));
-  border: 1px solid rgb(147 197 253 / 38%);
+    radial-gradient(circle at 38% 32%, rgb(255 255 255 / 14%), transparent 26%),
+    linear-gradient(145deg, rgb(23 27 35 / 96%), rgb(6 8 12 / 96%));
+  border: 1px solid rgb(255 255 255 / 20%);
   border-radius: 50%;
   box-shadow:
     0 0 0 12px rgb(96 165 250 / 5%),
     0 0 70px rgb(37 99 235 / 34%),
-    inset 0 0 32px rgb(96 165 250 / 12%);
+    inset 0 0 32px rgb(255 255 255 / 5%);
 }
 
 .core i {
@@ -366,7 +375,7 @@
 
 .core span,
 .floatCard > span {
-  color: #93c5fd;
+  color: #8db8ff;
   font-size: 9px;
   font-weight: 850;
   letter-spacing: 0.14em;
@@ -391,8 +400,8 @@
   gap: 5px;
   min-width: 174px;
   padding: 14px 16px;
-  background: linear-gradient(145deg, rgb(9 25 49 / 88%), rgb(12 29 53 / 68%));
-  border: 1px solid rgb(148 163 184 / 18%);
+  background: linear-gradient(145deg, rgb(20 23 29 / 92%), rgb(9 11 15 / 78%));
+  border: 1px solid rgb(255 255 255 / 13%);
   border-radius: 15px;
   box-shadow: 0 18px 52px rgb(2 8 23 / 34%);
   backdrop-filter: blur(16px);
@@ -479,7 +488,7 @@
 .sparkline i {
   width: 4px;
   height: 35%;
-  background: rgb(96 165 250 / 46%);
+  background: rgb(255 255 255 / 34%);
   border-radius: 4px;
 }
 
@@ -487,7 +496,7 @@
 .sparkline i:nth-child(3) { height: 43%; }
 .sparkline i:nth-child(4) { height: 72%; }
 .sparkline i:nth-child(5) { height: 64%; }
-.sparkline i:nth-child(6) { height: 100%; background: #93c5fd; }
+.sparkline i:nth-child(6) { height: 100%; background: #3b82f6; }
 
 .progress {
   height: 3px;
@@ -501,7 +510,7 @@
   display: block;
   width: 84%;
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #bfdbfe);
+  background: #3b82f6;
   border-radius: inherit;
   box-shadow: 0 0 12px #60a5fa;
 }
@@ -514,7 +523,7 @@
   gap: 7px;
   max-width: 330px;
   padding: 16px 18px;
-  background: rgb(7 17 31 / 76%);
+  background: rgb(8 10 14 / 88%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 18px;
   backdrop-filter: blur(18px);

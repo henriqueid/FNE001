@@ -1,24 +1,31 @@
 "use client";
 
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { type AuthChangeEvent } from "@supabase/supabase-js";
-import { supabaseBrowser } from "@/src/supabase/browser";
-import { getStratoTenantId } from "@/src/supabase/config";
+import { getStratoTenantId } from "@/src/app/tenant";
+import { type UserDepartment } from "@/src/domain/copilot/daily-briefing";
 import { StratoAuthProvider, type StratoAuthMode } from "./auth-context";
 import styles from "./auth-gate.module.css";
 
 const TENANT_ID = getStratoTenantId();
+const departments: UserDepartment[] = [
+  "Diretoria",
+  "Operações",
+  "Risco e crédito",
+  "Controladoria",
+  "Financeiro",
+  "Comercial",
+  "Cadastro",
+];
 
 type GateState =
-  { status: "loading" } | { status: "signed-out"; message?: string } | { status: "signed-in"; mode: StratoAuthMode };
+  | { status: "loading" }
+  | { status: "signed-out"; message?: string; tone?: "error" | "success" }
+  | { status: "signed-in"; mode: StratoAuthMode };
 
-async function verifyAccess(accessToken?: string) {
+async function verifyAccess() {
   const response = await fetch("/api/auth/session", {
-    headers: {
-      "x-strato-tenant-id": TENANT_ID,
-      "x-strato-auth-probe": "1",
-      ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
-    },
+    credentials: "same-origin",
+    headers: { "x-strato-tenant-id": TENANT_ID, "x-strato-auth-probe": "1" },
     cache: "no-store",
   });
   if (!response.ok) return false;
@@ -30,32 +37,16 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [gate, setGate] = useState<GateState>({ status: "loading" });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [department, setDepartment] = useState<UserDepartment>("Operações");
+  const [registering, setRegistering] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [localDemo, setLocalDemo] = useState(false);
 
   const resolveSession = useCallback(async () => {
-    const supabase = supabaseBrowser();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (session) {
-      if (await verifyAccess(session.access_token)) {
-        setGate({ status: "signed-in", mode: "supabase" });
-        return;
-      }
-      await supabase.auth.signOut({ scope: "local" });
-      setGate({
-        status: "signed-out",
-        message: "Sua conta existe, mas ainda não está vinculada a uma empresa ativa no STRATO.",
-      });
-      return;
-    }
-    if (await verifyAccess()) {
-      setGate({ status: "signed-in", mode: "demo" });
-      return;
-    }
-    setGate({ status: "signed-out" });
+    setGate((await verifyAccess()) ? { status: "signed-in", mode: "internal" } : { status: "signed-out" });
   }, []);
 
   useEffect(() => {
@@ -66,25 +57,20 @@ export function AuthGate({ children }: { children: ReactNode }) {
     const sessionTimer = window.setTimeout(
       () =>
         void resolveSession().catch(() =>
-          setGate({ status: "signed-out", message: "Não foi possível validar a sessão." }),
+          setGate({ status: "signed-out", message: "Não foi possível validar a sessão.", tone: "error" }),
         ),
       0,
     );
-    const { data } = supabaseBrowser().auth.onAuthStateChange((event: AuthChangeEvent) => {
-      if (event === "SIGNED_OUT") setGate({ status: "signed-out" });
-    });
     return () => {
       window.clearTimeout(demoTimer);
       window.clearTimeout(sessionTimer);
-      data.subscription.unsubscribe();
     };
   }, [resolveSession]);
 
   const signOut = useCallback(async () => {
-    if (gate.status === "signed-in" && gate.mode === "supabase") await supabaseBrowser().auth.signOut();
-    else await fetch("/api/auth/session", { method: "DELETE" });
+    await fetch("/api/auth/session", { method: "DELETE", credentials: "same-origin" });
     setGate({ status: "signed-out" });
-  }, [gate]);
+  }, []);
 
   const context = useMemo(
     () => (gate.status === "signed-in" ? { mode: gate.mode, signOut } : undefined),
@@ -96,22 +82,54 @@ export function AuthGate({ children }: { children: ReactNode }) {
     setSubmitting(true);
     setGate({ status: "signed-out" });
     try {
-      const { data, error } = await supabaseBrowser().auth.signInWithPassword({ email: email.trim(), password });
-      if (error || !data.session) {
-        setGate({ status: "signed-out", message: "E-mail ou senha inválidos." });
+      const response = await fetch("/api/auth/session", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json", "x-strato-tenant-id": TENANT_ID },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const body = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setGate({ status: "signed-out", message: body.error ?? "E-mail ou senha inválidos.", tone: "error" });
         return;
       }
-      if (!(await verifyAccess(data.session.access_token))) {
-        await supabaseBrowser().auth.signOut({ scope: "local" });
+      setGate({ status: "signed-in", mode: "internal" });
+    } catch {
+      setGate({ status: "signed-out", message: "Não foi possível entrar agora. Tente novamente.", tone: "error" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const requestAccess = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (password !== confirmPassword) {
+      setGate({ status: "signed-out", message: "As senhas não coincidem.", tone: "error" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/auth/requests", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-strato-tenant-id": TENANT_ID },
+        body: JSON.stringify({ name, email: email.trim(), password, department }),
+      });
+      const body = (await response.json()) as { error?: string; message?: string; status?: string };
+      if (!response.ok) {
         setGate({
           status: "signed-out",
-          message: "Login confirmado, mas este e-mail ainda não possui vínculo ativo no STRATO.",
+          message: body.error ?? "Não foi possível enviar a solicitação.",
+          tone: "error",
         });
         return;
       }
-      setGate({ status: "signed-in", mode: "supabase" });
+      if (body.status === "existing") {
+        setRegistering(false);
+        setConfirmPassword("");
+      }
+      setGate({ status: "signed-out", message: body.message, tone: "success" });
     } catch {
-      setGate({ status: "signed-out", message: "Não foi possível entrar agora. Tente novamente." });
+      setGate({ status: "signed-out", message: "Não foi possível enviar a solicitação agora.", tone: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -122,12 +140,14 @@ export function AuthGate({ children }: { children: ReactNode }) {
     try {
       const response = await fetch("/api/auth/session", {
         method: "POST",
-        headers: { "x-strato-tenant-id": TENANT_ID },
+        credentials: "same-origin",
+        headers: { "content-type": "application/json", "x-strato-tenant-id": TENANT_ID },
+        body: JSON.stringify({ mode: "demo" }),
       });
       if (!response.ok) throw new Error("demo unavailable");
       setGate({ status: "signed-in", mode: "demo" });
     } catch {
-      setGate({ status: "signed-out", message: "A demonstração local não pôde ser iniciada." });
+      setGate({ status: "signed-out", message: "A demonstração local não pôde ser iniciada.", tone: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -147,6 +167,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     );
 
   const message = gate.status === "signed-out" ? gate.message : undefined;
+  const messageTone = gate.status === "signed-out" ? gate.tone : undefined;
 
   return (
     <main className={styles.stage}>
@@ -156,11 +177,21 @@ export function AuthGate({ children }: { children: ReactNode }) {
           <span>Receivables OS</span>
         </div>
         <div className={styles.intro}>
-          <span>Acesso seguro</span>
-          <h1 id="auth-title">Seu dia começa com contexto.</h1>
-          <p>Entre para acessar sua carteira, tarefas, alçadas e o resumo inteligente do dia.</p>
+          <span>{registering ? "SOLICITAÇÃO DE ACESSO" : "ACESSO SEGURO"}</span>
+          <h1 id="auth-title">{registering ? "Seu acesso começa aqui." : "Seu dia começa com contexto."}</h1>
+          <p>
+            {registering
+              ? "Cadastre sua identidade. Um administrador definirá departamento, empresas, permissões e alçadas antes da liberação."
+              : "Entre para acessar sua carteira, tarefas, alçadas e o resumo inteligente do dia."}
+          </p>
         </div>
-        <form className={styles.form} onSubmit={submit}>
+        <form className={styles.form} onSubmit={registering ? requestAccess : submit}>
+          {registering && (
+            <label>
+              <span>Nome completo</span>
+              <input value={name} onChange={event => setName(event.target.value)} autoComplete="name" required />
+            </label>
+          )}
           <label>
             <span>E-mail corporativo</span>
             <input
@@ -172,15 +203,25 @@ export function AuthGate({ children }: { children: ReactNode }) {
               required
             />
           </label>
+          {registering && (
+            <label>
+              <span>Departamento solicitado</span>
+              <select value={department} onChange={event => setDepartment(event.target.value as UserDepartment)}>
+                {departments.map(item => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
-            <span>Senha</span>
+            <span>{registering ? "Crie uma senha" : "Senha"}</span>
             <div className={styles.password}>
               <input
                 type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
+                autoComplete={registering ? "new-password" : "current-password"}
                 value={password}
                 onChange={event => setPassword(event.target.value)}
-                placeholder="Sua senha"
+                placeholder={registering ? "10+ caracteres, letras e número" : "Sua senha"}
                 required
               />
               <button type="button" onClick={() => setShowPassword(value => !value)}>
@@ -188,12 +229,34 @@ export function AuthGate({ children }: { children: ReactNode }) {
               </button>
             </div>
           </label>
-          {message && <p className={styles.error}>{message}</p>}
+          {registering && (
+            <label>
+              <span>Confirme a senha</span>
+              <input
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={event => setConfirmPassword(event.target.value)}
+                required
+              />
+            </label>
+          )}
+          {message && <p className={messageTone === "success" ? styles.success : styles.error}>{message}</p>}
           <button className={styles.submit} type="submit" disabled={submitting}>
-            {submitting ? "Validando acesso…" : "Entrar no STRATO"}
+            {submitting ? "Processando…" : registering ? "Enviar para aprovação" : "Entrar no STRATO"}
+          </button>
+          <button
+            className={styles.switchMode}
+            type="button"
+            onClick={() => {
+              setRegistering(value => !value);
+              setGate({ status: "signed-out" });
+            }}
+          >
+            {registering ? "Já tenho acesso" : "Solicitar novo acesso"}
           </button>
         </form>
-        {localDemo && (
+        {localDemo && !registering && (
           <div className={styles.demo}>
             <span>Ambiente local</span>
             <button type="button" onClick={enterDemo} disabled={submitting}>
@@ -202,19 +265,68 @@ export function AuthGate({ children }: { children: ReactNode }) {
           </div>
         )}
         <footer>
-          <span>Autenticação protegida pelo Supabase</span>
+          <span>Autenticação própria do STRATO</span>
           <i />
-          <span>Acesso conforme perfil e empresa</span>
+          <span>Acesso conforme perfil, empresa e alçada</span>
         </footer>
       </section>
       <aside className={styles.visual} aria-hidden="true">
+        <div className={styles.grid} />
         <div className={styles.orbitOne} />
         <div className={styles.orbitTwo} />
         <div className={styles.glow} />
+        <div className={styles.scanner} />
+        <div className={styles.core}>
+          <i />
+          <span>STRATO CORE</span>
+          <strong>Contexto vivo</strong>
+          <small>128 sinais conectados</small>
+        </div>
+        <div className={`${styles.floatCard} ${styles.portfolioCard}`}>
+          <span>CARTEIRA ATIVA</span>
+          <strong>R$ 18,4 mi</strong>
+          <small className={styles.positive}>↑ 2,8% no período</small>
+          <div className={styles.sparkline}>
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+          </div>
+        </div>
+        <div className={`${styles.floatCard} ${styles.decisionCard}`}>
+          <span>DECISÕES</span>
+          <strong>2 aguardam você</strong>
+          <small>R$ 5,04 mi sob análise</small>
+        </div>
+        <div className={`${styles.floatCard} ${styles.targetCard}`}>
+          <span>META DO MÊS</span>
+          <strong>84%</strong>
+          <small>Ritmo acima do previsto</small>
+          <div className={styles.progress}>
+            <i />
+          </div>
+        </div>
+        <div className={`${styles.floatCard} ${styles.liquidityCard}`}>
+          <span>LIQUIDEZ LIVRE</span>
+          <strong>R$ 3,35 mi</strong>
+          <small>4,3× liberações prontas</small>
+        </div>
+        <div className={`${styles.floatCard} ${styles.riskCard}`}>
+          <span>RISCO MONITORADO</span>
+          <strong>1 concentração</strong>
+          <small>Revisão recomendada</small>
+        </div>
+        <div className={`${styles.floatCard} ${styles.tasksCard}`}>
+          <span>CENTRAL DO DIA</span>
+          <strong>6 tarefas</strong>
+          <small>3 prioritárias · 2 novas</small>
+        </div>
         <div className={styles.signal}>
-          <span>POSIÇÃO OPERACIONAL</span>
-          <strong>Controle em tempo real</strong>
-          <small>Decisões, carteira e ritmo conectados.</small>
+          <span>CÉREBRO OPERACIONAL</span>
+          <strong>O sistema conecta os sinais.</strong>
+          <small>Risco, operação, carteira e metas atualizados em um só contexto.</small>
         </div>
       </aside>
     </main>

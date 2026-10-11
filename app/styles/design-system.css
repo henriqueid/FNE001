@@ -5183,10 +5183,29 @@ a.fn-btn:not([href]) {
   overflow: hidden;
 }
 .access-users > header {
-  display: grid;
-  gap: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   padding: 15px;
   border-bottom: 1px solid var(--line);
+}
+.access-users > header > div {
+  display: grid;
+  gap: 3px;
+}
+.access-users > header > button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--ds-accent);
+  border-radius: 9px;
+  color: var(--ds-accent-ink);
+  background: var(--ds-accent);
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
 }
 .access-users > button {
   width: 100%;
@@ -5255,6 +5274,10 @@ a.fn-btn:not([href]) {
 .access-users button em[data-status="suspended"] {
   color: var(--muted);
   background: var(--soft);
+}
+.access-users button em[data-status="pending"] {
+  color: #9a6719;
+  background: rgb(217 119 6 / 11%);
 }
 .access-editor {
   padding: 17px;
@@ -5374,6 +5397,143 @@ a.fn-btn:not([href]) {
 .access-scopes input,
 .access-permissions input {
   accent-color: var(--brand);
+}
+.access-create-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(3 10 24 / 68%);
+  backdrop-filter: blur(8px);
+}
+.access-create-modal {
+  width: min(560px, 100%);
+  overflow: hidden;
+  border: 1px solid var(--ds-border);
+  border-radius: 20px;
+  background: var(--ds-elev);
+  box-shadow: 0 28px 90px rgb(0 0 0 / 32%);
+  animation: ds-pop 0.16s ease-out;
+}
+.access-create-modal > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--ds-border);
+  background: color-mix(in srgb, var(--ds-accent-soft) 38%, var(--ds-elev));
+}
+.access-create-modal > header > div {
+  display: grid;
+  gap: 4px;
+}
+.access-create-modal > header small {
+  color: var(--ds-text);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+.access-create-modal > header h3 {
+  margin: 0;
+  font-size: 21px;
+}
+.access-create-modal > header p {
+  margin: 0;
+  color: var(--sx-text);
+  font-size: 11px;
+}
+.access-create-modal > header > button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--ds-border);
+  border-radius: 9px;
+  color: var(--ds-text);
+  background: var(--ds-surface);
+  font: inherit;
+  font-size: 20px;
+  cursor: pointer;
+}
+.access-create-modal form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 22px 24px 24px;
+}
+.access-create-modal form > label {
+  display: grid;
+  gap: 6px;
+  color: var(--sx-text);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.access-create-modal input,
+.access-create-modal select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--ds-border);
+  border-radius: 10px;
+  color: var(--ds-text);
+  background: var(--ds-surface);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.access-create-modal form > aside,
+.access-create-error,
+.access-create-modal form > footer {
+  grid-column: 1 / -1;
+}
+.access-create-modal form > aside {
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--ds-accent) 18%, var(--ds-border));
+  border-radius: 11px;
+  color: var(--sx-text);
+  background: color-mix(in srgb, var(--ds-accent-soft) 26%, var(--ds-elev));
+  font-size: 10px;
+  line-height: 1.5;
+}
+.access-create-error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgb(239 68 68 / 22%);
+  border-radius: 10px;
+  color: #b42318;
+  background: rgb(239 68 68 / 8%);
+  font-size: 10px;
+}
+.access-create-modal form > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding-top: 4px;
+}
+.access-create-modal form > footer button {
+  min-height: 38px;
+  padding: 0 15px;
+  border: 1px solid var(--ds-border);
+  border-radius: 10px;
+  color: var(--ds-text);
+  background: var(--ds-surface);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.access-create-modal form > footer button[type="submit"] {
+  border-color: var(--ds-accent);
+  color: var(--ds-accent-ink);
+  background: var(--ds-accent);
+}
+.access-create-modal form > footer button:disabled {
+  opacity: 0.58;
+  cursor: wait;
 }
 .settings-inline-option {
   display: flex;

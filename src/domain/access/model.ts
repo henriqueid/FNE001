@@ -16,7 +16,7 @@ export type Permission =
 
 export type AccessUser = AppUserProfile & {
   email: string;
-  status: "active" | "suspended";
+  status: "pending" | "active" | "suspended";
   tenantIds: string[];
   authorityIds?: string[];
   companyScopes: string[];
@@ -215,6 +215,12 @@ export function defaultViewFor(user: AccessUser): AccessView {
 
 export function updateAccessUser(state: AccessState, user: AccessUser): AccessState {
   return { ...state, users: state.users.map(current => (current.id === user.id ? user : current)) };
+}
+
+export function addAccessUser(state: AccessState, user: AccessUser): AccessState {
+  if (state.users.some(current => current.id === user.id || current.email.toLowerCase() === user.email.toLowerCase()))
+    return state;
+  return { ...state, users: [...state.users, user] };
 }
 
 export function startUserPreview(state: AccessState, userId: string): AccessState {

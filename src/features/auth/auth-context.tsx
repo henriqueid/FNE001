@@ -2,7 +2,7 @@
 
 import { createContext, useContext } from "react";
 
-export type StratoAuthMode = "supabase" | "demo";
+export type StratoAuthMode = "internal" | "demo";
 
 export type StratoAuthContextValue = {
   mode: StratoAuthMode;

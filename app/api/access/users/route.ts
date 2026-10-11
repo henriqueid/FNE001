@@ -1,11 +1,25 @@
 import { env } from "cloudflare:workers";
 import { type AccessState } from "@/src/domain/access/model";
-import { loadAccessDirectory, saveAccessDirectory } from "@/src/server/access/repository";
+import { type UserDepartment } from "@/src/domain/copilot/daily-briefing";
+import { hashPassword, passwordValidationError } from "@/src/server/access/password";
+import {
+  AccessEmailConflictError,
+  createManagedAccessUser,
+  loadAccessDirectory,
+  saveAccessDirectory,
+} from "@/src/server/access/repository";
 import { sessionPrincipal } from "@/src/server/access/session";
-import { supabaseForRequest } from "@/src/supabase/request";
-import { type Json } from "@/src/supabase/database.types";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
+const departments: UserDepartment[] = [
+  "Diretoria",
+  "Operações",
+  "Risco e crédito",
+  "Controladoria",
+  "Financeiro",
+  "Comercial",
+  "Cadastro",
+];
 
 async function context(request: Request) {
   const tenantId = request.headers.get("x-strato-tenant-id")?.trim();
@@ -20,13 +34,44 @@ async function context(request: Request) {
 export async function GET(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
-  const supabase = supabaseForRequest(request.headers);
-  if (supabase) {
-    const { data, error } = await supabase.rpc("strato_access_directory", { p_tenant_id: access.tenantId });
-    if (error) return json({ error: error.message }, error.code === "42501" ? 403 : 500);
-    return json(data);
-  }
   return json(await loadAccessDirectory(env.DB, access.tenantId, access.principal.id));
+}
+
+export async function POST(request: Request) {
+  const access = await context(request);
+  if ("error" in access) return access.error;
+  const body = (await request.json().catch(() => ({}))) as {
+    name?: string;
+    email?: string;
+    password?: string;
+    department?: UserDepartment;
+  };
+  const name = body.name?.trim() ?? "";
+  const email = body.email?.trim().toLowerCase() ?? "";
+  if (name.length < 3 || !/^\S+@\S+\.\S+$/.test(email)) return json({ error: "Informe nome e login válidos." }, 400);
+  const passwordError = passwordValidationError(body.password ?? "");
+  if (passwordError) return json({ error: passwordError }, 400);
+  const department = departments.includes(body.department as UserDepartment) ? body.department! : "Operações";
+  try {
+    const createdUserId = await createManagedAccessUser(env.DB, {
+      tenantId: access.tenantId,
+      actorId: access.principal.id,
+      name,
+      email,
+      department,
+      passwordHash: await hashPassword(body.password!),
+    });
+    return json(
+      {
+        createdUserId,
+        state: await loadAccessDirectory(env.DB, access.tenantId, access.principal.id),
+      },
+      201,
+    );
+  } catch (error) {
+    if (error instanceof AccessEmailConflictError) return json({ error: error.message }, 409);
+    throw error;
+  }
 }
 
 export async function PUT(request: Request) {
@@ -34,15 +79,6 @@ export async function PUT(request: Request) {
   if ("error" in access) return access.error;
   const state = (await request.json()) as AccessState;
   if (state?.version !== 2 || !Array.isArray(state.users)) return json({ error: "Diretório de acesso inválido." }, 400);
-  const supabase = supabaseForRequest(request.headers);
-  if (supabase) {
-    const { data, error } = await supabase.rpc("strato_save_access_directory", {
-      p_tenant_id: access.tenantId,
-      p_state: state as unknown as Json,
-    });
-    if (error) return json({ error: error.message }, error.code === "42501" ? 403 : 400);
-    return json(data);
-  }
   await saveAccessDirectory(env.DB, access.tenantId, access.principal.id, state);
   return json(await loadAccessDirectory(env.DB, access.tenantId, access.principal.id));
 }

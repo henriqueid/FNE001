@@ -1,5 +1,12 @@
-import { seedAccessState, type AccessState, type AccessUser, type Permission } from "@/src/domain/access/model";
+import {
+  permissionsFor,
+  seedAccessState,
+  type AccessState,
+  type AccessUser,
+  type Permission,
+} from "@/src/domain/access/model";
 import { type DecisionDatabase } from "@/src/server/decisions/repository";
+import { verifyPassword } from "./password";
 
 const schema = [
   `CREATE TABLE IF NOT EXISTS access_users (
@@ -27,6 +34,13 @@ const schema = [
     expires_at TEXT NOT NULL, revoked_at TEXT, FOREIGN KEY (user_id) REFERENCES access_users(user_id)
   )`,
   "CREATE INDEX IF NOT EXISTS auth_sessions_user_idx ON auth_sessions (user_id, expires_at)",
+  `CREATE TABLE IF NOT EXISTS access_credentials (
+    user_id TEXT PRIMARY KEY, password_hash TEXT NOT NULL, status TEXT NOT NULL,
+    failed_attempts INTEGER NOT NULL DEFAULT 0, locked_until TEXT,
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES access_users(user_id)
+  )`,
+  "CREATE INDEX IF NOT EXISTS access_credentials_status_idx ON access_credentials (status, locked_until)",
   "CREATE INDEX IF NOT EXISTS tenant_memberships_user_idx ON tenant_memberships (user_id, tenant_id)",
   `CREATE TABLE IF NOT EXISTS access_events (
     event_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, actor_id TEXT NOT NULL,
@@ -172,6 +186,192 @@ export async function createSession(db: DecisionDatabase, userId: string, tokenH
     .run();
 }
 
+type CredentialRow = {
+  user_id: string;
+  password_hash: string;
+  credential_status: "pending" | "active" | "suspended";
+  user_status: AccessUser["status"];
+  locked_until: string | null;
+};
+
+export async function authenticateCredentials(db: DecisionDatabase, tenantId: string, email: string, password: string) {
+  await seedAccessDirectory(db);
+  const normalizedEmail = email.trim().toLowerCase();
+  const credential = await db
+    .prepare(
+      `SELECT c.user_id, c.password_hash, c.status AS credential_status,
+        c.locked_until, u.status AS user_status
+       FROM access_credentials c
+       JOIN access_users u ON u.user_id = c.user_id
+       JOIN tenant_memberships m ON m.user_id = u.user_id AND m.tenant_id = ?
+       WHERE lower(u.email) = ?`,
+    )
+    .bind(tenantId, normalizedEmail)
+    .first<CredentialRow>();
+  const now = new Date();
+  if (
+    !credential ||
+    credential.credential_status !== "active" ||
+    credential.user_status !== "active" ||
+    (credential.locked_until && new Date(credential.locked_until) > now)
+  )
+    return null;
+  if (!(await verifyPassword(password, credential.password_hash))) {
+    const lockedUntil = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
+    await db
+      .prepare(
+        `UPDATE access_credentials SET
+          failed_attempts = failed_attempts + 1,
+          locked_until = CASE WHEN failed_attempts + 1 >= 5 THEN ? ELSE locked_until END,
+          updated_at = ?
+         WHERE user_id = ?`,
+      )
+      .bind(lockedUntil, now.toISOString(), credential.user_id)
+      .run();
+    return null;
+  }
+  await db
+    .prepare("UPDATE access_credentials SET failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE user_id = ?")
+    .bind(now.toISOString(), credential.user_id)
+    .run();
+  return credential.user_id;
+}
+
+export async function registerAccessRequest(
+  db: DecisionDatabase,
+  input: { tenantId: string; name: string; email: string; department: AccessUser["department"]; passwordHash: string },
+) {
+  await seedAccessDirectory(db);
+  const now = new Date().toISOString();
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const existing = await db
+    .prepare("SELECT user_id, status FROM access_users WHERE lower(email) = ?")
+    .bind(normalizedEmail)
+    .first<{ user_id: string; status: AccessUser["status"] }>();
+  if (existing) return { userId: existing.user_id, status: "existing" } as const;
+  const userId = `user-${crypto.randomUUID()}`;
+  await db
+    .prepare(
+      `INSERT INTO access_users (
+        user_id, email, name, role, department, access_level, status,
+        manager_user_id, commercial_rep_id, account_manager_id, updated_at
+      ) VALUES (?, ?, ?, 'Aguardando definição', ?, 'operator', 'pending', NULL, NULL, NULL, ?)`,
+    )
+    .bind(userId, normalizedEmail, input.name.trim(), input.department, now)
+    .run();
+  await db
+    .prepare(
+      "INSERT INTO tenant_memberships (tenant_id, user_id, company_scopes_json, created_at) VALUES (?, ?, '[]', ?)",
+    )
+    .bind(input.tenantId, userId, now)
+    .run();
+  await db
+    .prepare(
+      `INSERT INTO access_credentials
+        (user_id, password_hash, status, failed_attempts, locked_until, created_at, updated_at)
+       VALUES (?, ?, ?, 0, NULL, ?, ?)
+       ON CONFLICT(user_id) DO UPDATE SET
+         password_hash = excluded.password_hash,
+         status = CASE WHEN access_credentials.status = 'active' THEN 'active' ELSE excluded.status END,
+         failed_attempts = 0, locked_until = NULL, updated_at = excluded.updated_at`,
+    )
+    .bind(userId, input.passwordHash, "pending", now, now)
+    .run();
+  await db
+    .prepare(
+      `INSERT INTO access_events
+        (event_id, tenant_id, actor_id, subject_user_id, event_type, payload_json, created_at)
+       VALUES (?, ?, ?, ?, 'ACCESS_REQUESTED', ?, ?)`,
+    )
+    .bind(
+      crypto.randomUUID(),
+      input.tenantId,
+      userId,
+      userId,
+      JSON.stringify({ email: normalizedEmail, requestedDepartment: input.department }),
+      now,
+    )
+    .run();
+  return { userId, status: "pending" } as const;
+}
+
+export class AccessEmailConflictError extends Error {}
+
+export async function createManagedAccessUser(
+  db: DecisionDatabase,
+  input: {
+    tenantId: string;
+    actorId: string;
+    name: string;
+    email: string;
+    department: AccessUser["department"];
+    passwordHash: string;
+  },
+) {
+  await seedAccessDirectory(db);
+  const now = new Date().toISOString();
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const existing = await db
+    .prepare("SELECT user_id FROM access_users WHERE lower(email) = ?")
+    .bind(normalizedEmail)
+    .first<{ user_id: string }>();
+  if (existing) throw new AccessEmailConflictError("Já existe um usuário ou solicitação com este e-mail.");
+
+  const userId = `user-${crypto.randomUUID()}`;
+  const permissions = permissionsFor(input.department, "operator");
+  const statements = [
+    db
+      .prepare(
+        `INSERT INTO access_users (
+          user_id, email, name, role, department, access_level, status,
+          manager_user_id, commercial_rep_id, account_manager_id, updated_at
+        ) VALUES (?, ?, ?, 'Aguardando definição', ?, 'operator', 'pending', NULL, NULL, NULL, ?)`,
+      )
+      .bind(userId, normalizedEmail, input.name.trim(), input.department, now),
+    db
+      .prepare(
+        "INSERT INTO tenant_memberships (tenant_id, user_id, company_scopes_json, created_at) VALUES (?, ?, '[]', ?)",
+      )
+      .bind(input.tenantId, userId, now),
+    db
+      .prepare(
+        `INSERT INTO access_credentials
+          (user_id, password_hash, status, failed_attempts, locked_until, created_at, updated_at)
+         VALUES (?, ?, 'pending', 0, NULL, ?, ?)`,
+      )
+      .bind(userId, input.passwordHash, now, now),
+    ...permissions.map(permission =>
+      db
+        .prepare("INSERT INTO access_permissions (tenant_id, user_id, permission, created_at) VALUES (?, ?, ?, ?)")
+        .bind(input.tenantId, userId, permission, now),
+    ),
+    db
+      .prepare(
+        `INSERT INTO access_events
+          (event_id, tenant_id, actor_id, subject_user_id, event_type, payload_json, created_at)
+         VALUES (?, ?, ?, ?, 'USER_CREATED_BY_ADMIN', ?, ?)`,
+      )
+      .bind(
+        crypto.randomUUID(),
+        input.tenantId,
+        input.actorId,
+        userId,
+        JSON.stringify({ email: normalizedEmail, department: input.department }),
+        now,
+      ),
+  ];
+  await db.batch(statements);
+  return userId;
+}
+
+export async function revokeSession(db: DecisionDatabase, tokenHash: string) {
+  await ensureAccessSchema(db);
+  await db
+    .prepare("UPDATE auth_sessions SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL")
+    .bind(new Date().toISOString(), tokenHash)
+    .run();
+}
+
 type AccessUserRow = {
   user_id: string;
   email: string;
@@ -267,6 +467,10 @@ export async function saveAccessDirectory(db: DecisionDatabase, tenantId: string
         user.accountManagerId ?? null,
         now,
       )
+      .run();
+    await db
+      .prepare("UPDATE access_credentials SET status = ?, updated_at = ? WHERE user_id = ?")
+      .bind(user.status === "active" ? "active" : user.status, now, user.id)
       .run();
     await db
       .prepare(

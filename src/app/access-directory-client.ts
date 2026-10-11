@@ -13,6 +13,21 @@ export async function loadAccessDirectory(tenantId: string) {
   return accessBody(await authenticatedFetch("/api/access/users", {}, tenantId));
 }
 
+export async function createManagedUser(
+  tenantId: string,
+  input: { name: string; email: string; password: string; department: string },
+) {
+  const response = await authenticatedFetch(
+    "/api/access/users",
+    { method: "POST", body: JSON.stringify(input) },
+    tenantId,
+  );
+  const body = (await response.json()) as { state?: AccessState; createdUserId?: string; error?: string };
+  if (!response.ok || !body.state || !body.createdUserId)
+    throw new Error(body.error ?? "Não foi possível adicionar o usuário.");
+  return { state: body.state, createdUserId: body.createdUserId };
+}
+
 export async function saveAccessDirectory(tenantId: string, state: AccessState) {
   return accessBody(
     await authenticatedFetch(

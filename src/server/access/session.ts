@@ -1,7 +1,5 @@
 import { type DecisionDatabase } from "@/src/server/decisions/repository";
-import { authenticatedSupabase } from "@/src/supabase/request";
-import { createSession, principalForSession } from "./repository";
-import { type ServerPrincipal } from "./repository";
+import { authenticateCredentials, createSession, principalForSession, revokeSession } from "./repository";
 
 export const SESSION_COOKIE = "strato_session";
 const SESSION_HOURS = 8;
@@ -23,42 +21,31 @@ export function cookieValue(headers: Headers, name: string) {
 }
 
 export async function createDemoSession(db: DecisionDatabase) {
+  return createUserSession(db, "user-henrique-admin");
+}
+
+export async function createUserSession(db: DecisionDatabase, userId: string) {
   const token = crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "");
   const tokenHash = await hashSessionToken(token);
   const expiresAt = new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000).toISOString();
-  await createSession(db, "user-henrique-admin", tokenHash, expiresAt);
+  await createSession(db, userId, tokenHash, expiresAt);
   return { token, expiresAt };
 }
 
-export async function sessionPrincipal(db: DecisionDatabase, headers: Headers, tenantId: string) {
-  const authenticated = await authenticatedSupabase(headers);
-  if (authenticated) {
-    const { data, error } = await authenticated.client.rpc("strato_current_principal", {
-      p_tenant_id: tenantId,
-    });
-    if (error || !isServerPrincipal(data)) return null;
-    return data;
-  }
+export async function loginSession(db: DecisionDatabase, tenantId: string, email: string, password: string) {
+  const userId = await authenticateCredentials(db, tenantId, email, password);
+  return userId ? createUserSession(db, userId) : null;
+}
 
+export async function sessionPrincipal(db: DecisionDatabase, headers: Headers, tenantId: string) {
   const token = cookieValue(headers, SESSION_COOKIE);
   if (!token) return null;
   return principalForSession(db, await hashSessionToken(token), tenantId);
 }
 
-function isServerPrincipal(value: unknown): value is ServerPrincipal {
-  if (!value || typeof value !== "object") return false;
-  const principal = value as Partial<ServerPrincipal>;
-  return (
-    typeof principal.id === "string" &&
-    typeof principal.name === "string" &&
-    typeof principal.role === "string" &&
-    typeof principal.department === "string" &&
-    (principal.access === "admin" || principal.access === "manager" || principal.access === "operator") &&
-    principal.status === "active" &&
-    typeof principal.tenantId === "string" &&
-    Array.isArray(principal.permissions) &&
-    Array.isArray(principal.authorityIds)
-  );
+export async function endSession(db: DecisionDatabase, headers: Headers) {
+  const token = cookieValue(headers, SESSION_COOKIE);
+  if (token) await revokeSession(db, await hashSessionToken(token));
 }
 
 export function sessionCookie(token: string, expiresAt: string, secure: boolean) {

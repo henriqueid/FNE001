@@ -1,5 +1,12 @@
 import { env } from "cloudflare:workers";
-import { createDemoSession, SESSION_COOKIE, sessionCookie, sessionPrincipal } from "@/src/server/access/session";
+import {
+  createDemoSession,
+  endSession,
+  loginSession,
+  SESSION_COOKIE,
+  sessionCookie,
+  sessionPrincipal,
+} from "@/src/server/access/session";
 
 const json = (body: unknown, status = 200, headers?: HeadersInit) => Response.json(body, { status, headers });
 
@@ -14,15 +21,25 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const url = new URL(request.url);
-  if (url.hostname !== "localhost" && url.hostname !== "127.0.0.1")
-    return json({ error: "A entrada demonstrativa é bloqueada fora do ambiente local." }, 403);
-  const session = await createDemoSession(env.DB);
+  const body = (await request.json().catch(() => ({}))) as { mode?: string; email?: string; password?: string };
+  let session;
+  if (body.mode === "demo") {
+    if (url.hostname !== "localhost" && url.hostname !== "127.0.0.1")
+      return json({ error: "A entrada demonstrativa é bloqueada fora do ambiente local." }, 403);
+    session = await createDemoSession(env.DB);
+  } else {
+    const tenantId = request.headers.get("x-strato-tenant-id")?.trim();
+    if (!tenantId || !body.email?.trim() || !body.password) return json({ error: "Informe e-mail e senha." }, 400);
+    session = await loginSession(env.DB, tenantId, body.email, body.password);
+    if (!session) return json({ error: "E-mail, senha ou acesso inválido." }, 401);
+  }
   return json({ authenticated: true, expiresAt: session.expiresAt }, 201, {
     "set-cookie": sessionCookie(session.token, session.expiresAt, url.protocol === "https:"),
   });
 }
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
+  await endSession(env.DB, request.headers);
   return json({ authenticated: false }, 200, {
     "set-cookie": `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Strict; Max-Age=0`,
   });

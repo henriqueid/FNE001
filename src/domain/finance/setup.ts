@@ -3,7 +3,7 @@
  */
 import { transfer } from "./banking";
 import { type Result, addDays, emptyState, nextId, openingEntries, run, todayIso } from "./ledger";
-import { chartWithBanks, withBankLedgers, type FinanceState } from "./model";
+import { chartWithBanks, modelCategories, modelChart, withBankLedgers, type FinanceState } from "./model";
 import { type StatementInput, autoReconcile, importStatement } from "./reconciliation";
 import { createTitle } from "./titles";
 
@@ -359,6 +359,23 @@ export function seedFinance(today = todayIso()): FinanceState {
     s = autoReconcile(s, a.id, by, { upTo: addDays(today, -8) }).state;
   });
   return s;
+}
+
+export function emptyFinance(): FinanceState {
+  return {
+    version: 1,
+    accounts: [],
+    chart: modelChart,
+    categories: modelCategories,
+    titles: [],
+    movements: [],
+    journal: [],
+    registrations: {},
+    purchasePosted: {},
+    statement: [],
+    chartOrigin: "modelo",
+    seq: 0,
+  };
 }
 
 export function addChartAccount(

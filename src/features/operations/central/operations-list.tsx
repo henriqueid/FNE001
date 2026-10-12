@@ -28,7 +28,7 @@ export function OperationsList({
   companyScope: string;
   onOpen: (op: Operation) => void;
   onNew?: () => void;
-  onReset: () => void;
+  onReset?: () => void;
 }) {
   const filters = useOperationsFilters(operations, companyScope);
   const { scope, displayMode, datePreset, filtered, scopedOperations, selectQueue } = filters;
@@ -109,7 +109,7 @@ export function OperationsList({
               ? `${inProgressOperations.length + releasedOperations.length} operações distribuídas no fluxo`
               : `Mostrando ${filtered.length} de ${scopedOperations.length} operações no período`}
           </span>
-          <button onClick={onReset}>Restaurar dados de demonstração</button>
+          {onReset && <button onClick={onReset}>Restaurar dados de demonstração</button>}
           <span>
             {datePreset === "today" ? "Hoje" : datePreset === "all" ? "Todo o histórico" : "Período personalizado"} ·
             atualizado agora

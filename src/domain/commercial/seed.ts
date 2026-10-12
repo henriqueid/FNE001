@@ -305,6 +305,21 @@ export const clients: SeedClient[] = [
 // [nome, documento, comercial, dias desde o vínculo, origem, limite, volume mensal, taxa a.m., segmento, cidade, dias desde a última operação (inativos), sem operação ainda]
 export const committeeMembers = ["Henrique (diretoria)", "Luciana Prado (risco)", "Otávio Reis (jurídico)"];
 
+export function emptyCommercial(): CommercialState {
+  return {
+    version: 1,
+    reps: [],
+    links: [],
+    deals: [],
+    visits: [],
+    committees: [],
+    prospects: [],
+    rules: defaultRules,
+    closings: {},
+    seq: 0,
+  };
+}
+
 // [nome, documento, comercial, dias desde o vínculo, origem, limite, volume mensal, taxa a.m., segmento, cidade, dias desde a última operação (inativos), sem operação ainda]
 
 export function seedCommercial(today = todayIso()): CommercialState {

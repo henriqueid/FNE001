@@ -2,4 +2,4 @@
 export const THEME_KEY = "strato-theme";
 
 /** Script inline que aplica o tema salvo antes da primeira pintura (evita piscar). */
-export const themeBootScript = `(function(){try{var p=localStorage.getItem('${THEME_KEY}')||'system';var d=p==='dark'||(p==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}})();`;
+export const themeBootScript = `(function(){try{localStorage.removeItem('${THEME_KEY}');document.documentElement.dataset.theme='light';}catch(e){document.documentElement.dataset.theme='light';}})();`;

@@ -5,7 +5,6 @@
  * Fornecido por `strato-app.tsx`; consumido por Operação, Comercial, Carteira e Cadastros.
  */
 import { type CommercialState, type SalesRep } from "@/src/domain/commercial/types";
-import { initialCedents } from "@/src/domain/core/demo/cedents";
 import { type Cedent } from "@/src/domain/core/types";
 import { type Party } from "@/src/domain/registry/parties";
 import { type ClientRecord } from "@/src/domain/registry/registry";
@@ -36,5 +35,5 @@ export function useRegistry(): RegistryValue {
 
 /** Versão tolerante (componentes que também rodam fora do provedor, como testes). */
 export function useCedents(): Cedent[] {
-  return useContext(RegistryContext)?.cedents ?? initialCedents;
+  return useContext(RegistryContext)?.cedents ?? [];
 }

@@ -26,7 +26,7 @@ export type ShellContextValue = {
   openOperation: (operation: Operation) => void;
   newOperation: () => void;
   openSettings: () => void;
-  resetDemo: () => void;
+  resetDemo?: () => void;
 };
 
 export const ShellContext = createContext<ShellContextValue | null>(null);

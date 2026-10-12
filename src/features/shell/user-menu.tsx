@@ -9,17 +9,7 @@ import { type AppUserProfile } from "@/src/domain/copilot/daily-briefing";
 import { useStratoAuth } from "@/src/features/auth/auth-context";
 
 import { destinations } from "@/src/domain/core/demo/companies";
-import {
-  CheckIcon,
-  LayersIcon,
-  MonitorIcon,
-  MoonIcon,
-  SlidersIcon,
-  SparkIcon,
-  SunIcon,
-  UndoIcon,
-  CloseIcon,
-} from "@/src/ui/icons";
+import { CheckIcon, LayersIcon, SlidersIcon, SparkIcon, SunIcon, UndoIcon, CloseIcon } from "@/src/ui/icons";
 import { useEffect, useRef, useState } from "react";
 
 export function initials(name: string) {
@@ -32,17 +22,11 @@ export function initials(name: string) {
     .toUpperCase();
 }
 
-const themes: { id: ThemePreference; label: string; icon: React.ReactNode }[] = [
-  { id: "light", label: "Claro", icon: <SunIcon /> },
-  { id: "dark", label: "Escuro", icon: <MoonIcon /> },
-  { id: "system", label: "Sistema", icon: <MonitorIcon /> },
-];
-
 export function UserMenu({
   user,
   companyScope,
   onCompanyScopeChange,
-  theme,
+  theme: _theme,
   onTheme,
   onOpenSettings,
   onResetDemo,
@@ -149,20 +133,10 @@ export function UserMenu({
 
           <section>
             <span className="lx-label">Aparência</span>
-            <div className="lx-theme-switch" role="radiogroup" aria-label="Tema">
-              {themes.map(t => (
-                <button
-                  key={t.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={theme === t.id}
-                  className={theme === t.id ? "is-active" : ""}
-                  onClick={() => onTheme(t.id)}
-                >
-                  {t.icon}
-                  {t.label}
-                </button>
-              ))}
+            <div className="lx-theme-switch" aria-label="Tema claro fixo">
+              <button type="button" className="is-active" aria-pressed="true" onClick={() => onTheme("light")}>
+                <SunIcon /> Claro
+              </button>
             </div>
           </section>
 

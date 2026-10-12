@@ -15,8 +15,6 @@ import { type ThemePreference } from "./use-theme";
 import {
   ActivityIcon,
   CloseIcon,
-  MonitorIcon,
-  MoonIcon,
   PlusIcon,
   ReturnIcon,
   SearchIcon,
@@ -60,7 +58,7 @@ export function CommandPalette({
   onOpen: (operation: Operation) => void;
   onNew: () => void;
   onSettings: () => void;
-  onReset: () => void;
+  onReset?: () => void;
   user: AccessUser;
 }) {
   const [query, setQuery] = useState("");
@@ -143,24 +141,6 @@ export function CommandPalette({
         keywords: "tema claro light aparencia",
         run: () => onTheme("light"),
       },
-      {
-        id: "theme-dark",
-        group: "Ações",
-        label: "Tema escuro",
-        detail: themePreference === "dark" ? "Em uso" : undefined,
-        icon: <MoonIcon />,
-        keywords: "tema escuro dark aparencia",
-        run: () => onTheme("dark"),
-      },
-      {
-        id: "theme-system",
-        group: "Ações",
-        label: "Tema do sistema",
-        detail: themePreference === "system" ? "Em uso" : undefined,
-        icon: <MonitorIcon />,
-        keywords: "tema sistema automatico aparencia",
-        run: () => onTheme("system"),
-      },
       ...(can(user, "settings:manage")
         ? [
             {
@@ -173,7 +153,7 @@ export function CommandPalette({
             } satisfies PaletteItem,
           ]
         : []),
-      ...(user.access === "admin"
+      ...(user.access === "admin" && onReset
         ? [
             {
               id: "reset",

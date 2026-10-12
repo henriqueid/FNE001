@@ -4,6 +4,7 @@ import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useSta
 import { getStratoTenantId } from "@/src/app/tenant";
 import { type UserDepartment } from "@/src/domain/copilot/daily-briefing";
 import { StratoAuthProvider, type StratoAuthMode } from "./auth-context";
+import { CompanyOnboarding } from "@/src/features/onboarding/company-onboarding";
 import styles from "./auth-gate.module.css";
 
 const TENANT_ID = getStratoTenantId();
@@ -154,7 +155,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
   };
 
   if (gate.status === "signed-in" && context)
-    return <StratoAuthProvider value={context}>{children}</StratoAuthProvider>;
+    return (
+      <StratoAuthProvider value={context}>
+        {gate.mode === "internal" ? <CompanyOnboarding>{children}</CompanyOnboarding> : children}
+      </StratoAuthProvider>
+    );
 
   if (gate.status === "loading")
     return (

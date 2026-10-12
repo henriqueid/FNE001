@@ -1,0 +1,133 @@
+.stage {
+  min-height: 100vh;
+  background: #f5f7fa;
+  color: #111827;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  font-family: var(--font-sans, Arial, sans-serif);
+}
+.card {
+  width: min(920px, 100%);
+  background: #fff;
+  border: 1px solid #dfe5ec;
+  border-radius: 24px;
+  box-shadow: 0 22px 70px rgba(15, 23, 42, 0.12);
+  padding: 36px;
+}
+.card header img {
+  width: 150px;
+  height: auto;
+}
+.card header > span {
+  display: block;
+  margin-top: 30px;
+  color: #1167d8;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+.card h1 {
+  font-size: 36px;
+  letter-spacing: -0.04em;
+  margin: 8px 0;
+}
+.card header p {
+  color: #64748b;
+  max-width: 660px;
+  line-height: 1.55;
+  margin: 0 0 28px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.wide {
+  grid-column: 1/-1;
+}
+.grid label {
+  display: grid;
+  gap: 7px;
+}
+.grid span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+.grid input,
+.grid select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 11px;
+  background: #fff;
+  color: #0f172a;
+  padding: 12px 13px;
+  font: inherit;
+  outline: none;
+}
+.grid input:focus,
+.grid select:focus {
+  border-color: #1976e9;
+  box-shadow: 0 0 0 3px rgba(25, 118, 233, 0.12);
+}
+.card footer {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.card footer small {
+  color: #64748b;
+}
+.card button {
+  border: 0;
+  border-radius: 11px;
+  background: #1167d8;
+  color: #fff;
+  font-weight: 800;
+  padding: 13px 20px;
+  cursor: pointer;
+}
+.card button:disabled {
+  opacity: 0.55;
+}
+.error {
+  color: #b42318;
+  background: #fef3f2;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.loading {
+  font-weight: 700;
+  color: #475569;
+}
+@media (max-width: 680px) {
+  .stage {
+    padding: 14px;
+  }
+  .card {
+    padding: 24px;
+    border-radius: 18px;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .wide {
+    grid-column: auto;
+  }
+  .card h1 {
+    font-size: 29px;
+  }
+  .card footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .card button {
+    width: 100%;
+  }
+}

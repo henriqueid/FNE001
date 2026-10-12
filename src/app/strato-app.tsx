@@ -19,7 +19,7 @@ import {
 import { buildNewOperation } from "@/src/domain/operations/create-operation";
 
 import { managerOf, repAt } from "@/src/domain/commercial/rules";
-import { seedCommercial } from "@/src/domain/commercial/seed";
+import { emptyCommercial, seedCommercial } from "@/src/domain/commercial/seed";
 import { type CommercialState } from "@/src/domain/commercial/types";
 import { initialCedents } from "@/src/domain/core/demo/cedents";
 import { initialDebtors } from "@/src/domain/core/demo/debtors";
@@ -29,7 +29,7 @@ import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { type Effect } from "@/src/domain/finance/ledger";
 import type { FinanceState } from "@/src/domain/finance/model";
 import { payableKey, syncReleases } from "@/src/domain/finance/releases";
-import { seedFinance } from "@/src/domain/finance/setup";
+import { emptyFinance, seedFinance } from "@/src/domain/finance/setup";
 import { isoDate, portfolioTitles } from "@/src/domain/home/metrics";
 import { demoCedentHistories, demoDebtorHistories } from "@/src/domain/core/demo/quality-history";
 import { qualityByDocument, scoredCedent, scoredDebtor } from "@/src/domain/risk/quality-scores";
@@ -70,6 +70,8 @@ import { seedIntelligenceState } from "@/src/domain/intelligence/model";
 import { type PublishedNotification } from "@/src/domain/notifications/model";
 import { loadAccessDirectory, saveAccessDirectory } from "./access-directory-client";
 import { syncPublishedNotifications } from "./notification-client";
+import { useStratoAuth } from "@/src/features/auth/auth-context";
+import { loadRegistryParties, persistRegistryParty } from "./registry-client";
 
 const CommercialModule = lazy(() => import("@/src/features/commercial/commercial-module"));
 const ControlleriaModule = lazy(() => import("@/src/features/controlleria/controlleria-module"));
@@ -105,12 +107,12 @@ function ModuleLoading() {
 }
 
 const COMPANY_SCOPE_KEY = "strato-company-scope";
-const ACCESS_SERVER_MIGRATION_KEY = "strato-access-server-migrated-v1";
-
 export default function StratoApp() {
+  const auth = useStratoAuth();
+  const isDemo = auth?.mode === "demo";
   const deepLinkHandled = useRef(false);
-  const [operations, setOperations] = useState(initialOperations);
-  const [debtors, setDebtors] = useState(initialDebtors);
+  const [operations, setOperations] = useState(() => (isDemo ? initialOperations : []));
+  const [debtors, setDebtors] = useState(() => (isDemo ? initialDebtors : []));
   const [selected, setSelected] = useState<Operation | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [companyScope, setCompanyScope] = useState("Consolidado");
@@ -119,7 +121,7 @@ export default function StratoApp() {
   const [showJourney, setShowJourney] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [access, setAccess] = useState(() => seedAccessState());
-  const [accessServerReady, setAccessServerReady] = useState(false);
+  const [accessServerReady, setAccessServerReady] = useState(isDemo);
   const [intelligence, setIntelligence] = useState(() => seedIntelligenceState());
   const currentUser = useMemo(() => activeUser(access), [access]);
   const sessionUser = useMemo(() => authenticatedUser(access), [access]);
@@ -129,12 +131,14 @@ export default function StratoApp() {
     setSelected(null);
     setView(target);
   };
-  const [finance, setFinance] = useState<FinanceState>(() => seedFinance());
-  const [portfolio, setPortfolio] = useState(() => seedPortfolio(initialOperations));
+  const [finance, setFinance] = useState<FinanceState>(() => (isDemo ? seedFinance() : emptyFinance()));
+  const [portfolio, setPortfolio] = useState(() =>
+    isDemo ? seedPortfolio(initialOperations) : { version: 3 as const, titles: [] },
+  );
   // Vínculo comercial do cliente (carteira, comitês, comissões): compartilhado por Cadastro, Operação, Carteira e Comercial.
-  const [commercial, setCommercial] = useState<CommercialState>(() => seedCommercial());
+  const [commercial, setCommercial] = useState<CommercialState>(() => (isDemo ? seedCommercial() : emptyCommercial()));
   // Cadastro de pessoas (cedentes, sacados, fornecedores, representantes, investidores...).
-  const [savedParties, setSavedParties] = useState<Party[]>(() => seedParties());
+  const [savedParties, setSavedParties] = useState<Party[]>(() => (isDemo ? seedParties() : []));
   const [policies, setPolicies] = useState(() => seedEligibilityPolicies());
   const [integrations, setIntegrations] = useState(() => seedIntegrationState());
   const [operationalDefaults, setOperationalDefaults] = useState(() => seedOperationalDefaults());
@@ -220,7 +224,7 @@ export default function StratoApp() {
 
   // Restaura o que foi salvo depois de montar (evita divergência na hidratação do SSR).
   useEffect(() => {
-    const stored = loadPersistedState();
+    const stored = isDemo ? loadPersistedState() : {};
     /* eslint-disable react-hooks/set-state-in-effect -- restauração única do localStorage após montar */
     if (stored.operations) setOperations(stored.operations);
     if (stored.debtors) setDebtors(stored.debtors);
@@ -232,7 +236,7 @@ export default function StratoApp() {
     if (stored.integrations) setIntegrations(stored.integrations);
     if (stored.operationalDefaults) setOperationalDefaults(stored.operationalDefaults);
     if (stored.tasks) setTasks(stored.tasks);
-    if (stored.access) setAccess(stored.access);
+    if (isDemo && stored.access) setAccess(stored.access);
     if (stored.intelligence) setIntelligence(stored.intelligence);
     if (stored.guidance !== undefined) setShowGuidance(stored.guidance);
     if (stored.journey !== undefined) setShowJourney(stored.journey);
@@ -248,10 +252,10 @@ export default function StratoApp() {
     }
     setStorageReady(true);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, []);
+  }, [isDemo]);
 
   useEffect(() => {
-    if (storageReady)
+    if (storageReady && isDemo)
       savePersistedState({
         operations,
         debtors,
@@ -280,6 +284,7 @@ export default function StratoApp() {
     access,
     intelligence,
     storageReady,
+    isDemo,
   ]);
 
   useEffect(() => {
@@ -288,18 +293,16 @@ export default function StratoApp() {
 
   useEffect(() => {
     if (!storageReady || accessServerReady) return;
+    if (isDemo) return;
     let cancelled = false;
     const tenantId = intelligence.tenantId;
-    const migrate = window.localStorage.getItem(ACCESS_SERVER_MIGRATION_KEY) !== "done";
-    const request = migrate ? saveAccessDirectory(tenantId, access) : loadAccessDirectory(tenantId);
-    request
+    loadAccessDirectory(tenantId)
       .then(serverState => {
         if (cancelled) return;
         setAccess(current => ({ ...serverState, previewUserId: current.previewUserId }));
-        window.localStorage.setItem(ACCESS_SERVER_MIGRATION_KEY, "done");
       })
       .catch(() => {
-        /* mantém a demonstração local quando o backend estiver indisponível */
+        /* mantém a sessão atual e tenta novamente no próximo acesso */
       })
       .finally(() => {
         if (!cancelled) setAccessServerReady(true);
@@ -307,17 +310,32 @@ export default function StratoApp() {
     return () => {
       cancelled = true;
     };
-  }, [access, accessServerReady, intelligence.tenantId, storageReady]);
+  }, [accessServerReady, intelligence.tenantId, storageReady, isDemo]);
 
   useEffect(() => {
-    if (!accessServerReady) return;
+    if (!storageReady || isDemo) return;
+    let cancelled = false;
+    loadRegistryParties()
+      .then(parties => {
+        if (!cancelled) setSavedParties(parties);
+      })
+      .catch(() => {
+        /* o modo real permanece vazio quando o banco estiver indisponível */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemo, storageReady]);
+
+  useEffect(() => {
+    if (!accessServerReady || isDemo) return;
     const timer = window.setTimeout(() => {
       void saveAccessDirectory(intelligence.tenantId, access).catch(() => {
         /* o estado local continua disponível e uma próxima alteração tenta novamente */
       });
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [access, accessServerReady, intelligence.tenantId]);
+  }, [access, accessServerReady, intelligence.tenantId, isDemo]);
 
   useEffect(() => {
     if (!accessServerReady) return;
@@ -445,27 +463,33 @@ export default function StratoApp() {
   const commercialLive = useMemo(() => ({ ...commercial, carteiraEvents }), [commercial, carteiraEvents]);
   // Cedentes = cadastro de crédito existente + cedentes novos criados no Cadastro; limite vem do comitê.
   const registryCedents = useMemo(() => {
-    const known = new Set(initialCedents.map(c => c.document.replace(/\D/g, "")));
+    const baseline = isDemo ? initialCedents : [];
+    const known = new Set(baseline.map(c => c.document.replace(/\D/g, "")));
     const created = savedParties
       .filter(p => p.roles.includes("cedente") && p.status === "Ativo" && !known.has(p.document.replace(/\D/g, "")))
       .map(partyToCedent);
-    return effectiveCedents(commercial, [...initialCedents, ...created]);
-  }, [commercial, savedParties]);
+    return effectiveCedents(commercial, [...baseline, ...created]);
+  }, [commercial, savedParties, isDemo]);
   // Score de qualidade único (0–1000): calculado pela política sobre o histórico de cada cliente e usado
   // igual no cadastro, na operação, no painel de Risco e no panorama. O score de bureau fica em `bureauScore`.
   const qualityState = useQualityPolicyState();
   const scoreDay = isoDate(new Date());
-  const cedentHistories = useMemo(() => demoCedentHistories(registryCedents, scoreDay), [registryCedents, scoreDay]);
+  const cedentHistories = useMemo(
+    () => (isDemo ? demoCedentHistories(registryCedents, scoreDay) : []),
+    [registryCedents, scoreDay, isDemo],
+  );
   const debtorHistories = useMemo(
     () =>
-      demoDebtorHistories(
-        debtors.map(d => {
-          const doc = d.document.replace(/\D/g, "");
-          return { id: doc, name: d.name, document: doc, exposure: d.portfolioReceivable ?? 0, debtor: d };
-        }),
-        scoreDay,
-      ),
-    [debtors, scoreDay],
+      isDemo
+        ? demoDebtorHistories(
+            debtors.map(d => {
+              const doc = d.document.replace(/\D/g, "");
+              return { id: doc, name: d.name, document: doc, exposure: d.portfolioReceivable ?? 0, debtor: d };
+            }),
+            scoreDay,
+          )
+        : [],
+    [debtors, scoreDay, isDemo],
   );
   const qualityValue = useMemo<QualityValue>(() => {
     const byDocument = qualityByDocument([...cedentHistories, ...debtorHistories], qualityState.policy);
@@ -523,6 +547,7 @@ export default function StratoApp() {
         setSavedParties(result.saved);
         setDebtors(result.debtors);
         setCommercial(result.commercial);
+        if (!isDemo) void persistRegistryParty(result.saved.find(item => item.id === party.id) ?? party);
         return { message: result.message };
       },
       onCommercial: next => {
@@ -538,6 +563,7 @@ export default function StratoApp() {
       parties,
       savedParties,
       debtors,
+      isDemo,
       commercial,
       operationalDefaults,
       today,
@@ -674,7 +700,7 @@ export default function StratoApp() {
       if (can(currentUser, "operations:edit")) setShowNew(true);
     },
     openSettings,
-    resetDemo,
+    resetDemo: isDemo ? resetDemo : undefined,
   };
   const roadmapViews = { integrations: "Integrações" } as const;
   const activeSection = selected
@@ -805,7 +831,7 @@ export default function StratoApp() {
         companyScope={companyScope}
         onOpen={setSelected}
         onNew={can(currentUser, "operations:edit") ? () => setShowNew(true) : undefined}
-        onReset={resetDemo}
+        onReset={isDemo ? resetDemo : undefined}
       />
     );
   return (
@@ -856,7 +882,7 @@ export default function StratoApp() {
                   />
                 </Suspense>
               )}
-              {confirmReset && (
+              {isDemo && confirmReset && (
                 <div className="modal-backdrop" role="presentation">
                   <section
                     className="settings-modal reset-modal"

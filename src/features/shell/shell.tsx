@@ -354,10 +354,14 @@ export function Shell({
             setPaletteOpen(false);
             onOpenSettings();
           }}
-          onReset={() => {
-            setPaletteOpen(false);
-            context?.resetDemo();
-          }}
+          onReset={
+            context?.resetDemo
+              ? () => {
+                  setPaletteOpen(false);
+                  context.resetDemo?.();
+                }
+              : undefined
+          }
           user={currentUser}
         />
       )}

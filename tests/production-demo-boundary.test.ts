@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
+import { settlementPending } from "@/src/domain/home/metrics";
 
 const root = process.cwd();
 
@@ -24,5 +25,30 @@ describe("fronteira entre ambiente real e demonstração", () => {
 
     expect(source).not.toContain("domain/core/demo/operations");
     expect(source).not.toContain("...initialOperations");
+  });
+
+  it("mantém conta gráfica e pendências zeradas fora da demonstração", () => {
+    expect(settlementPending()).toEqual({
+      pendingCount: 0,
+      pendingAmount: 0,
+      creditCount: 0,
+      creditAmount: 0,
+    });
+    expect(settlementPending(true).pendingCount).toBeGreaterThan(0);
+  });
+
+  it("não pré-preenche formulários reais com empresas, pessoas ou valores fictícios", () => {
+    const repModal = readFileSync(join(root, "src", "features", "commercial", "modals", "rep-modal.tsx"), "utf8");
+    const financeImport = readFileSync(
+      join(root, "src", "features", "finance", "titles", "import-titles-modal.tsx"),
+      "utf8",
+    );
+    const homeMetrics = readFileSync(join(root, "src", "features", "home", "use-home-metrics.ts"), "utf8");
+
+    expect(repModal).not.toContain("Lastro Fomento Mercantil");
+    expect(repModal).not.toContain("monthlyGoal: 30_000");
+    expect(financeImport).not.toContain("GZ Transportes");
+    expect(financeImport).not.toContain("Órbita");
+    expect(homeMetrics).toContain("settlementPending(includeDemoPortfolio)");
   });
 });

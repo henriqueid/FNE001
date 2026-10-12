@@ -61,6 +61,7 @@ import { CommercialIndicatorsCard } from "./commercial-indicators-card";
 import { useQualityPolicy } from "@/src/features/risk/use-quality-policy";
 import { useMemo, useState } from "react";
 import { useStratoAuth } from "@/src/features/auth/auth-context";
+import { useCompanyDestinations } from "@/src/app/company-context";
 
 export function BriefcaseIcon() {
   return (
@@ -104,6 +105,7 @@ export default function CommercialModule({
   onNavigate,
 }: Props) {
   const isDemo = useStratoAuth()?.mode === "demo";
+  const destinations = useCompanyDestinations();
   const today = todayIso();
   // O estado comercial vive no app (vínculo único com Cadastro, Operação e Carteira).
   const setState = onState;
@@ -702,7 +704,13 @@ export default function CommercialModule({
         />
       )}
       {modal?.type === "rep" && (
-        <RepModal state={state} rep={modal.rep} onClose={() => setModal(null)} onApply={apply} />
+        <RepModal
+          state={state}
+          rep={modal.rep}
+          defaultCompany={destinations[0]?.name}
+          onClose={() => setModal(null)}
+          onApply={apply}
+        />
       )}
       {modal?.type === "rules" && <RulesModal state={state} onClose={() => setModal(null)} onApply={apply} />}
       {modal?.type === "transfer" && (

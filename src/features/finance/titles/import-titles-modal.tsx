@@ -118,9 +118,7 @@ export function ImportModal({
           rows={6}
           value={text}
           onChange={e => setText(e.target.value)}
-          placeholder={
-            "Pagar\tEnergia elétrica\tCopel\tDespesas gerais\tLastro Fomento\t01/10/2026\t15/10/2026\t1.240,50\nReceber\tTarifa de cadastro\tGZ Transportes\tTarifas e ad valorem\tÓrbita\t01/10/2026\t05/10/2026\t800,00"
-          }
+          placeholder="Cole aqui as linhas copiadas da sua planilha. Nenhum lançamento de exemplo será incluído."
         />
       </Field>
       <p className="fn-note">

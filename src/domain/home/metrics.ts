@@ -381,9 +381,17 @@ export function vehicleExposure(ops: Operation[], fin: Record<string, OpFinancia
     .sort((a, b) => b.total - a.total);
 }
 
-export function settlementPending() {
-  const pend = cedentSettlementAdjustments.filter(a => a.kind === "Pendência");
-  const cred = cedentSettlementAdjustments.filter(a => a.kind === "Crédito");
+/**
+ * Pendências e créditos da conta gráfica.
+ *
+ * O catálogo atual ainda é demonstrativo; por isso ele só pode participar dos
+ * indicadores quando a tela estiver explicitamente no modo de demonstração.
+ * No ambiente real, a ausência de uma fonte persistida significa posição zero.
+ */
+export function settlementPending(includeDemoAdjustments = false) {
+  const adjustments = includeDemoAdjustments ? cedentSettlementAdjustments : [];
+  const pend = adjustments.filter(a => a.kind === "Pendência");
+  const cred = adjustments.filter(a => a.kind === "Crédito");
   return {
     pendingCount: pend.length,
     pendingAmount: pend.reduce((s, a) => s + a.amount, 0),

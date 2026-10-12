@@ -13,11 +13,13 @@ import { useState } from "react";
 export function RepModal({
   state,
   rep,
+  defaultCompany,
   onClose,
   onApply,
 }: {
   state: CommercialState;
   rep?: SalesRep;
+  defaultCompany?: string;
   onClose: () => void;
   onApply: (r: CResult) => boolean;
 }) {
@@ -32,8 +34,8 @@ export function RepModal({
       email: "",
       phone: "",
       document: "",
-      company: "Lastro Fomento Mercantil",
-      monthlyGoal: 30_000,
+      company: defaultCompany ?? "",
+      monthlyGoal: 0,
       active: true,
       since: todayIso(),
     },

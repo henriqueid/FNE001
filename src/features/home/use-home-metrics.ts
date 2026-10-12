@@ -213,7 +213,7 @@ export function useHomeMetrics({
       t.origin === "Liberação de operação" &&
       (companyScope === "Consolidado" || t.company === companyScope),
   );
-  const pend = settlementPending();
+  const pend = settlementPending(includeDemoPortfolio);
   const team = useMemo(() => teamRows(scoped, fin, win.from, win.to, today), [scoped, fin, win, today]);
 
   /* esteira: operações em andamento, prontas e com bloqueio */

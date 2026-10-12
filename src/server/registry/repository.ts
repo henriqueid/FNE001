@@ -69,6 +69,17 @@ export async function saveCompanyProfile(
       actorId,
     )
     .run();
+  await db
+    .prepare(
+      `update private.tenant_memberships
+       set company_scopes = case
+         when company_scopes @> jsonb_build_array(?) then company_scopes
+         else company_scopes || jsonb_build_array(?)
+       end
+       where tenant_id = ? and user_id = ?`,
+    )
+    .bind(company.tradeName.trim(), company.tradeName.trim(), tenantId, actorId)
+    .run();
 }
 
 export async function loadRegistryParties(db: DecisionDatabase, tenantId: string): Promise<Party[]> {

@@ -23,7 +23,6 @@ import { emptyCommercial, seedCommercial } from "@/src/domain/commercial/seed";
 import { type CommercialState } from "@/src/domain/commercial/types";
 import { initialCedents } from "@/src/domain/core/demo/cedents";
 import { initialDebtors } from "@/src/domain/core/demo/debtors";
-import { destinations } from "@/src/domain/core/demo/companies";
 import { initialOperations } from "@/src/domain/core/demo/operations";
 import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { type Effect } from "@/src/domain/finance/ledger";
@@ -72,6 +71,7 @@ import { loadAccessDirectory, saveAccessDirectory } from "./access-directory-cli
 import { syncPublishedNotifications } from "./notification-client";
 import { useStratoAuth } from "@/src/features/auth/auth-context";
 import { loadRegistryParties, persistRegistryParty } from "./registry-client";
+import { useCompanyDestinations } from "./company-context";
 
 const CommercialModule = lazy(() => import("@/src/features/commercial/commercial-module"));
 const ControlleriaModule = lazy(() => import("@/src/features/controlleria/controlleria-module"));
@@ -110,12 +110,15 @@ const COMPANY_SCOPE_KEY = "strato-company-scope";
 export default function StratoApp() {
   const auth = useStratoAuth();
   const isDemo = auth?.mode === "demo";
+  const destinations = useCompanyDestinations();
   const deepLinkHandled = useRef(false);
   const [operations, setOperations] = useState(() => (isDemo ? initialOperations : []));
   const [debtors, setDebtors] = useState(() => (isDemo ? initialDebtors : []));
   const [selected, setSelected] = useState<Operation | null>(null);
   const [showNew, setShowNew] = useState(false);
-  const [companyScope, setCompanyScope] = useState("Consolidado");
+  const [companyScope, setCompanyScope] = useState(() =>
+    isDemo ? "Consolidado" : (destinations[0]?.name ?? "Consolidado"),
+  );
   const [storageReady, setStorageReady] = useState(false);
   const [showGuidance, setShowGuidance] = useState(true);
   const [showJourney, setShowJourney] = useState(false);
@@ -252,7 +255,7 @@ export default function StratoApp() {
     }
     setStorageReady(true);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [isDemo]);
+  }, [isDemo, destinations]);
 
   useEffect(() => {
     if (storageReady && isDemo)

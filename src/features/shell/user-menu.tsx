@@ -8,7 +8,7 @@ import { type ThemePreference } from "./use-theme";
 import { type AppUserProfile } from "@/src/domain/copilot/daily-briefing";
 import { useStratoAuth } from "@/src/features/auth/auth-context";
 
-import { destinations } from "@/src/domain/core/demo/companies";
+import { useCompanyDestinations } from "@/src/app/company-context";
 import { CheckIcon, LayersIcon, SlidersIcon, SparkIcon, SunIcon, UndoIcon, CloseIcon } from "@/src/ui/icons";
 import { useEffect, useRef, useState } from "react";
 
@@ -44,10 +44,12 @@ export function UserMenu({
   canOpenSettings?: boolean;
 }) {
   const auth = useStratoAuth();
+  const destinations = useCompanyDestinations();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const allowedDestinations = destinations.filter(
-    destination => user.companyScopes?.includes(destination.name) ?? true,
+    destination =>
+      user.access === "admin" || !user.companyScopes?.length || user.companyScopes.includes(destination.name),
   );
   const canConsolidate = user.access === "admin";
   const scopeLabel = companyScope === "Consolidado" ? "Consolidado" : companyScope;

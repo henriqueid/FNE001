@@ -5,7 +5,7 @@
  * campos próprios (limite e comercial do cedente, série do debenturista, fundo do cotista...).
  */
 import { useRegistry } from "@/src/app/registry-context";
-import { destinations } from "@/src/domain/core/demo/companies";
+import { useCompanyDestinations } from "@/src/app/company-context";
 import {
   defaultRoleData,
   roleLabel,
@@ -54,6 +54,7 @@ function MoneyInput({ id, value, onChange }: { id: string; value: number; onChan
 }
 
 export function PartyRoleFields({ party, onChange, issueFor }: Props) {
+  const destinations = useCompanyDestinations();
   const { commercial, cedents } = useRegistry();
   const data = party.roleData;
   const update = <K extends PartyRole>(role: K, patch: Partial<NonNullable<PartyRoleData[K]>>) =>

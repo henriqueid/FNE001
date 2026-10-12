@@ -4,7 +4,7 @@
  * Nova operação: cedente obrigatório (com comercial, score e limite), origem dos títulos e destino.
  */
 import { RegistryContext, useCedents } from "@/src/app/registry-context";
-import { destinations } from "@/src/domain/core/demo/companies";
+import { useCompanyDestinations } from "@/src/app/company-context";
 import { preciseMoney } from "@/src/domain/core/format";
 import {
   type Cedent,
@@ -80,6 +80,7 @@ export function NewOperationModal({
   debtors: Debtor[];
 }) {
   const registryCedents = useCedents();
+  const destinations = useCompanyDestinations();
   const registry = useContext(RegistryContext);
   const [source, setSource] = useState<OperationSource>("XML NF-e");
   const [destinationName, setDestinationName] = useState(

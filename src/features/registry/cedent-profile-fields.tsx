@@ -1,6 +1,6 @@
 "use client";
 
-import { destinations } from "@/src/domain/core/demo/companies";
+import { useCompanyDestinations } from "@/src/app/company-context";
 import type { InstitutionType } from "@/src/domain/core/types";
 import {
   type ClientComplianceProfile,
@@ -368,6 +368,7 @@ function TrancheCard({
   onChange: (next: LimitTranche) => void;
   onRemove: () => void;
 }) {
+  const destinations = useCompanyDestinations();
   const set = (patch: Partial<LimitTranche>) => onChange({ ...tranche, ...patch });
   return (
     <article className="rg-tranche-card">

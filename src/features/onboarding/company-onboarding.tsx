@@ -3,6 +3,7 @@
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { type CompanyProfile } from "@/src/domain/company/profile";
 import { getStratoTenantId } from "@/src/app/tenant";
+import { CompanyProvider } from "@/src/app/company-context";
 import styles from "./company-onboarding.module.css";
 
 const emptyCompany: CompanyProfile = {
@@ -19,7 +20,7 @@ const emptyCompany: CompanyProfile = {
 
 export function CompanyOnboarding({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<"loading" | "required" | "ready">("loading");
-  const [company, setCompany] = useState(emptyCompany);
+  const [company, setCompany] = useState<CompanyProfile>(emptyCompany);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   useEffect(() => {
@@ -28,7 +29,10 @@ export function CompanyOnboarding({ children }: { children: ReactNode }) {
       .then(async response => {
         if (!response.ok) throw new Error("Não foi possível consultar a empresa.");
         const body = (await response.json()) as { company: CompanyProfile | null };
-        if (active) setStatus(body.company ? "ready" : "required");
+        if (active) {
+          if (body.company) setCompany(body.company);
+          setStatus(body.company ? "ready" : "required");
+        }
       })
       .catch(reason => {
         if (active) {
@@ -40,7 +44,7 @@ export function CompanyOnboarding({ children }: { children: ReactNode }) {
       active = false;
     };
   }, []);
-  if (status === "ready") return children;
+  if (status === "ready") return <CompanyProvider value={company}>{children}</CompanyProvider>;
   if (status === "loading")
     return (
       <main className={styles.stage}>
@@ -59,8 +63,9 @@ export function CompanyOnboarding({ children }: { children: ReactNode }) {
         body: JSON.stringify(company),
       });
       const raw = await response.text();
-      const body = raw ? (JSON.parse(raw) as { error?: string }) : {};
+      const body = raw ? (JSON.parse(raw) as { error?: string; company?: CompanyProfile }) : {};
       if (!response.ok) throw new Error(body.error ?? "Não foi possível salvar a empresa.");
+      if (body.company) setCompany(body.company);
       setStatus("ready");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Não foi possível salvar a empresa.");

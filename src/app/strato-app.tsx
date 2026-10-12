@@ -41,10 +41,10 @@ import { Shell } from "@/src/features/shell/shell";
 import { type AppView, ShellContext } from "@/src/features/shell/shell-context";
 import { RegistryContext, type RegistryValue } from "./registry-context";
 import { EligibilityPolicyProvider } from "./eligibility-policy-context";
-import { seedEligibilityPolicies } from "@/src/domain/eligibility/policy-library";
-import { seedIntegrationState } from "@/src/domain/integrations/model";
+import { emptyEligibilityPolicies, seedEligibilityPolicies } from "@/src/domain/eligibility/policy-library";
+import { emptyIntegrationState, seedIntegrationState } from "@/src/domain/integrations/model";
 import { IntegrationProvider } from "./integration-context";
-import { seedOperationalDefaults } from "@/src/domain/registry/operational-profile";
+import { emptyOperationalDefaults, seedOperationalDefaults } from "@/src/domain/registry/operational-profile";
 import { buildDailyBriefing, demoAdminUser, operationsForUser } from "@/src/domain/copilot/daily-briefing";
 import { buildAttentionItems } from "@/src/domain/copilot/attention-center";
 import {
@@ -65,7 +65,7 @@ import {
   seedAccessState,
   stopUserPreview,
 } from "@/src/domain/access/model";
-import { seedIntelligenceState } from "@/src/domain/intelligence/model";
+import { emptyIntelligenceState, seedIntelligenceState } from "@/src/domain/intelligence/model";
 import { type PublishedNotification } from "@/src/domain/notifications/model";
 import { loadAccessDirectory, saveAccessDirectory } from "./access-directory-client";
 import { syncPublishedNotifications } from "./notification-client";
@@ -125,7 +125,7 @@ export default function StratoApp() {
   const [confirmReset, setConfirmReset] = useState(false);
   const [access, setAccess] = useState(() => seedAccessState());
   const [accessServerReady, setAccessServerReady] = useState(isDemo);
-  const [intelligence, setIntelligence] = useState(() => seedIntelligenceState());
+  const [intelligence, setIntelligence] = useState(() => (isDemo ? seedIntelligenceState() : emptyIntelligenceState()));
   const currentUser = useMemo(() => activeUser(access), [access]);
   const sessionUser = useMemo(() => authenticatedUser(access), [access]);
   const [view, setView] = useState<AppView>("home");
@@ -142,9 +142,11 @@ export default function StratoApp() {
   const [commercial, setCommercial] = useState<CommercialState>(() => (isDemo ? seedCommercial() : emptyCommercial()));
   // Cadastro de pessoas (cedentes, sacados, fornecedores, representantes, investidores...).
   const [savedParties, setSavedParties] = useState<Party[]>(() => (isDemo ? seedParties() : []));
-  const [policies, setPolicies] = useState(() => seedEligibilityPolicies());
-  const [integrations, setIntegrations] = useState(() => seedIntegrationState());
-  const [operationalDefaults, setOperationalDefaults] = useState(() => seedOperationalDefaults());
+  const [policies, setPolicies] = useState(() => (isDemo ? seedEligibilityPolicies() : emptyEligibilityPolicies()));
+  const [integrations, setIntegrations] = useState(() => (isDemo ? seedIntegrationState() : emptyIntegrationState()));
+  const [operationalDefaults, setOperationalDefaults] = useState(() =>
+    isDemo ? seedOperationalDefaults() : emptyOperationalDefaults(),
+  );
   const [tasks, setTasks] = useState(() => seedTaskState());
   const [publishedNotifications, setPublishedNotifications] = useState<PublishedNotification[]>([]);
   const [taskClock, setTaskClock] = useState(() => Date.now());
@@ -221,8 +223,12 @@ export default function StratoApp() {
   // A empresa do título acompanha a projeção de caixa do Financeiro (antes entrava em qualquer recorte).
   const carteiraFlows = useMemo(
     () =>
-      portfolioTitles(operations).map(title => ({ date: title.dueDate, amount: title.amount, company: title.vehicle })),
-    [operations],
+      portfolioTitles(operations, isDemo).map(title => ({
+        date: title.dueDate,
+        amount: title.amount,
+        company: title.vehicle,
+      })),
+    [operations, isDemo],
   );
 
   // Restaura o que foi salvo depois de montar (evita divergência na hidratação do SSR).
@@ -612,34 +618,42 @@ export default function StratoApp() {
         user: currentUser,
         operations,
         financials: homeFinancials,
-        titles: portfolioTitles(operations),
+        titles: portfolioTitles(operations, isDemo),
         referenceDate: today,
         revenueTarget: operationalDefaults.revenueGoals.consolidated.mes,
         scope: userScope,
       }),
-    [operations, homeFinancials, today, operationalDefaults.revenueGoals.consolidated.mes, userScope, currentUser],
+    [
+      operations,
+      homeFinancials,
+      today,
+      operationalDefaults.revenueGoals.consolidated.mes,
+      userScope,
+      currentUser,
+      isDemo,
+    ],
   );
   const systemAttentionItems = useMemo(
     () =>
       buildAttentionItems({
         operations,
-        titles: portfolioTitles(operations),
+        titles: portfolioTitles(operations, isDemo),
         user: demoAdminUser,
         referenceDate: today,
         scope: userScope,
       }),
-    [operations, today, userScope],
+    [operations, today, userScope, isDemo],
   );
   const detectedAttentionItems = useMemo(
     () =>
       buildAttentionItems({
         operations,
-        titles: portfolioTitles(operations),
+        titles: portfolioTitles(operations, isDemo),
         user: currentUser,
         referenceDate: today,
         scope: userScope,
       }),
-    [operations, today, userScope, currentUser],
+    [operations, today, userScope, currentUser, isDemo],
   );
   const publishedAttentionItems = useMemo(
     () =>
@@ -777,6 +791,7 @@ export default function StratoApp() {
         onGoOperations={() => navigate("operations")}
         onNew={can(currentUser, "operations:edit") ? () => setShowNew(true) : undefined}
         revenueGoals={operationalDefaults.revenueGoals}
+        includeDemoPortfolio={isDemo}
       />
     );
   else if (view === "registry")

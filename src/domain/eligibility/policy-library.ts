@@ -8,6 +8,8 @@ export type EligibilityPolicyState = {
   policies: EligibilityPolicy[];
 };
 
+export const emptyEligibilityPolicies = (): EligibilityPolicyState => ({ version: 2, policies: [] });
+
 export function seedEligibilityPolicies(): EligibilityPolicyState {
   const names: Record<string, string> = {
     "Lastro Prime FIDC · Classe Sênior": "Política Lastro Prime FIDC",

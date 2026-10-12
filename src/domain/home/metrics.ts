@@ -2,6 +2,7 @@
 // Funções puras: recebem operações, carteira, cadastros e parâmetros e devolvem os agregados.
 
 import { initialCedents } from "@/src/domain/core/demo/cedents";
+import { initialOperations } from "@/src/domain/core/demo/operations";
 import { cedentPortfolioTitles, cedentSettlementAdjustments } from "@/src/domain/core/demo/portfolio";
 import { stages } from "@/src/domain/core/stages";
 import { type Cedent, type Debtor, type Operation } from "@/src/domain/core/types";
@@ -192,8 +193,17 @@ export type PortfolioTitle = {
 
 const cedentName = (doc: string, fallback: string) => initialCedents.find(c => c.document === doc)?.name ?? fallback;
 
-export function portfolioTitles(ops: Operation[]): PortfolioTitle[] {
-  const base: PortfolioTitle[] = cedentPortfolioTitles.map(t => {
+const demoOperationIds = new Set(initialOperations.map(operation => operation.id));
+
+/**
+ * Consolida a carteira corrente. O legado de demonstração só entra quando o chamador
+ * pede explicitamente ou quando a própria lista contém operações do cenário demo.
+ */
+export function portfolioTitles(
+  ops: Operation[],
+  includeDemoPortfolio = ops.some(op => demoOperationIds.has(op.id)),
+): PortfolioTitle[] {
+  const base: PortfolioTitle[] = (includeDemoPortfolio ? cedentPortfolioTitles : []).map(t => {
     const owner = t.groupOwnerDocument ?? t.cedentDocument;
     // Carteira anterior: fica no veículo em que o cedente opera (até a Carteira ter o veículo por título).
     const vehicle = ops.find(op => op.document === t.cedentDocument || op.document === owner)?.vehicle;

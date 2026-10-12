@@ -141,6 +141,16 @@ export const seedOperationalDefaults = (): OperationalDefaultsState => ({
   },
 });
 
+/** Parâmetros estruturais preservados, mas sem metas financeiras fictícias. */
+export const emptyOperationalDefaults = (): OperationalDefaultsState => ({
+  version: 1,
+  general: { ...defaultOperationalParameters },
+  revenueGoals: {
+    consolidated: { dia: 0, semana: 0, mes: 0 },
+    byVehicle: {},
+  },
+});
+
 export function migrateOperationalDefaults(value: unknown): OperationalDefaultsState {
   if (!value || typeof value !== "object") return seedOperationalDefaults();
   const stored = value as Partial<OperationalDefaultsState>;

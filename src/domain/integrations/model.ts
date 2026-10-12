@@ -133,6 +133,14 @@ export function seedIntegrationState(): IntegrationState {
   };
 }
 
+/** Catálogo real sem integrações ficticiamente conectadas. */
+export function emptyIntegrationState(): IntegrationState {
+  return {
+    version: 1,
+    providers: providerCatalog.map(provider => ({ ...provider, mode: "NAO_CONFIGURADA" })),
+  };
+}
+
 export function migrateIntegrationState(value: unknown): IntegrationState {
   const seed = seedIntegrationState();
   if (!value || typeof value !== "object") return seed;

@@ -62,6 +62,7 @@ export type HomeMetricsInput = {
   now: Date;
   qualityPolicy: QualityPolicy;
   revenueGoals: OperationalDefaultsState["revenueGoals"];
+  includeDemoPortfolio?: boolean;
 };
 
 export type HealthTone = "critical" | "watch" | "ok";
@@ -80,6 +81,7 @@ export function useHomeMetrics({
   now,
   qualityPolicy,
   revenueGoals,
+  includeDemoPortfolio = false,
 }: HomeMetricsInput) {
   const registryCedents = useCedents();
   const fin = financials;
@@ -116,8 +118,11 @@ export function useHomeMetrics({
 
   // carteira: títulos em aberto + títulos das operações liberadas ao financeiro
   const titles = useMemo(
-    () => portfolioTitles(operations).filter(t => companyScope === "Consolidado" || t.vehicle === companyScope),
-    [operations, companyScope],
+    () =>
+      portfolioTitles(operations, includeDemoPortfolio).filter(
+        t => companyScope === "Consolidado" || t.vehicle === companyScope,
+      ),
+    [operations, companyScope, includeDemoPortfolio],
   );
   const portfolioTotal = titles.reduce((s, t) => s + t.amount, 0);
   const agingBuckets = useMemo(() => aging(titles, today), [titles, today]);

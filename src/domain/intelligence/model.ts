@@ -22,6 +22,18 @@ export const seedIntelligenceState = (): IntelligenceState => ({
   updatedAt: new Date().toISOString(),
 });
 
+/** Estado inicial de uma organização real antes de contratar e configurar IA. */
+export const emptyIntelligenceState = (tenantId = "strato-demo"): IntelligenceState => ({
+  version: 1,
+  tenantId,
+  contracted: false,
+  enabled: false,
+  status: "AI_DISABLED",
+  monthlyTokenBudget: 0,
+  usedTokens: 0,
+  updatedAt: new Date().toISOString(),
+});
+
 export function migrateIntelligenceState(value: unknown): IntelligenceState {
   const seed = seedIntelligenceState();
   if (!value || typeof value !== "object") return seed;

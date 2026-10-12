@@ -58,7 +58,7 @@ try {
         (event_id, tenant_id, actor_id, subject_user_id, event_type, payload, created_at)
       values (
         ${randomUUID()}, ${user.tenant_id}, ${user.user_id}, ${user.user_id},
-        'ADMIN_CREDENTIAL_BOOTSTRAPPED', ${JSON.stringify({ email })}::jsonb, now()
+        'ADMIN_CREDENTIAL_BOOTSTRAPPED', ${transaction.json({ email })}, now()
       )`;
     return user;
   });

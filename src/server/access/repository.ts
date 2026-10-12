@@ -195,7 +195,7 @@ export async function registerAccessRequest(
       input.tenantId,
       userId,
       userId,
-      JSON.stringify({ email: normalizedEmail, requestedDepartment: input.department }),
+      { email: normalizedEmail, requestedDepartment: input.department },
       now,
     )
     .run();
@@ -265,7 +265,7 @@ export async function createManagedAccessUser(
         input.tenantId,
         input.actorId,
         userId,
-        JSON.stringify({ email: normalizedEmail, department: input.department }),
+        { email: normalizedEmail, department: input.department },
         now,
       ),
   ];
@@ -392,10 +392,10 @@ export async function saveAccessDirectory(db: DecisionDatabase, tenantId: string
         user.managerUserId ?? null,
         user.commercialRepId ?? null,
         user.accountManagerId ?? null,
-        JSON.stringify(user.responsibilities),
+        user.responsibilities,
         user.operationOwner ?? null,
         user.substituteUserId ?? null,
-        JSON.stringify(user.cedentDocuments ?? []),
+        user.cedentDocuments ?? [],
         user.revenueGoalShare ?? null,
         now,
       )
@@ -410,7 +410,7 @@ export async function saveAccessDirectory(db: DecisionDatabase, tenantId: string
          VALUES (?, ?, ?, ?)
          ON CONFLICT(tenant_id, user_id) DO UPDATE SET company_scopes = excluded.company_scopes`,
       )
-      .bind(tenantId, user.id, JSON.stringify(user.companyScopes), now)
+      .bind(tenantId, user.id, user.companyScopes, now)
       .run();
     await db
       .prepare("DELETE FROM private.access_permissions WHERE tenant_id = ? AND user_id = ?")
@@ -447,7 +447,7 @@ export async function saveAccessDirectory(db: DecisionDatabase, tenantId: string
         tenantId,
         actorId,
         user.id,
-        JSON.stringify({
+        {
           role: user.role,
           department: user.department,
           access: user.access,
@@ -455,7 +455,7 @@ export async function saveAccessDirectory(db: DecisionDatabase, tenantId: string
           companyScopes: user.companyScopes,
           permissions: user.permissions,
           authorityIds: user.authorityIds ?? [],
-        }),
+        },
         now,
       )
       .run();

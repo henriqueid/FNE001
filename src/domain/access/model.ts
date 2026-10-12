@@ -16,6 +16,8 @@ export type Permission =
 
 export type AccessUser = AppUserProfile & {
   email: string;
+  loginName?: string;
+  cpf?: string;
   status: "pending" | "active" | "suspended";
   tenantIds: string[];
   authorityIds?: string[];
@@ -86,6 +88,7 @@ export const seedAccessState = (): AccessState => ({
       id: "user-henrique-admin",
       name: "Henrique",
       email: "henrique@strato.local",
+      loginName: "henrique",
       role: "Administrador",
       department: "Diretoria",
       access: "admin",
@@ -100,6 +103,7 @@ export const seedAccessState = (): AccessState => ({
       id: "user-marina-ops",
       name: "Marina Alves",
       email: "marina.alves@strato.local",
+      loginName: "marina.alves",
       role: "Analista operacional",
       department: "Operações",
       access: "operator",
@@ -115,6 +119,7 @@ export const seedAccessState = (): AccessState => ({
       id: "user-gestor-ops",
       name: "Eduardo Martins",
       email: "eduardo.martins@strato.local",
+      loginName: "eduardo.martins",
       role: "Gerente de operações",
       department: "Operações",
       access: "manager",
@@ -128,6 +133,7 @@ export const seedAccessState = (): AccessState => ({
       id: "user-rafael-comercial",
       name: "Rafael Menezes",
       email: "rafael.menezes@strato.local",
+      loginName: "rafael.menezes",
       role: "Executivo comercial",
       department: "Comercial",
       access: "operator",
@@ -143,6 +149,7 @@ export const seedAccessState = (): AccessState => ({
       id: "user-bruno-contas",
       name: "Bruno Teixeira",
       email: "bruno.teixeira@strato.local",
+      loginName: "bruno.teixeira",
       role: "Gerente de contas",
       department: "Comercial",
       access: "manager",
@@ -157,6 +164,7 @@ export const seedAccessState = (): AccessState => ({
       id: "user-lucas-risco",
       name: "Lucas Ribeiro",
       email: "lucas.ribeiro@strato.local",
+      loginName: "lucas.ribeiro",
       role: "Analista de risco",
       department: "Risco e crédito",
       access: "operator",
@@ -218,7 +226,15 @@ export function updateAccessUser(state: AccessState, user: AccessUser): AccessSt
 }
 
 export function addAccessUser(state: AccessState, user: AccessUser): AccessState {
-  if (state.users.some(current => current.id === user.id || current.email.toLowerCase() === user.email.toLowerCase()))
+  if (
+    state.users.some(
+      current =>
+        current.id === user.id ||
+        (!!user.email && current.email.toLowerCase() === user.email.toLowerCase()) ||
+        (!!user.loginName && current.loginName?.toLowerCase() === user.loginName.toLowerCase()) ||
+        (!!user.cpf && current.cpf === user.cpf),
+    )
+  )
     return state;
   return { ...state, users: [...state.users, user] };
 }

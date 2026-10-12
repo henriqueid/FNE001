@@ -5,6 +5,7 @@ import { getStratoTenantId } from "@/src/app/tenant";
 import { type UserDepartment } from "@/src/domain/copilot/daily-briefing";
 import { StratoAuthProvider, type StratoAuthMode } from "./auth-context";
 import { CompanyOnboarding } from "@/src/features/onboarding/company-onboarding";
+import { formatCpf, normalizeCpf } from "@/src/domain/access/identity";
 import styles from "./auth-gate.module.css";
 
 const TENANT_ID = getStratoTenantId();
@@ -36,7 +37,10 @@ async function verifyAccess() {
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const [gate, setGate] = useState<GateState>({ status: "loading" });
+  const [identifier, setIdentifier] = useState("");
   const [email, setEmail] = useState("");
+  const [loginName, setLoginName] = useState("");
+  const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -87,7 +91,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
         method: "POST",
         credentials: "same-origin",
         headers: { "content-type": "application/json", "x-strato-tenant-id": TENANT_ID },
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({ identifier: identifier.trim(), password }),
       });
       const body = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -113,7 +117,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       const response = await fetch("/api/auth/requests", {
         method: "POST",
         headers: { "content-type": "application/json", "x-strato-tenant-id": TENANT_ID },
-        body: JSON.stringify({ name, email: email.trim(), password, department }),
+        body: JSON.stringify({ name, loginName, cpf, email: email.trim(), password, department }),
       });
       const body = (await response.json()) as { error?: string; message?: string; status?: string };
       if (!response.ok) {
@@ -197,14 +201,39 @@ export function AuthGate({ children }: { children: ReactNode }) {
               <input value={name} onChange={event => setName(event.target.value)} autoComplete="name" required />
             </label>
           )}
+          {registering && (
+            <label>
+              <span>Login personalizado</span>
+              <input
+                value={loginName}
+                onChange={event => setLoginName(event.target.value)}
+                placeholder="ex.: joao.silva"
+                autoComplete="username"
+                required
+              />
+            </label>
+          )}
+          {registering && (
+            <label>
+              <span>CPF</span>
+              <input
+                value={formatCpf(cpf)}
+                onChange={event => setCpf(normalizeCpf(event.target.value))}
+                placeholder="000.000.000-00"
+                inputMode="numeric"
+                autoComplete="off"
+                required
+              />
+            </label>
+          )}
           <label>
-            <span>E-mail corporativo</span>
+            <span>{registering ? "E-mail corporativo" : "Login, CPF ou e-mail"}</span>
             <input
-              type="email"
+              type={registering ? "email" : "text"}
               autoComplete="username"
-              value={email}
-              onChange={event => setEmail(event.target.value)}
-              placeholder="nome@empresa.com.br"
+              value={registering ? email : identifier}
+              onChange={event => (registering ? setEmail(event.target.value) : setIdentifier(event.target.value))}
+              placeholder={registering ? "nome@empresa.com.br" : "seu.login, CPF ou e-mail"}
               required
             />
           </label>

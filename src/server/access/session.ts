@@ -32,8 +32,8 @@ export async function createUserSession(db: DecisionDatabase, userId: string) {
   return { token, expiresAt };
 }
 
-export async function loginSession(db: DecisionDatabase, tenantId: string, email: string, password: string) {
-  const userId = await authenticateCredentials(db, tenantId, email, password);
+export async function loginSession(db: DecisionDatabase, tenantId: string, identifier: string, password: string) {
+  const userId = await authenticateCredentials(db, tenantId, identifier, password);
   return userId ? createUserSession(db, userId) : null;
 }
 

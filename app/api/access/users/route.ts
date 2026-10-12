@@ -2,11 +2,17 @@ import { type AccessState } from "@/src/domain/access/model";
 import { type UserDepartment } from "@/src/domain/copilot/daily-briefing";
 import { hashPassword, passwordValidationError } from "@/src/server/access/password";
 import {
-  AccessEmailConflictError,
+  AccessIdentityConflictError,
   createManagedAccessUser,
   loadAccessDirectory,
   saveAccessDirectory,
 } from "@/src/server/access/repository";
+import {
+  cpfValidationError,
+  loginNameValidationError,
+  normalizeCpf,
+  normalizeLoginName,
+} from "@/src/domain/access/identity";
 import { sessionPrincipal } from "@/src/server/access/session";
 import { getDatabase } from "@/src/server/database/postgres";
 
@@ -44,12 +50,22 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
     name?: string;
     email?: string;
+    loginName?: string;
+    cpf?: string;
     password?: string;
     department?: UserDepartment;
   };
   const name = body.name?.trim() ?? "";
   const email = body.email?.trim().toLowerCase() ?? "";
-  if (name.length < 3 || !/^\S+@\S+\.\S+$/.test(email)) return json({ error: "Informe nome e login válidos." }, 400);
+  const loginName = normalizeLoginName(body.loginName ?? "");
+  const cpf = normalizeCpf(body.cpf ?? "");
+  if (name.length < 3) return json({ error: "Informe o nome completo." }, 400);
+  if (email && !/^\S+@\S+\.\S+$/.test(email))
+    return json({ error: "Informe um e-mail válido ou deixe o campo vazio." }, 400);
+  const loginError = loginNameValidationError(loginName);
+  if (loginError) return json({ error: loginError }, 400);
+  const cpfError = cpfValidationError(cpf);
+  if (cpfError) return json({ error: cpfError }, 400);
   const passwordError = passwordValidationError(body.password ?? "");
   if (passwordError) return json({ error: passwordError }, 400);
   const department = departments.includes(body.department as UserDepartment) ? body.department! : "Operações";
@@ -58,7 +74,9 @@ export async function POST(request: Request) {
       tenantId: access.tenantId,
       actorId: access.principal.id,
       name,
-      email,
+      email: email || undefined,
+      loginName,
+      cpf,
       department,
       passwordHash: await hashPassword(body.password!),
     });
@@ -70,7 +88,7 @@ export async function POST(request: Request) {
       201,
     );
   } catch (error) {
-    if (error instanceof AccessEmailConflictError) return json({ error: error.message }, 409);
+    if (error instanceof AccessIdentityConflictError) return json({ error: error.message }, 409);
     throw error;
   }
 }

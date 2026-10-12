@@ -14,6 +14,7 @@ import { createManagedUser } from "@/src/app/access-directory-client";
 import { useCompanyDestinations } from "@/src/app/company-context";
 import { getStratoTenantId } from "@/src/app/tenant";
 import { type UserDepartment } from "@/src/domain/copilot/daily-briefing";
+import { formatCpf, normalizeCpf } from "@/src/domain/access/identity";
 import { type FormEvent, useMemo, useState } from "react";
 
 const departments: UserDepartment[] = [
@@ -59,7 +60,14 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
   const [creating, setCreating] = useState(false);
   const [savingNewUser, setSavingNewUser] = useState(false);
   const [createError, setCreateError] = useState("");
-  const [draft, setDraft] = useState({ name: "", email: "", password: "", department: "Operações" as UserDepartment });
+  const [draft, setDraft] = useState({
+    name: "",
+    loginName: "",
+    cpf: "",
+    email: "",
+    password: "",
+    department: "Operações" as UserDepartment,
+  });
   const selected = state.users.find(user => user.id === selectedId) ?? state.users[0];
   const active = state.users.find(user => user.id === state.previewUserId) ?? authenticatedUser(state);
   const actor = authenticatedUser(state);
@@ -80,7 +88,7 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
       const result = await createManagedUser(getStratoTenantId(), draft);
       onState(result.state);
       setSelectedId(result.createdUserId);
-      setDraft({ name: "", email: "", password: "", department: "Operações" });
+      setDraft({ name: "", loginName: "", cpf: "", email: "", password: "", department: "Operações" });
       setCreating(false);
     } catch (error) {
       setCreateError(error instanceof Error ? error.message : "Não foi possível adicionar o usuário.");
@@ -173,7 +181,11 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
             <div>
               <small>PERFIL SELECIONADO</small>
               <h3>{selected.name}</h3>
-              <p>{selected.email}</p>
+              <p>
+                {selected.loginName ? `@${selected.loginName}` : "Sem login personalizado"}
+                {selected.cpf ? ` · CPF ${formatCpf(selected.cpf)}` : ""}
+                {selected.email ? ` · ${selected.email}` : ""}
+              </p>
             </div>
             {selected.status === "pending" ? (
               <button type="button" onClick={() => save({ status: "active" })}>
@@ -393,14 +405,34 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
                 />
               </label>
               <label>
-                Login (e-mail)
+                Login personalizado
+                <input
+                  value={draft.loginName}
+                  onChange={event => setDraft(current => ({ ...current, loginName: event.target.value }))}
+                  placeholder="ex.: joao.silva"
+                  autoComplete="off"
+                  required
+                />
+              </label>
+              <label>
+                CPF
+                <input
+                  value={formatCpf(draft.cpf)}
+                  onChange={event => setDraft(current => ({ ...current, cpf: normalizeCpf(event.target.value) }))}
+                  placeholder="000.000.000-00"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  required
+                />
+              </label>
+              <label>
+                E-mail para contato (opcional)
                 <input
                   type="email"
                   value={draft.email}
                   onChange={event => setDraft(current => ({ ...current, email: event.target.value }))}
                   placeholder="nome@empresa.com.br"
                   autoComplete="off"
-                  required
                 />
               </label>
               <label>

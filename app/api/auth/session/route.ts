@@ -23,7 +23,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const db = getDatabase();
   const url = new URL(request.url);
-  const body = (await request.json().catch(() => ({}))) as { mode?: string; email?: string; password?: string };
+  const body = (await request.json().catch(() => ({}))) as {
+    mode?: string;
+    identifier?: string;
+    email?: string;
+    password?: string;
+  };
   let session;
   if (body.mode === "demo") {
     if (url.hostname !== "localhost" && url.hostname !== "127.0.0.1")
@@ -31,9 +36,11 @@ export async function POST(request: Request) {
     session = await createDemoSession(db);
   } else {
     const tenantId = request.headers.get("x-strato-tenant-id")?.trim();
-    if (!tenantId || !body.email?.trim() || !body.password) return json({ error: "Informe e-mail e senha." }, 400);
-    session = await loginSession(db, tenantId, body.email, body.password);
-    if (!session) return json({ error: "E-mail, senha ou acesso inválido." }, 401);
+    const identifier = body.identifier?.trim() || body.email?.trim();
+    if (!tenantId || !identifier || !body.password)
+      return json({ error: "Informe login, CPF ou e-mail e senha." }, 400);
+    session = await loginSession(db, tenantId, identifier, body.password);
+    if (!session) return json({ error: "Login, CPF, e-mail, senha ou acesso inválido." }, 401);
   }
   return json({ authenticated: true, expiresAt: session.expiresAt }, 201, {
     "set-cookie": sessionCookie(session.token, session.expiresAt, url.protocol === "https:"),

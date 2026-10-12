@@ -15,7 +15,7 @@ export async function loadAccessDirectory(tenantId: string) {
 
 export async function createManagedUser(
   tenantId: string,
-  input: { name: string; email: string; password: string; department: string },
+  input: { name: string; email: string; loginName: string; cpf: string; password: string; department: string },
 ) {
   const response = await authenticatedFetch(
     "/api/access/users",

@@ -5,6 +5,7 @@ import {
   type AccessUser,
   type Permission,
 } from "@/src/domain/access/model";
+import { normalizeCpf, normalizeLoginName } from "@/src/domain/access/identity";
 import { type DecisionDatabase } from "@/src/server/decisions/repository";
 import { verifyPassword } from "./password";
 
@@ -99,9 +100,15 @@ type CredentialRow = {
   locked_until: string | null;
 };
 
-export async function authenticateCredentials(db: DecisionDatabase, tenantId: string, email: string, password: string) {
+export async function authenticateCredentials(
+  db: DecisionDatabase,
+  tenantId: string,
+  identifier: string,
+  password: string,
+) {
   await seedAccessDirectory(db);
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedIdentifier = identifier.trim().toLowerCase();
+  const normalizedCpf = normalizeCpf(identifier);
   const credential = await db
     .prepare(
       `SELECT c.user_id, c.password_hash, c.status AS credential_status,
@@ -109,9 +116,11 @@ export async function authenticateCredentials(db: DecisionDatabase, tenantId: st
        FROM private.access_credentials c
        JOIN private.access_users u ON u.user_id = c.user_id
        JOIN private.tenant_memberships m ON m.user_id = u.user_id AND m.tenant_id = ?
-       WHERE lower(u.email) = ?`,
+       WHERE lower(COALESCE(u.email, '')) = ?
+          OR lower(COALESCE(u.login_name, '')) = ?
+          OR COALESCE(u.cpf, '') = ?`,
     )
-    .bind(tenantId, normalizedEmail)
+    .bind(tenantId, normalizedIdentifier, normalizedIdentifier, normalizedCpf)
     .first<CredentialRow>();
   const now = new Date();
   if (
@@ -146,25 +155,38 @@ export async function authenticateCredentials(db: DecisionDatabase, tenantId: st
 
 export async function registerAccessRequest(
   db: DecisionDatabase,
-  input: { tenantId: string; name: string; email: string; department: AccessUser["department"]; passwordHash: string },
+  input: {
+    tenantId: string;
+    name: string;
+    email: string;
+    loginName: string;
+    cpf: string;
+    department: AccessUser["department"];
+    passwordHash: string;
+  },
 ) {
   await seedAccessDirectory(db);
   const now = new Date().toISOString();
   const normalizedEmail = input.email.trim().toLowerCase();
+  const normalizedLoginName = normalizeLoginName(input.loginName);
+  const normalizedCpf = normalizeCpf(input.cpf);
   const existing = await db
-    .prepare("SELECT user_id, status FROM private.access_users WHERE lower(email) = ?")
-    .bind(normalizedEmail)
+    .prepare(
+      `SELECT user_id, status FROM private.access_users
+       WHERE lower(COALESCE(email, '')) = ? OR lower(COALESCE(login_name, '')) = ? OR cpf = ?`,
+    )
+    .bind(normalizedEmail, normalizedLoginName, normalizedCpf)
     .first<{ user_id: string; status: AccessUser["status"] }>();
   if (existing) return { userId: existing.user_id, status: "existing" } as const;
   const userId = `user-${crypto.randomUUID()}`;
   await db
     .prepare(
       `INSERT INTO private.access_users (
-        user_id, email, name, role, department, access_level, status,
+        user_id, email, login_name, cpf, name, role, department, access_level, status,
         manager_user_id, commercial_rep_id, account_manager_id, updated_at
-      ) VALUES (?, ?, ?, 'Aguardando definição', ?, 'operator', 'pending', NULL, NULL, NULL, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, 'Aguardando definição', ?, 'operator', 'pending', NULL, NULL, NULL, ?)`,
     )
-    .bind(userId, normalizedEmail, input.name.trim(), input.department, now)
+    .bind(userId, normalizedEmail, normalizedLoginName, normalizedCpf, input.name.trim(), input.department, now)
     .run();
   await db
     .prepare(
@@ -195,14 +217,19 @@ export async function registerAccessRequest(
       input.tenantId,
       userId,
       userId,
-      { email: normalizedEmail, requestedDepartment: input.department },
+      {
+        email: normalizedEmail,
+        loginName: normalizedLoginName,
+        cpfEnding: normalizedCpf.slice(-4),
+        requestedDepartment: input.department,
+      },
       now,
     )
     .run();
   return { userId, status: "pending" } as const;
 }
 
-export class AccessEmailConflictError extends Error {}
+export class AccessIdentityConflictError extends Error {}
 
 export async function createManagedAccessUser(
   db: DecisionDatabase,
@@ -210,19 +237,26 @@ export async function createManagedAccessUser(
     tenantId: string;
     actorId: string;
     name: string;
-    email: string;
+    email?: string;
+    loginName: string;
+    cpf: string;
     department: AccessUser["department"];
     passwordHash: string;
   },
 ) {
   await seedAccessDirectory(db);
   const now = new Date().toISOString();
-  const normalizedEmail = input.email.trim().toLowerCase();
+  const normalizedEmail = input.email?.trim().toLowerCase() || null;
+  const normalizedLoginName = normalizeLoginName(input.loginName);
+  const normalizedCpf = normalizeCpf(input.cpf);
   const existing = await db
-    .prepare("SELECT user_id FROM private.access_users WHERE lower(email) = ?")
-    .bind(normalizedEmail)
+    .prepare(
+      `SELECT user_id FROM private.access_users
+       WHERE lower(COALESCE(email, '')) = ? OR lower(COALESCE(login_name, '')) = ? OR cpf = ?`,
+    )
+    .bind(normalizedEmail ?? "", normalizedLoginName, normalizedCpf)
     .first<{ user_id: string }>();
-  if (existing) throw new AccessEmailConflictError("Já existe um usuário ou solicitação com este e-mail.");
+  if (existing) throw new AccessIdentityConflictError("E-mail, login personalizado ou CPF já está em uso.");
 
   const userId = `user-${crypto.randomUUID()}`;
   const permissions = permissionsFor(input.department, "operator");
@@ -230,11 +264,11 @@ export async function createManagedAccessUser(
     db
       .prepare(
         `INSERT INTO private.access_users (
-          user_id, email, name, role, department, access_level, status,
+          user_id, email, login_name, cpf, name, role, department, access_level, status,
           manager_user_id, commercial_rep_id, account_manager_id, updated_at
-        ) VALUES (?, ?, ?, 'Aguardando definição', ?, 'operator', 'pending', NULL, NULL, NULL, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, 'Aguardando definição', ?, 'operator', 'pending', NULL, NULL, NULL, ?)`,
       )
-      .bind(userId, normalizedEmail, input.name.trim(), input.department, now),
+      .bind(userId, normalizedEmail, normalizedLoginName, normalizedCpf, input.name.trim(), input.department, now),
     db
       .prepare(
         "INSERT INTO private.tenant_memberships (tenant_id, user_id, company_scopes, created_at) VALUES (?, ?, '[]'::jsonb, ?)",
@@ -265,7 +299,12 @@ export async function createManagedAccessUser(
         input.tenantId,
         input.actorId,
         userId,
-        { email: normalizedEmail, department: input.department },
+        {
+          email: normalizedEmail,
+          loginName: normalizedLoginName,
+          cpfEnding: normalizedCpf.slice(-4),
+          department: input.department,
+        },
         now,
       ),
   ];
@@ -283,7 +322,9 @@ export async function revokeSession(db: DecisionDatabase, tokenHash: string) {
 
 type AccessUserRow = {
   user_id: string;
-  email: string;
+  email: string | null;
+  login_name: string | null;
+  cpf: string | null;
   name: string;
   role: string;
   department: AccessUser["department"];
@@ -337,7 +378,9 @@ export async function loadAccessDirectory(
         responsibilities: [],
       }),
       id: row.user_id,
-      email: row.email,
+      email: row.email ?? "",
+      loginName: row.login_name ?? undefined,
+      cpf: row.cpf ?? undefined,
       name: row.name,
       role: row.role,
       department: row.department,
@@ -367,13 +410,14 @@ export async function saveAccessDirectory(db: DecisionDatabase, tenantId: string
     await db
       .prepare(
         `INSERT INTO private.access_users (
-          user_id, email, name, role, department, access_level, status,
+          user_id, email, login_name, cpf, name, role, department, access_level, status,
           manager_user_id, commercial_rep_id, account_manager_id,
           responsibilities, operation_owner, substitute_user_id, cedent_documents,
           revenue_goal_share, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(user_id) DO UPDATE SET
-          email = excluded.email, name = excluded.name, role = excluded.role,
+          email = excluded.email, login_name = excluded.login_name, cpf = excluded.cpf,
+          name = excluded.name, role = excluded.role,
           department = excluded.department, access_level = excluded.access_level, status = excluded.status,
           manager_user_id = excluded.manager_user_id, commercial_rep_id = excluded.commercial_rep_id,
           account_manager_id = excluded.account_manager_id,
@@ -383,7 +427,9 @@ export async function saveAccessDirectory(db: DecisionDatabase, tenantId: string
       )
       .bind(
         user.id,
-        user.email,
+        user.email || null,
+        user.loginName ?? null,
+        user.cpf ?? null,
         user.name,
         user.role,
         user.department,

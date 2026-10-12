@@ -58,7 +58,8 @@ export function CompanyOnboarding({ children }: { children: ReactNode }) {
         headers: { "content-type": "application/json", "x-strato-tenant-id": getStratoTenantId() },
         body: JSON.stringify(company),
       });
-      const body = (await response.json()) as { error?: string };
+      const raw = await response.text();
+      const body = raw ? (JSON.parse(raw) as { error?: string }) : {};
       if (!response.ok) throw new Error(body.error ?? "Não foi possível salvar a empresa.");
       setStatus("ready");
     } catch (reason) {

@@ -6,6 +6,12 @@ type QueryExecutor = {
   unsafe(query: string, parameters?: unknown[]): Promise<QueryRow[]>;
 };
 
+type JsonParameter = { readonly __stratoJson: true; readonly value: unknown };
+
+export const jsonParameter = (value: unknown): JsonParameter => ({ __stratoJson: true, value });
+const isJsonParameter = (value: unknown): value is JsonParameter =>
+  typeof value === "object" && value !== null && "__stratoJson" in value;
+
 function postgresPlaceholders(query: string) {
   let parameter = 0;
   return query.replace(/\?/g, () => `$${++parameter}`);
@@ -17,6 +23,7 @@ class PostgresStatement implements DecisionStatement {
   constructor(
     private readonly executor: QueryExecutor,
     private readonly query: string,
+    private readonly encodeJson: (value: unknown) => unknown,
   ) {}
 
   bind(...values: unknown[]) {
@@ -25,7 +32,10 @@ class PostgresStatement implements DecisionStatement {
   }
 
   async executeWith(executor: QueryExecutor) {
-    return executor.unsafe(postgresPlaceholders(this.query), this.values);
+    return executor.unsafe(
+      postgresPlaceholders(this.query),
+      this.values.map(value => (isJsonParameter(value) ? this.encodeJson(value.value) : value)),
+    );
   }
 
   async first<T = unknown>() {
@@ -48,7 +58,9 @@ class PostgresDatabase implements DecisionDatabase {
   constructor(private readonly client: ReturnType<typeof postgres>) {}
 
   prepare(query: string) {
-    return new PostgresStatement(this.client as unknown as QueryExecutor, query);
+    return new PostgresStatement(this.client as unknown as QueryExecutor, query, value =>
+      this.client.json(value as never),
+    );
   }
 
   async batch<T = unknown>(statements: DecisionStatement[]) {

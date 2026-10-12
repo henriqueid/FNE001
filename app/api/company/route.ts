@@ -26,6 +26,11 @@ export async function PUT(request: Request) {
   if (!company) return json({ error: "Dados da empresa ausentes." }, 400);
   const error = validateCompanyProfile(company);
   if (error) return json({ error }, 400);
-  await saveCompanyProfile(access.db, access.tenantId, access.principal.id, company);
-  return json({ company: await loadCompanyProfile(access.db, access.tenantId) });
+  try {
+    await saveCompanyProfile(access.db, access.tenantId, access.principal.id, company);
+    return json({ company: await loadCompanyProfile(access.db, access.tenantId) });
+  } catch (reason) {
+    console.error("company_profile_save_failed", reason);
+    return json({ error: "O banco não conseguiu salvar a empresa. Tente novamente." }, 500);
+  }
 }

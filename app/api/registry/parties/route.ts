@@ -27,6 +27,11 @@ export async function PUT(request: Request) {
   const existing = await loadRegistryParties(access.db, access.tenantId);
   const blocking = validateParty(party, existing).find(issue => issue.blocking);
   if (blocking) return json({ error: blocking.message }, 400);
-  await saveRegistryParty(access.db, access.tenantId, access.principal.id, party);
-  return json({ party });
+  try {
+    await saveRegistryParty(access.db, access.tenantId, access.principal.id, party);
+    return json({ party });
+  } catch (reason) {
+    console.error("registry_party_save_failed", reason);
+    return json({ error: "O banco não conseguiu salvar o cadastro. Tente novamente." }, 500);
+  }
 }

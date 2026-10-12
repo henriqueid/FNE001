@@ -1,6 +1,7 @@
 import type { CompanyProfile } from "@/src/domain/company/profile";
 import { onlyDigits, type Party } from "@/src/domain/registry/parties";
 import type { DecisionDatabase } from "@/src/server/decisions/repository";
+import { jsonParameter } from "@/src/server/database/postgres";
 
 type CompanyRow = {
   legal_name: string;
@@ -63,7 +64,7 @@ export async function saveCompanyProfile(
       company.phone.trim(),
       company.website.trim(),
       company.foundationDate,
-      JSON.stringify(company.address),
+      jsonParameter(company.address),
       actorId,
       actorId,
     )
@@ -102,7 +103,7 @@ export async function saveRegistryParty(db: DecisionDatabase, tenantId: string, 
         party.tradeName.trim(),
         party.status,
         `{${party.roles.join(",")}}`,
-        JSON.stringify(party),
+        jsonParameter(party),
         actorId,
         actorId,
       ),
@@ -123,7 +124,7 @@ export async function saveRegistryParty(db: DecisionDatabase, tenantId: string, 
               ? "REACTIVATED"
               : "INACTIVATED"
             : "UPDATED",
-        JSON.stringify({
+        jsonParameter({
           name: party.name,
           document: onlyDigits(party.document),
           status: party.status,

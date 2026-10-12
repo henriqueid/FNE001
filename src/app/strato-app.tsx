@@ -6,15 +6,9 @@
  * contexto do shell (`ShellContext`) e escolhe a tela pela `view` atual ou pela operação aberta.
  */
 import { normalizedPricing, pricingCalculation } from "@/src/domain/operations/pricing";
-import { OperationsList } from "@/src/features/operations/central/operations-list";
 import { Badge } from "@/src/features/operations/components/status";
-import { type NewOperationInput, NewOperationModal } from "@/src/features/operations/new-operation/new-operation-modal";
-import { OperationWorkspace } from "@/src/features/operations/workspace/operation-workspace";
-
-import CommercialModule from "@/src/features/commercial/commercial-module";
-import FinanceModule from "@/src/features/finance/finance-module";
-import HomeDashboard from "@/src/features/home/home-dashboard";
-import { useEffect, useMemo, useRef, useState } from "react";
+import type { NewOperationInput } from "@/src/features/operations/new-operation/new-operation-modal";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import {
   clearPersistedState,
   loadPersistedState,
@@ -44,16 +38,11 @@ import { mergeParties, type Party, partyToCedent, seedParties } from "@/src/doma
 import { saveParty as savePartyRecord } from "@/src/domain/registry/party-save";
 import { buildRegistry, effectiveCedents, repurchaseEvents } from "@/src/domain/registry/registry";
 import { seedPortfolio, syncPortfolio } from "@/src/domain/portfolio/model";
-import PortfolioModule from "@/src/features/portfolio/portfolio-module";
-import ControlleriaModule from "@/src/features/controlleria/controlleria-module";
-import RegistryModule from "@/src/features/registry/registry-module";
-import { ModuleRoadmap } from "@/src/features/shell/module-roadmap";
 import { Shell } from "@/src/features/shell/shell";
 import { type AppView, ShellContext } from "@/src/features/shell/shell-context";
 import { RegistryContext, type RegistryValue } from "./registry-context";
 import { EligibilityPolicyProvider } from "./eligibility-policy-context";
 import { seedEligibilityPolicies } from "@/src/domain/eligibility/policy-library";
-import SettingsModule from "@/src/features/settings/settings-module";
 import { seedIntegrationState } from "@/src/domain/integrations/model";
 import { IntegrationProvider } from "./integration-context";
 import { seedOperationalDefaults } from "@/src/domain/registry/operational-profile";
@@ -81,6 +70,39 @@ import { seedIntelligenceState } from "@/src/domain/intelligence/model";
 import { type PublishedNotification } from "@/src/domain/notifications/model";
 import { loadAccessDirectory, saveAccessDirectory } from "./access-directory-client";
 import { syncPublishedNotifications } from "./notification-client";
+
+const CommercialModule = lazy(() => import("@/src/features/commercial/commercial-module"));
+const ControlleriaModule = lazy(() => import("@/src/features/controlleria/controlleria-module"));
+const FinanceModule = lazy(() => import("@/src/features/finance/finance-module"));
+const HomeDashboard = lazy(() => import("@/src/features/home/home-dashboard"));
+const PortfolioModule = lazy(() => import("@/src/features/portfolio/portfolio-module"));
+const RegistryModule = lazy(() => import("@/src/features/registry/registry-module"));
+const SettingsModule = lazy(() => import("@/src/features/settings/settings-module"));
+const ModuleRoadmap = lazy(() =>
+  import("@/src/features/shell/module-roadmap").then(module => ({ default: module.ModuleRoadmap })),
+);
+const NewOperationModal = lazy(() =>
+  import("@/src/features/operations/new-operation/new-operation-modal").then(module => ({
+    default: module.NewOperationModal,
+  })),
+);
+const OperationsList = lazy(() =>
+  import("@/src/features/operations/central/operations-list").then(module => ({ default: module.OperationsList })),
+);
+const OperationWorkspace = lazy(() =>
+  import("@/src/features/operations/workspace/operation-workspace").then(module => ({
+    default: module.OperationWorkspace,
+  })),
+);
+
+function ModuleLoading() {
+  return (
+    <div className="empty-state" role="status" aria-live="polite">
+      <strong>Carregando módulo…</strong>
+      <span>Preparando os dados desta área.</span>
+    </div>
+  );
+}
 
 const COMPANY_SCOPE_KEY = "strato-company-scope";
 const ACCESS_SERVER_MIGRATION_KEY = "strato-access-server-migrated-v1";
@@ -821,16 +843,18 @@ export default function StratoApp() {
                   setCompanyScope("Consolidado");
                 }}
               >
-                {page}
+                <Suspense fallback={<ModuleLoading />}>{page}</Suspense>
               </Shell>
               {showNew && can(currentUser, "operations:edit") && (
-                <NewOperationModal
-                  defaultDestination={companyScope}
-                  operations={operations}
-                  debtors={debtors}
-                  onClose={() => setShowNew(false)}
-                  onCreate={createOperation}
-                />
+                <Suspense fallback={null}>
+                  <NewOperationModal
+                    defaultDestination={companyScope}
+                    operations={operations}
+                    debtors={debtors}
+                    onClose={() => setShowNew(false)}
+                    onCreate={createOperation}
+                  />
+                </Suspense>
               )}
               {confirmReset && (
                 <div className="modal-backdrop" role="presentation">

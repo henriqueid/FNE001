@@ -231,15 +231,7 @@ export async function appendDecisionEvent(
             status, attempts, available_at, created_at, published_at, last_error
           ) VALUES (?, ?, 'decision.event.recorded', ?, ?, ?, 'PENDING', 0, ?, ?, NULL, NULL)`,
         )
-        .bind(
-          scope.tenantId,
-          crypto.randomUUID(),
-          event.decisionId,
-          event.eventId,
-          event,
-          createdAt,
-          createdAt,
-        );
+        .bind(scope.tenantId, crypto.randomUUID(), event.decisionId, event.eventId, event, createdAt, createdAt);
       await db.batch([eventInsert, idempotencyInsert, outboxInsert]);
       return { event, replayed: false } as const;
     } catch (error) {

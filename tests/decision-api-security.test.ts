@@ -3,7 +3,12 @@ import { type Permission } from "@/src/domain/access/model";
 import { type ServerPrincipal } from "@/src/server/access/repository";
 import { cookieValue, hashSessionToken } from "@/src/server/access/session";
 import { assertDecisionPermission } from "@/src/server/decisions/access";
-import { decisionRequestHash } from "@/src/server/decisions/repository";
+import {
+  appendDecisionEvent,
+  decisionRequestHash,
+  type DecisionDatabase,
+  type DecisionStatement,
+} from "@/src/server/decisions/repository";
 import { parseDecisionEventDraft } from "@/src/server/decisions/validation";
 
 const principal = (permissions: Permission[], authorityIds: string[] = []): ServerPrincipal => ({
@@ -98,5 +103,64 @@ describe("seguranca da API de decisoes", () => {
     expect(await decisionRequestHash(scope, { ...right, requestedAction: "REVIEW" })).not.toBe(
       await decisionRequestHash(scope, left),
     );
+  });
+
+  it("envia arrays e objetos JSON nativos ao adaptador PostgreSQL", async () => {
+    const batches: unknown[][][] = [];
+    const db: DecisionDatabase = {
+      prepare(query) {
+        const statement = {
+          values: [] as unknown[],
+          bind(...values: unknown[]) {
+            this.values = values;
+            return this;
+          },
+          async first<T>() {
+            return (query.includes("COALESCE(MAX(event_version)") ? { version: 0 } : null) as T | null;
+          },
+          async all<T>() {
+            return { results: [] as T[] };
+          },
+          async run() {
+            return { success: true };
+          },
+        };
+        return statement;
+      },
+      async batch(statements) {
+        batches.push(statements.map(statement => (statement as DecisionStatement & { values: unknown[] }).values));
+        return [];
+      },
+      async exec() {},
+    };
+    const event = parseDecisionEventDraft({
+      eventId: "event-json",
+      eventType: "ANALYSIS_REQUESTED",
+      decisionId: "decision-json",
+      operationId: "operation-json",
+      entityRefs: ["cedent-1"],
+      decisionType: "CREDIT",
+      requestedAction: "ANALYZE",
+      policyId: "policy-1",
+      policyVersion: "1",
+      inputSnapshotId: "snapshot-1",
+      inputSnapshotHash: "hash-1",
+      computedMetrics: { exposure: 100 },
+      reasonCodes: ["LIMIT_EXCEEDED"],
+      supportingEvidenceRefs: [],
+      priorDecisionRefs: [],
+      outcome: "PENDING",
+      conditions: [],
+      validFrom: "2026-10-10T12:00:00.000Z",
+      correlationId: "correlation-json",
+    });
+
+    await appendDecisionEvent(db, { tenantId: "tenant-1", actorId: "user-1", actorRole: "Analista" }, event, "key-1");
+
+    const [eventInsert, , outboxInsert] = batches[0];
+    expect(eventInsert[6]).toEqual(["cedent-1"]);
+    expect(eventInsert[16]).toEqual({ exposure: 100 });
+    expect(typeof eventInsert[16]).not.toBe("string");
+    expect(outboxInsert[4]).toMatchObject({ eventId: "event-json", computedMetrics: { exposure: 100 } });
   });
 });

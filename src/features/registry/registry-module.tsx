@@ -18,7 +18,9 @@ import { BY } from "@/src/features/finance/finance-ui";
 import { type AppView } from "@/src/features/shell/shell-context";
 import { AlertIcon, CheckIcon, CloseIcon, PlusIcon, UsersIcon } from "@/src/ui/icons";
 import { ModuleTabs } from "@/src/ui/module-tabs";
-import { useState } from "react";
+import { loadRegistryPartyStats } from "@/src/app/registry-client";
+import type { RegistryPartyStats } from "@/src/server/registry/repository";
+import { useEffect, useState } from "react";
 import { CedentsTab } from "./cedents-tab";
 import { LinkModal, TransferModal } from "./commercial-link-modals";
 import { DebtorsTab } from "./debtors-tab";
@@ -41,12 +43,16 @@ export default function RegistryModule({ debtors, operations, onOpenOperation, o
   const [repFilter, setRepFilter] = useState("");
   const [toast, setToast] = useState<Toast>(null);
   const [editing, setEditing] = useState<Party | null>(null);
+  const [stats, setStats] = useState<RegistryPartyStats | null>(null);
   const [linkModal, setLinkModal] = useState<
     null | { type: "transfer"; link: ClientLink } | { type: "link"; record: ClientRecord }
   >(null);
 
   const active = parties.filter(p => p.status === "Ativo");
-  const countOf = (role: Tab) => (role === "todos" ? active.length : active.filter(p => p.roles.includes(role)).length);
+  const countOf = (role: Tab) =>
+    role === "todos"
+      ? (stats?.active ?? active.length)
+      : (stats?.byRole[role] ?? active.filter(p => p.roles.includes(role)).length);
   const openByDocument = (document: string) => {
     const party = parties.find(p => onlyDigits(p.document) === onlyDigits(document));
     if (party) setEditing(party);
@@ -63,6 +69,20 @@ export default function RegistryModule({ debtors, operations, onOpenOperation, o
   };
   const tabs: [Tab, string][] = [["todos", "Todos"], ...partyRoles.map(r => [r.id, r.plural] as [Tab, string])];
   const selectedRole = tab === "todos" ? null : partyRoles.find(role => role.id === tab);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadRegistryPartyStats()
+      .then(result => {
+        if (!cancelled) setStats(result);
+      })
+      .catch(() => {
+        /* mantém os totais locais se o banco estiver temporariamente indisponível */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [parties.length]);
 
   return (
     <div className="page-wrap fn-page rg-page">
@@ -134,7 +154,14 @@ export default function RegistryModule({ debtors, operations, onOpenOperation, o
           repFilter={repFilter}
         />
       )}
-      {tab === "sacado" && <DebtorsTab debtors={debtors} operations={operations} onEdit={openByDocument} />}
+      {tab === "sacado" && (
+        <DebtorsTab
+          debtors={debtors}
+          operations={operations}
+          onEditDocument={openByDocument}
+          onEditParty={setEditing}
+        />
+      )}
       {tab !== "cedente" && tab !== "sacado" && <PartiesTab role={tab} onEdit={setEditing} />}
 
       {editing && (

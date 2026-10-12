@@ -82,12 +82,129 @@ export async function saveCompanyProfile(
     .run();
 }
 
+export type RegistryPartySearchItem = {
+  party: Party;
+  openAmount: number;
+  cedentCount: number;
+};
+
+export type RegistryPartyStats = {
+  total: number;
+  active: number;
+  byRole: Record<string, number>;
+};
+
 export async function loadRegistryParties(db: DecisionDatabase, tenantId: string): Promise<Party[]> {
   const result = await db
-    .prepare(`select payload from private.registry_parties where tenant_id = ? order by name`)
+    .prepare(
+      `select payload from private.registry_parties
+       where tenant_id = ?
+         and (roles @> array['cedente']::text[] or not (roles @> array['sacado']::text[]))
+       order by name`,
+    )
     .bind(tenantId)
     .all<{ payload: Party }>();
   return result.results.map(row => row.payload);
+}
+
+export async function searchRegistryParties(
+  db: DecisionDatabase,
+  tenantId: string,
+  options: { role?: string; query?: string; status?: string; limit: number; offset: number },
+) {
+  const term = options.query?.trim() ?? "";
+  const pattern = `%${term}%`;
+  const documentPattern = `%${onlyDigits(term)}%`;
+  const role = options.role?.trim() ?? "";
+  const status = options.status?.trim() ?? "";
+  const where = `tenant_id = ?
+    and (? = '' or ? = any(roles))
+    and (? = '' or status = ?)
+    and (? = '' or name ilike ? or trade_name ilike ? or document_digits like ?)`;
+  const bindings = [tenantId, role, role, status, status, term, pattern, pattern, documentPattern];
+  const count = await db
+    .prepare(`select count(*)::integer as total from private.registry_parties where ${where}`)
+    .bind(...bindings)
+    .first<{ total: number }>();
+  const rows = await db
+    .prepare(
+      `with matched as (
+         select party_id, payload, name
+         from private.registry_parties
+         where ${where}
+         order by name
+         limit ? offset ?
+       ), latest_position as (
+         select max(position_date) as position_date
+         from private.portfolio_title_positions
+         where tenant_id = ?
+       ), exposure as (
+         select t.debtor_party_id,
+                coalesce(sum(p.open_amount), 0)::float8 as open_amount,
+                count(distinct t.cedent_party_id)::integer as cedent_count
+         from private.portfolio_titles t
+         join private.portfolio_title_positions p
+           on p.tenant_id = t.tenant_id and p.title_id = t.title_id
+         join latest_position latest on latest.position_date = p.position_date
+         where t.tenant_id = ? and p.lifecycle_status = 'OPEN'
+           and t.debtor_party_id in (select party_id from matched)
+         group by t.debtor_party_id
+       )
+       select matched.payload,
+              coalesce(exposure.open_amount, 0)::float8 as open_amount,
+              coalesce(exposure.cedent_count, 0)::integer as cedent_count
+       from matched
+       left join exposure on exposure.debtor_party_id = matched.party_id
+       order by matched.name`,
+    )
+    .bind(...bindings, options.limit, options.offset, tenantId, tenantId)
+    .all<{ payload: Party; open_amount: number; cedent_count: number }>();
+  return {
+    items: rows.results.map(row => ({
+      party: row.payload,
+      openAmount: Number(row.open_amount),
+      cedentCount: Number(row.cedent_count),
+    })),
+    total: Number(count?.total ?? 0),
+  };
+}
+
+export async function loadRegistryPartyStats(db: DecisionDatabase, tenantId: string): Promise<RegistryPartyStats> {
+  const rows = await db
+    .prepare(
+      `select role, count(*)::integer as total
+       from private.registry_parties p
+       cross join lateral unnest(p.roles) role
+       where p.tenant_id = ? and p.status = 'Ativo'
+       group by role`,
+    )
+    .bind(tenantId)
+    .all<{ role: string; total: number }>();
+  const totals = await db
+    .prepare(
+      `select count(*)::integer as total,
+              count(*) filter (where status = 'Ativo')::integer as active
+       from private.registry_parties where tenant_id = ?`,
+    )
+    .bind(tenantId)
+    .first<{ total: number; active: number }>();
+  return {
+    total: Number(totals?.total ?? 0),
+    active: Number(totals?.active ?? 0),
+    byRole: Object.fromEntries(rows.results.map(row => [row.role, Number(row.total)])),
+  };
+}
+
+export async function findRegistryPartyByDocument(
+  db: DecisionDatabase,
+  tenantId: string,
+  document: string,
+): Promise<Party | null> {
+  const row = await db
+    .prepare(`select payload from private.registry_parties where tenant_id = ? and document_digits = ?`)
+    .bind(tenantId, onlyDigits(document))
+    .first<{ payload: Party }>();
+  return row?.payload ?? null;
 }
 
 export async function saveRegistryParty(db: DecisionDatabase, tenantId: string, actorId: string, party: Party) {

@@ -9,6 +9,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "start": "vinext start",
+    "import:portfolio": "node scripts/import-portfolio-csv.mjs",
     "bootstrap:admin": "node scripts/bootstrap-admin.mjs",
     "typecheck": "tsc --noEmit -p .",
     "lint": "eslint src app tests",

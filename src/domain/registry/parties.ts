@@ -154,7 +154,7 @@ export type Party = {
   inactiveReason?: string;
   notes: string;
   /** Origem do registro: criado no Cadastro ou derivado de dados que já existiam nos módulos. */
-  origin: "Cadastro" | "Operações" | "Comercial";
+  origin: "Cadastro" | "Operações" | "Comercial" | "Importação";
   createdAt: string;
   updatedAt: string;
   history: PartyHistoryEntry[];
@@ -521,7 +521,7 @@ export function partyToDebtor(party: Party): Debtor {
     zipCode: party.address.zipCode,
     email: party.email || undefined,
     phone: party.phone || undefined,
-    source: "Cadastro manual",
+    source: party.origin === "Importação" ? "Integração" : "Cadastro manual",
   };
 }
 

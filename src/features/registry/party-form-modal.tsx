@@ -6,6 +6,8 @@
  * usuário digita; erros bloqueiam a gravação, avisos só orientam.
  */
 import { useRegistry } from "@/src/app/registry-context";
+import { consultCnpj } from "@/src/app/cnpj-enrichment-client";
+import { cnpjEvidenceChanges, type CnpjEvidence } from "@/src/domain/integrations/cnpj";
 import {
   defaultRoleData,
   formatDocument,
@@ -93,6 +95,9 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
   const [changeReason, setChangeReason] = useState("");
   const [attempted, setAttempted] = useState(false);
   const [activeSection, setActiveSection] = useState<PartySection>("overview");
+  const [cnpjEvidence, setCnpjEvidence] = useState<CnpjEvidence>();
+  const [cnpjLoading, setCnpjLoading] = useState(false);
+  const [cnpjError, setCnpjError] = useState("");
   const set = (patch: Partial<Party>) => setDraft(current => ({ ...current, ...patch }));
   const setAddress = (patch: Partial<Party["address"]>) =>
     setDraft(current => ({ ...current, address: { ...current.address, ...patch } }));
@@ -118,6 +123,43 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
     Boolean(draft.address.city),
   ];
   const completeness = Math.round((requiredChecks.filter(Boolean).length / requiredChecks.length) * 100);
+
+  const requestCnpjEvidence = async () => {
+    setCnpjLoading(true);
+    setCnpjError("");
+    try {
+      setCnpjEvidence(await consultCnpj(draft.id));
+    } catch (reason) {
+      setCnpjError(reason instanceof Error ? reason.message : "Não foi possível consultar o CNPJ.");
+    } finally {
+      setCnpjLoading(false);
+    }
+  };
+
+  const applyCnpjEvidence = () => {
+    if (!cnpjEvidence) return;
+    setDraft(current => ({
+      ...current,
+      name: cnpjEvidence.legalName || current.name,
+      tradeName: cnpjEvidence.tradeName || current.tradeName,
+      birthOrFoundation: cnpjEvidence.openedAt || current.birthOrFoundation,
+      email: cnpjEvidence.email || current.email,
+      phone: cnpjEvidence.phones[0] || current.phone,
+      address: {
+        zipCode: cnpjEvidence.address.zipCode || current.address.zipCode,
+        street: cnpjEvidence.address.street || current.address.street,
+        number: cnpjEvidence.address.number || current.address.number,
+        complement: cnpjEvidence.address.complement || current.address.complement,
+        district: cnpjEvidence.address.district || current.address.district,
+        city: cnpjEvidence.address.city || current.address.city,
+        state: cnpjEvidence.address.state || current.address.state,
+      },
+      notes: current.notes.includes("Consulta CNPJ")
+        ? current.notes
+        : `${current.notes}${current.notes ? "\n" : ""}Consulta CNPJ: ${cnpjEvidence.provider} em ${cnpjEvidence.fetchedAt.slice(0, 10)}.`,
+    }));
+    if (!changeReason) setChangeReason("Atualização cadastral conferida com fonte CNPJ externa");
+  };
 
   const toggleRole = (role: PartyRole) =>
     setDraft(current => {
@@ -232,6 +274,41 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
                     placeholder={draft.kind === "PJ" ? "00.000.000/0000-00" : "000.000.000-00"}
                   />
                 </Field>
+                {draft.kind === "PJ" && onlyDigits(draft.document).length === 14 && !isNew && (
+                  <div className="rg-inline-alert">
+                    <span>
+                      <b>Consulta cadastral externa</b>
+                      <br />
+                      Busque razão social, situação, endereço, atividades e quadro societário com evidência registrada.
+                    </span>
+                    <button
+                      type="button"
+                      className="fn-btn small ghost"
+                      disabled={cnpjLoading}
+                      onClick={() => void requestCnpjEvidence()}
+                    >
+                      {cnpjLoading ? "Consultando…" : cnpjEvidence ? "Atualizar consulta" : "Consultar CNPJ"}
+                    </button>
+                  </div>
+                )}
+                {cnpjError && <p className="rg-issue bad">{cnpjError}</p>}
+                {cnpjEvidence && (
+                  <div className="rg-inline-alert">
+                    <CheckIcon />
+                    <span>
+                      <b>
+                        {cnpjEvidence.registrationStatus.label} · {cnpjEvidence.provider}
+                      </b>
+                      <br />
+                      {cnpjEvidenceChanges(draft, cnpjEvidence).length
+                        ? `${cnpjEvidenceChanges(draft, cnpjEvidence).join(", ")} com atualização disponível.`
+                        : "O cadastro já coincide com os principais dados consultados."}
+                    </span>
+                    <button type="button" className="fn-btn small ghost" onClick={applyCnpjEvidence}>
+                      Aplicar dados conferidos
+                    </button>
+                  </div>
+                )}
                 {duplicate && (
                   <div className="rg-inline-alert">
                     <AlertIcon />{" "}

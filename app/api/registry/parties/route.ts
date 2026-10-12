@@ -1,7 +1,13 @@
 import { validateParty, type Party } from "@/src/domain/registry/parties";
 import { sessionPrincipal } from "@/src/server/access/session";
 import { getDatabase } from "@/src/server/database/postgres";
-import { loadRegistryParties, saveRegistryParty } from "@/src/server/registry/repository";
+import {
+  findRegistryPartyByDocument,
+  loadRegistryParties,
+  loadRegistryPartyStats,
+  saveRegistryParty,
+  searchRegistryParties,
+} from "@/src/server/registry/repository";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 async function context(request: Request) {
@@ -15,6 +21,21 @@ async function context(request: Request) {
 export async function GET(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
+  const params = new URL(request.url).searchParams;
+  if (params.get("stats") === "1") return json({ stats: await loadRegistryPartyStats(access.db, access.tenantId) });
+  if (params.has("role") || params.has("q") || params.has("offset")) {
+    const limit = Math.min(100, Math.max(1, Number(params.get("limit")) || 50));
+    const offset = Math.max(0, Number(params.get("offset")) || 0);
+    return json(
+      await searchRegistryParties(access.db, access.tenantId, {
+        role: params.get("role") ?? undefined,
+        query: params.get("q") ?? undefined,
+        status: params.get("status") ?? undefined,
+        limit,
+        offset,
+      }),
+    );
+  }
   return json({ parties: await loadRegistryParties(access.db, access.tenantId) });
 }
 export async function PUT(request: Request) {
@@ -24,8 +45,8 @@ export async function PUT(request: Request) {
     return json({ error: "Sem permissão para editar cadastros." }, 403);
   const party = (await request.json().catch(() => null)) as Party | null;
   if (!party?.id || !Array.isArray(party.roles)) return json({ error: "Cadastro inválido." }, 400);
-  const existing = await loadRegistryParties(access.db, access.tenantId);
-  const blocking = validateParty(party, existing).find(issue => issue.blocking);
+  const sameDocument = await findRegistryPartyByDocument(access.db, access.tenantId, party.document);
+  const blocking = validateParty(party, sameDocument ? [sameDocument] : []).find(issue => issue.blocking);
   if (blocking) return json({ error: blocking.message }, 400);
   try {
     await saveRegistryParty(access.db, access.tenantId, access.principal.id, party);

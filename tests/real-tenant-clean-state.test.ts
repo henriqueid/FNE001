@@ -1,5 +1,5 @@
 import { buildAttentionItems } from "@/src/domain/copilot/attention-center";
-import { demoAdminUser } from "@/src/domain/copilot/daily-briefing";
+import { buildDailyBriefing, demoAdminUser } from "@/src/domain/copilot/daily-briefing";
 import { emptyEligibilityPolicies } from "@/src/domain/eligibility/policy-library";
 import { portfolioTitles } from "@/src/domain/home/metrics";
 import { emptyIntegrationState } from "@/src/domain/integrations/model";
@@ -19,6 +19,26 @@ describe("organização real recém-criada", () => {
 
     expect(titles).toEqual([]);
     expect(notifications).toEqual([]);
+  });
+
+  it("gera o resumo do dia mesmo sem nenhum dado operacional", () => {
+    const briefing = buildDailyBriefing({
+      user: demoAdminUser,
+      operations: [],
+      financials: {},
+      titles: [],
+      referenceDate: "2026-10-12",
+      revenueTarget: 0,
+    });
+
+    expect(briefing).toMatchObject({
+      taskCount: 0,
+      portfolioTotal: 0,
+      overdueTotal: 0,
+      revenue: 0,
+      revenueTarget: 0,
+      priorities: [],
+    });
   });
 
   it("nasce sem políticas, integrações, IA ou metas fictícias", () => {

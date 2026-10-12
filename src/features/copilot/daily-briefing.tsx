@@ -17,11 +17,13 @@ const pct = (value: number) => `${value.toLocaleString("pt-BR", { maximumFractio
 export function DailyBriefing({
   briefing,
   onClose,
+  onHideToday,
   onNavigate,
   onOpenAttention,
 }: {
   briefing: DailyBriefingData;
   onClose: () => void;
+  onHideToday: () => void;
   onNavigate: (view: AppView) => void;
   onOpenAttention: () => void;
 }) {
@@ -173,8 +175,11 @@ export function DailyBriefing({
         </div>
 
         <footer className="cpl-day-footer">
-          <span>Este resumo aparece uma vez por dia e respeita seu perfil, departamento e responsabilidades.</span>
+          <span>Este resumo abre ao entrar e respeita seu perfil, departamento e responsabilidades.</span>
           <div>
+            <button type="button" className="cpl-day-secondary" onClick={onHideToday}>
+              Não mostrar mais hoje
+            </button>
             <button type="button" className="cpl-day-secondary" onClick={() => go("home")}>
               Ver visão geral
             </button>

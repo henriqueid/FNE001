@@ -12,6 +12,7 @@ import { type AppView, ShellContext } from "./shell-context";
 import { useTheme } from "./use-theme";
 import { UserMenu } from "./user-menu";
 import { ExperienceGuide } from "./experience-guide";
+import { dailyBriefingStorageKey, shouldAutoOpenDailyBriefing } from "./daily-briefing-visibility";
 import { DailyBriefing } from "@/src/features/copilot/daily-briefing";
 import { type DailyBriefingData } from "@/src/domain/copilot/daily-briefing";
 import { can, type AccessUser } from "@/src/domain/access/model";
@@ -98,8 +99,11 @@ export function Shell({
     setAttentionSelectedId(itemId);
     setAttentionOpen(true);
   }, []);
-  const briefingStorageKey = `strato-daily-briefing-v1-${currentUser.id}`;
+  const briefingStorageKey = dailyBriefingStorageKey(currentUser.id);
   const closeBriefing = useCallback(() => {
+    setBriefingOpen(false);
+  }, []);
+  const hideBriefingToday = useCallback(() => {
     setBriefingOpen(false);
     try {
       window.localStorage.setItem(briefingStorageKey, dailyBriefing.referenceDate);
@@ -110,7 +114,8 @@ export function Shell({
   useEffect(() => {
     if (!briefingReady) return;
     try {
-      if (window.localStorage.getItem(briefingStorageKey) === dailyBriefing.referenceDate) return;
+      if (!shouldAutoOpenDailyBriefing(window.localStorage.getItem(briefingStorageKey), dailyBriefing.referenceDate))
+        return;
     } catch {
       /* sem armazenamento: ainda apresenta o resumo */
     }
@@ -372,6 +377,7 @@ export function Shell({
         <DailyBriefing
           briefing={dailyBriefing}
           onClose={closeBriefing}
+          onHideToday={hideBriefingToday}
           onNavigate={view => (onNavigate ?? context?.navigate)?.(view)}
           onOpenAttention={() => openAttention()}
         />

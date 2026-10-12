@@ -7,23 +7,8 @@ import { type DecisionDatabase } from "@/src/server/decisions/repository";
 const MAX_ATTEMPTS = 5;
 const RETRY_SECONDS = [60, 300, 1_800, 7_200, 21_600];
 
-const schema = [
-  `CREATE TABLE IF NOT EXISTS decision_notifications (
-    tenant_id TEXT NOT NULL, notification_id TEXT NOT NULL, source_outbox_id TEXT NOT NULL,
-    source_event_id TEXT NOT NULL, decision_id TEXT NOT NULL, operation_id TEXT NOT NULL,
-    kind TEXT NOT NULL, tone TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL,
-    detail TEXT NOT NULL, impact TEXT NOT NULL, next_action TEXT NOT NULL, owner TEXT NOT NULL,
-    department TEXT NOT NULL, timing TEXT NOT NULL, view TEXT NOT NULL,
-    required_permission TEXT, authority_id TEXT, status TEXT NOT NULL DEFAULT 'OPEN',
-    created_at TEXT NOT NULL, resolved_at TEXT,
-    PRIMARY KEY (tenant_id, notification_id), UNIQUE (tenant_id, source_outbox_id)
-  )`,
-  "CREATE INDEX IF NOT EXISTS decision_notifications_open_idx ON decision_notifications (tenant_id, status, created_at)",
-  "CREATE INDEX IF NOT EXISTS decision_notifications_decision_idx ON decision_notifications (tenant_id, decision_id, status)",
-];
-
-export async function ensurePublisherSchema(db: DecisionDatabase) {
-  for (const statement of schema) await db.prepare(statement).run();
+export async function ensurePublisherSchema(_db: DecisionDatabase) {
+  // The outbox schema is managed by Supabase migrations.
 }
 
 type OutboxRow = {
@@ -134,7 +119,7 @@ async function markFailure(db: DecisionDatabase, row: OutboxRow, error: unknown,
   const disposition = outboxFailureDisposition(row.attempts, now);
   await db
     .prepare(
-      `UPDATE decision_outbox SET status = ?, attempts = ?, available_at = ?, last_error = ?
+      `UPDATE private.decision_outbox SET status = ?, attempts = ?, available_at = ?, last_error = ?
        WHERE tenant_id = ? AND outbox_id = ? AND status = 'PENDING'`,
     )
     .bind(
@@ -153,14 +138,14 @@ async function publishRow(db: DecisionDatabase, row: OutboxRow, now: Date) {
   const event = JSON.parse(row.payload_json) as DecisionEvent;
   const complete = db
     .prepare(
-      `UPDATE decision_outbox SET status = 'PUBLISHED', attempts = attempts + 1,
+      `UPDATE private.decision_outbox SET status = 'PUBLISHED', attempts = attempts + 1,
        published_at = ?, last_error = NULL WHERE tenant_id = ? AND outbox_id = ? AND status = 'PENDING'`,
     )
     .bind(now.toISOString(), row.tenant_id, row.outbox_id);
   if (resolutionEvents.has(event.eventType)) {
     const resolve = db
       .prepare(
-        `UPDATE decision_notifications SET status = 'RESOLVED', resolved_at = ?
+        `UPDATE private.decision_notifications SET status = 'RESOLVED', resolved_at = ?
          WHERE tenant_id = ? AND decision_id = ? AND status = 'OPEN'`,
       )
       .bind(now.toISOString(), row.tenant_id, event.decisionId);
@@ -175,11 +160,12 @@ async function publishRow(db: DecisionDatabase, row: OutboxRow, now: Date) {
   const notificationId = `decision-${event.eventId}`;
   const insert = db
     .prepare(
-      `INSERT OR IGNORE INTO decision_notifications (
+      `INSERT INTO private.decision_notifications (
         tenant_id, notification_id, source_outbox_id, source_event_id, decision_id, operation_id,
-        kind, tone, title, summary, detail, impact, next_action, owner, department, timing, view,
+        kind, tone, title, summary, detail, impact, next_action, owner, department, timing, view_name,
         required_permission, authority_id, status, created_at, resolved_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', ?, NULL)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', ?, NULL)
+      ON CONFLICT (tenant_id, source_outbox_id) DO NOTHING`,
     )
     .bind(
       row.tenant_id,
@@ -210,7 +196,7 @@ export async function publishDecisionOutbox(db: DecisionDatabase, tenantId: stri
   await ensurePublisherSchema(db);
   const pending = await db
     .prepare(
-      `SELECT tenant_id, outbox_id, event_id, payload_json, attempts FROM decision_outbox
+      `SELECT tenant_id, outbox_id, event_id, payload::text AS payload_json, attempts FROM private.decision_outbox
        WHERE tenant_id = ? AND status = 'PENDING' AND available_at <= ?
        ORDER BY available_at, created_at LIMIT ?`,
     )
@@ -235,7 +221,7 @@ export async function publishAllDecisionOutboxes(db: DecisionDatabase, now = new
   await ensurePublisherSchema(db);
   const tenants = await db
     .prepare(
-      `SELECT DISTINCT tenant_id FROM decision_outbox
+      `SELECT DISTINCT tenant_id FROM private.decision_outbox
        WHERE status = 'PENDING' AND available_at <= ? ORDER BY tenant_id LIMIT 100`,
     )
     .bind(now.toISOString())
@@ -263,7 +249,7 @@ type NotificationRow = {
   owner: string;
   department: string;
   timing: string;
-  view: PublishedNotification["view"];
+  view_name: PublishedNotification["view"];
   required_permission: Permission | null;
   authority_id: string | null;
   created_at: string;
@@ -273,7 +259,7 @@ export async function listPublishedNotifications(db: DecisionDatabase, tenantId:
   await ensurePublisherSchema(db);
   const result = await db
     .prepare(
-      `SELECT * FROM decision_notifications WHERE tenant_id = ? AND status = 'OPEN'
+      `SELECT * FROM private.decision_notifications WHERE tenant_id = ? AND status = 'OPEN'
        ORDER BY created_at DESC LIMIT 100`,
     )
     .bind(tenantId)
@@ -297,7 +283,7 @@ export async function listPublishedNotifications(db: DecisionDatabase, tenantId:
       owner: row.owner,
       department: row.department,
       timing: row.timing,
-      view: row.view,
+      view: row.view_name,
       requiredPermission: row.required_permission ?? undefined,
       authorityId: row.authority_id ?? undefined,
       createdAt: row.created_at,
@@ -306,7 +292,7 @@ export async function listPublishedNotifications(db: DecisionDatabase, tenantId:
 
 export async function outboxHealth(db: DecisionDatabase, tenantId: string): Promise<OutboxHealth> {
   const result = await db
-    .prepare("SELECT status, COUNT(*) AS total FROM decision_outbox WHERE tenant_id = ? GROUP BY status")
+    .prepare("SELECT status, COUNT(*) AS total FROM private.decision_outbox WHERE tenant_id = ? GROUP BY status")
     .bind(tenantId)
     .all<{ status: "PENDING" | "PUBLISHED" | "FAILED"; total: number }>();
   const health: OutboxHealth = { pending: 0, failed: 0, published: 0 };
@@ -317,7 +303,7 @@ export async function outboxHealth(db: DecisionDatabase, tenantId: string): Prom
 export async function retryFailedOutbox(db: DecisionDatabase, tenantId: string, now = new Date()) {
   const result = await db
     .prepare(
-      `UPDATE decision_outbox SET status = 'PENDING', attempts = 0, available_at = ?, last_error = NULL
+      `UPDATE private.decision_outbox SET status = 'PENDING', attempts = 0, available_at = ?, last_error = NULL
        WHERE tenant_id = ? AND status = 'FAILED'`,
     )
     .bind(now.toISOString(), tenantId)

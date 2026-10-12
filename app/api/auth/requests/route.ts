@@ -1,7 +1,7 @@
-import { env } from "cloudflare:workers";
 import { type UserDepartment } from "@/src/domain/copilot/daily-briefing";
 import { hashPassword, passwordValidationError } from "@/src/server/access/password";
 import { registerAccessRequest } from "@/src/server/access/repository";
+import { getDatabase } from "@/src/server/database/postgres";
 
 const departments: UserDepartment[] = [
   "Diretoria",
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   const passwordError = passwordValidationError(password);
   if (passwordError) return json({ error: passwordError }, 400);
   const department = departments.includes(body.department as UserDepartment) ? body.department! : "Operações";
-  const result = await registerAccessRequest(env.DB, {
+  const result = await registerAccessRequest(getDatabase(), {
     tenantId,
     name,
     email,

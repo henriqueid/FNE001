@@ -1,6 +1,6 @@
 # Arquitetura do STRATO
 
-Aplicação navegável de uma plataforma operacional de recebíveis (factoring, securitizadora, FIDC). Nesta etapa, os dados operacionais são demonstrativos e ficam no `localStorage`. A trilha de decisões e o diretório de acesso usam APIs com o adaptador D1 no ambiente local. O login, o cadastro e a aprovação são próprios do STRATO; o Supabase Auth não participa mais da aplicação. O PostgreSQL definitivo já possui a estrutura privada para receber credenciais, sessões, diretório, ledger e os demais estados nas próximas etapas.
+Aplicação navegável de uma plataforma operacional de recebíveis (factoring, securitizadora, FIDC). Nesta etapa, os dados operacionais são demonstrativos e ficam no `localStorage`. A trilha de decisões, as notificações e o diretório de acesso usam APIs conectadas ao PostgreSQL privado do Supabase. O login, o cadastro e a aprovação são próprios do STRATO; o Supabase Auth não participa mais da aplicação.
 
 ## 1. Visão em camadas
 
@@ -113,11 +113,11 @@ Cada arquivo começa com um comentário dizendo o que ele faz. Nenhum arquivo de
 | explicações na interface            | `boolean`               | `lastro-interface-guidance-v1`  |
 | tema, perfil/período da Visão geral | preferências do usuário | `strato-theme`, `strato-home-*` |
 
-A trilha de decisões é a primeira exceção a esse armazenamento local: `app/api/decisions/route.ts` valida tenant, sessão, permissão, alçada e chave de idempotência, e `src/server/decisions/repository.ts` grava eventos versionados na tabela D1 `decision_events`. A migração base está em `drizzle/0001_decision_ledger.sql`; gatilhos recusam atualização e exclusão. `drizzle/0003_decision_outbox.sql` acrescenta a deduplicação por chave e a outbox; evento, reivindicação idempotente e mensagem pendente são gravados no mesmo `batch` transacional do D1. `src/server/outbox/publisher.ts` entrega as mensagens para `decision_notifications`, aplica backoff, encerra após cinco falhas e resolve tarefas por novos eventos. O Worker executa esse publicador a cada minuto; a interface também o aciona para atualização imediata.
+A trilha de decisões é a primeira exceção a esse armazenamento local: `app/api/decisions/route.ts` valida tenant, sessão, permissão, alçada e chave de idempotência, e `src/server/decisions/repository.ts` grava eventos versionados no PostgreSQL privado. As migrações em `supabase/migrations/` criam o ledger imutável, a deduplicação e a outbox; evento, reivindicação idempotente e mensagem pendente são gravados na mesma transação. `src/server/outbox/publisher.ts` entrega as mensagens para `decision_notifications`, aplica backoff, encerra após cinco falhas e resolve tarefas por novos eventos. A interface aciona o publicador autenticado para atualização imediata; o agendamento externo pode reutilizar o mesmo serviço.
 
-O diretório de identidade e autorização também é sincronizado com o D1 por `app/api/access/users/route.ts`. A autenticação pertence ao STRATO: a pessoa cria uma solicitação com senha, permanece pendente e só entra depois de um administrador definir departamento, função, empresas, permissões e alçadas. `src/server/access/password.ts` aplica PBKDF2 com sal individual; `src/server/access/session.ts` emite token opaco em cookie `HttpOnly` e persiste somente o hash; `src/server/access/repository.ts` resolve vínculo, escopo, permissões e alçadas, além de bloquear tentativas repetidas. O bootstrap automático existe somente em `localhost` para a demonstração.
+O diretório de identidade e autorização também é sincronizado com o PostgreSQL por `app/api/access/users/route.ts`. A autenticação pertence ao STRATO: a pessoa cria uma solicitação com senha, permanece pendente e só entra depois de um administrador definir departamento, função, empresas, permissões e alçadas. `src/server/access/password.ts` aplica PBKDF2 com sal individual; `src/server/access/session.ts` emite token opaco em cookie `HttpOnly` e persiste somente o hash; `src/server/access/repository.ts` resolve vínculo, escopo, permissões e alçadas, além de bloquear tentativas repetidas. O bootstrap automático de demonstração existe somente em `localhost`; a primeira credencial externa é criada pelo comando administrativo de uso único.
 
-O ambiente definitivo usa o projeto Supabase `STRATO`, na região de São Paulo, exclusivamente como PostgreSQL gerenciado. As migrações em `supabase/migrations/` criam o esquema `private`, não exposto diretamente pela Data API, e reproduzem credenciais internas, sessões opacas, diretório de acesso, ledger, idempotência, outbox e notificações. Todas as tabelas internas têm RLS habilitado sem políticas para `anon` ou `authenticated`; somente o backend, com segredo restrito ao servidor, pode operar esses dados. O navegador não carrega cliente, chave pública ou sessão do Supabase Auth.
+O ambiente definitivo usa o projeto Supabase `STRATO`, na região de São Paulo, exclusivamente como PostgreSQL gerenciado. As migrações em `supabase/migrations/` criam o esquema `private`, não exposto diretamente pela Data API, com credenciais internas, sessões opacas, diretório de acesso, ledger, idempotência, outbox e notificações. `src/server/database/postgres.ts` mantém um pool pequeno, conexão criptografada e comandos sem prepared statements para compatibilidade com o pooler. O navegador não carrega cliente, chave pública, sessão do Supabase Auth ou conexão do banco.
 
 - A restauração acontece uma vez, depois de montar (`loadPersistedState`), e mescla o que foi salvo com os dados de demonstração atuais (migração tolerante a campos novos).
 - "Restaurar dados de demonstração" (busca global) chama `clearPersistedState` e recria o seed.
@@ -182,7 +182,7 @@ npm test          # Vitest (tests/*.test.ts)
 
 - Testes cobrem as regras que mais custam caro se quebrarem: dígitos de CPF/CNPJ, validação e propagação do cadastro, métodos de deságio, partidas dobradas e estorno, parser monetário, atribuição e comissão.
 - ESLint roda sem erros nem avisos. As poucas exceções (`eslint-disable`) têm o motivo escrito ao lado — em geral, restauração do localStorage depois de montar.
-- `worker/` e `vite.config.ts` ficam fora do typecheck principal por dependerem dos tipos do ambiente Cloudflare; o build de produção valida essa camada e o plugin de empacotamento está versionado em `tools/`.
+- O servidor Node, as rotas e o adaptador PostgreSQL participam do typecheck; o build de produção valida os pacotes RSC, SSR e cliente.
 
 ## 8. Como fazer mudanças comuns
 
@@ -195,7 +195,7 @@ npm test          # Vitest (tests/*.test.ts)
 
 ## 9. Limitações conhecidas
 
-- O login e o diretório de usuários já operam pelo backend próprio do STRATO com D1 no ambiente local; em `localhost`, a entrada demonstrativa permanece como alternativa explícita. A estrutura equivalente está criada no PostgreSQL do Supabase, mas a troca do adaptador local pelo repositório PostgreSQL e a implantação no servidor ainda são etapas de produção. A trilha de decisões, sua outbox e os demais dados operacionais continuam demonstrativos ou locais.
+- Login, sessões, usuários, vínculos, permissões, alçadas, trilha de decisões e outbox já usam o adaptador PostgreSQL. Em `localhost`, a entrada demonstrativa permanece como alternativa explícita. A publicação na Hostinger e a migração dos demais estados operacionais ainda são etapas de produção.
 - Integrações (Receita, SEFAZ, bureaus, bancos, assinatura) são simuladas.
 - A Mesa Inteligente ainda reconhece arquivos por nome e extensão; leitura real de conteúdo, OCR e modelo externo pertencem às fases seguintes.
 - A ordem de evolução está em [architecture/PLANO_ESTRUTURA_IA.md](./architecture/PLANO_ESTRUTURA_IA.md).

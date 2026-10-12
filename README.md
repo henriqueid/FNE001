@@ -1,6 +1,6 @@
 # STRATO · Receivables OS
 
-Plataforma operacional de recebíveis para factoring, securitizadora, FIDC e ESC. O produto está na transição de protótipo navegável para aplicação persistente: os dados operacionais ainda são fictícios no navegador e a trilha de decisões continua com o adaptador D1 local durante a migração. O login e o diretório de acessos já usam Supabase Auth e PostgreSQL no ambiente definitivo em São Paulo, com esquema privado, RLS, segregação por tenant, trilhas imutáveis, idempotência e outbox transacional.
+Plataforma operacional de recebíveis para factoring, securitizadora, FIDC e ESC. O produto está na transição de protótipo navegável para aplicação persistente: os dados operacionais de demonstração ainda ficam no navegador, enquanto autenticação própria, usuários, sessões, permissões, alçadas, trilha de decisões e notificações já usam o PostgreSQL privado do Supabase em São Paulo.
 
 ## Rodar
 
@@ -18,10 +18,14 @@ npm run check          # typecheck + lint + formatação + testes
 npm test               # testes unitários (Vitest)
 npm run format         # Prettier
 npm run build          # build de produção
+npm start              # servidor Node de produção
+npm run bootstrap:admin # cria a primeira credencial administrativa, uma única vez
 npx supabase --help    # comandos da infraestrutura Supabase
 ```
 
-Copie `.env.example` para `.env.local` e preencha as variáveis públicas do Supabase. Cada usuário do Supabase Auth deve ser vinculado explicitamente a um perfil autorizado no diretório do STRATO, com o mesmo e-mail corporativo. Chaves secretas e a conexão PostgreSQL são exclusivas do servidor e nunca devem ser expostas no navegador.
+Copie `.env.example` para `.env.local` e preencha a conexão PostgreSQL server-only. O STRATO não usa mais o Supabase Auth: cadastro, aprovação, login, sessão, departamento, vínculos, permissões e alçadas pertencem ao próprio sistema. Nunca exponha `DATABASE_URL` no navegador.
+
+Para publicação externa, siga [docs/DEPLOY_HOSTINGER.md](docs/DEPLOY_HOSTINGER.md).
 
 ## Módulos
 

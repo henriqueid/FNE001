@@ -2,7 +2,7 @@
 
 ## Situação da implementação
 
-O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como capacidades separadas. A primeira fatia vertical do Adendo 04 está implementada com persistência da trilha no backend Cloudflare D1.
+O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como capacidades separadas. A primeira fatia vertical do Adendo 04 está implementada com persistência no PostgreSQL privado do Supabase.
 
 ## Implementado nesta fase
 
@@ -19,18 +19,18 @@ O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como 
 - identificação visual entre resultado do motor de políticas e insight com apoio de IA;
 - classificação explícita de apontamentos como fato, regra, tendência, hipótese ou sugestão.
 - API de decisões com empresa e ator derivados de sessão opaca validada pelo servidor;
-- persistência D1 com sequência por decisão e índices por tenant, decisão e operação;
+- persistência PostgreSQL com sequência por decisão e índices por tenant, decisão e operação;
 - gatilhos de banco que recusam `UPDATE` e `DELETE`, preservando o contrato append-only;
 - autorização no servidor para leitura, aprovação de exceção, formalização e confirmação de pagamento;
 - bloqueio de acesso cruzado entre tenants antes de qualquer consulta ou gravação.
 - sessão em cookie `HttpOnly`, `SameSite=Strict`, com token opaco e somente seu hash persistido;
-- diretório D1 de usuários, vínculos com o tenant, permissões, escopos empresariais e alçadas formais;
+- diretório PostgreSQL de usuários, vínculos com o tenant, permissões, escopos empresariais e alçadas formais;
 - autorização de decisões a partir da permissão e da alçada persistidas, sem confiar em cabeçalhos de identidade do cliente;
 - bootstrap demonstrativo de sessão limitado a `localhost`, recusado fora do ambiente local.
 - idempotência no servidor com assinatura canônica do tenant, ator e conteúdo da decisão;
 - reenvio seguro que devolve o evento original sem duplicar a trilha;
-- outbox D1 gravada atomicamente com o evento e preparada para publicação assíncrona.
-- publicador executado por agendamento do Worker e por sincronização imediata da interface;
+- outbox PostgreSQL gravada atomicamente com o evento e preparada para publicação assíncrona.
+- publicador executado pela sincronização autenticada da interface, com estrutura pronta para agendamento externo;
 - entrega deduplicada para a Central do Dia conforme permissão, departamento e alçada;
 - repetição com backoff de 1 minuto, 5 minutos, 30 minutos, 2 horas e 6 horas;
 - fila de falhas após cinco tentativas, com saúde visível e reprocessamento administrativo;
@@ -48,7 +48,7 @@ O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como 
 
 ## Próxima fatia para produção
 
-1. Integrar um provedor de identidade corporativo ao emissor das sessões opacas já implementadas.
+1. Publicar o servidor Node na Hostinger e configurar a conexão segura com o Supabase.
 2. Conectar destinos externos reais ao publicador usando adaptadores isolados e assinados.
 3. Tornar a gravação do diretório de acesso transacional e registrar somente alterações efetivas.
 4. Implementar condições precedentes e impedir formalização enquanto estiverem pendentes.
@@ -59,4 +59,4 @@ O STRATO passou a tratar o motor determinístico, a decisão humana e a IA como 
 
 ## Limite desta entrega
 
-A trilha de decisões e o diretório de acesso deixaram o navegador e estão funcionais no D1 local, com imutabilidade, segregação, idempotência, outbox transacional e publicação resiliente para a Central do Dia. A identidade usada pela API já vem de cookie opaco verificável, mas o login automático é apenas um bootstrap local; antes do uso produtivo ainda é necessário integrar o provedor de identidade, conectar destinos externos e implantar o banco no ambiente definitivo. Os demais estados operacionais continuam no navegador.
+A trilha de decisões, as credenciais, as sessões e o diretório de acesso deixaram o navegador e agora apontam para o PostgreSQL definitivo, com imutabilidade, segregação, idempotência, outbox transacional e publicação resiliente para a Central do Dia. O servidor Node já gera e inicia sem dependências do Cloudflare. Para uso externo ainda é necessário configurar `DATABASE_URL`, criar a primeira credencial administrativa e publicar na Hostinger. Os demais estados operacionais continuam no navegador.

@@ -1,8 +1,8 @@
-import { env } from "cloudflare:workers";
 import { type DecisionEventType } from "@/src/domain/decisions/model";
 import { assertDecisionPermission, DecisionAccessError, decisionPrincipal } from "@/src/server/decisions/access";
 import { appendDecisionEvent, DecisionConflictError, listDecisionEvents } from "@/src/server/decisions/repository";
 import { parseDecisionEventDraft } from "@/src/server/decisions/validation";
+import { getDatabase } from "@/src/server/database/postgres";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
@@ -15,11 +15,12 @@ function failure(error: unknown) {
 
 export async function GET(request: Request) {
   try {
-    const principal = await decisionPrincipal(env.DB, request.headers);
+    const db = getDatabase();
+    const principal = await decisionPrincipal(db, request.headers);
     assertDecisionPermission(principal.user);
     const decisionId = new URL(request.url).searchParams.get("decisionId")?.trim();
     if (!decisionId) return json({ error: "Decisão não informada." }, 400);
-    const events = await listDecisionEvents(env.DB, principal.tenantId, decisionId);
+    const events = await listDecisionEvents(db, principal.tenantId, decisionId);
     return json({ version: 1, events });
   } catch (error) {
     return failure(error);
@@ -28,14 +29,15 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const principal = await decisionPrincipal(env.DB, request.headers);
+    const db = getDatabase();
+    const principal = await decisionPrincipal(db, request.headers);
     const idempotencyKey = request.headers.get("idempotency-key")?.trim();
     if (!idempotencyKey || idempotencyKey.length > 200)
       return json({ error: "Chave de idempotência ausente ou inválida." }, 400);
     const draft = parseDecisionEventDraft(await request.json());
     assertDecisionPermission(principal.user, draft.eventType as DecisionEventType, draft.authorityId);
     const result = await appendDecisionEvent(
-      env.DB,
+      db,
       { tenantId: principal.tenantId, actorId: principal.user.id, actorRole: principal.user.role },
       draft,
       idempotencyKey,

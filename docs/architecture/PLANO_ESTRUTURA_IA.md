@@ -37,7 +37,7 @@ seleciona ferramentas autorizadas e apresenta os resultados.
 
 ### Limitações atuais
 
-- Dados operacionais ainda persistidos em `localStorage`; a trilha de decisões e o diretório de acesso usam API e Cloudflare D1 local, com estrutura definitiva já criada no Supabase/PostgreSQL.
+- Dados operacionais ainda persistidos em `localStorage`; a trilha de decisões, credenciais, sessões, diretório de acesso e notificações já usam API e Supabase/PostgreSQL.
 - Perguntas interpretadas por regras locais, sem modelo de linguagem externo.
 - Arquivos reconhecidos pelo nome/extensão, sem leitura real do conteúdo na Mesa Inteligente.
 - Títulos, birô e resultados externos demonstrativos.
@@ -55,10 +55,10 @@ A primeira entrega da fase **IA-0 — Fundação** já está disponível no prot
 - filtragem da carteira e das tarefas pelo perfil, departamento, responsabilidade operacional e vínculo comercial;
 - proteção efetiva da navegação, busca global, links diretos, empresa de trabalho e criação de operações;
 - separação entre a identidade autenticada e o perfil simulado, com retorno seguro à sessão administrativa;
-- persistência e migração inicial do estado de acesso do navegador para o D1, com cobertura automatizada das regras;
-- ledger de decisões persistido no D1, append-only e ordenado por versão no servidor;
+- persistência e migração do estado de acesso do navegador para o PostgreSQL, com cobertura automatizada das regras;
+- ledger de decisões persistido no PostgreSQL, append-only e ordenado por versão no servidor;
 - token opaco em cookie `HttpOnly`, somente o hash no banco, e identidade do cliente ignorada nos cabeçalhos;
-- usuários, vínculos, escopos empresariais, permissões e alçadas formais persistidos no D1;
+- usuários, vínculos, escopos empresariais, permissões e alçadas formais persistidos no PostgreSQL;
 - tenant, ator e horário atribuídos no servidor, com bloqueio de acesso cruzado e de decisões sem permissão ou alçada;
 - reenvio idempotente com assinatura canônica e conflito explícito quando a mesma chave representa outro conteúdo;
 - outbox gravada atomicamente com cada decisão e publicada por agendamento ou sincronização imediata;
@@ -66,13 +66,11 @@ A primeira entrega da fase **IA-0 — Fundação** já está disponível no prot
 - API do Copiloto conectada ao ledger e capaz de reler a trilha após recarregar a página.
 - projeto Supabase `STRATO` ativo em São Paulo, com PostgreSQL 17, esquema privado, RLS e migrações versionadas;
 - estrutura definitiva de tenants, usuários, vínculos, permissões, alçadas, ledger, idempotência, outbox e notificações validada no banco remoto.
-- autenticação própria do STRATO implementada com solicitação, aprovação administrativa, senha protegida, sessão opaca e vínculo explícito a perfil, departamento, empresa, permissões e alçadas; a estrutura privada equivalente já existe no PostgreSQL e aguarda a troca do adaptador local;
+- autenticação própria do STRATO implementada com solicitação, aprovação administrativa, senha protegida, sessão opaca e vínculo explícito a perfil, departamento, empresa, permissões e alçadas, já conectada ao PostgreSQL;
 - tela de login, encerramento de sessão e alternativa de demonstração restrita ao ambiente local.
 
 Esta entrega valida o modelo funcional, a experiência e o primeiro backend auditável. A infraestrutura definitiva do
-banco já está implantada no Supabase e a estrutura de identidade e acesso está pronta para a conexão do backend. A troca do diretório, ledger,
-outbox e notificações do adaptador D1 para PostgreSQL, os adaptadores para destinos externos e a migração dos demais
-domínios continuam como próximos componentes da IA-0 antes do uso produtivo.
+banco está implantada no Supabase e o backend Node já se conecta ao PostgreSQL. A publicação na Hostinger, os adaptadores para destinos externos e a migração dos demais domínios continuam como próximos componentes da IA-0 antes do uso produtivo.
 
 ## 3. Princípios obrigatórios
 

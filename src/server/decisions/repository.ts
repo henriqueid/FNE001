@@ -21,38 +21,6 @@ export type DecisionDatabase = {
 
 export class DecisionConflictError extends Error {}
 
-const schema = [
-  `CREATE TABLE IF NOT EXISTS decision_events (
-  tenant_id TEXT NOT NULL, event_id TEXT NOT NULL, event_version INTEGER NOT NULL,
-  event_type TEXT NOT NULL, decision_id TEXT NOT NULL, operation_id TEXT NOT NULL,
-  entity_refs_json TEXT NOT NULL, decision_type TEXT NOT NULL, requested_action TEXT NOT NULL,
-  actor_id TEXT NOT NULL, actor_role TEXT NOT NULL, authority_id TEXT,
-  policy_id TEXT NOT NULL, policy_version TEXT NOT NULL, input_snapshot_id TEXT NOT NULL,
-  input_snapshot_hash TEXT NOT NULL, computed_metrics_json TEXT NOT NULL, reason_codes_json TEXT NOT NULL,
-  human_rationale TEXT, supporting_evidence_refs_json TEXT NOT NULL, prior_decision_refs_json TEXT NOT NULL,
-  outcome TEXT NOT NULL, conditions_json TEXT NOT NULL, valid_from TEXT NOT NULL, valid_until TEXT,
-  created_at TEXT NOT NULL, correlation_id TEXT NOT NULL,
-  PRIMARY KEY (tenant_id, event_id), UNIQUE (tenant_id, decision_id, event_version)
-)`,
-  "CREATE INDEX IF NOT EXISTS decision_events_tenant_decision_idx ON decision_events (tenant_id, decision_id, event_version)",
-  "CREATE INDEX IF NOT EXISTS decision_events_tenant_operation_idx ON decision_events (tenant_id, operation_id, created_at)",
-  "CREATE TRIGGER IF NOT EXISTS decision_events_prevent_update BEFORE UPDATE ON decision_events BEGIN SELECT RAISE(ABORT, 'decision_events is append-only'); END",
-  "CREATE TRIGGER IF NOT EXISTS decision_events_prevent_delete BEFORE DELETE ON decision_events BEGIN SELECT RAISE(ABORT, 'decision_events is append-only'); END",
-  `CREATE TABLE IF NOT EXISTS decision_idempotency (
-    tenant_id TEXT NOT NULL, idempotency_key TEXT NOT NULL, event_id TEXT NOT NULL,
-    request_hash TEXT NOT NULL, created_at TEXT NOT NULL,
-    PRIMARY KEY (tenant_id, idempotency_key)
-  )`,
-  `CREATE TABLE IF NOT EXISTS decision_outbox (
-    tenant_id TEXT NOT NULL, outbox_id TEXT NOT NULL, topic TEXT NOT NULL,
-    aggregate_id TEXT NOT NULL, event_id TEXT NOT NULL, payload_json TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'PENDING', attempts INTEGER NOT NULL DEFAULT 0,
-    available_at TEXT NOT NULL, created_at TEXT NOT NULL, published_at TEXT, last_error TEXT,
-    PRIMARY KEY (tenant_id, outbox_id), UNIQUE (tenant_id, event_id, topic)
-  )`,
-  "CREATE INDEX IF NOT EXISTS decision_outbox_pending_idx ON decision_outbox (status, available_at, tenant_id)",
-];
-
 type DecisionRow = {
   tenant_id: string;
   event_id: string;
@@ -117,14 +85,28 @@ function eventFromRow(row: DecisionRow): DecisionEvent {
   };
 }
 
-export async function ensureDecisionSchema(db: DecisionDatabase) {
-  for (const statement of schema) await db.prepare(statement).run();
+export async function ensureDecisionSchema(_db: DecisionDatabase) {
+  // The PostgreSQL schema is versioned exclusively through Supabase migrations.
 }
+
+const decisionColumns = `
+  tenant_id, event_id, event_version, event_type, decision_id, operation_id,
+  entity_refs::text AS entity_refs_json, decision_type, requested_action,
+  actor_id, actor_role, authority_id, policy_id, policy_version, input_snapshot_id,
+  input_snapshot_hash, computed_metrics::text AS computed_metrics_json,
+  reason_codes::text AS reason_codes_json, human_rationale,
+  supporting_evidence_refs::text AS supporting_evidence_refs_json,
+  prior_decision_refs::text AS prior_decision_refs_json, outcome,
+  conditions::text AS conditions_json, valid_from::text, valid_until::text,
+  created_at::text, correlation_id`;
 
 export async function listDecisionEvents(db: DecisionDatabase, tenantId: string, decisionId: string) {
   await ensureDecisionSchema(db);
   const result = await db
-    .prepare("SELECT * FROM decision_events WHERE tenant_id = ? AND decision_id = ? ORDER BY event_version ASC")
+    .prepare(
+      `SELECT ${decisionColumns} FROM private.decision_events
+      WHERE tenant_id = ? AND decision_id = ? ORDER BY event_version ASC`,
+    )
     .bind(tenantId, decisionId)
     .all<DecisionRow>();
   return result.results.map(eventFromRow);
@@ -153,14 +135,16 @@ type IdempotencyRow = { event_id: string; request_hash: string };
 
 async function replayedEvent(db: DecisionDatabase, tenantId: string, idempotencyKey: string, requestHash: string) {
   const claim = await db
-    .prepare("SELECT event_id, request_hash FROM decision_idempotency WHERE tenant_id = ? AND idempotency_key = ?")
+    .prepare(
+      "SELECT event_id, request_hash FROM private.decision_idempotency WHERE tenant_id = ? AND idempotency_key = ?",
+    )
     .bind(tenantId, idempotencyKey)
     .first<IdempotencyRow>();
   if (!claim) return null;
   if (claim.request_hash !== requestHash)
     throw new DecisionConflictError("A chave de idempotência já foi usada com outro conteúdo.");
   const row = await db
-    .prepare("SELECT * FROM decision_events WHERE tenant_id = ? AND event_id = ?")
+    .prepare(`SELECT ${decisionColumns} FROM private.decision_events WHERE tenant_id = ? AND event_id = ?`)
     .bind(tenantId, claim.event_id)
     .first<DecisionRow>();
   if (!row) throw new Error("A chave de idempotência não possui evento associado.");
@@ -181,7 +165,7 @@ export async function appendDecisionEvent(
   for (let attempt = 0; attempt < 3; attempt++) {
     const latest = await db
       .prepare(
-        "SELECT COALESCE(MAX(event_version), 0) AS version FROM decision_events WHERE tenant_id = ? AND decision_id = ?",
+        "SELECT COALESCE(MAX(event_version), 0) AS version FROM private.decision_events WHERE tenant_id = ? AND decision_id = ?",
       )
       .bind(scope.tenantId, draft.decisionId)
       .first<{ version: number }>();
@@ -196,12 +180,12 @@ export async function appendDecisionEvent(
     try {
       const eventInsert = db
         .prepare(
-          `INSERT INTO decision_events (
+          `INSERT INTO private.decision_events (
             tenant_id, event_id, event_version, event_type, decision_id, operation_id,
-            entity_refs_json, decision_type, requested_action, actor_id, actor_role, authority_id,
-            policy_id, policy_version, input_snapshot_id, input_snapshot_hash, computed_metrics_json,
-            reason_codes_json, human_rationale, supporting_evidence_refs_json, prior_decision_refs_json,
-            outcome, conditions_json, valid_from, valid_until, created_at, correlation_id
+            entity_refs, decision_type, requested_action, actor_id, actor_role, authority_id,
+            policy_id, policy_version, input_snapshot_id, input_snapshot_hash, computed_metrics,
+            reason_codes, human_rationale, supporting_evidence_refs, prior_decision_refs,
+            outcome, conditions, valid_from, valid_until, created_at, correlation_id
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
@@ -235,15 +219,15 @@ export async function appendDecisionEvent(
         );
       const idempotencyInsert = db
         .prepare(
-          `INSERT INTO decision_idempotency
+          `INSERT INTO private.decision_idempotency
             (tenant_id, idempotency_key, event_id, request_hash, created_at)
            VALUES (?, ?, ?, ?, ?)`,
         )
         .bind(scope.tenantId, idempotencyKey, event.eventId, requestHash, createdAt);
       const outboxInsert = db
         .prepare(
-          `INSERT INTO decision_outbox (
-            tenant_id, outbox_id, topic, aggregate_id, event_id, payload_json,
+          `INSERT INTO private.decision_outbox (
+            tenant_id, outbox_id, topic, aggregate_id, event_id, payload,
             status, attempts, available_at, created_at, published_at, last_error
           ) VALUES (?, ?, 'decision.event.recorded', ?, ?, ?, 'PENDING', 0, ?, ?, NULL, NULL)`,
         )
@@ -260,11 +244,14 @@ export async function appendDecisionEvent(
       return { event, replayed: false } as const;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      const databaseCode =
+        error && typeof error === "object" && "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+      const uniqueConflict = databaseCode === "23505" || /unique constraint/i.test(message);
       const concurrentReplay = await replayedEvent(db, scope.tenantId, idempotencyKey, requestHash);
       if (concurrentReplay) return { event: concurrentReplay, replayed: true } as const;
-      if (message.includes("event_id") || message.includes("PRIMARY KEY"))
+      if (uniqueConflict && (message.includes("event_id") || /primary key/i.test(message)))
         throw new DecisionConflictError("Evento já registrado.");
-      if (attempt === 2 || !message.includes("UNIQUE")) throw error;
+      if (attempt === 2 || !uniqueConflict) throw error;
     }
   }
   throw new Error("Não foi possível ordenar o evento de decisão.");

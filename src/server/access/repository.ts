@@ -8,48 +8,6 @@ import {
 import { type DecisionDatabase } from "@/src/server/decisions/repository";
 import { verifyPassword } from "./password";
 
-const schema = [
-  `CREATE TABLE IF NOT EXISTS access_users (
-    user_id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, name TEXT NOT NULL, role TEXT NOT NULL,
-    department TEXT NOT NULL, access_level TEXT NOT NULL, status TEXT NOT NULL,
-    manager_user_id TEXT, commercial_rep_id TEXT, account_manager_id TEXT, updated_at TEXT NOT NULL
-  )`,
-  `CREATE TABLE IF NOT EXISTS tenant_memberships (
-    tenant_id TEXT NOT NULL, user_id TEXT NOT NULL, company_scopes_json TEXT NOT NULL, created_at TEXT NOT NULL,
-    PRIMARY KEY (tenant_id, user_id), FOREIGN KEY (user_id) REFERENCES access_users(user_id)
-  )`,
-  `CREATE TABLE IF NOT EXISTS access_permissions (
-    tenant_id TEXT NOT NULL, user_id TEXT NOT NULL, permission TEXT NOT NULL, created_at TEXT NOT NULL,
-    PRIMARY KEY (tenant_id, user_id, permission),
-    FOREIGN KEY (tenant_id, user_id) REFERENCES tenant_memberships(tenant_id, user_id)
-  )`,
-  `CREATE TABLE IF NOT EXISTS authority_assignments (
-    tenant_id TEXT NOT NULL, user_id TEXT NOT NULL, authority_id TEXT NOT NULL,
-    valid_from TEXT NOT NULL, valid_until TEXT, created_at TEXT NOT NULL,
-    PRIMARY KEY (tenant_id, user_id, authority_id),
-    FOREIGN KEY (tenant_id, user_id) REFERENCES tenant_memberships(tenant_id, user_id)
-  )`,
-  `CREATE TABLE IF NOT EXISTS auth_sessions (
-    token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at TEXT NOT NULL,
-    expires_at TEXT NOT NULL, revoked_at TEXT, FOREIGN KEY (user_id) REFERENCES access_users(user_id)
-  )`,
-  "CREATE INDEX IF NOT EXISTS auth_sessions_user_idx ON auth_sessions (user_id, expires_at)",
-  `CREATE TABLE IF NOT EXISTS access_credentials (
-    user_id TEXT PRIMARY KEY, password_hash TEXT NOT NULL, status TEXT NOT NULL,
-    failed_attempts INTEGER NOT NULL DEFAULT 0, locked_until TEXT,
-    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES access_users(user_id)
-  )`,
-  "CREATE INDEX IF NOT EXISTS access_credentials_status_idx ON access_credentials (status, locked_until)",
-  "CREATE INDEX IF NOT EXISTS tenant_memberships_user_idx ON tenant_memberships (user_id, tenant_id)",
-  `CREATE TABLE IF NOT EXISTS access_events (
-    event_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, actor_id TEXT NOT NULL,
-    subject_user_id TEXT NOT NULL, event_type TEXT NOT NULL, payload_json TEXT NOT NULL, created_at TEXT NOT NULL
-  )`,
-  "CREATE TRIGGER IF NOT EXISTS access_events_prevent_update BEFORE UPDATE ON access_events BEGIN SELECT RAISE(ABORT, 'access_events is append-only'); END",
-  "CREATE TRIGGER IF NOT EXISTS access_events_prevent_delete BEFORE DELETE ON access_events BEGIN SELECT RAISE(ABORT, 'access_events is append-only'); END",
-];
-
 export type ServerPrincipal = {
   id: string;
   name: string;
@@ -62,65 +20,12 @@ export type ServerPrincipal = {
   authorityIds: string[];
 };
 
-export async function ensureAccessSchema(db: DecisionDatabase) {
-  for (const statement of schema) await db.prepare(statement).run();
+export async function ensureAccessSchema(_db: DecisionDatabase) {
+  // The PostgreSQL schema and immutable audit triggers live in Supabase migrations.
 }
 
 export async function seedAccessDirectory(db: DecisionDatabase) {
   await ensureAccessSchema(db);
-  const existing = await db.prepare("SELECT user_id FROM access_users LIMIT 1").first<{ user_id: string }>();
-  if (existing) return;
-  const now = new Date().toISOString();
-  for (const user of seedAccessState().users) {
-    await db
-      .prepare(
-        `INSERT OR IGNORE INTO access_users (
-          user_id, email, name, role, department, access_level, status,
-          manager_user_id, commercial_rep_id, account_manager_id, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .bind(
-        user.id,
-        user.email,
-        user.name,
-        user.role,
-        user.department,
-        user.access,
-        user.status,
-        user.managerUserId ?? null,
-        user.commercialRepId ?? null,
-        user.accountManagerId ?? null,
-        now,
-      )
-      .run();
-    for (const tenantId of user.tenantIds) {
-      await db
-        .prepare(
-          "INSERT OR IGNORE INTO tenant_memberships (tenant_id, user_id, company_scopes_json, created_at) VALUES (?, ?, ?, ?)",
-        )
-        .bind(tenantId, user.id, JSON.stringify(user.companyScopes), now)
-        .run();
-      for (const permission of user.permissions)
-        await db
-          .prepare(
-            "INSERT OR IGNORE INTO access_permissions (tenant_id, user_id, permission, created_at) VALUES (?, ?, ?, ?)",
-          )
-          .bind(tenantId, user.id, permission, now)
-          .run();
-    }
-  }
-
-  for (const user of seedAccessState().users)
-    for (const tenantId of user.tenantIds)
-      for (const authorityId of user.authorityIds ?? [])
-        await db
-          .prepare(
-            `INSERT OR IGNORE INTO authority_assignments
-              (tenant_id, user_id, authority_id, valid_from, valid_until, created_at)
-             VALUES (?, ?, ?, ?, NULL, ?)`,
-          )
-          .bind(tenantId, user.id, authorityId, now, now)
-          .run();
 }
 
 type PrincipalRow = {
@@ -143,21 +48,21 @@ export async function principalForSession(
   const user = await db
     .prepare(
       `SELECT u.user_id, u.name, u.role, u.department, u.access_level, u.status, m.tenant_id
-       FROM auth_sessions s
-       JOIN access_users u ON u.user_id = s.user_id
-       JOIN tenant_memberships m ON m.user_id = u.user_id AND m.tenant_id = ?
+       FROM private.app_sessions s
+       JOIN private.access_users u ON u.user_id = s.user_id
+       JOIN private.tenant_memberships m ON m.user_id = u.user_id AND m.tenant_id = ?
        WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ? AND u.status = 'active'`,
     )
     .bind(tenantId, tokenHash, at)
     .first<PrincipalRow>();
   if (!user) return null;
   const permissions = await db
-    .prepare("SELECT permission FROM access_permissions WHERE tenant_id = ? AND user_id = ?")
+    .prepare("SELECT permission FROM private.access_permissions WHERE tenant_id = ? AND user_id = ?")
     .bind(tenantId, user.user_id)
     .all<{ permission: Permission }>();
   const authorities = await db
     .prepare(
-      `SELECT authority_id FROM authority_assignments
+      `SELECT authority_id FROM private.authority_assignments
        WHERE tenant_id = ? AND user_id = ? AND valid_from <= ? AND (valid_until IS NULL OR valid_until >= ?)`,
     )
     .bind(tenantId, user.user_id, at, at)
@@ -180,7 +85,7 @@ export async function createSession(db: DecisionDatabase, userId: string, tokenH
   const now = new Date().toISOString();
   await db
     .prepare(
-      "INSERT INTO auth_sessions (token_hash, user_id, created_at, expires_at, revoked_at) VALUES (?, ?, ?, ?, NULL)",
+      "INSERT INTO private.app_sessions (token_hash, user_id, created_at, expires_at, revoked_at) VALUES (?, ?, ?, ?, NULL)",
     )
     .bind(tokenHash, userId, now, expiresAt)
     .run();
@@ -201,9 +106,9 @@ export async function authenticateCredentials(db: DecisionDatabase, tenantId: st
     .prepare(
       `SELECT c.user_id, c.password_hash, c.status AS credential_status,
         c.locked_until, u.status AS user_status
-       FROM access_credentials c
-       JOIN access_users u ON u.user_id = c.user_id
-       JOIN tenant_memberships m ON m.user_id = u.user_id AND m.tenant_id = ?
+       FROM private.access_credentials c
+       JOIN private.access_users u ON u.user_id = c.user_id
+       JOIN private.tenant_memberships m ON m.user_id = u.user_id AND m.tenant_id = ?
        WHERE lower(u.email) = ?`,
     )
     .bind(tenantId, normalizedEmail)
@@ -220,7 +125,7 @@ export async function authenticateCredentials(db: DecisionDatabase, tenantId: st
     const lockedUntil = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
     await db
       .prepare(
-        `UPDATE access_credentials SET
+        `UPDATE private.access_credentials SET
           failed_attempts = failed_attempts + 1,
           locked_until = CASE WHEN failed_attempts + 1 >= 5 THEN ? ELSE locked_until END,
           updated_at = ?
@@ -231,7 +136,9 @@ export async function authenticateCredentials(db: DecisionDatabase, tenantId: st
     return null;
   }
   await db
-    .prepare("UPDATE access_credentials SET failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE user_id = ?")
+    .prepare(
+      "UPDATE private.access_credentials SET failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE user_id = ?",
+    )
     .bind(now.toISOString(), credential.user_id)
     .run();
   return credential.user_id;
@@ -245,14 +152,14 @@ export async function registerAccessRequest(
   const now = new Date().toISOString();
   const normalizedEmail = input.email.trim().toLowerCase();
   const existing = await db
-    .prepare("SELECT user_id, status FROM access_users WHERE lower(email) = ?")
+    .prepare("SELECT user_id, status FROM private.access_users WHERE lower(email) = ?")
     .bind(normalizedEmail)
     .first<{ user_id: string; status: AccessUser["status"] }>();
   if (existing) return { userId: existing.user_id, status: "existing" } as const;
   const userId = `user-${crypto.randomUUID()}`;
   await db
     .prepare(
-      `INSERT INTO access_users (
+      `INSERT INTO private.access_users (
         user_id, email, name, role, department, access_level, status,
         manager_user_id, commercial_rep_id, account_manager_id, updated_at
       ) VALUES (?, ?, ?, 'Aguardando definição', ?, 'operator', 'pending', NULL, NULL, NULL, ?)`,
@@ -261,13 +168,13 @@ export async function registerAccessRequest(
     .run();
   await db
     .prepare(
-      "INSERT INTO tenant_memberships (tenant_id, user_id, company_scopes_json, created_at) VALUES (?, ?, '[]', ?)",
+      "INSERT INTO private.tenant_memberships (tenant_id, user_id, company_scopes, created_at) VALUES (?, ?, '[]'::jsonb, ?)",
     )
     .bind(input.tenantId, userId, now)
     .run();
   await db
     .prepare(
-      `INSERT INTO access_credentials
+      `INSERT INTO private.access_credentials
         (user_id, password_hash, status, failed_attempts, locked_until, created_at, updated_at)
        VALUES (?, ?, ?, 0, NULL, ?, ?)
        ON CONFLICT(user_id) DO UPDATE SET
@@ -279,8 +186,8 @@ export async function registerAccessRequest(
     .run();
   await db
     .prepare(
-      `INSERT INTO access_events
-        (event_id, tenant_id, actor_id, subject_user_id, event_type, payload_json, created_at)
+      `INSERT INTO private.access_events
+        (event_id, tenant_id, actor_id, subject_user_id, event_type, payload, created_at)
        VALUES (?, ?, ?, ?, 'ACCESS_REQUESTED', ?, ?)`,
     )
     .bind(
@@ -312,7 +219,7 @@ export async function createManagedAccessUser(
   const now = new Date().toISOString();
   const normalizedEmail = input.email.trim().toLowerCase();
   const existing = await db
-    .prepare("SELECT user_id FROM access_users WHERE lower(email) = ?")
+    .prepare("SELECT user_id FROM private.access_users WHERE lower(email) = ?")
     .bind(normalizedEmail)
     .first<{ user_id: string }>();
   if (existing) throw new AccessEmailConflictError("Já existe um usuário ou solicitação com este e-mail.");
@@ -322,7 +229,7 @@ export async function createManagedAccessUser(
   const statements = [
     db
       .prepare(
-        `INSERT INTO access_users (
+        `INSERT INTO private.access_users (
           user_id, email, name, role, department, access_level, status,
           manager_user_id, commercial_rep_id, account_manager_id, updated_at
         ) VALUES (?, ?, ?, 'Aguardando definição', ?, 'operator', 'pending', NULL, NULL, NULL, ?)`,
@@ -330,25 +237,27 @@ export async function createManagedAccessUser(
       .bind(userId, normalizedEmail, input.name.trim(), input.department, now),
     db
       .prepare(
-        "INSERT INTO tenant_memberships (tenant_id, user_id, company_scopes_json, created_at) VALUES (?, ?, '[]', ?)",
+        "INSERT INTO private.tenant_memberships (tenant_id, user_id, company_scopes, created_at) VALUES (?, ?, '[]'::jsonb, ?)",
       )
       .bind(input.tenantId, userId, now),
     db
       .prepare(
-        `INSERT INTO access_credentials
+        `INSERT INTO private.access_credentials
           (user_id, password_hash, status, failed_attempts, locked_until, created_at, updated_at)
          VALUES (?, ?, 'pending', 0, NULL, ?, ?)`,
       )
       .bind(userId, input.passwordHash, now, now),
     ...permissions.map(permission =>
       db
-        .prepare("INSERT INTO access_permissions (tenant_id, user_id, permission, created_at) VALUES (?, ?, ?, ?)")
+        .prepare(
+          "INSERT INTO private.access_permissions (tenant_id, user_id, permission, created_at) VALUES (?, ?, ?, ?)",
+        )
         .bind(input.tenantId, userId, permission, now),
     ),
     db
       .prepare(
-        `INSERT INTO access_events
-          (event_id, tenant_id, actor_id, subject_user_id, event_type, payload_json, created_at)
+        `INSERT INTO private.access_events
+          (event_id, tenant_id, actor_id, subject_user_id, event_type, payload, created_at)
          VALUES (?, ?, ?, ?, 'USER_CREATED_BY_ADMIN', ?, ?)`,
       )
       .bind(
@@ -367,7 +276,7 @@ export async function createManagedAccessUser(
 export async function revokeSession(db: DecisionDatabase, tokenHash: string) {
   await ensureAccessSchema(db);
   await db
-    .prepare("UPDATE auth_sessions SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL")
+    .prepare("UPDATE private.app_sessions SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL")
     .bind(new Date().toISOString(), tokenHash)
     .run();
 }
@@ -383,6 +292,11 @@ type AccessUserRow = {
   manager_user_id: string | null;
   commercial_rep_id: string | null;
   account_manager_id: string | null;
+  operation_owner: string | null;
+  substitute_user_id: string | null;
+  responsibilities_json: string;
+  cedent_documents_json: string;
+  revenue_goal_share: string | number | null;
   company_scopes_json: string;
 };
 
@@ -394,9 +308,12 @@ export async function loadAccessDirectory(
   await seedAccessDirectory(db);
   const result = await db
     .prepare(
-      `SELECT u.*, m.company_scopes_json
-       FROM access_users u
-       JOIN tenant_memberships m ON m.user_id = u.user_id
+      `SELECT u.*,
+        u.responsibilities::text AS responsibilities_json,
+        u.cedent_documents::text AS cedent_documents_json,
+        m.company_scopes::text AS company_scopes_json
+       FROM private.access_users u
+       JOIN private.tenant_memberships m ON m.user_id = u.user_id
        WHERE m.tenant_id = ?
        ORDER BY u.name`,
     )
@@ -406,11 +323,11 @@ export async function loadAccessDirectory(
   const users: AccessUser[] = [];
   for (const row of result.results) {
     const permissions = await db
-      .prepare("SELECT permission FROM access_permissions WHERE tenant_id = ? AND user_id = ?")
+      .prepare("SELECT permission FROM private.access_permissions WHERE tenant_id = ? AND user_id = ?")
       .bind(tenantId, row.user_id)
       .all<{ permission: Permission }>();
     const authorities = await db
-      .prepare("SELECT authority_id FROM authority_assignments WHERE tenant_id = ? AND user_id = ?")
+      .prepare("SELECT authority_id FROM private.authority_assignments WHERE tenant_id = ? AND user_id = ?")
       .bind(tenantId, row.user_id)
       .all<{ authority_id: string }>();
     const base = seeded.get(row.user_id);
@@ -432,6 +349,11 @@ export async function loadAccessDirectory(
       managerUserId: row.manager_user_id ?? undefined,
       commercialRepId: row.commercial_rep_id ?? undefined,
       accountManagerId: row.account_manager_id ?? undefined,
+      operationOwner: row.operation_owner ?? undefined,
+      substituteUserId: row.substitute_user_id ?? undefined,
+      responsibilities: JSON.parse(row.responsibilities_json) as string[],
+      cedentDocuments: JSON.parse(row.cedent_documents_json) as string[],
+      revenueGoalShare: row.revenue_goal_share === null ? undefined : Number(row.revenue_goal_share),
       permissions: permissions.results.map(item => item.permission),
     });
   }
@@ -444,15 +366,20 @@ export async function saveAccessDirectory(db: DecisionDatabase, tenantId: string
   for (const user of state.users.filter(candidate => candidate.tenantIds.includes(tenantId))) {
     await db
       .prepare(
-        `INSERT INTO access_users (
+        `INSERT INTO private.access_users (
           user_id, email, name, role, department, access_level, status,
-          manager_user_id, commercial_rep_id, account_manager_id, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          manager_user_id, commercial_rep_id, account_manager_id,
+          responsibilities, operation_owner, substitute_user_id, cedent_documents,
+          revenue_goal_share, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(user_id) DO UPDATE SET
           email = excluded.email, name = excluded.name, role = excluded.role,
           department = excluded.department, access_level = excluded.access_level, status = excluded.status,
           manager_user_id = excluded.manager_user_id, commercial_rep_id = excluded.commercial_rep_id,
-          account_manager_id = excluded.account_manager_id, updated_at = excluded.updated_at`,
+          account_manager_id = excluded.account_manager_id,
+          responsibilities = excluded.responsibilities, operation_owner = excluded.operation_owner,
+          substitute_user_id = excluded.substitute_user_id, cedent_documents = excluded.cedent_documents,
+          revenue_goal_share = excluded.revenue_goal_share, updated_at = excluded.updated_at`,
       )
       .bind(
         user.id,
@@ -465,38 +392,45 @@ export async function saveAccessDirectory(db: DecisionDatabase, tenantId: string
         user.managerUserId ?? null,
         user.commercialRepId ?? null,
         user.accountManagerId ?? null,
+        JSON.stringify(user.responsibilities),
+        user.operationOwner ?? null,
+        user.substituteUserId ?? null,
+        JSON.stringify(user.cedentDocuments ?? []),
+        user.revenueGoalShare ?? null,
         now,
       )
       .run();
     await db
-      .prepare("UPDATE access_credentials SET status = ?, updated_at = ? WHERE user_id = ?")
+      .prepare("UPDATE private.access_credentials SET status = ?, updated_at = ? WHERE user_id = ?")
       .bind(user.status === "active" ? "active" : user.status, now, user.id)
       .run();
     await db
       .prepare(
-        `INSERT INTO tenant_memberships (tenant_id, user_id, company_scopes_json, created_at)
+        `INSERT INTO private.tenant_memberships (tenant_id, user_id, company_scopes, created_at)
          VALUES (?, ?, ?, ?)
-         ON CONFLICT(tenant_id, user_id) DO UPDATE SET company_scopes_json = excluded.company_scopes_json`,
+         ON CONFLICT(tenant_id, user_id) DO UPDATE SET company_scopes = excluded.company_scopes`,
       )
       .bind(tenantId, user.id, JSON.stringify(user.companyScopes), now)
       .run();
     await db
-      .prepare("DELETE FROM access_permissions WHERE tenant_id = ? AND user_id = ?")
+      .prepare("DELETE FROM private.access_permissions WHERE tenant_id = ? AND user_id = ?")
       .bind(tenantId, user.id)
       .run();
     for (const permission of user.permissions)
       await db
-        .prepare("INSERT INTO access_permissions (tenant_id, user_id, permission, created_at) VALUES (?, ?, ?, ?)")
+        .prepare(
+          "INSERT INTO private.access_permissions (tenant_id, user_id, permission, created_at) VALUES (?, ?, ?, ?)",
+        )
         .bind(tenantId, user.id, permission, now)
         .run();
     await db
-      .prepare("DELETE FROM authority_assignments WHERE tenant_id = ? AND user_id = ?")
+      .prepare("DELETE FROM private.authority_assignments WHERE tenant_id = ? AND user_id = ?")
       .bind(tenantId, user.id)
       .run();
     for (const authorityId of user.authorityIds ?? [])
       await db
         .prepare(
-          `INSERT INTO authority_assignments
+          `INSERT INTO private.authority_assignments
             (tenant_id, user_id, authority_id, valid_from, valid_until, created_at)
            VALUES (?, ?, ?, ?, NULL, ?)`,
         )
@@ -504,8 +438,8 @@ export async function saveAccessDirectory(db: DecisionDatabase, tenantId: string
         .run();
     await db
       .prepare(
-        `INSERT INTO access_events
-          (event_id, tenant_id, actor_id, subject_user_id, event_type, payload_json, created_at)
+        `INSERT INTO private.access_events
+          (event_id, tenant_id, actor_id, subject_user_id, event_type, payload, created_at)
          VALUES (?, ?, ?, ?, 'ACCESS_PROFILE_SAVED', ?, ?)`,
       )
       .bind(

@@ -1,4 +1,3 @@
-import { env } from "cloudflare:workers";
 import { type AccessState } from "@/src/domain/access/model";
 import { type UserDepartment } from "@/src/domain/copilot/daily-briefing";
 import { hashPassword, passwordValidationError } from "@/src/server/access/password";
@@ -9,6 +8,7 @@ import {
   saveAccessDirectory,
 } from "@/src/server/access/repository";
 import { sessionPrincipal } from "@/src/server/access/session";
+import { getDatabase } from "@/src/server/database/postgres";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 const departments: UserDepartment[] = [
@@ -22,19 +22,20 @@ const departments: UserDepartment[] = [
 ];
 
 async function context(request: Request) {
+  const db = getDatabase();
   const tenantId = request.headers.get("x-strato-tenant-id")?.trim();
   if (!tenantId) return { error: json({ error: "Empresa não informada." }, 400) } as const;
-  const principal = await sessionPrincipal(env.DB, request.headers, tenantId);
+  const principal = await sessionPrincipal(db, request.headers, tenantId);
   if (!principal) return { error: json({ error: "Sessão ausente ou expirada." }, 401) } as const;
   if (!principal.permissions.includes("users:manage"))
     return { error: json({ error: "Usuário sem permissão para administrar acessos." }, 403) } as const;
-  return { tenantId, principal } as const;
+  return { db, tenantId, principal } as const;
 }
 
 export async function GET(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
-  return json(await loadAccessDirectory(env.DB, access.tenantId, access.principal.id));
+  return json(await loadAccessDirectory(access.db, access.tenantId, access.principal.id));
 }
 
 export async function POST(request: Request) {
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
   if (passwordError) return json({ error: passwordError }, 400);
   const department = departments.includes(body.department as UserDepartment) ? body.department! : "Operações";
   try {
-    const createdUserId = await createManagedAccessUser(env.DB, {
+    const createdUserId = await createManagedAccessUser(access.db, {
       tenantId: access.tenantId,
       actorId: access.principal.id,
       name,
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
     return json(
       {
         createdUserId,
-        state: await loadAccessDirectory(env.DB, access.tenantId, access.principal.id),
+        state: await loadAccessDirectory(access.db, access.tenantId, access.principal.id),
       },
       201,
     );
@@ -79,6 +80,6 @@ export async function PUT(request: Request) {
   if ("error" in access) return access.error;
   const state = (await request.json()) as AccessState;
   if (state?.version !== 2 || !Array.isArray(state.users)) return json({ error: "Diretório de acesso inválido." }, 400);
-  await saveAccessDirectory(env.DB, access.tenantId, access.principal.id, state);
-  return json(await loadAccessDirectory(env.DB, access.tenantId, access.principal.id));
+  await saveAccessDirectory(access.db, access.tenantId, access.principal.id, state);
+  return json(await loadAccessDirectory(access.db, access.tenantId, access.principal.id));
 }

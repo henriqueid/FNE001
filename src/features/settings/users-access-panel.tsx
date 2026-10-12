@@ -11,8 +11,8 @@ import {
   type Permission,
 } from "@/src/domain/access/model";
 import { createManagedUser } from "@/src/app/access-directory-client";
+import { useCompanyDestinations } from "@/src/app/company-context";
 import { getStratoTenantId } from "@/src/app/tenant";
-import { destinations } from "@/src/domain/core/demo/companies";
 import { type UserDepartment } from "@/src/domain/copilot/daily-briefing";
 import { type FormEvent, useMemo, useState } from "react";
 
@@ -54,6 +54,7 @@ const statusLabel: Record<AccessUser["status"], string> = {
 };
 
 export function UsersAccessPanel({ state, onState }: { state: AccessState; onState: (state: AccessState) => void }) {
+  const destinations = useCompanyDestinations();
   const [selectedId, setSelectedId] = useState(state.previewUserId ?? state.authenticatedUserId);
   const [creating, setCreating] = useState(false);
   const [savingNewUser, setSavingNewUser] = useState(false);

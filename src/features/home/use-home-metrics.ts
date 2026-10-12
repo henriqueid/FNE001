@@ -62,6 +62,7 @@ export type HomeMetricsInput = {
   now: Date;
   qualityPolicy: QualityPolicy;
   revenueGoals: OperationalDefaultsState["revenueGoals"];
+  originationGoals: OperationalDefaultsState["originationGoals"];
   includeDemoPortfolio?: boolean;
 };
 
@@ -81,6 +82,7 @@ export function useHomeMetrics({
   now,
   qualityPolicy,
   revenueGoals,
+  originationGoals,
   includeDemoPortfolio = false,
 }: HomeMetricsInput) {
   const registryCedents = useCedents();
@@ -103,13 +105,13 @@ export function useHomeMetrics({
     [scoped, fin, previousPositionDate, today],
   );
   const target =
-    homeSettings.volumeTarget[period] *
-    (companyScope === "Consolidado" ? 1 : (homeSettings.vehicleTargetShare[companyScope] ?? 0));
+    companyScope === "Consolidado"
+      ? originationGoals.consolidated[period]
+      : (originationGoals.byVehicle[companyScope]?.[period] ?? 0);
   const revenueTarget =
     companyScope === "Consolidado"
       ? revenueGoals.consolidated[period]
-      : (revenueGoals.byVehicle[companyScope]?.[period] ??
-        revenueGoals.consolidated[period] * (homeSettings.vehicleTargetShare[companyScope] ?? 0));
+      : (revenueGoals.byVehicle[companyScope]?.[period] ?? 0);
   const revenuePace = useMemo(
     () =>
       buildRevenuePace({ operations: scoped, financials: fin, period, referenceDate: today, target: revenueTarget }),
@@ -253,22 +255,25 @@ export function useHomeMetrics({
     const known = new Map((shared?.debtorHistories ?? []).map(h => [h.document, h]));
     const missing = debExp.filter(d => !known.has(d.document));
     const generated = new Map(
-      demoDebtorHistories(
-        missing.map(d => ({
-          id: d.document,
-          name: d.name,
-          document: d.document,
-          exposure: d.exposure,
-          debtor: debtors.find(x => x.document.replace(/\D/g, "") === d.document),
-        })),
-        today,
+      (includeDemoPortfolio
+        ? demoDebtorHistories(
+            missing.map(d => ({
+              id: d.document,
+              name: d.name,
+              document: d.document,
+              exposure: d.exposure,
+              debtor: debtors.find(x => x.document.replace(/\D/g, "") === d.document),
+            })),
+            today,
+          )
+        : []
       ).map(h => [h.document, h]),
     );
     return debExp.flatMap(d => {
       const h = known.get(d.document) ?? generated.get(d.document);
       return h ? [{ ...h, name: d.name, exposure: d.exposure }] : [];
     });
-  }, [shared, debExp, debtors, today]);
+  }, [shared, debExp, debtors, today, includeDemoPortfolio]);
   const risk = useMemo(
     () => ({
       cedentQuality: qualityRankings(scopedCedentHistories, qualityPolicy),

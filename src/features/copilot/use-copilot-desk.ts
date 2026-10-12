@@ -50,6 +50,7 @@ export function useCopilotDesk(
   actor: AccessUser,
   intelligence: IntelligenceState,
   defaultCedentId = "",
+  demoMode = false,
 ) {
   const [cedent, setCedent] = useState(defaultCedentId);
   const [files, setFiles] = useState<DeskFile[]>([]);
@@ -181,6 +182,7 @@ export function useCopilotDesk(
   );
 
   const loadExamples = () => {
+    if (!demoMode) return;
     setFiles(deskDemoFiles);
     setUserFiles(false);
   };
@@ -193,6 +195,17 @@ export function useCopilotDesk(
   };
 
   const start = async () => {
+    if (!demoMode) {
+      push({
+        role: "ai",
+        reply: {
+          paragraphs: [
+            "A análise automática de arquivos ainda não está conectada neste ambiente. Nenhum conteúdo foi processado nem substituído por dados simulados.",
+          ],
+        },
+      });
+      return;
+    }
     const token = ++run.current;
     correlationId.current = uniqueId("copilot-run");
     const stale = () => !alive.current || token !== run.current;
@@ -444,6 +457,7 @@ export function useCopilotDesk(
     decisionLedger,
     decisionError,
     aiAvailable,
+    demoMode,
     locked,
     unread,
     clearUnread: () => setUnread(false),

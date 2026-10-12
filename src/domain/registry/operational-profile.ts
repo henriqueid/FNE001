@@ -87,6 +87,10 @@ export type ClientComplianceProfile = {
 export type OperationalDefaultsState = {
   version: 1;
   general: OperationalParameters;
+  originationGoals: {
+    consolidated: Record<HomePeriod, number>;
+    byVehicle: Record<string, Partial<Record<HomePeriod, number>>>;
+  };
   revenueGoals: {
     consolidated: Record<HomePeriod, number>;
     byVehicle: Record<string, Partial<Record<HomePeriod, number>>>;
@@ -135,6 +139,10 @@ export const defaultOperationalParameters: OperationalParameters = {
 export const seedOperationalDefaults = (): OperationalDefaultsState => ({
   version: 1,
   general: { ...defaultOperationalParameters },
+  originationGoals: {
+    consolidated: { dia: 1_500_000, semana: 7_500_000, mes: 30_000_000 },
+    byVehicle: {},
+  },
   revenueGoals: {
     consolidated: { dia: 30_000, semana: 150_000, mes: 600_000 },
     byVehicle: {},
@@ -145,6 +153,10 @@ export const seedOperationalDefaults = (): OperationalDefaultsState => ({
 export const emptyOperationalDefaults = (): OperationalDefaultsState => ({
   version: 1,
   general: { ...defaultOperationalParameters },
+  originationGoals: {
+    consolidated: { dia: 0, semana: 0, mes: 0 },
+    byVehicle: {},
+  },
   revenueGoals: {
     consolidated: { dia: 0, semana: 0, mes: 0 },
     byVehicle: {},
@@ -157,6 +169,13 @@ export function migrateOperationalDefaults(value: unknown): OperationalDefaultsS
   return {
     version: 1,
     general: { ...defaultOperationalParameters, ...(stored.general ?? {}) },
+    originationGoals: {
+      consolidated: {
+        ...seedOperationalDefaults().originationGoals.consolidated,
+        ...(stored.originationGoals?.consolidated ?? {}),
+      },
+      byVehicle: stored.originationGoals?.byVehicle ?? {},
+    },
     revenueGoals: {
       consolidated: {
         ...seedOperationalDefaults().revenueGoals.consolidated,

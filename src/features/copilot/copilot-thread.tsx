@@ -71,7 +71,15 @@ export function StartCard({
           ))}
         </div>
       )}
-      {!showForm ? (
+      {!desk.demoMode ? (
+        <div className="cpl-card">
+          <b className="cpl-card-title">Análise de arquivos ainda não conectada</b>
+          <p className="cpl-note">
+            O ambiente real não usa títulos de exemplo. A importação será liberada somente quando o processamento e a
+            política institucional estiverem conectados.
+          </p>
+        </div>
+      ) : !showForm ? (
         <button type="button" className="cpl-start-action" onClick={() => setShowForm(true)}>
           <FolderIcon />
           <span>

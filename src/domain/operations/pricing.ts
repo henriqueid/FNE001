@@ -3,6 +3,7 @@
  * compensações e taxa all-in. Fonte única usada pelas etapas Preço e Aprovação, pela Visão geral e pelo Comercial.
  */
 import { cedentPortfolioTitles, cedentSettlementAdjustments } from "@/src/domain/core/demo/portfolio";
+import { isDemoOperation } from "@/src/domain/core/demo/operations";
 import { type Operation } from "@/src/domain/core/types";
 import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
 
@@ -86,7 +87,7 @@ export function repurchaseCalculation(operation: Operation, pricing: PricingDraf
   today.setHours(12, 0, 0, 0);
   const cedentDocument = operation.document.replace(/\D/g, "");
   const selectedIds = new Set(pricing.repurchaseTitleIds ?? []);
-  const rows = cedentPortfolioTitles
+  const rows = (isDemoOperation(operation) ? cedentPortfolioTitles : [])
     .filter(
       title =>
         title.cedentDocument.replace(/\D/g, "") === cedentDocument ||
@@ -143,7 +144,7 @@ export function repurchaseCalculation(operation: Operation, pricing: PricingDraf
 export function settlementAdjustmentCalculation(operation: Operation, pricing: PricingDraft) {
   const cedentDocument = operation.document.replace(/\D/g, "");
   const selectedIds = new Set(pricing.settlementAdjustmentIds ?? []);
-  const rows = cedentSettlementAdjustments
+  const rows = (isDemoOperation(operation) ? cedentSettlementAdjustments : [])
     .filter(
       item =>
         item.cedentDocument.replace(/\D/g, "") === cedentDocument ||

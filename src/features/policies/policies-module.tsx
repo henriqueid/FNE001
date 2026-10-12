@@ -1,6 +1,6 @@
 "use client";
 
-import { destinations } from "@/src/domain/core/demo/companies";
+import { useCompanyDestinations } from "@/src/app/company-context";
 import { masterRuleCatalog } from "@/src/domain/eligibility/master-rule-catalog";
 import {
   type EligibilityAction,
@@ -48,6 +48,7 @@ export default function PoliciesModule({
   onState: (state: EligibilityPolicyState) => void;
   embedded?: boolean;
 }) {
+  const destinations = useCompanyDestinations();
   const [selectedId, setSelectedId] = useState(state.policies.find(policy => policy.status === "ATIVA")?.id ?? "");
   const [message, setMessage] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -56,7 +57,7 @@ export default function PoliciesModule({
   const [draft, setDraft] = useState({
     name: "",
     version: "v1.0",
-    company: destinations[0].name,
+    company: destinations[0]?.name ?? "",
     product: "",
     effectiveFrom: new Date().toISOString().slice(0, 10),
   });
@@ -66,7 +67,7 @@ export default function PoliciesModule({
   const today = new Date().toISOString().slice(0, 10);
   const replacePolicy = (policy: EligibilityPolicy) =>
     onState({ ...state, policies: state.policies.map(item => (item.id === policy.id ? policy : item)) });
-  const selectedDestination = destinations.find(destination => destination.name === draft.company)!;
+  const selectedDestination = destinations.find(destination => destination.name === draft.company);
   const unboundRules = masterRuleCatalog.filter(
     rule =>
       !selected?.bindings.some(binding => binding.ruleId === rule.id) &&
@@ -91,7 +92,7 @@ export default function PoliciesModule({
   };
 
   const createPolicy = () => {
-    if (!draft.name.trim()) {
+    if (!draft.name.trim() || !selectedDestination) {
       setMessage("Informe o nome da nova política.");
       return;
     }
@@ -540,7 +541,9 @@ export default function PoliciesModule({
                   ))}
                 </select>
                 <small>
-                  {selectedDestination.institution} · {selectedDestination.detail}
+                  {selectedDestination
+                    ? `${selectedDestination.institution} · ${selectedDestination.detail}`
+                    : "Cadastre uma empresa antes de criar a política."}
                 </small>
               </label>
               <label>

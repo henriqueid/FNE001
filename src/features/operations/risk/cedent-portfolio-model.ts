@@ -2,6 +2,7 @@
  * Funções puras da visão de carteira do cedente (ranking de sacados, histórico e posição).
  */
 import { initialOperations } from "@/src/domain/core/demo/operations";
+import { initialCedents } from "@/src/domain/core/demo/cedents";
 import { type Cedent, type PortfolioPosition } from "@/src/domain/core/types";
 import { scoreBand } from "@/src/domain/eligibility/operational-parameters";
 import { shiftDateText } from "@/src/domain/core/demo/relative-dates";
@@ -34,6 +35,7 @@ export const confirmationTone = (value: number) =>
   value >= 90 ? "positive" : value >= 80 ? "warning-text" : "negative";
 
 export function buildCedentPortfolio(cedent: Cedent) {
+  const demoMode = initialCedents.some(item => item.id === cedent.id);
   const utilization = cedent.creditLimit > 0 ? (cedent.usedLimit / cedent.creditLimit) * 100 : 0;
   const available = Math.max(0, cedent.creditLimit - cedent.usedLimit);
   const metrics = cedent.portfolioMetrics;
@@ -68,12 +70,19 @@ export function buildCedentPortfolio(cedent: Cedent) {
   ];
   const healthyProfile = scoreBand(cedent.score) === "Positivo";
   const criticalProfile = scoreBand(cedent.score) === "Crítico";
-  const confirmationRate = criticalProfile ? 78.4 : healthyProfile ? 96.8 : 89.6;
+  const confirmationRate = demoMode ? (criticalProfile ? 78.4 : healthyProfile ? 96.8 : 89.6) : 0;
   const repurchaseRate = cedent.settlements ? (cedent.repurchases / cedent.settlements) * 100 : 0;
-  const frequencyDays = criticalProfile ? 14 : healthyProfile ? 7 : 11;
-  const frequencyLabel = frequencyDays <= 8 ? "Semanal" : frequencyDays <= 16 ? "Quinzenal" : "Mensal";
-  const names =
-    cedent.id === "ced-1"
+  const frequencyDays = demoMode ? (criticalProfile ? 14 : healthyProfile ? 7 : 11) : 0;
+  const frequencyLabel = demoMode
+    ? frequencyDays <= 8
+      ? "Semanal"
+      : frequencyDays <= 16
+        ? "Quinzenal"
+        : "Mensal"
+    : "Sem histórico";
+  const names = !demoMode
+    ? []
+    : cedent.id === "ced-1"
       ? [
           "L.V. Carvalho Gutierrez Ltda",
           "Carlos Marco Distribuidora Ltda",
@@ -126,29 +135,31 @@ export function buildCedentPortfolio(cedent: Cedent) {
   const currentOperation = initialOperations.find(
     item => item.document.replace(/\D/g, "") === cedent.document.replace(/\D/g, ""),
   );
-  const dates = criticalProfile
-    ? [
-        shiftDateText("25/09/2026"),
-        shiftDateText("10/09/2026"),
-        shiftDateText("27/08/2026"),
-        shiftDateText("12/08/2026"),
-        shiftDateText("30/07/2026"),
-      ]
-    : healthyProfile
+  const dates = !demoMode
+    ? []
+    : criticalProfile
       ? [
           shiftDateText("25/09/2026"),
-          shiftDateText("18/09/2026"),
-          shiftDateText("11/09/2026"),
-          shiftDateText("04/09/2026"),
-          shiftDateText("28/08/2026"),
+          shiftDateText("10/09/2026"),
+          shiftDateText("27/08/2026"),
+          shiftDateText("12/08/2026"),
+          shiftDateText("30/07/2026"),
         ]
-      : [
-          shiftDateText("25/09/2026"),
-          shiftDateText("15/09/2026"),
-          shiftDateText("03/09/2026"),
-          shiftDateText("22/08/2026"),
-          shiftDateText("09/08/2026"),
-        ];
+      : healthyProfile
+        ? [
+            shiftDateText("25/09/2026"),
+            shiftDateText("18/09/2026"),
+            shiftDateText("11/09/2026"),
+            shiftDateText("04/09/2026"),
+            shiftDateText("28/08/2026"),
+          ]
+        : [
+            shiftDateText("25/09/2026"),
+            shiftDateText("15/09/2026"),
+            shiftDateText("03/09/2026"),
+            shiftDateText("22/08/2026"),
+            shiftDateText("09/08/2026"),
+          ];
   const recentOperations: CedentRecentOperation[] = dates.map((date, index) => ({
     aditivo:
       index === 0 && currentOperation

@@ -39,7 +39,7 @@ export function QualityPolicyModal({
             <span className="lx-label">Política de risco</span>
             <h2 id="qp-title">Critérios do score de qualidade (0–1000)</h2>
             <p>
-              {draft.name} · {draft.version}. Valores de demonstração: ajuste para a política da sua instituição.
+              {draft.name} · {draft.version}. Homologue os critérios antes de usá-los no fluxo operacional.
             </p>
           </div>
           <button type="button" className="lx-square" aria-label="Fechar" onClick={onClose}>
@@ -247,7 +247,7 @@ export function QualityPolicyModal({
               onClose();
             }}
           >
-            Voltar aos valores de demonstração
+            Restaurar política padrão
           </button>
           <button
             type="button"

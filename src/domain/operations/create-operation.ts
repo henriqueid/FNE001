@@ -5,7 +5,6 @@
  */
 import { managerOf, repAt } from "@/src/domain/commercial/rules";
 import { type CommercialState } from "@/src/domain/commercial/types";
-import { initialOperations } from "@/src/domain/core/demo/operations";
 import {
   type Cedent,
   type Destination,
@@ -26,10 +25,20 @@ export type NewOperationRequest = {
   importedData?: ManualEntryData;
   entryIntake?: EntryIntake;
   operationalParameters?: OperationalParameters;
+  actor?: { name: string; initials?: string };
 };
 
 export function buildNewOperation(
-  { source, operationType, destination, cedent, importedData, entryIntake, operationalParameters }: NewOperationRequest,
+  {
+    source,
+    operationType,
+    destination,
+    cedent,
+    importedData,
+    entryIntake,
+    operationalParameters,
+    actor,
+  }: NewOperationRequest,
   operations: Operation[],
   commercial: CommercialState,
   today: string,
@@ -41,7 +50,7 @@ export function buildNewOperation(
     "Digitação manual": "Definir o tipo de recebível e iniciar a digitação",
     "Crédito estruturado": "Cadastrar condições, garantias e partes da CCB",
   };
-  const prefix = datePrefix();
+  const prefix = datePrefix(new Date(`${today}T12:00:00`));
   const dailySequence =
     Math.max(
       0,
@@ -68,7 +77,6 @@ export function buildNewOperation(
       )
     : 0;
   return {
-    ...initialOperations[4],
     commercialRepId: repAt(commercial, cedent.document, today),
     accountManagerId: managerOf(commercial, cedent.document),
     clientOperationalParameters: operationalParameters,
@@ -88,6 +96,15 @@ export function buildNewOperation(
     titleCount: importedEntries.length,
     stage: 1,
     status: "Em andamento",
+    owner: actor?.name ?? "Usuário atual",
+    ownerInitials:
+      actor?.initials ??
+      (actor?.name ?? "Usuário atual")
+        .split(" ")
+        .slice(0, 2)
+        .map(part => part[0])
+        .join("")
+        .toUpperCase(),
     blockers: 0,
     alerts: cedent.incidents,
     enteredAt: "Agora",
@@ -99,15 +116,7 @@ export function buildNewOperation(
     nextAction: importedEntries.length ? "Conferir lote normalizado e concluir a entrada" : nextActions[source],
     manualEntry: importedData,
     entryIntake,
-    automation: entryIntake ? intakeAutomation : source === "Digitação manual" ? 0 : initialOperations[4].automation,
-    policy:
-      destination.institution === "FIDC"
-        ? "Política do fundo selecionado"
-        : destination.institution === "Securitizadora"
-          ? "Política comercial da securitizadora"
-          : "Política de fomento com regresso",
-    fundClass: destination.institution === "FIDC" ? destination.detail : undefined,
-    participants:
-      destination.institution === "FIDC" ? ["Gestora Atlas", "Adm. Fiduciário Orbe", "Custodiante Nexus"] : undefined,
+    automation: entryIntake ? intakeAutomation : 0,
+    policy: "Política não configurada",
   };
 }

@@ -454,7 +454,12 @@ export default function StratoApp() {
   }
   function createOperation(input: NewOperationInput) {
     if (!can(currentUser, "operations:edit")) return;
-    const next = buildNewOperation(input, operations, commercial, new Date().toISOString().slice(0, 10));
+    const next = buildNewOperation(
+      { ...input, actor: { name: currentUser.name } },
+      operations,
+      commercial,
+      new Date().toISOString().slice(0, 10),
+    );
     // Sacados novos do arquivo são cadastrados automaticamente ao iniciar a operação.
     const importedDebtors = input.entryIntake?.newDebtors ?? [];
     if (importedDebtors.length)
@@ -481,7 +486,7 @@ export default function StratoApp() {
   }, [commercial, savedParties, isDemo]);
   // Score de qualidade único (0–1000): calculado pela política sobre o histórico de cada cliente e usado
   // igual no cadastro, na operação, no painel de Risco e no panorama. O score de bureau fica em `bureauScore`.
-  const qualityState = useQualityPolicyState();
+  const qualityState = useQualityPolicyState(isDemo);
   const scoreDay = isoDate(new Date());
   const cedentHistories = useMemo(
     () => (isDemo ? demoCedentHistories(registryCedents, scoreDay) : []),
@@ -707,6 +712,7 @@ export default function StratoApp() {
   );
   const runTaskCommand = (id: string, command: TaskCommand) =>
     setTasks(current => applyTaskCommand(current, id, command, new Date().toISOString()));
+  if (!isDemo && !accessServerReady) return <ModuleLoading />;
   const shellContext = {
     operations: scopedOperations,
     navigate,
@@ -791,6 +797,7 @@ export default function StratoApp() {
         onGoOperations={() => navigate("operations")}
         onNew={can(currentUser, "operations:edit") ? () => setShowNew(true) : undefined}
         revenueGoals={operationalDefaults.revenueGoals}
+        originationGoals={operationalDefaults.originationGoals}
         includeDemoPortfolio={isDemo}
       />
     );
@@ -839,6 +846,7 @@ export default function StratoApp() {
         onAccess={setAccess}
         intelligence={intelligence}
         onIntelligence={setIntelligence}
+        demoMode={isDemo}
       />
     );
   else if (view in roadmapViews) page = <ModuleRoadmap view={view as keyof typeof roadmapViews} />;
@@ -886,6 +894,7 @@ export default function StratoApp() {
                   setAccess(current => stopUserPreview(current));
                   setCompanyScope("Consolidado");
                 }}
+                demoMode={isDemo}
               >
                 <Suspense fallback={<ModuleLoading />}>{page}</Suspense>
               </Shell>

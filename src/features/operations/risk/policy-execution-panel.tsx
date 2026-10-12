@@ -432,8 +432,7 @@ export function PolicyExecutionPanel({
             {hasHistoricalSnapshot
               ? "A execução salva o resultado e as versões utilizadas. "
               : "Prévia não persistida: o sistema não fabrica histórico retroativo. "}
-            Parâmetros demonstrativos devem ser substituídos pela política real antes de o motor controlar o fluxo da
-            operação.
+            Os parâmetros devem ser homologados pela instituição antes de o motor controlar o fluxo da operação.
             {executionHistory.length > 0 &&
               ` A trilha conserva ${executionHistory.length} execução(ões) substituída(s), incluindo seus overrides.`}
           </footer>

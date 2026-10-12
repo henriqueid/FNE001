@@ -54,6 +54,7 @@ export function Shell({
   briefingReady = false,
   previewedBy,
   onEndPreview,
+  demoMode = false,
 }: {
   children: ReactNode;
   active?: string;
@@ -73,6 +74,7 @@ export function Shell({
   briefingReady?: boolean;
   previewedBy?: string;
   onEndPreview?: () => void;
+  demoMode?: boolean;
 }) {
   const context = useContext(ShellContext);
   const { preference, setPreference } = useTheme();
@@ -309,6 +311,7 @@ export function Shell({
           attentionItems={attentionItems}
           currentUser={currentUser}
           intelligence={intelligence}
+          demoMode={demoMode}
           onOpenAttention={openAttention}
           onNavigate={view => (onNavigate ?? context?.navigate)?.(view)}
         />

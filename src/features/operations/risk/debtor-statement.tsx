@@ -15,6 +15,7 @@ import {
   groupKey,
 } from "./risk-model";
 import { ScoreExplanation } from "./score-explanation";
+import { useIntegrations } from "@/src/app/integration-context";
 
 export function DebtorStatement({
   selectedGroup,
@@ -35,6 +36,11 @@ export function DebtorStatement({
   onConsult: (key: string) => void;
   onDecide: (key: string, decision: RiskDecision) => void;
 }) {
+  const integrations = useIntegrations();
+  const receitaMode = integrations.providers.find(provider => provider.id === "RECEITA")?.mode ?? "NAO_CONFIGURADA";
+  const bureauMode = integrations.providers.find(provider => provider.id === "BUREAU")?.mode ?? "NAO_CONFIGURADA";
+  const receitaAvailable = receitaMode === "ATIVA" || receitaMode === "DEMONSTRACAO";
+  const bureauAvailable = bureauMode === "ATIVA" || bureauMode === "DEMONSTRACAO";
   const recommendation = debtorRecommendation(selectedDebtor);
   return (
     <section className="debtor-analysis">
@@ -79,13 +85,27 @@ export function DebtorStatement({
             <ShieldIcon />
             <span>
               <strong>{selectedDebtor?.publicStatus ?? "Consulta pública pendente"}</strong>
-              <small>Receita/CPF-CNPJ · demonstração; integração oficial ainda não conectada</small>
+              <small>
+                Receita/CPF-CNPJ · {receitaMode === "ATIVA" ? "fonte oficial ativa" : "integração não configurada"}
+              </small>
             </span>
-            <button onClick={() => onConsult(groupKey(selectedGroup))}>
-              {consulted.includes(groupKey(selectedGroup)) ? "Consulta atualizada" : "Consultar cadastro"}
+            <button disabled={!receitaAvailable} onClick={() => onConsult(groupKey(selectedGroup))}>
+              {!receitaAvailable
+                ? "Configurar Receita"
+                : consulted.includes(groupKey(selectedGroup))
+                  ? "Consulta atualizada"
+                  : "Consultar cadastro"}
             </button>
-            <button className="bureau-button" onClick={() => onConsult(`bureau-${groupKey(selectedGroup)}`)}>
-              {consulted.includes(`bureau-${groupKey(selectedGroup)}`) ? "Serasa consultado" : "Consultar Serasa"}
+            <button
+              className="bureau-button"
+              disabled={!bureauAvailable}
+              onClick={() => onConsult(`bureau-${groupKey(selectedGroup)}`)}
+            >
+              {!bureauAvailable
+                ? "Configurar bureau"
+                : consulted.includes(`bureau-${groupKey(selectedGroup)}`)
+                  ? "Bureau consultado"
+                  : "Consultar bureau"}
             </button>
           </div>
           <div className="decision-buttons">

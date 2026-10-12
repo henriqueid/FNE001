@@ -3,7 +3,7 @@
  * Cabeçalho da visão geral: título com trilha (empresa / perfil), perfis em abas de texto,
  * seletor de empresa, período e nova operação, e o aviso de período sem originação.
  */
-import { destinations } from "@/src/domain/core/demo/companies";
+import { useCompanyDestinations } from "@/src/app/company-context";
 import { periodLabels, profileLabels, type HomePeriod, type HomeProfile } from "@/src/domain/home/settings";
 import { ArrowIcon, ClockIcon, FolderIcon, GridIcon, PlusIcon } from "@/src/ui/icons";
 import type { HomeMetrics } from "./use-home-metrics";
@@ -29,6 +29,7 @@ export function HomeHeader({
   companyScope: string;
   onNew?: () => void;
 }) {
+  const destinations = useCompanyDestinations();
   const { labels, periodEmpty } = metrics;
   const today = new Date().toLocaleDateString("sv-SE");
   const position = new Date(`${positionDate}T12:00:00`);

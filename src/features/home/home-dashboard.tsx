@@ -34,6 +34,7 @@ export default function HomeDashboard({
   onGoOperations,
   onNew,
   revenueGoals,
+  originationGoals,
   includeDemoPortfolio = false,
 }: {
   operations: Operation[];
@@ -47,6 +48,7 @@ export default function HomeDashboard({
   onGoOperations: () => void;
   onNew?: () => void;
   revenueGoals: OperationalDefaultsState["revenueGoals"];
+  originationGoals: OperationalDefaultsState["originationGoals"];
   includeDemoPortfolio?: boolean;
 }) {
   const { period, setPeriod, profile, chooseProfile, now, positionDate, setPositionDate } = useHomePreferences();
@@ -64,6 +66,7 @@ export default function HomeDashboard({
     now: position,
     qualityPolicy: quality.policy,
     revenueGoals,
+    originationGoals,
     includeDemoPortfolio,
   });
 

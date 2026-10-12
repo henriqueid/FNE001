@@ -172,5 +172,9 @@ describe("entrada e normalização de operações", () => {
       entryIntake: { fileName: "nova-operacao.csv", acceptedRows: 1 },
     });
     expect(operation.automation).toBeGreaterThan(75);
+    expect(operation.policy).toBe("Política não configurada");
+    expect(operation.participants).toBeUndefined();
+    expect(operation.fundClass).toBeUndefined();
+    expect(operation.pricingReview).toBeUndefined();
   });
 });

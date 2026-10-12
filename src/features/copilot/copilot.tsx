@@ -14,7 +14,6 @@ import { type DailyBriefingData } from "@/src/domain/copilot/daily-briefing";
 import { type SystemKnowledge, systemSuggestions } from "@/src/domain/copilot/system-query";
 import { masterRuleCatalog } from "@/src/domain/eligibility/master-rule-catalog";
 import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
-import { seedEligibilityPolicies } from "@/src/domain/eligibility/policy-library";
 import { isoDate, portfolioTitles } from "@/src/domain/home/metrics";
 import { ShellContext } from "@/src/features/shell/shell-context";
 import { ArrowIcon, CloseIcon, ExpandIcon, SendIcon, SparkIcon, UndoIcon } from "@/src/ui/icons";
@@ -34,6 +33,7 @@ export function Copilot({
   onOpenAttention,
   currentUser,
   intelligence,
+  demoMode = false,
 }: {
   suggestion?: CopilotSuggestion;
   dailyBriefing: DailyBriefingData;
@@ -41,6 +41,7 @@ export function Copilot({
   onOpenAttention: (itemId?: string) => void;
   currentUser: AccessUser;
   intelligence: IntelligenceState;
+  demoMode?: boolean;
 }) {
   const cedents = useCedents();
   const operations = useContext(ShellContext)?.operations;
@@ -50,14 +51,14 @@ export function Copilot({
       operations: operations ?? [],
       cedents,
       titles: portfolioTitles(operations ?? []),
-      policies: policies ?? seedEligibilityPolicies().policies,
+      policies: policies ?? [],
       rules: masterRuleCatalog,
       parameters: operationalParametersFor(),
       today: isoDate(new Date()),
     }),
     [operations, cedents, policies],
   );
-  const desk = useCopilotDesk(knowledge, currentUser, intelligence, cedents[0]?.id ?? "");
+  const desk = useCopilotDesk(knowledge, currentUser, intelligence, cedents[0]?.id ?? "", demoMode);
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState("");

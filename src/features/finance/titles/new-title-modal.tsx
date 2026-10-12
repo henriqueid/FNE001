@@ -3,7 +3,7 @@
 /**
  * Novo lançamento: único, nota parcelada ou recorrente, com opção de lançar e baixar.
  */
-import { destinations } from "@/src/domain/core/demo/companies";
+import { useCompanyDestinations } from "@/src/app/company-context";
 import { addDays, round2, todayIso, type Effect, type Result } from "@/src/domain/finance/ledger";
 import type { FinanceState, FinanceTitle } from "@/src/domain/finance/model";
 import { createTitle } from "@/src/domain/finance/titles";
@@ -36,10 +36,11 @@ export function NewTitleModal({
   onApply: (r: Result) => void;
   template?: FinanceTitle;
 }) {
+  const destinations = useCompanyDestinations();
   const today = todayIso();
   const [kind, setKind] = useState<"Pagar" | "Receber">(template?.kind ?? "Pagar");
   const [company, setCompany] = useState(
-    template?.company ?? (defaultCompany === "Consolidado" ? destinations[3].name : defaultCompany),
+    template?.company ?? (defaultCompany === "Consolidado" ? (destinations[0]?.name ?? "") : defaultCompany),
   );
   const cats = state.categories.filter(c => c.kind === (kind === "Pagar" ? "Despesa" : "Receita"));
   const [categoryId, setCategoryId] = useState(template?.categoryId ?? "");

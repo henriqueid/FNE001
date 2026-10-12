@@ -136,6 +136,20 @@ export const demoQualityPolicy: QualityPolicy = {
   ],
 };
 
+/** Base neutra para uma organização real; os parâmetros devem ser homologados pela instituição. */
+export const defaultQualityPolicy: QualityPolicy = {
+  ...demoQualityPolicy,
+  name: "Política de qualidade padrão",
+  version: "v1.0",
+  components: demoQualityPolicy.components.map(component => ({ ...component })),
+  indicators: {
+    ...demoQualityPolicy.indicators,
+    provisionBands: demoQualityPolicy.indicators.provisionBands.map(band => ({ ...band })),
+    funnelProbability: { ...demoQualityPolicy.indicators.funnelProbability },
+    inactiveDays: [...demoQualityPolicy.indicators.inactiveDays],
+  },
+};
+
 export function hhiLabel(hhi: number, policy: Pick<QualityPolicy, "hhiModerate" | "hhiHigh">) {
   return hhi > policy.hhiHigh ? "concentrada" : hhi > policy.hhiModerate ? "moderada" : "pulverizada";
 }

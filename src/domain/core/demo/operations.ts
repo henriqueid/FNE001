@@ -506,3 +506,7 @@ const seedOperations: Operation[] = [
 
 /** Sementes com as datas acompanhando o dia de hoje (fixas nos testes). */
 export const initialOperations: Operation[] = shiftDemoDates(seedOperations);
+
+const demoOperationIds = new Set(initialOperations.map(operation => operation.id));
+
+export const isDemoOperation = (operation: Pick<Operation, "id">) => demoOperationIds.has(operation.id);

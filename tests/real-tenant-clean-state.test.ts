@@ -31,5 +31,6 @@ describe("organização real recém-criada", () => {
       monthlyTokenBudget: 0,
     });
     expect(emptyOperationalDefaults().revenueGoals.consolidated).toEqual({ dia: 0, semana: 0, mes: 0 });
+    expect(emptyOperationalDefaults().originationGoals.consolidated).toEqual({ dia: 0, semana: 0, mes: 0 });
   });
 });

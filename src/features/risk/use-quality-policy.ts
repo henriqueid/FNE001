@@ -6,7 +6,7 @@
  * para que cadastro, operação, Risco e panorama mostrem o mesmo score.
  */
 import { type QualityHistory, type QualityTrend } from "@/src/domain/risk/quality";
-import { demoQualityPolicy, type QualityPolicy } from "@/src/domain/risk/quality-policy";
+import { defaultQualityPolicy, demoQualityPolicy, type QualityPolicy } from "@/src/domain/risk/quality-policy";
 import { createContext, useContext, useEffect, useState } from "react";
 
 /** v2: score na escala 0–1000 (a v1 guardava o índice em 0–100). */
@@ -34,41 +34,43 @@ export function useQualityPolicy(): QualityState {
   return useContext(QualityContext) ?? local;
 }
 
-export function useQualityPolicyState() {
-  const [policy, setPolicy] = useState<QualityPolicy>(demoQualityPolicy);
+export function useQualityPolicyState(demoMode = true) {
+  const basePolicy = demoMode ? demoQualityPolicy : defaultQualityPolicy;
+  const storageKey = demoMode ? QUALITY_POLICY_KEY : "strato-quality-policy-real-v1";
+  const [policy, setPolicy] = useState<QualityPolicy>(basePolicy);
   useEffect(() => {
     try {
-      const saved = window.localStorage.getItem(QUALITY_POLICY_KEY);
+      const saved = window.localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved) as QualityPolicy;
         if (parsed?.components?.length)
           // eslint-disable-next-line react-hooks/set-state-in-effect -- preferência lida do navegador depois de montar
           setPolicy({
-            ...demoQualityPolicy,
+            ...basePolicy,
             ...parsed,
-            healthyIndex: demoQualityPolicy.healthyIndex,
-            indicators: { ...demoQualityPolicy.indicators, ...(parsed.indicators ?? {}) },
+            healthyIndex: basePolicy.healthyIndex,
+            indicators: { ...basePolicy.indicators, ...(parsed.indicators ?? {}) },
           });
       }
     } catch {
-      /* sem armazenamento: fica a política de demonstração */
+      /* sem armazenamento: mantém a política base do ambiente */
     }
-  }, []);
+  }, [basePolicy, storageKey]);
   const save = (next: QualityPolicy) => {
     setPolicy(next);
     try {
-      window.localStorage.setItem(QUALITY_POLICY_KEY, JSON.stringify(next));
+      window.localStorage.setItem(storageKey, JSON.stringify(next));
     } catch {
       /* ignora */
     }
   };
   const reset = () => {
-    setPolicy(demoQualityPolicy);
+    setPolicy(basePolicy);
     try {
-      window.localStorage.removeItem(QUALITY_POLICY_KEY);
+      window.localStorage.removeItem(storageKey);
     } catch {
       /* ignora */
     }
   };
-  return { policy, save, reset, customized: policy !== demoQualityPolicy };
+  return { policy, save, reset, customized: policy !== basePolicy };
 }

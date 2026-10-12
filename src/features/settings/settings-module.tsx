@@ -1,6 +1,6 @@
 "use client";
 
-import { destinations } from "@/src/domain/core/demo/companies";
+import { useCompanyDestinations } from "@/src/app/company-context";
 import { masterRuleCatalog } from "@/src/domain/eligibility/master-rule-catalog";
 import { type EligibilityPolicyState } from "@/src/domain/eligibility/policy-library";
 import PoliciesModule from "@/src/features/policies/policies-module";
@@ -8,7 +8,7 @@ import { useState } from "react";
 import { type IntegrationState, updateIntegrationMode } from "@/src/domain/integrations/model";
 import type { OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
 import { OperationalParametersEditor } from "@/src/features/registry/operational-parameters-editor";
-import { homeSettings, type HomePeriod } from "@/src/domain/home/settings";
+import { type HomePeriod } from "@/src/domain/home/settings";
 import { type AccessState } from "@/src/domain/access/model";
 import { UsersAccessPanel } from "./users-access-panel";
 import {
@@ -145,6 +145,7 @@ export default function SettingsModule({
   onAccess,
   intelligence,
   onIntelligence,
+  demoMode = false,
 }: {
   policies: EligibilityPolicyState;
   onPolicies: (state: EligibilityPolicyState) => void;
@@ -160,7 +161,9 @@ export default function SettingsModule({
   onAccess: (state: AccessState) => void;
   intelligence: IntelligenceState;
   onIntelligence: (state: IntelligenceState) => void;
+  demoMode?: boolean;
 }) {
+  const destinations = useCompanyDestinations();
   const [section, setSection] = useState<SettingsSection>("overview");
   const activePolicies = policies.policies.filter(policy => policy.status === "ATIVA").length;
   const executableRules = masterRuleCatalog.filter(
@@ -225,7 +228,11 @@ export default function SettingsModule({
                   <p>Use os atalhos abaixo ou navegue pelos assuntos no menu lateral.</p>
                 </div>
                 <div className="settings-readiness">
-                  <b>{activePolicies === destinations.length ? "Ambiente organizado" : "Requer atenção"}</b>
+                  <b>
+                    {destinations.length > 0 && activePolicies === destinations.length
+                      ? "Ambiente organizado"
+                      : "Requer atenção"}
+                  </b>
                   <small>
                     {activePolicies} de {destinations.length} empresas com política ativa
                   </small>
@@ -278,14 +285,16 @@ export default function SettingsModule({
                     <b>1</b>
                     <span>
                       <strong>Confirme as empresas</strong>
-                      <small>Os quatro escopos multiempresa já estão disponíveis.</small>
+                      <small>{destinations.length} escopo(s) empresarial(is) cadastrado(s).</small>
                     </span>
                   </li>
-                  <li className="done">
+                  <li className={activePolicies === destinations.length && destinations.length > 0 ? "done" : ""}>
                     <b>2</b>
                     <span>
                       <strong>Revise as políticas</strong>
-                      <small>Cada empresa possui uma política ativa para evoluir.</small>
+                      <small>
+                        {activePolicies} de {destinations.length} empresa(s) com política ativa.
+                      </small>
                     </span>
                   </li>
                   <li>
@@ -427,6 +436,84 @@ export default function SettingsModule({
               />
               <section className="settings-revenue-goals">
                 <header>
+                  <span>META DE ORIGINAÇÃO</span>
+                  <h3>Volume por período e veículo</h3>
+                  <p>Começa zerado no ambiente real e só passa a orientar os painéis depois de configurado.</p>
+                </header>
+                <div className="settings-goal-row heading">
+                  <b>Escopo</b>
+                  {goalPeriods.map(period => (
+                    <b key={period.id}>{period.label}</b>
+                  ))}
+                </div>
+                <div className="settings-goal-row">
+                  <span>
+                    <strong>Consolidado</strong>
+                    <small>Meta geral de volume</small>
+                  </span>
+                  {goalPeriods.map(period => (
+                    <label key={period.id}>
+                      <small>R$</small>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        aria-label={`Meta consolidada de originação por ${period.label.toLowerCase()}`}
+                        value={operationalDefaults.originationGoals.consolidated[period.id]}
+                        onChange={event =>
+                          onOperationalDefaults({
+                            ...operationalDefaults,
+                            originationGoals: {
+                              ...operationalDefaults.originationGoals,
+                              consolidated: {
+                                ...operationalDefaults.originationGoals.consolidated,
+                                [period.id]: Number(event.target.value),
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </label>
+                  ))}
+                </div>
+                {destinations.map(destination => (
+                  <div className="settings-goal-row" key={destination.name}>
+                    <span>
+                      <strong>{destination.name}</strong>
+                      <small>{destination.institution}</small>
+                    </span>
+                    {goalPeriods.map(period => (
+                      <label key={period.id}>
+                        <small>R$</small>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1000"
+                          aria-label={`Meta de originação de ${destination.name} por ${period.label.toLowerCase()}`}
+                          value={operationalDefaults.originationGoals.byVehicle[destination.name]?.[period.id] ?? 0}
+                          onChange={event =>
+                            onOperationalDefaults({
+                              ...operationalDefaults,
+                              originationGoals: {
+                                ...operationalDefaults.originationGoals,
+                                byVehicle: {
+                                  ...operationalDefaults.originationGoals.byVehicle,
+                                  [destination.name]: {
+                                    ...operationalDefaults.originationGoals.byVehicle[destination.name],
+                                    [period.id]: Number(event.target.value),
+                                  },
+                                },
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                    ))}
+                  </div>
+                ))}
+              </section>
+              <section className="settings-revenue-goals">
+                <header>
                   <span>META DE RECEITA</span>
                   <h3>Metas por período e veículo</h3>
                   <p>
@@ -476,9 +563,6 @@ export default function SettingsModule({
                       <small>{destination.institution}</small>
                     </span>
                     {goalPeriods.map(period => {
-                      const fallback =
-                        operationalDefaults.revenueGoals.consolidated[period.id] *
-                        (homeSettings.vehicleTargetShare[destination.name] ?? 0.25);
                       return (
                         <label key={period.id}>
                           <small>R$</small>
@@ -487,10 +571,7 @@ export default function SettingsModule({
                             min="0"
                             step="1000"
                             aria-label={`Meta de ${destination.name} por ${period.label.toLowerCase()}`}
-                            value={
-                              operationalDefaults.revenueGoals.byVehicle[destination.name]?.[period.id] ??
-                              Math.round(fallback)
-                            }
+                            value={operationalDefaults.revenueGoals.byVehicle[destination.name]?.[period.id] ?? 0}
                             onChange={event =>
                               onOperationalDefaults({
                                 ...operationalDefaults,
@@ -603,7 +684,8 @@ export default function SettingsModule({
                       >
                         Desativar demonstração
                       </button>
-                    ) : provider.mode === "NAO_CONFIGURADA" &&
+                    ) : demoMode &&
+                      provider.mode === "NAO_CONFIGURADA" &&
                       ["CEP", "RECEITA", "SEFAZ", "BUREAU", "PEP_SANCOES"].includes(provider.id) ? (
                       <button
                         type="button"

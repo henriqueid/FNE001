@@ -19,17 +19,6 @@ export const profileLabels: Record<HomeProfile, { tab: string; description: stri
 };
 
 export const homeSettings = {
-  // Meta de originação por período (Configurações › Metas).
-  volumeTarget: { dia: 1_500_000, semana: 7_500_000, mes: 30_000_000 } as Record<HomePeriod, number>,
-  // Meta de receita reconhecida. A visão operacional distribui o valor pelos dias úteis.
-  revenueTarget: { dia: 30_000, semana: 150_000, mes: 600_000 } as Record<HomePeriod, number>,
-  // Participação de cada empresa/veículo na meta consolidada (recorte por empresa).
-  vehicleTargetShare: {
-    "Lastro Prime FIDC · Classe Sênior": 0.35,
-    "Aurora Recebíveis FIDC · Classe Única": 0.2,
-    "Órbita Securitizadora S.A.": 0.15,
-    "Lastro Fomento Mercantil": 0.3,
-  } as Record<string, number>,
   // Recebimento esperado dos vencimentos em cada cenário da curva de liquidez.
   recovery: { conservative: 0.8, base: 0.95, optimistic: 1 },
   // Janela do gráfico principal de caixa: dias realizados para trás e projetados para frente.

@@ -337,10 +337,7 @@ export function ClientPanel({
               </tbody>
             </table>
           ) : (
-            <p className="lx-note">
-              Os títulos deste cliente não estão na carteira de demonstração; as faixas acima vêm do último fechamento
-              mensal.
-            </p>
+            <p className="lx-note">Não há títulos analíticos disponíveis para este cliente na posição atual.</p>
           )}
         </section>
 

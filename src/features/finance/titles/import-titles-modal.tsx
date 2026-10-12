@@ -3,7 +3,7 @@
 /**
  * Importação de títulos colados do Excel.
  */
-import { destinations } from "@/src/domain/core/demo/companies";
+import { useCompanyDestinations } from "@/src/app/company-context";
 import { todayIso, type Result } from "@/src/domain/finance/ledger";
 import type { FinanceState } from "@/src/domain/finance/model";
 import { createTitle } from "@/src/domain/finance/titles";
@@ -24,6 +24,7 @@ export function ImportModal({
   onClose: () => void;
   onApply: (r: Result) => void;
 }) {
+  const destinations = useCompanyDestinations();
   const [text, setText] = useState("");
   const today = todayIso();
   const toIso = (v: string) => {
@@ -31,7 +32,7 @@ export function ImportModal({
     if (m) return `${m[3].length === 2 ? `20${m[3]}` : m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
     return /^\d{4}-\d{2}-\d{2}$/.test(v.trim()) ? v.trim() : "";
   };
-  const fallbackCompany = defaultCompany === "Consolidado" ? destinations[3].name : defaultCompany;
+  const fallbackCompany = defaultCompany === "Consolidado" ? (destinations[0]?.name ?? "") : defaultCompany;
   const parsed = text
     .split(/\r?\n/)
     .map(l => l.trim())

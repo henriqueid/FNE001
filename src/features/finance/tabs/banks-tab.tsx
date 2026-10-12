@@ -3,7 +3,7 @@
 /**
  * Contas bancárias da empresa: cadastro, finalidades, convênio de cobrança e saldo mínimo.
  */
-import { destinations } from "@/src/domain/core/demo/companies";
+import { useCompanyDestinations } from "@/src/app/company-context";
 import { accountBalance, inScope, saveAccount } from "@/src/domain/finance/banking";
 import { todayIso, type Result } from "@/src/domain/finance/ledger";
 import { bankList, type BankAccountType, type CompanyBankAccount, type FinanceState } from "@/src/domain/finance/model";
@@ -20,10 +20,11 @@ export function BanksTab({
   scope: string;
   onApply: (r: Result) => boolean;
 }) {
+  const destinations = useCompanyDestinations();
   const [editing, setEditing] = useState<CompanyBankAccount | null>(null);
   const blank: CompanyBankAccount = {
     id: "",
-    company: scope === "Consolidado" ? destinations[3].name : scope,
+    company: scope === "Consolidado" ? (destinations[0]?.name ?? "") : scope,
     bankCode: "341",
     bankName: "Itaú Unibanco",
     agency: "",
@@ -140,6 +141,7 @@ export function AccountModal({
   onClose: () => void;
   onSave: (a: CompanyBankAccount) => void;
 }) {
+  const destinations = useCompanyDestinations();
   const [a, setA] = useState<CompanyBankAccount>(account);
   const set = (change: Partial<CompanyBankAccount>) => setA(prev => ({ ...prev, ...change }));
   // Valores digitados ficam como texto até salvar (aceita "1.500,55").

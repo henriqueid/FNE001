@@ -4,6 +4,7 @@
  * Etapa Liberação: favorecidos (cedente ou terceiro com justificativa), conferências e envio ao financeiro.
  */
 import { cedentBankAccounts } from "@/src/domain/core/demo/cedents";
+import { isDemoOperation } from "@/src/domain/core/demo/operations";
 import { preciseMoney } from "@/src/domain/core/format";
 import {
   type BankAccount,
@@ -65,7 +66,9 @@ export function ReleasePanel({
   const offsets =
     repurchaseCalculation(operation, pricing).total + settlementAdjustmentCalculation(operation, pricing).total;
   const netToRelease = roundPricing(operation.pricingReview ? calculated.net - offsets : operation.netAmount);
-  const cedentAccounts = cedentBankAccounts[operation.document.replace(/\D/g, "")] ?? [];
+  const cedentAccounts = isDemoOperation(operation)
+    ? (cedentBankAccounts[operation.document.replace(/\D/g, "")] ?? [])
+    : [];
   const today = localDateISO();
   const cedentPayee = (account: BankAccount | undefined, id: string): ReleasePayee => ({
     id,

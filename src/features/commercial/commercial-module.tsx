@@ -60,6 +60,7 @@ import { ModuleTabs } from "@/src/ui/module-tabs";
 import { CommercialIndicatorsCard } from "./commercial-indicators-card";
 import { useQualityPolicy } from "@/src/features/risk/use-quality-policy";
 import { useMemo, useState } from "react";
+import { useStratoAuth } from "@/src/features/auth/auth-context";
 
 export function BriefcaseIcon() {
   return (
@@ -102,6 +103,7 @@ export default function CommercialModule({
   onOpenOperation,
   onNavigate,
 }: Props) {
+  const isDemo = useStratoAuth()?.mode === "demo";
   const today = todayIso();
   // O estado comercial vive no app (vínculo único com Cadastro, Operação e Carteira).
   const setState = onState;
@@ -715,21 +717,23 @@ export default function CommercialModule({
       {modal?.type === "lost" && (
         <LostModal state={state} prospect={modal.prospect} onClose={() => setModal(null)} onApply={apply} />
       )}
-      <p className="fn-note cm-foot">
-        Dados comerciais de demonstração gerados a partir de hoje. As operações liberadas ao financeiro no workspace
-        entram como negócios do comercial do cliente.{" "}
-        <button
-          className="fn-btn link"
-          onClick={() => {
-            if (window.confirm("Restaurar os dados comerciais de demonstração?")) {
-              setState(seedCommercial());
-              setToast({ tone: "success", text: "Dados comerciais restaurados." });
-            }
-          }}
-        >
-          Restaurar demonstração
-        </button>
-      </p>
+      {isDemo && (
+        <p className="fn-note cm-foot">
+          Dados comerciais de demonstração gerados a partir de hoje. As operações liberadas ao financeiro no workspace
+          entram como negócios do comercial do cliente.{" "}
+          <button
+            className="fn-btn link"
+            onClick={() => {
+              if (window.confirm("Restaurar os dados comerciais de demonstração?")) {
+                setState(seedCommercial());
+                setToast({ tone: "success", text: "Dados comerciais restaurados." });
+              }
+            }}
+          >
+            Restaurar demonstração
+          </button>
+        </p>
+      )}
     </div>
   );
 }

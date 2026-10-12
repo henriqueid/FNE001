@@ -2,6 +2,7 @@
  * Avaliação de lastro: amostra por risco, cobertura documental e situação de confirmação de cada título.
  */
 import { initialDebtors } from "@/src/domain/core/demo/debtors";
+import { isDemoOperation } from "@/src/domain/core/demo/operations";
 import { type Debtor, type ManualEntry, type Operation } from "@/src/domain/core/types";
 import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
 
@@ -45,7 +46,10 @@ export const isLastroException = (confirmation?: LastroAssessmentRow["confirmati
 export const isConfirmationResolved = (row: Pick<LastroAssessmentRow, "confirmation">) =>
   row.confirmation === "Confirmado" || isLastroException(row.confirmation);
 
-export function lastroAssessmentFor(operation: Operation, debtorCatalog: Debtor[] = initialDebtors) {
+export function lastroAssessmentFor(
+  operation: Operation,
+  debtorCatalog: Debtor[] = isDemoOperation(operation) ? initialDebtors : [],
+) {
   const entries = operation.manualEntry?.entries ?? [];
   const { lastroSampleRatio, lastroRelevantShare, scoreBands, cfopPrefixes } = operationalParametersFor(
     operation.institution,

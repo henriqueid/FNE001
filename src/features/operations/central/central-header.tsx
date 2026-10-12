@@ -4,11 +4,12 @@
  * Cabeçalho da Central de Operações (título, trilha com a empresa em foco e nova operação).
  * A empresa é escolhida na barra superior.
  */
-import { destinations } from "@/src/domain/core/demo/companies";
+import { useCompanyDestinations } from "@/src/app/company-context";
 import { Badge } from "@/src/features/operations/components/status";
 import { PlusIcon, SparkIcon } from "@/src/ui/icons";
 
 export function CentralHeader({ companyScope, onNew }: { companyScope: string; onNew?: () => void }) {
+  const destinations = useCompanyDestinations();
   return (
     <div className="page-heading">
       <div>

@@ -92,6 +92,7 @@ export function ExperienceGuide({
   onNavigate,
   currentUser,
   intelligence,
+  demoMode = false,
 }: {
   active: string;
   operations: Operation[];
@@ -103,6 +104,7 @@ export function ExperienceGuide({
   showJourney: boolean;
   currentUser: AccessUser;
   intelligence: IntelligenceState;
+  demoMode?: boolean;
 }) {
   const [explained, setExplained] = useState(false);
   const current = guide[active] ?? guide.Operações;
@@ -196,6 +198,7 @@ export function ExperienceGuide({
         }}
         currentUser={currentUser}
         intelligence={intelligence}
+        demoMode={demoMode}
       />
     </>
   );

@@ -97,7 +97,7 @@ Evidências A3.2:
 - [x] persistir políticas e versões aprovadas;
 - [x] persistir tarefas, responsáveis, prazos e histórico;
 - [x] persistir Carteira sem depender do navegador;
-- [ ] criar manuais por perfil para Comercial, Risco, Controladoria e Financeiro.
+- [x] criar manuais por perfil para Comercial, Risco, Controladoria e Financeiro.
 
 Progresso A4.1 — Central do Dia persistente:
 
@@ -188,6 +188,7 @@ Evidências A4.4:
 - TypeScript, lint, formatação e build aprovados; 237 testes automatizados aprovados em 42 arquivos;
 - testes específicos cobrem integridade da transição e estabilidade da chave idempotente;
 - guia publicado em `docs/user-guides/COMERCIAL_FUNIL_COMITE_E_ONBOARDING.md`.
+- guia transversal por perfil publicado em `docs/user-guides/GUIA_RAPIDO_POR_PERFIL.md`, com rotinas, limites de atuação e passagens de bastão para Comercial, Risco, Controladoria e Financeiro.
 
 ### A5. Segurança e comandos materiais
 

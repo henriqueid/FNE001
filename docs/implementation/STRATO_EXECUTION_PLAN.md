@@ -93,7 +93,7 @@ Evidências A3.2:
 
 ### A4. Estado operacional complementar
 
-- [ ] persistir Comercial e vínculos históricos;
+- [x] persistir Comercial e vínculos históricos;
 - [x] persistir políticas e versões aprovadas;
 - [x] persistir tarefas, responsáveis, prazos e histórico;
 - [x] persistir Carteira sem depender do navegador;
@@ -164,6 +164,30 @@ Evidências A4.3:
 - testes automatizados cobrem autoria, imutabilidade da origem, histórico append-only e hash do comando;
 - inspeção visual confirmou a Central de cobrança, 18 títulos, prioridades, agenda e régua de recuperação sem erros no console;
 - guia publicado em `docs/user-guides/CARTEIRA_COBRANCA_E_CONFIRMACAO.md`.
+
+Progresso A4.4 — originação Comercial persistente:
+
+- [x] persistir o agregado Comercial e suas projeções de leads e comitês por tenant;
+- [x] manter dossiê, responsável, visitas, vínculos, comissões e histórico entre sessões;
+- [x] exigir decisão favorável do comitê antes da conversão;
+- [x] separar a autoria comercial da alçada de decisão de risco;
+- [x] criar automaticamente o cedente e o vínculo após aprovação válida;
+- [x] aplicar versão otimista, comandos idempotentes, eventos e outbox;
+- [x] manter demonstração no navegador e modo real no servidor autenticado;
+- [x] publicar o guia do funil, comitê e onboarding;
+- [ ] homologar visualmente a concorrência com duas sessões reais.
+
+Evidências A4.4:
+
+- migração `create_commercial_origination_storage` aplicada no Supabase e reconciliada com o histórico remoto;
+- tabelas privadas com RLS forçado e privilégios de clientes revogados;
+- projeções normalizadas permitem consultar funil por etapa, CNPJ e pautas por situação/data;
+- API autenticada aplica permissão comercial e exige `risk:decide` para registrar decisões;
+- validações preservam pautas, decisões e históricos e impedem conversão sem aprovação;
+- ensaio transacional confirmou estado, lead, comitê, evento, outbox, recibo idempotente e bloqueio de alteração do recibo, seguido de rollback com zero resíduos;
+- TypeScript, lint, formatação e build aprovados; 237 testes automatizados aprovados em 42 arquivos;
+- testes específicos cobrem integridade da transição e estabilidade da chave idempotente;
+- guia publicado em `docs/user-guides/COMERCIAL_FUNIL_COMITE_E_ONBOARDING.md`.
 
 ### A5. Segurança e comandos materiais
 

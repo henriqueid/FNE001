@@ -35,8 +35,9 @@ import { addDays, todayIso } from "@/src/domain/finance/ledger";
 import type { FinanceState } from "@/src/domain/finance/model";
 import { portfolioTitles } from "@/src/domain/home/metrics";
 import { portfolioByRep } from "@/src/domain/registry/registry";
-import { ConvertModal, LostModal, ProspectModal, TransferModal } from "@/src/features/commercial/modals/client-modals";
+import { LostModal, ProspectModal, TransferModal } from "@/src/features/commercial/modals/client-modals";
 import { CommitteeModal } from "@/src/features/commercial/modals/committee-modal";
+import { ProspectDossierModal } from "@/src/features/commercial/modals/prospect-dossier-modal";
 import { RepModal } from "@/src/features/commercial/modals/rep-modal";
 import { RulesModal } from "@/src/features/commercial/modals/rules-modal";
 import { VisitModal } from "@/src/features/commercial/modals/visit-modal";
@@ -92,6 +93,7 @@ export type Props = {
   onFinance: (s: FinanceState) => void;
   onOpenOperation: (op: Operation) => void;
   onNavigate?: (view: AppView) => void;
+  canDecideCommittee?: boolean;
 };
 
 export default function CommercialModule({
@@ -103,6 +105,7 @@ export default function CommercialModule({
   onFinance,
   onOpenOperation,
   onNavigate,
+  canDecideCommittee = false,
 }: Props) {
   const isDemo = useStratoAuth()?.mode === "demo";
   const destinations = useCompanyDestinations();
@@ -127,7 +130,7 @@ export default function CommercialModule({
     | { type: "rules" }
     | { type: "transfer"; link: ClientLink }
     | { type: "prospect" }
-    | { type: "convert"; prospect: Prospect }
+    | { type: "dossier"; prospect: Prospect }
     | { type: "lost"; prospect: Prospect }
   >(null);
 
@@ -649,11 +652,19 @@ export default function CommercialModule({
           onApply={apply}
           onNew={() => setModal({ type: "prospect" })}
           onLost={prospect => setModal({ type: "lost", prospect })}
-          onConvert={prospect => setModal({ type: "convert", prospect })}
+          onOpenDossier={prospect => setModal({ type: "dossier", prospect })}
           onCommittee={p =>
             setModal({
               type: "committee",
-              preset: { clientName: p.name, repId: p.repId, request: "Limite inicial", requested: p.potential },
+              preset: {
+                clientName: p.name,
+                document: p.dossier?.document || p.document,
+                repId: p.repId,
+                request: "Limite inicial",
+                requested: p.dossier?.requestedLimit || p.potential,
+                rate: p.dossier?.proposedRate,
+                commercialOpinion: p.dossier?.commercialSummary,
+              },
             })
           }
         />
@@ -668,6 +679,8 @@ export default function CommercialModule({
           to={to}
           onNew={() => setModal({ type: "committee" })}
           onDecide={committee => setModal({ type: "committee", committee })}
+          onOpenDossier={prospect => setModal({ type: "dossier", prospect })}
+          canDecide={canDecideCommittee}
         />
       )}
 
@@ -719,8 +732,27 @@ export default function CommercialModule({
       {modal?.type === "prospect" && (
         <ProspectModal state={state} defaultRep={repFilter} onClose={() => setModal(null)} onApply={apply} />
       )}
-      {modal?.type === "convert" && (
-        <ConvertModal state={state} prospect={modal.prospect} onClose={() => setModal(null)} onApply={apply} />
+      {modal?.type === "dossier" && (
+        <ProspectDossierModal
+          state={state}
+          prospect={modal.prospect}
+          onClose={() => setModal(null)}
+          onApply={apply}
+          onCommittee={prospect =>
+            setModal({
+              type: "committee",
+              preset: {
+                clientName: prospect.name,
+                document: prospect.dossier?.document || prospect.document,
+                repId: prospect.repId,
+                request: "Limite inicial",
+                requested: prospect.dossier?.requestedLimit || prospect.potential,
+                rate: prospect.dossier?.proposedRate,
+                commercialOpinion: prospect.dossier?.commercialSummary,
+              },
+            })
+          }
+        />
       )}
       {modal?.type === "lost" && (
         <LostModal state={state} prospect={modal.prospect} onClose={() => setModal(null)} onApply={apply} />

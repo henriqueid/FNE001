@@ -4,7 +4,7 @@
  * Pauta e histórico de comitês.
  */
 import { inRange } from "@/src/domain/commercial/calendar";
-import { type CommercialState, type Committee } from "@/src/domain/commercial/types";
+import { type CommercialState, type Committee, type Prospect } from "@/src/domain/commercial/types";
 import { committeeTone, pct } from "@/src/features/commercial/commercial-ui";
 import { br, compact, money } from "@/src/features/finance/finance-ui";
 import { PlusIcon, SearchIcon } from "@/src/ui/icons";
@@ -18,6 +18,8 @@ export function CommitteesTab({
   to,
   onNew,
   onDecide,
+  onOpenDossier,
+  canDecide,
 }: {
   state: CommercialState;
   pauta: Committee[];
@@ -26,6 +28,8 @@ export function CommitteesTab({
   to: string;
   onNew: () => void;
   onDecide: (c: Committee) => void;
+  onOpenDossier: (p: Prospect) => void;
+  canDecide: boolean;
 }) {
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
@@ -89,9 +93,21 @@ export function CommitteesTab({
                 </div>
               )}
               <footer>
-                <button className="fn-btn primary small" onClick={() => onDecide(c)}>
-                  Registrar decisão
-                </button>
+                {state.prospects.find(item => item.name === c.clientName) && (
+                  <button
+                    className="fn-btn ghost small"
+                    onClick={() => onOpenDossier(state.prospects.find(item => item.name === c.clientName)!)}
+                  >
+                    Ver dossiê
+                  </button>
+                )}
+                {canDecide ? (
+                  <button className="fn-btn primary small" onClick={() => onDecide(c)}>
+                    Registrar decisão
+                  </button>
+                ) : (
+                  <span className="fn-chip warn">Aguardando alçada de risco</span>
+                )}
               </footer>
             </article>
           ))}

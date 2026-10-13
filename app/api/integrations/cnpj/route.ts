@@ -37,10 +37,35 @@ export async function POST(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
   if (
-    !access.principal.permissions.some(permission => permission === "registry:edit" || permission === "settings:manage")
+    !access.principal.permissions.some(
+      permission =>
+        permission === "registry:edit" || permission === "settings:manage" || permission === "portfolio:manage",
+    )
   )
     return json({ error: "Sem permissão para consultar dados cadastrais externos." }, 403);
-  const body = (await request.json().catch(() => null)) as { partyId?: string; force?: boolean } | null;
+  const body = (await request.json().catch(() => null)) as {
+    partyId?: string;
+    document?: string;
+    force?: boolean;
+  } | null;
+  if (body?.document) {
+    if (
+      !access.principal.permissions.some(
+        permission =>
+          permission === "portfolio:manage" || permission === "registry:edit" || permission === "settings:manage",
+      )
+    )
+      return json({ error: "Sem permissão para consultar dados cadastrais externos." }, 403);
+    const document = body.document.replace(/\D/g, "");
+    if (!/^\d{14}$/.test(document)) return json({ error: "Informe um CNPJ válido." }, 400);
+    try {
+      const result = await fetchBrasilApiCnpj(document);
+      return json({ evidence: result.evidence, cached: false });
+    } catch (reason) {
+      console.error("lead_cnpj_enrichment_failed", reason);
+      return json({ error: "A fonte cadastral está indisponível. Tente novamente em instantes." }, 503);
+    }
+  }
   if (!body?.partyId) return json({ error: "Cadastro não informado." }, 400);
   const party = await cnpjParty(access.db, access.tenantId, body.partyId);
   if (!party) return json({ error: "Cadastro não encontrado." }, 404);

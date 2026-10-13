@@ -16,10 +16,129 @@ import {
   isAccountManager,
   type LinkOrigin,
   type Prospect,
+  type ProspectDossier,
   type SalesRep,
   type Visit,
 } from "./types";
 import { addDays, todayIso } from "@/src/domain/finance/ledger";
+import { isValidCnpj } from "@/src/domain/registry/parties";
+
+export const emptyProspectDossier = (): ProspectDossier => ({
+  document: "",
+  legalName: "",
+  tradeName: "",
+  segment: "",
+  city: "",
+  state: "",
+  contactName: "",
+  contactRole: "",
+  email: "",
+  phone: "",
+  monthlyRevenue: 0,
+  requestedLimit: 0,
+  proposedRate: 0,
+  averageTermDays: 30,
+  receivableType: "Duplicatas mercantis",
+  debtorCount: 0,
+  largestDebtorPercent: 0,
+  hasRestrictiveIssues: false,
+  restrictiveIssues: "",
+  commercialSummary: "",
+  documents: {
+    companyRegistration: false,
+    partnerDocuments: false,
+    financialStatements: false,
+    receivablesSample: false,
+    bankStatements: false,
+  },
+  updatedAt: todayIso(),
+});
+
+export function dossierReadiness(prospect: Prospect) {
+  const dossier = prospect.dossier ?? emptyProspectDossier();
+  const checks = [
+    { id: "document", label: "CNPJ válido", ready: isValidCnpj(dossier.document) },
+    {
+      id: "market",
+      label: "Segmento e localização",
+      ready: !!dossier.segment.trim() && !!dossier.city.trim() && !!dossier.state.trim(),
+    },
+    {
+      id: "contact",
+      label: "Contato responsável",
+      ready: !!dossier.contactName.trim() && (!!dossier.email.trim() || !!dossier.phone.trim()),
+    },
+    {
+      id: "financial",
+      label: "Faturamento e limite solicitado",
+      ready: dossier.monthlyRevenue > 0 && dossier.requestedLimit > 0,
+    },
+    {
+      id: "operation",
+      label: "Perfil da operação",
+      ready: dossier.proposedRate > 0 && dossier.averageTermDays > 0 && dossier.debtorCount > 0,
+    },
+    { id: "opinion", label: "Parecer comercial", ready: dossier.commercialSummary.trim().length >= 20 },
+    {
+      id: "documents",
+      label: "Documentação mínima",
+      ready:
+        dossier.documents.companyRegistration &&
+        dossier.documents.financialStatements &&
+        dossier.documents.receivablesSample,
+    },
+  ];
+  const completed = checks.filter(check => check.ready).length;
+  return {
+    checks,
+    completed,
+    total: checks.length,
+    percent: Math.round((completed / checks.length) * 100),
+    ready: completed === checks.length,
+  };
+}
+
+export function saveProspectDossier(
+  state: CommercialState,
+  prospectId: string,
+  dossier: ProspectDossier,
+  by: string,
+): CResult {
+  const prospect = state.prospects.find(item => item.id === prospectId);
+  if (!prospect) return { state, error: "Lead não encontrado." };
+  if (dossier.document && !isValidCnpj(dossier.document)) return { state, error: "Informe um CNPJ válido." };
+  if (dossier.largestDebtorPercent < 0 || dossier.largestDebtorPercent > 100)
+    return { state, error: "A concentração do maior sacado deve ficar entre 0% e 100%." };
+  const at = todayIso();
+  const updated = { ...dossier, updatedAt: at };
+  return {
+    state: {
+      ...state,
+      prospects: state.prospects.map(item =>
+        item.id === prospectId
+          ? {
+              ...item,
+              name: updated.legalName.trim() || item.name,
+              document: updated.document || item.document,
+              potential: updated.requestedLimit || item.potential,
+              dossier: updated,
+              updatedAt: at,
+              history: [
+                ...(item.history ?? []),
+                {
+                  at: stamp(),
+                  by,
+                  action: "Dossiê atualizado",
+                  detail: `${dossierReadiness({ ...item, dossier: updated }).percent}% completo`,
+                },
+              ],
+            }
+          : item,
+      ),
+    },
+    message: "Dossiê comercial atualizado.",
+  };
+}
 
 export const nextId = (s: CommercialState, p: string) => {
   s.seq += 1;
@@ -62,6 +181,9 @@ export function submitCommittee(
   if (!c.commercialOpinion.trim())
     return { state, error: "Escreva o parecer comercial: é o que o comitê lê primeiro." };
   if (c.request !== "Taxa especial" && !(c.requested > 0)) return { state, error: "Informe o valor solicitado." };
+  const prospect = state.prospects.find(x => x.name === c.clientName && !x.lost);
+  if (c.request === "Limite inicial" && prospect && !dossierReadiness(prospect).ready)
+    return { state, error: "Complete o dossiê do lead antes de enviá-lo ao comitê." };
   const s = { ...state, committees: [...state.committees] };
   s.committees.push({
     ...c,
@@ -73,7 +195,15 @@ export function submitCommittee(
   const p = s.prospects.find(x => x.name === c.clientName && !x.lost);
   if (p && funnelStages.indexOf(p.stage) < funnelStages.indexOf("Comitê"))
     s.prospects = s.prospects.map(x =>
-      x.id === p.id ? { ...x, stage: "Comitê", updatedAt: todayIso(), nextStep: "Em pauta no comitê" } : x,
+      x.id === p.id
+        ? {
+            ...x,
+            stage: "Comitê",
+            updatedAt: todayIso(),
+            nextStep: "Em pauta no comitê",
+            history: [...(x.history ?? []), { at: stamp(), by, action: "Enviado ao comitê", detail: c.request }],
+          }
+        : x,
     );
   return { state: s, message: "Pedido incluído na pauta do comitê." };
 }
@@ -185,11 +315,75 @@ export function decideCommittee(
         ),
       };
     }
+    const approvedProspect = s.prospects.find(p => p.name === c.clientName && !p.lost);
+    const canConvertProspect = !!approvedProspect?.dossier && isValidCnpj(approvedProspect.dossier.document);
+    if (
+      approvedProspect?.dossier &&
+      !s.links.some(link => digits(link.document) === digits(approvedProspect.dossier!.document))
+    ) {
+      const managerId = s.reps.find(rep => rep.active && isAccountManager(rep))?.id;
+      s = {
+        ...s,
+        links: [
+          ...s.links,
+          {
+            id: nextId(s, "lk"),
+            clientName: approvedProspect.name,
+            document: approvedProspect.dossier.document,
+            repId: approvedProspect.repId,
+            managerId,
+            since: at,
+            origin: approvedProspect.source,
+            status: "Em onboarding",
+            approvedLimit: d.approved ?? approvedProspect.dossier.requestedLimit,
+            segment: approvedProspect.dossier.segment,
+            city: `${approvedProspect.dossier.city}/${approvedProspect.dossier.state}`,
+            transfers: [],
+          },
+        ],
+      };
+    }
     s = {
       ...s,
       prospects: s.prospects.map(p =>
         p.name === c.clientName && !p.lost
-          ? { ...p, stage: "Aprovado", updatedAt: at, nextStep: "Cadastrar e fazer a 1ª operação" }
+          ? {
+              ...p,
+              stage: "Aprovado",
+              updatedAt: at,
+              convertedAt: canConvertProspect ? at : undefined,
+              nextStep: canConvertProspect
+                ? "Cedente criado · concluir onboarding e contrato"
+                : "Completar dossiê para criar o cedente",
+              history: [
+                ...(p.history ?? []),
+                {
+                  at: stamp(),
+                  by,
+                  action: canConvertProspect ? "Convertido em cedente" : "Aprovado pelo comitê",
+                  detail: d.status,
+                },
+              ],
+            }
+          : p,
+      ),
+    };
+  } else if (d.status === "Reprovado") {
+    s = {
+      ...s,
+      prospects: s.prospects.map(p =>
+        p.name === c.clientName && !p.lost
+          ? {
+              ...p,
+              lost: `Reprovado no comitê: ${d.conditions}`,
+              rejectedAt: at,
+              updatedAt: at,
+              nextStep: "Arquivado no histórico comercial",
+              history: [
+                ...(p.history ?? []),
+                { at: stamp(), by, action: "Reprovado pelo comitê", detail: d.conditions ?? "Sem motivo informado" },
+              ],
+            }
           : p,
       ),
     };
@@ -221,11 +415,21 @@ export function moveProspect(
 
 export function addProspect(
   state: CommercialState,
-  p: Pick<Prospect, "name" | "repId" | "potential" | "source" | "nextStep">,
+  p: Pick<Prospect, "name" | "repId" | "potential" | "source" | "nextStep" | "document" | "dossier">,
+  by = "Comercial",
 ): CResult {
   if (!p.name.trim()) return { state, error: "Informe o nome da empresa." };
+  if (!p.repId || !state.reps.some(rep => rep.id === p.repId && rep.active))
+    return { state, error: "Cadastre e selecione um comercial responsável." };
   const s = { ...state, prospects: [...state.prospects] };
-  s.prospects.push({ ...p, id: nextId(s, "pp"), stage: "Lead", createdAt: todayIso(), updatedAt: todayIso() });
+  s.prospects.push({
+    ...p,
+    id: nextId(s, "pp"),
+    stage: "Lead",
+    createdAt: todayIso(),
+    updatedAt: todayIso(),
+    history: [{ at: stamp(), by, action: "Lead criado", detail: p.source }],
+  });
   return { state: s, message: "Oportunidade criada no funil." };
 }
 

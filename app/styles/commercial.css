@@ -861,3 +861,282 @@ span.bad {
     grid-template-columns: 1fr;
   }
 }
+
+/* Esteira e dossiê comercial */
+.cm-pipeline-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.cm-pipeline-overview > div {
+  min-height: 118px;
+  padding: 18px;
+  border: 1px solid var(--c-bd-d7dee5);
+  border-radius: 18px;
+  background: linear-gradient(145deg, #fff 0%, #f7f9fc 100%);
+  box-shadow: 0 10px 24px rgb(15 23 42 / 5%);
+}
+
+.cm-pipeline-overview span,
+.cm-dossier-hero > div > span {
+  display: block;
+  color: var(--fn-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.cm-pipeline-overview strong {
+  display: block;
+  margin: 9px 0 3px;
+  font-size: 27px;
+  line-height: 1;
+}
+
+.cm-pipeline-overview small,
+.cm-lead-title span,
+.cm-form-section-head span,
+.cm-check-row small {
+  color: var(--fn-muted);
+}
+
+.cm-funnel-card {
+  overflow: hidden;
+}
+.cm-lead-card {
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+}
+.cm-lead-card:hover {
+  transform: translateY(-2px);
+  border-color: #a9bde7;
+  box-shadow: 0 12px 26px rgb(26 75 160 / 10%);
+}
+.cm-lead-title {
+  display: flex;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 2px;
+}
+.cm-lead-title span {
+  font-size: 11px;
+}
+.cm-readiness-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  margin: 12px 0;
+  color: var(--fn-muted);
+  font-size: 10px;
+}
+.cm-readiness-row > i {
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #e6ebf3;
+}
+.cm-readiness-row > i > em {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #245bc1;
+}
+.cm-readiness-row b {
+  font-size: 10px;
+}
+
+.cm-lost-history {
+  margin-top: 14px;
+}
+.cm-history-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 18px 18px;
+}
+.cm-history-grid button {
+  display: flex;
+  min-height: 86px;
+  padding: 14px;
+  border: 1px solid var(--c-bd-d7dee5);
+  border-radius: 14px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 8px;
+}
+.cm-history-grid button:hover {
+  border-color: #8fa8da;
+}
+.cm-history-grid span {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.cm-history-grid small {
+  color: #a14343;
+}
+.cm-history-grid em {
+  color: var(--fn-muted);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.cm-form-section {
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid var(--c-bd-d7dee5);
+  border-radius: 16px;
+  background: #fbfcfe;
+}
+.cm-form-section-head {
+  display: flex;
+  margin-bottom: 16px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+.cm-form-section-head b {
+  font-size: 14px;
+}
+.cm-form-section-head span {
+  font-size: 11px;
+}
+.cm-dossier-hero {
+  margin-bottom: 18px;
+  padding: 20px;
+  border-radius: 18px;
+  color: #fff;
+  background: radial-gradient(circle at 90% 0%, #2f70df 0%, #163b82 38%, #09142b 100%);
+}
+.cm-dossier-hero > div:first-child {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 4px 20px;
+}
+.cm-dossier-hero > div > span {
+  color: #b9cff7;
+}
+.cm-dossier-hero strong {
+  grid-row: span 2;
+  font-size: 42px;
+}
+.cm-dossier-hero p {
+  margin: 0;
+  color: #d9e5fb;
+}
+.cm-dossier-progress {
+  height: 7px;
+  margin: 16px 0;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgb(255 255 255 / 18%);
+}
+.cm-dossier-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #72a3ff;
+  transition: width 180ms ease;
+}
+.cm-dossier-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.cm-dossier-checks span {
+  padding: 6px 9px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 999px;
+  font-size: 10px;
+}
+.cm-dossier-checks .ready {
+  background: rgb(77 210 150 / 18%);
+  color: #bdf4d8;
+}
+.cm-dossier-checks .pending {
+  background: rgb(255 255 255 / 7%);
+  color: #d4def1;
+}
+.cm-check-row {
+  display: flex;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid var(--c-bd-d7dee5);
+  border-radius: 12px;
+  background: #fff;
+  align-items: flex-start;
+  gap: 10px;
+}
+.cm-check-row span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cm-document-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+.cm-document-grid label {
+  display: flex;
+  padding: 12px;
+  border: 1px solid var(--c-bd-d7dee5);
+  border-radius: 12px;
+  background: #fff;
+  align-items: center;
+  gap: 9px;
+}
+.cm-document-grid label.complete {
+  border-color: #8fd0b0;
+  background: #f3fbf7;
+}
+
+.cm-cnpj-lookup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+}
+
+.cm-cnpj-lookup .fn-btn {
+  white-space: nowrap;
+}
+.cm-field-error {
+  display: block;
+  margin-top: 5px;
+  color: #a14343;
+}
+
+@media (width<=980px) {
+  .cm-pipeline-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cm-history-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (width<=620px) {
+  .cm-pipeline-overview,
+  .cm-document-grid {
+    grid-template-columns: 1fr;
+  }
+  .cm-form-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

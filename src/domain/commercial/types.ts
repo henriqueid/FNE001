@@ -106,6 +106,46 @@ export type FunnelStage = "Lead" | "Visita" | "Proposta" | "Comitê" | "Aprovado
 
 export const funnelStages: FunnelStage[] = ["Lead", "Visita", "Proposta", "Comitê", "Aprovado"];
 
+export type ProspectDocumentChecklist = {
+  companyRegistration: boolean;
+  partnerDocuments: boolean;
+  financialStatements: boolean;
+  receivablesSample: boolean;
+  bankStatements: boolean;
+};
+
+export type ProspectDossier = {
+  document: string;
+  legalName: string;
+  tradeName: string;
+  segment: string;
+  city: string;
+  state: string;
+  contactName: string;
+  contactRole: string;
+  email: string;
+  phone: string;
+  monthlyRevenue: number;
+  requestedLimit: number;
+  proposedRate: number;
+  averageTermDays: number;
+  receivableType: string;
+  debtorCount: number;
+  largestDebtorPercent: number;
+  hasRestrictiveIssues: boolean;
+  restrictiveIssues: string;
+  commercialSummary: string;
+  documents: ProspectDocumentChecklist;
+  updatedAt: string;
+};
+
+export type ProspectHistoryEntry = {
+  at: string;
+  by: string;
+  action: string;
+  detail: string;
+};
+
 export type Prospect = {
   id: string;
   name: string;
@@ -118,6 +158,10 @@ export type Prospect = {
   nextStep: string;
   source: LinkOrigin;
   lost?: string;
+  dossier?: ProspectDossier;
+  history?: ProspectHistoryEntry[];
+  rejectedAt?: string;
+  convertedAt?: string;
 };
 
 export type CommissionTier = { from: number; rate: number };
@@ -157,6 +201,7 @@ export type CommissionClosing = {
 
 export type CommercialState = {
   version: 1;
+  persistenceVersion?: number;
   reps: SalesRep[];
   links: ClientLink[];
   deals: Deal[];

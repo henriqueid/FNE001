@@ -32,11 +32,11 @@ export function CommitteeModal({
   const [form, setForm] = useState({
     clientName: preset?.clientName ?? "",
     document: preset?.document ?? "",
-    repId: preset?.repId ?? state.reps[0].id,
+    repId: preset?.repId ?? state.reps.find(rep => rep.active)?.id ?? "",
     request: (preset?.request ?? "Limite inicial") as CommitteeRequest,
     requested: inputMoney(preset?.requested ?? 0),
     rate: "",
-    commercialOpinion: "",
+    commercialOpinion: preset?.commercialOpinion ?? "",
     date: nextCommitteeDate(),
   });
   const [decision, setDecision] = useState({
@@ -172,8 +172,8 @@ export function CommitteeModal({
           </Field>
         </div>
         <p className="fn-note">
-          Participantes: {committee.members.join(", ")}. A decisão entra no histórico do cliente e, se aprovada,
-          atualiza o limite na carteira do comercial.
+          Participantes: {committee.members.join(", ")}. Se o limite inicial for aprovado, o sistema cria o cedente em
+          onboarding; se for reprovado, preserva o dossiê no histórico comercial.
         </p>
       </Modal>
     );

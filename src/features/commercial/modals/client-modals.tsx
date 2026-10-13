@@ -3,7 +3,13 @@
 /**
  * Modais de cliente do Comercial: transferir, nova oportunidade, converter em conta nova e marcar perda.
  */
-import { addProspect, convertProspect, moveProspect, transferClient } from "@/src/domain/commercial/actions";
+import {
+  addProspect,
+  convertProspect,
+  emptyProspectDossier,
+  moveProspect,
+  transferClient,
+} from "@/src/domain/commercial/actions";
 import {
   type CResult,
   type ClientLink,
@@ -91,13 +97,22 @@ export function ProspectModal({
 }) {
   const [form, setForm] = useState({
     name: "",
-    repId: defaultRep || state.reps[0].id,
+    document: "",
+    tradeName: "",
+    repId: defaultRep || state.reps.find(rep => rep.active)?.id || "",
     potential: "",
     source: "Prospecção ativa" as LinkOrigin,
     nextStep: "",
+    segment: "",
+    city: "",
+    state: "",
+    contactName: "",
+    email: "",
+    phone: "",
   });
   return (
     <Modal
+      wide
       title="Nova oportunidade"
       onClose={onClose}
       footer={
@@ -111,9 +126,25 @@ export function ProspectModal({
               if (
                 onApply(
                   addProspect(state, {
-                    ...form,
+                    name: form.name,
+                    document: form.document,
+                    repId: form.repId,
+                    source: form.source,
                     potential: num(form.potential),
                     nextStep: form.nextStep || "Primeiro contato",
+                    dossier: {
+                      ...emptyProspectDossier(),
+                      document: form.document,
+                      legalName: form.name,
+                      tradeName: form.tradeName,
+                      segment: form.segment,
+                      city: form.city,
+                      state: form.state,
+                      contactName: form.contactName,
+                      email: form.email,
+                      phone: form.phone,
+                      requestedLimit: num(form.potential),
+                    },
                   }),
                 )
               )
@@ -125,38 +156,85 @@ export function ProspectModal({
         </>
       }
     >
-      <div className="fn-form">
-        <Field label="Empresa" wide>
-          <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-        </Field>
-        <Field label="Comercial">
-          <select value={form.repId} onChange={e => setForm({ ...form, repId: e.target.value })}>
-            {state.reps
-              .filter(r => r.active)
-              .map(r => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-          </select>
-        </Field>
-        <Field label="Origem">
-          <select value={form.source} onChange={e => setForm({ ...form, source: e.target.value as LinkOrigin })}>
-            <option>Prospecção ativa</option>
-            <option>Indicação</option>
-            <option>Inbound</option>
-          </select>
-        </Field>
-        <Field label="Potencial de volume mensal (R$)">
-          <input
-            inputMode="decimal"
-            value={form.potential}
-            onChange={e => setForm({ ...form, potential: e.target.value.replace(/[^\d.,]/g, "") })}
-          />
-        </Field>
-        <Field label="Próximo passo">
-          <input value={form.nextStep} onChange={e => setForm({ ...form, nextStep: e.target.value })} />
-        </Field>
+      <div className="cm-form-section">
+        <div className="cm-form-section-head">
+          <b>Identificação do lead</b>
+          <span>Os dados já iniciam o dossiê comercial.</span>
+        </div>
+        <div className="fn-form">
+          <Field label="Razão social" wide>
+            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          </Field>
+          <Field label="CNPJ">
+            <input
+              value={form.document}
+              onChange={e => setForm({ ...form, document: e.target.value })}
+              placeholder="00.000.000/0000-00"
+            />
+          </Field>
+          <Field label="Nome fantasia">
+            <input value={form.tradeName} onChange={e => setForm({ ...form, tradeName: e.target.value })} />
+          </Field>
+          <Field label="Comercial">
+            <select value={form.repId} onChange={e => setForm({ ...form, repId: e.target.value })}>
+              {state.reps
+                .filter(r => r.active)
+                .map(r => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              {!state.reps.some(rep => rep.active) && <option value="">Cadastre um comercial primeiro</option>}
+            </select>
+          </Field>
+          <Field label="Origem">
+            <select value={form.source} onChange={e => setForm({ ...form, source: e.target.value as LinkOrigin })}>
+              <option>Prospecção ativa</option>
+              <option>Indicação</option>
+              <option>Inbound</option>
+            </select>
+          </Field>
+          <Field label="Potencial de volume mensal (R$)">
+            <input
+              inputMode="decimal"
+              value={form.potential}
+              onChange={e => setForm({ ...form, potential: e.target.value.replace(/[^\d.,]/g, "") })}
+            />
+          </Field>
+          <Field label="Segmento">
+            <input value={form.segment} onChange={e => setForm({ ...form, segment: e.target.value })} />
+          </Field>
+          <Field label="Cidade">
+            <input value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} />
+          </Field>
+          <Field label="UF">
+            <input
+              maxLength={2}
+              value={form.state}
+              onChange={e => setForm({ ...form, state: e.target.value.toUpperCase() })}
+            />
+          </Field>
+        </div>
+      </div>
+      <div className="cm-form-section">
+        <div className="cm-form-section-head">
+          <b>Contato principal</b>
+          <span>Quem conduz a negociação pelo cliente.</span>
+        </div>
+        <div className="fn-form">
+          <Field label="Nome">
+            <input value={form.contactName} onChange={e => setForm({ ...form, contactName: e.target.value })} />
+          </Field>
+          <Field label="E-mail">
+            <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+          </Field>
+          <Field label="Telefone">
+            <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+          </Field>
+          <Field label="Próximo passo">
+            <input value={form.nextStep} onChange={e => setForm({ ...form, nextStep: e.target.value })} />
+          </Field>
+        </div>
       </div>
     </Modal>
   );

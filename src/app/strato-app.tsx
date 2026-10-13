@@ -78,12 +78,16 @@ import {
   persistOperation as persistServerOperation,
 } from "./operations-client";
 import { loadFinanceState as loadServerFinance, persistFinanceState as persistServerFinance } from "./finance-client";
-import { loadCurrentPortfolio } from "./portfolio-client";
+import { loadCurrentPortfolio, persistPortfolioState as persistServerPortfolio } from "./portfolio-client";
 import { loadTaskState as loadServerTasks, persistTaskState as persistServerTasks } from "./tasks-client";
 import {
   loadEligibilityPolicyState as loadServerPolicies,
   persistEligibilityPolicyState as persistServerPolicies,
 } from "./eligibility-policies-client";
+import {
+  loadCommercialState as loadServerCommercial,
+  persistCommercialState as persistServerCommercial,
+} from "./commercial-client";
 
 const CommercialModule = lazy(() => import("@/src/features/commercial/commercial-module"));
 const ControlleriaModule = lazy(() => import("@/src/features/controlleria/controlleria-module"));
@@ -159,8 +163,14 @@ export default function StratoApp() {
   );
   const [portfolioServerReady, setPortfolioServerReady] = useState(isDemo);
   const [portfolioLoadError, setPortfolioLoadError] = useState<string>();
+  const portfolioSaveQueue = useRef<Promise<typeof portfolio> | null>(null);
+  const portfolioRef = useRef(portfolio);
   // Vínculo comercial do cliente (carteira, comitês, comissões): compartilhado por Cadastro, Operação, Carteira e Comercial.
   const [commercial, setCommercial] = useState<CommercialState>(() => (isDemo ? seedCommercial() : emptyCommercial()));
+  const [commercialServerReady, setCommercialServerReady] = useState(isDemo);
+  const [commercialPersistenceError, setCommercialPersistenceError] = useState<string>();
+  const commercialSaveQueue = useRef<Promise<CommercialState> | null>(null);
+  const commercialRef = useRef(commercial);
   // Cadastro de pessoas (cedentes, sacados, fornecedores, representantes, investidores...).
   const [savedParties, setSavedParties] = useState<Party[]>(() => (isDemo ? seedParties() : []));
   const [policies, setPolicies] = useState(() => (isDemo ? seedEligibilityPolicies() : emptyEligibilityPolicies()));
@@ -221,6 +231,115 @@ export default function StratoApp() {
   useEffect(() => {
     taskRef.current = tasks;
   }, [tasks]);
+
+  useEffect(() => {
+    portfolioRef.current = portfolio;
+  }, [portfolio]);
+
+  useEffect(() => {
+    commercialRef.current = commercial;
+  }, [commercial]);
+
+  const persistRealCommercial = useCallback(
+    (candidate: CommercialState) => {
+      if (isDemo) return;
+      const prior = commercialSaveQueue.current ?? Promise.resolve(candidate);
+      const queued = prior
+        .catch(() => candidate)
+        .then(serverBase =>
+          persistServerCommercial({
+            ...candidate,
+            persistenceVersion: serverBase.persistenceVersion ?? candidate.persistenceVersion,
+          }),
+        );
+      commercialSaveQueue.current = queued;
+      void queued
+        .then(saved => {
+          commercialRef.current = saved;
+          setCommercialPersistenceError(undefined);
+          setCommercial(saved);
+          return loadRegistryParties();
+        })
+        .then(setSavedParties)
+        .catch(reason => {
+          setCommercialPersistenceError(
+            reason instanceof Error ? reason.message : "Não foi possível salvar o Comercial no banco.",
+          );
+        })
+        .finally(() => {
+          if (commercialSaveQueue.current === queued) commercialSaveQueue.current = null;
+        });
+    },
+    [isDemo],
+  );
+
+  const applyCommercialState = useCallback(
+    (candidate: CommercialState) => {
+      commercialRef.current = candidate;
+      setCommercial(candidate);
+      persistRealCommercial(candidate);
+    },
+    [persistRealCommercial],
+  );
+
+  const persistRealPortfolio = useCallback(
+    (candidate: typeof portfolio) => {
+      if (isDemo) return;
+      const prior = portfolioSaveQueue.current ?? Promise.resolve(candidate);
+      const queued = prior
+        .catch(() => candidate)
+        .then(serverBase =>
+          persistServerPortfolio({
+            ...candidate,
+            persistenceVersion: serverBase.persistenceVersion ?? candidate.persistenceVersion,
+          }),
+        );
+      portfolioSaveQueue.current = queued;
+      void queued
+        .then(saved => {
+          setPortfolioLoadError(undefined);
+          portfolioRef.current = saved;
+          setPortfolio(saved);
+        })
+        .catch(reason => {
+          setPortfolioLoadError(reason instanceof Error ? reason.message : "Não foi possível salvar a Carteira.");
+        })
+        .finally(() => {
+          if (portfolioSaveQueue.current === queued) portfolioSaveQueue.current = null;
+        });
+    },
+    [isDemo],
+  );
+
+  const applyPortfolioState = useCallback(
+    (candidate: typeof portfolio) => {
+      const previousById = new Map(portfolioRef.current.titles.map(title => [title.id, title]));
+      const attributed = {
+        ...candidate,
+        titles: candidate.titles.map(title => {
+          const previous = previousById.get(title.id);
+          if (!previous) return title;
+          const confirmationChanged = JSON.stringify(previous.confirmation) !== JSON.stringify(title.confirmation);
+          return {
+            ...title,
+            collectionOccurrences: title.collectionOccurrences.map((item, index) =>
+              index < previous.collectionOccurrences.length ? item : { ...item, createdBy: sessionUser.name },
+            ),
+            events: title.events.map((event, index) =>
+              index < previous.events.length ? event : { ...event, by: sessionUser.name },
+            ),
+            confirmation: confirmationChanged
+              ? { ...title.confirmation, updatedBy: sessionUser.name }
+              : title.confirmation,
+          };
+        }),
+      };
+      portfolioRef.current = attributed;
+      setPortfolio(attributed);
+      persistRealPortfolio(attributed);
+    },
+    [persistRealPortfolio, sessionUser.name],
+  );
 
   function persistRealOperation(candidate: Operation) {
     if (isDemo) return;
@@ -355,9 +474,11 @@ export default function StratoApp() {
     persistRealFinance(next);
   }, [operations, homeFinancials, financeServerReady, isDemo, persistRealFinance]);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- novas liberações entram na carteira sem apagar manutenções
-    setPortfolio(current => syncPortfolio(current, operations));
-  }, [operations]);
+    if (!isDemo && !portfolioServerReady) return;
+    const current = portfolioRef.current;
+    const next = syncPortfolio(current, operations);
+    if (next !== current) applyPortfolioState(next);
+  }, [operations, portfolioServerReady, isDemo, applyPortfolioState]);
   function applyFinanceEffects(effects: Effect[]) {
     if (!can(currentUser, "finance:release")) return;
     const nextOperations = operations.map(operation => {
@@ -563,6 +684,31 @@ export default function StratoApp() {
   }, [financeServerReady, isDemo, storageReady]);
 
   useEffect(() => {
+    if (!storageReady || isDemo || commercialServerReady) return;
+    let cancelled = false;
+    loadServerCommercial()
+      .then(serverCommercial => {
+        if (cancelled) return;
+        const loaded = serverCommercial ?? emptyCommercial();
+        commercialRef.current = loaded;
+        setCommercial(loaded);
+        setCommercialPersistenceError(undefined);
+      })
+      .catch(reason => {
+        if (cancelled) return;
+        setCommercialPersistenceError(
+          reason instanceof Error ? reason.message : "Não foi possível carregar o Comercial do banco.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setCommercialServerReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [commercialServerReady, isDemo, storageReady]);
+
+  useEffect(() => {
     if (!storageReady || isDemo || tasksServerReady) return;
     let cancelled = false;
     loadServerTasks()
@@ -616,6 +762,7 @@ export default function StratoApp() {
     loadCurrentPortfolio()
       .then(serverPortfolio => {
         if (cancelled) return;
+        portfolioRef.current = serverPortfolio;
         setPortfolio(serverPortfolio);
         setPortfolioLoadError(undefined);
       })
@@ -865,7 +1012,7 @@ export default function StratoApp() {
         if (!can(currentUser, "portfolio:manage")) return;
         const { carteiraEvents: _drop, ...rest } = next;
         void _drop;
-        setCommercial(rest as CommercialState);
+        applyCommercialState(rest as CommercialState);
       },
     }),
     [
@@ -879,6 +1026,7 @@ export default function StratoApp() {
       operationalDefaults,
       today,
       currentUser,
+      applyCommercialState,
     ],
   );
   const userScope = useMemo(
@@ -1027,6 +1175,7 @@ export default function StratoApp() {
     (!accessServerReady ||
       !operationsServerReady ||
       !financeServerReady ||
+      !commercialServerReady ||
       !portfolioServerReady ||
       !tasksServerReady ||
       !policiesServerReady)
@@ -1098,6 +1247,7 @@ export default function StratoApp() {
         financials={homeFinancials}
         finance={finance}
         onFinance={applyFinanceState}
+        canDecideCommittee={can(currentUser, "risk:decide")}
         onOpenOperation={setSelected}
         onNavigate={navigate}
       />
@@ -1135,7 +1285,7 @@ export default function StratoApp() {
     page = (
       <PortfolioModule
         portfolio={portfolio}
-        onPortfolio={setPortfolio}
+        onPortfolio={applyPortfolioState}
         companyScope={companyScope}
         onNavigate={navigate}
       />
@@ -1145,7 +1295,7 @@ export default function StratoApp() {
       <ControlleriaModule
         operations={scopedOperations}
         portfolio={portfolio}
-        onPortfolio={setPortfolio}
+        onPortfolio={applyPortfolioState}
         companyScope={companyScope}
         onOpenOperation={setSelected}
       />
@@ -1243,6 +1393,12 @@ export default function StratoApp() {
                   <div className="empty-state" role="alert">
                     <strong>Alterações das políticas ainda não foram salvas</strong>
                     <span>{policyPersistenceError}</span>
+                  </div>
+                )}
+                {commercialPersistenceError && (
+                  <div className="empty-state" role="alert">
+                    <strong>Alterações do Comercial ainda não foram salvas</strong>
+                    <span>{commercialPersistenceError}</span>
                   </div>
                 )}
                 {portfolioLoadError && (

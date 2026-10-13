@@ -94,7 +94,7 @@ Evidências A3.2:
 ### A4. Estado operacional complementar
 
 - [ ] persistir Comercial e vínculos históricos;
-- [ ] persistir políticas e versões aprovadas;
+- [x] persistir políticas e versões aprovadas;
 - [x] persistir tarefas, responsáveis, prazos e histórico;
 - [ ] persistir Carteira sem depender do navegador;
 - [ ] criar manuais por perfil para Comercial, Risco, Controladoria e Financeiro.
@@ -118,7 +118,30 @@ Evidências A4.1:
 - rollback integral confirmado com zero tenants, estados, tarefas, históricos e comandos descartáveis;
 - Advisor sem chaves estrangeiras não indexadas após a correção;
 - testes automatizados cobrem integridade do agregado, autoria e imutabilidade do histórico;
+- inspeção visual confirmou fila, filtros, responsável, prazo, histórico e delegação usando os seis usuários ativos do tenant, sem erro no console;
 - guia publicado em `docs/user-guides/CENTRAL_DO_DIA_E_TAREFAS.md`.
+
+Progresso A4.2 — políticas versionadas e aprovadas:
+
+- [x] persistir agregado, versões, escopos, vigências e parâmetros por tenant;
+- [x] exigir aprovação identificada, data e justificativa para ativação;
+- [x] tornar versões ativas e encerradas imutáveis;
+- [x] encerrar automaticamente a vigência anterior do mesmo escopo;
+- [x] aplicar versão otimista, comandos idempotentes, eventos e outbox;
+- [x] manter demonstração no navegador e modo real no servidor autenticado;
+- [x] publicar o guia de políticas de elegibilidade;
+- [ ] homologar visualmente a concorrência com duas sessões reais.
+
+Evidências A4.2:
+
+- migração `create_eligibility_policy_governance` aplicada no Supabase e reconciliada com o histórico remoto;
+- ensaio completo da migração executado em transação e revertido antes da aplicação;
+- repositório confirmou criação, replay idempotente, aprovação, conflito de chave, trava de versão e projeções normalizadas;
+- rollback integral confirmado com zero tenants, estados, políticas, aprovações e comandos descartáveis;
+- Advisor sem chaves estrangeiras não indexadas; índices novos ainda sem uso são esperados antes da carga produtiva;
+- testes automatizados cobrem validação, autoria da aprovação, vigência, imutabilidade e hash do comando;
+- inspeção visual confirmou versão ativa imutável, autoria/justificativa visíveis e novo rascunho com o comando “Aprovar e ativar”, sem erros no console;
+- guia publicado em `docs/user-guides/POLITICAS_DE_ELEGIBILIDADE.md`.
 
 ### A5. Segurança e comandos materiais
 

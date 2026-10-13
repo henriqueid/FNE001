@@ -145,6 +145,7 @@ export default function SettingsModule({
   onAccess,
   intelligence,
   onIntelligence,
+  policyApprovalActor,
   demoMode = false,
 }: {
   policies: EligibilityPolicyState;
@@ -161,6 +162,7 @@ export default function SettingsModule({
   onAccess: (state: AccessState) => void;
   intelligence: IntelligenceState;
   onIntelligence: (state: IntelligenceState) => void;
+  policyApprovalActor: { id: string; name: string };
   demoMode?: boolean;
 }) {
   const destinations = useCompanyDestinations();
@@ -316,7 +318,9 @@ export default function SettingsModule({
             </div>
           )}
 
-          {section === "policies" && <PoliciesModule state={policies} onState={onPolicies} embedded />}
+          {section === "policies" && (
+            <PoliciesModule state={policies} onState={onPolicies} approvalActor={policyApprovalActor} embedded />
+          )}
 
           {section === "access" && <UsersAccessPanel state={access} onState={onAccess} />}
 

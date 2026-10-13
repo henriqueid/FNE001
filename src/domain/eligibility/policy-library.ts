@@ -6,6 +6,7 @@ import { demoPoliciesFor } from "./demo-policy";
 export type EligibilityPolicyState = {
   version: 2;
   policies: EligibilityPolicy[];
+  persistenceVersion?: number;
 };
 
 export const emptyEligibilityPolicies = (): EligibilityPolicyState => ({ version: 2, policies: [] });
@@ -30,6 +31,12 @@ export function seedEligibilityPolicies(): EligibilityPolicyState {
       company: destination.name,
       effectiveFrom: "2026-01-01",
       status: "ATIVA" as const,
+      approval: {
+        approvedById: "system-bootstrap",
+        approvedBy: "STRATO",
+        approvedAt: "2026-01-01T09:00:00.000Z",
+        justification: "Política inicial validada para o ambiente de demonstração.",
+      },
       bindings: [...bindings.values()].map(binding => ({ ...binding })),
     };
   });
@@ -106,6 +113,7 @@ export function createPolicyVersion(policy: EligibilityPolicy, effectiveFrom: st
     effectiveFrom,
     effectiveTo: undefined,
     status: "RASCUNHO",
+    approval: undefined,
     bindings: policy.bindings.map(binding => ({ ...binding })),
   };
 }
@@ -130,11 +138,12 @@ export function activatePolicyVersion(
   policies: EligibilityPolicy[],
   policyId: string,
   effectiveFrom: string,
+  approval: NonNullable<EligibilityPolicy["approval"]>,
 ): EligibilityPolicy[] {
   const target = policies.find(policy => policy.id === policyId);
   if (!target || target.status !== "RASCUNHO" || !target.bindings.some(binding => binding.enabled)) return policies;
   return policies.map(policy => {
-    if (policy.id === policyId) return { ...policy, status: "ATIVA", effectiveFrom };
+    if (policy.id === policyId) return { ...policy, status: "ATIVA", effectiveFrom, approval };
     if (policy.status !== "ATIVA" || !sameScope(policy, target)) return policy;
     const priorDay = new Date(`${effectiveFrom}T12:00:00`);
     priorDay.setDate(priorDay.getDate() - 1);

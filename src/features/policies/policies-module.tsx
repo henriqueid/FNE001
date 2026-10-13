@@ -42,15 +42,18 @@ function parameterInput(value: EligibilityPolicy["bindings"][number]["parameter"
 export default function PoliciesModule({
   state,
   onState,
+  approvalActor,
   embedded = false,
 }: {
   state: EligibilityPolicyState;
   onState: (state: EligibilityPolicyState) => void;
+  approvalActor: { id: string; name: string };
   embedded?: boolean;
 }) {
   const destinations = useCompanyDestinations();
   const [selectedId, setSelectedId] = useState(state.policies.find(policy => policy.status === "ATIVA")?.id ?? "");
   const [message, setMessage] = useState("");
+  const [approvalJustification, setApprovalJustification] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [catalogSearch, setCatalogSearch] = useState("");
   const [detailSection, setDetailSection] = useState<"rules" | "catalog">("rules");
@@ -109,8 +112,21 @@ export default function PoliciesModule({
       setMessage("Ative e parametrize ao menos uma regra antes de publicar a política.");
       return;
     }
-    onState({ ...state, policies: activatePolicyVersion(state.policies, selected.id, selected.effectiveFrom) });
-    setMessage("Versão ativada. Novas análises usarão esta vigência; execuções anteriores permanecem congeladas.");
+    if (approvalJustification.trim().length < 10) {
+      setMessage("Registre uma justificativa de aprovação com pelo menos 10 caracteres.");
+      return;
+    }
+    onState({
+      ...state,
+      policies: activatePolicyVersion(state.policies, selected.id, selected.effectiveFrom, {
+        approvedById: approvalActor.id,
+        approvedBy: approvalActor.name,
+        approvedAt: new Date().toISOString(),
+        justification: approvalJustification.trim(),
+      }),
+    });
+    setApprovalJustification("");
+    setMessage("Versão aprovada e ativada. Novas análises usarão esta vigência; o histórico ficou congelado.");
   };
 
   const downloadTemplate = () => {
@@ -282,9 +298,24 @@ export default function PoliciesModule({
                     onChange={event => replacePolicy({ ...selected, version: event.target.value })}
                   />
                 </label>
+                <label>
+                  Justificativa da aprovação
+                  <input
+                    value={approvalJustification}
+                    placeholder="Ex.: revisão anual aprovada pela Diretoria"
+                    onChange={event => setApprovalJustification(event.target.value)}
+                  />
+                </label>
                 <button type="button" onClick={activate}>
-                  Ativar versão
+                  Aprovar e ativar
                 </button>
+              </div>
+            )}
+
+            {selected.approval && (
+              <div className="policy-module-message">
+                <strong>Aprovada por {selected.approval.approvedBy}</strong> em{" "}
+                {new Date(selected.approval.approvedAt).toLocaleString("pt-BR")}. {selected.approval.justification}
               </div>
             )}
 

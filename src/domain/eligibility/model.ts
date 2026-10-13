@@ -49,6 +49,12 @@ export type EligibilityPolicy = {
   effectiveFrom: string;
   effectiveTo?: string;
   status: "RASCUNHO" | "ATIVA" | "ENCERRADA";
+  approval?: {
+    approvedById: string;
+    approvedBy: string;
+    approvedAt: string;
+    justification: string;
+  };
   bindings: PolicyRuleBinding[];
 };
 

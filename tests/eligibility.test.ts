@@ -196,7 +196,12 @@ describe("Motor Universal de Elegibilidade", () => {
       edited.bindings.find(binding => binding.ruleId === "DEBTOR-OPERATION-CONCENTRATION-MAX-001")?.parameter,
     ).toBe(32);
 
-    const activated = activatePolicyVersion([...state.policies, edited], edited.id, edited.effectiveFrom);
+    const activated = activatePolicyVersion([...state.policies, edited], edited.id, edited.effectiveFrom, {
+      approvedById: "user-henrique-admin",
+      approvedBy: "Henrique",
+      approvedAt: "2026-10-13T12:00:00.000Z",
+      justification: "Revisão de limites aprovada pela Diretoria.",
+    });
     expect(activated.find(policy => policy.id === edited.id)?.status).toBe("ATIVA");
     expect(activated.find(policy => policy.id === active.id)).toMatchObject({
       status: "ENCERRADA",

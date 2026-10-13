@@ -1,0 +1,23 @@
+{
+  "name": "strato-copiloto-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Animação Remotion apresentando o Copiloto do STRATO.",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render CopilotoExplainer out/copiloto.mp4",
+    "still": "remotion still CopilotoExplainer out/still.png"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@fontsource-variable/urbanist": "5.3.0",
+    "@remotion/cli": "4.0.535",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.535"
+  }
+}

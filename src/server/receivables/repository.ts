@@ -35,7 +35,7 @@ export async function loadReceivables(
       `select payload, aggregate_version
        from private.receivables
        where tenant_id = ?
-         and (? is null or operation_id = ?)
+         and (?::text is null or operation_id = ?::text)
        order by operation_id, source_entry_id`,
     )
     .bind(tenantId, operationId ?? null, operationId ?? null)

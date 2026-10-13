@@ -10,6 +10,8 @@ import {
   stripReceivablesFromOperation,
   validateReceivable,
 } from "@/src/domain/receivables/model";
+import type { DecisionDatabase, DecisionStatement } from "@/src/server/decisions/repository";
+import { loadReceivables } from "@/src/server/receivables/repository";
 
 const operation = initialOperations.find(item => item.manualEntry?.entries.length)!;
 const entry = operation.manualEntry!.entries[0];
@@ -70,5 +72,36 @@ describe("agregado Receivable", () => {
     const record = receivableFromOperation(operation, entry);
     expect(validateReceivable(record)).toBeNull();
     expect(validateReceivable({ ...record, entry: { ...record.entry, amount: 0 } })).toBe("Valor de face inválido.");
+  });
+
+  it("tipa o filtro opcional ao consultar toda a carteira no PostgreSQL", async () => {
+    let query = "";
+    let values: unknown[] = [];
+    const statement: DecisionStatement = {
+      bind(...bound) {
+        values = bound;
+        return this;
+      },
+      async first<T>() {
+        return null as T | null;
+      },
+      async all<T>() {
+        return { results: [] as T[] };
+      },
+      async run() {
+        return { success: true };
+      },
+    };
+    const db = {
+      prepare(sql: string) {
+        query = sql;
+        return statement;
+      },
+    } as DecisionDatabase;
+
+    await expect(loadReceivables(db, "tenant-real")).resolves.toEqual([]);
+    expect(query).toContain("?::text is null");
+    expect(query).toContain("operation_id = ?::text");
+    expect(values).toEqual(["tenant-real", null, null]);
   });
 });

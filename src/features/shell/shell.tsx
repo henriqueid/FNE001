@@ -51,6 +51,7 @@ export function Shell({
   dailyBriefing,
   attentionItems,
   taskItems,
+  taskAssignees,
   onTaskCommand,
   briefingReady = false,
   previewedBy,
@@ -71,6 +72,7 @@ export function Shell({
   dailyBriefing: DailyBriefingData;
   attentionItems: AttentionItem[];
   taskItems: ManagedTask[];
+  taskAssignees: { id: string; name: string; department: string }[];
   onTaskCommand: (id: string, command: TaskCommand) => void;
   briefingReady?: boolean;
   previewedBy?: string;
@@ -387,6 +389,7 @@ export function Shell({
           items={taskItems}
           briefing={dailyBriefing}
           currentUser={currentUser}
+          assignees={taskAssignees}
           initialItemId={attentionSelectedId}
           onClose={() => setAttentionOpen(false)}
           onOpenTask={openTask}

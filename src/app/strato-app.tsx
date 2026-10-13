@@ -54,6 +54,7 @@ import {
   reconcileTasks,
   seedTaskState,
   type TaskCommand,
+  type TaskState,
   visibleTasksForUser,
 } from "@/src/domain/tasks/model";
 import {
@@ -78,6 +79,7 @@ import {
 } from "./operations-client";
 import { loadFinanceState as loadServerFinance, persistFinanceState as persistServerFinance } from "./finance-client";
 import { loadCurrentPortfolio } from "./portfolio-client";
+import { loadTaskState as loadServerTasks, persistTaskState as persistServerTasks } from "./tasks-client";
 
 const CommercialModule = lazy(() => import("@/src/features/commercial/commercial-module"));
 const ControlleriaModule = lazy(() => import("@/src/features/controlleria/controlleria-module"));
@@ -163,12 +165,20 @@ export default function StratoApp() {
     isDemo ? seedOperationalDefaults() : emptyOperationalDefaults(),
   );
   const [tasks, setTasks] = useState(() => seedTaskState());
+  const [tasksServerReady, setTasksServerReady] = useState(isDemo);
+  const [taskPersistenceError, setTaskPersistenceError] = useState<string>();
+  const taskSaveQueue = useRef<Promise<TaskState> | null>(null);
+  const taskRef = useRef(tasks);
   const [publishedNotifications, setPublishedNotifications] = useState<PublishedNotification[]>([]);
   const [taskClock, setTaskClock] = useState(() => Date.now());
 
   useEffect(() => {
     financeRef.current = finance;
   }, [finance]);
+
+  useEffect(() => {
+    taskRef.current = tasks;
+  }, [tasks]);
 
   function persistRealOperation(candidate: Operation) {
     if (isDemo) return;
@@ -238,6 +248,36 @@ export default function StratoApp() {
     setFinance(candidate);
     persistRealFinance(candidate);
   }
+
+  const persistRealTasks = useCallback(
+    (candidate: TaskState) => {
+      if (isDemo) return;
+      const prior = taskSaveQueue.current ?? Promise.resolve(candidate);
+      const queued = prior
+        .catch(() => candidate)
+        .then(serverBase =>
+          persistServerTasks({
+            ...candidate,
+            persistenceVersion: serverBase.persistenceVersion ?? candidate.persistenceVersion,
+          }),
+        );
+      taskSaveQueue.current = queued;
+      void queued
+        .then(saved => {
+          setTaskPersistenceError(undefined);
+          setTasks(current => ({ ...current, persistenceVersion: saved.persistenceVersion }));
+        })
+        .catch(reason => {
+          setTaskPersistenceError(
+            reason instanceof Error ? reason.message : "Não foi possível salvar as tarefas no banco.",
+          );
+        })
+        .finally(() => {
+          if (taskSaveQueue.current === queued) taskSaveQueue.current = null;
+        });
+    },
+    [isDemo],
+  );
   // Resultado financeiro de cada operação, pela mesma precificação da etapa Preço, para a Visão geral.
   const homeFinancials = useMemo(
     () =>
@@ -479,6 +519,31 @@ export default function StratoApp() {
       cancelled = true;
     };
   }, [financeServerReady, isDemo, storageReady]);
+
+  useEffect(() => {
+    if (!storageReady || isDemo || tasksServerReady) return;
+    let cancelled = false;
+    loadServerTasks()
+      .then(serverTasks => {
+        if (cancelled) return;
+        const loaded = serverTasks ?? seedTaskState();
+        taskRef.current = loaded;
+        setTasks(loaded);
+        setTaskPersistenceError(undefined);
+      })
+      .catch(reason => {
+        if (cancelled) return;
+        setTaskPersistenceError(
+          reason instanceof Error ? reason.message : "Não foi possível carregar as tarefas do banco.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setTasksServerReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemo, storageReady, tasksServerReady]);
 
   useEffect(() => {
     if (!storageReady || isDemo || portfolioServerReady) return;
@@ -863,10 +928,14 @@ export default function StratoApp() {
     [publishedAttentionItems, systemAttentionItems],
   );
   useEffect(() => {
-    if (!storageReady) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reconcilia alertas automáticos com o histórico persistido
-    setTasks(current => reconcileTasks(current, persistentAttentionItems, new Date().toISOString()));
-  }, [persistentAttentionItems, storageReady]);
+    if (!storageReady || !tasksServerReady) return;
+    const current = taskRef.current;
+    const next = reconcileTasks(current, persistentAttentionItems, new Date().toISOString());
+    if (next === current) return;
+    taskRef.current = next;
+    setTasks(next);
+    persistRealTasks(next);
+  }, [persistentAttentionItems, persistRealTasks, storageReady, tasksServerReady]);
   const taskItems = useMemo(() => {
     const allManaged = managedTasks(
       tasks,
@@ -881,9 +950,17 @@ export default function StratoApp() {
     () => actionableAttentionItems(taskItems, new Date(taskClock).toISOString()),
     [taskItems, taskClock],
   );
-  const runTaskCommand = (id: string, command: TaskCommand) =>
-    setTasks(current => applyTaskCommand(current, id, command, new Date().toISOString()));
-  if (!isDemo && (!accessServerReady || !operationsServerReady || !financeServerReady || !portfolioServerReady))
+  const runTaskCommand = (id: string, command: TaskCommand) => {
+    const next = applyTaskCommand(taskRef.current, id, command, new Date().toISOString());
+    if (next === taskRef.current) return;
+    taskRef.current = next;
+    setTasks(next);
+    persistRealTasks(next);
+  };
+  if (
+    !isDemo &&
+    (!accessServerReady || !operationsServerReady || !financeServerReady || !portfolioServerReady || !tasksServerReady)
+  )
     return <ModuleLoading />;
   const shellContext = {
     operations: scopedOperations,
@@ -1061,6 +1138,9 @@ export default function StratoApp() {
                 dailyBriefing={dailyBriefing}
                 attentionItems={attentionItems}
                 taskItems={taskItems}
+                taskAssignees={access.users
+                  .filter(user => user.status === "active" && user.tenantIds.includes(intelligence.tenantId))
+                  .map(user => ({ id: user.id, name: user.name, department: user.department }))}
                 onTaskCommand={runTaskCommand}
                 briefingReady={storageReady}
                 previewedBy={access.previewUserId ? sessionUser.name : undefined}
@@ -1080,6 +1160,12 @@ export default function StratoApp() {
                   <div className="empty-state" role="alert">
                     <strong>Alterações do Financeiro ainda não foram salvas</strong>
                     <span>{financePersistenceError}</span>
+                  </div>
+                )}
+                {taskPersistenceError && (
+                  <div className="empty-state" role="alert">
+                    <strong>Alterações das tarefas ainda não foram salvas</strong>
+                    <span>{taskPersistenceError}</span>
                   </div>
                 )}
                 {portfolioLoadError && (

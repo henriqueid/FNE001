@@ -17,15 +17,6 @@ const filterLabels: { id: Filter; label: string }[] = [
   { id: "all", label: "Todas" },
 ];
 
-const team = [
-  { name: "Henrique", department: "Diretoria" },
-  { name: "Marina Costa", department: "Operações" },
-  { name: "Lucas Ribeiro", department: "Risco e crédito" },
-  { name: "Camila Nunes", department: "Controladoria" },
-  { name: "Rafael Alves", department: "Financeiro" },
-  { name: "Juliana Martins", department: "Carteira e cobrança" },
-];
-
 const statusLabel: Record<TaskStatus, string> = {
   open: "Aberta",
   in_progress: "Em andamento",
@@ -67,6 +58,7 @@ export function AttentionCenter({
   items,
   briefing,
   currentUser,
+  assignees,
   initialItemId,
   onClose,
   onOpenTask,
@@ -75,6 +67,7 @@ export function AttentionCenter({
   items: ManagedTask[];
   briefing: DailyBriefingData;
   currentUser: AppUserProfile;
+  assignees: { id: string; name: string; department: string }[];
   initialItemId?: string;
   onClose: () => void;
   onOpenTask: (item: AttentionItem) => void;
@@ -84,7 +77,10 @@ export function AttentionCenter({
   const [selectedId, setSelectedId] = useState(initialItemId ?? items.find(item => item.status !== "completed")?.id);
   const [actionPanel, setActionPanel] = useState<ActionPanel>(null);
   const [note, setNote] = useState("");
-  const [delegateTo, setDelegateTo] = useState(team[1].name);
+  const team = assignees.length
+    ? assignees
+    : [{ id: currentUser.id, name: currentUser.name, department: currentUser.department }];
+  const [delegateTo, setDelegateTo] = useState(team[0].name);
   const [snoozeUntil, setSnoozeUntil] = useState(tomorrowMorning);
   const active = items.filter(item => item.status !== "completed");
   const filtered = useMemo(

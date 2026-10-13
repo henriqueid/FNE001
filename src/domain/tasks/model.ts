@@ -33,7 +33,7 @@ export type TaskRecord = {
   history: TaskHistoryEntry[];
 };
 
-export type TaskState = { version: 1; tasks: TaskRecord[] };
+export type TaskState = { version: 1; tasks: TaskRecord[]; persistenceVersion?: number };
 
 export type ManagedTask = AttentionItem &
   Pick<

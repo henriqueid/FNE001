@@ -88,15 +88,37 @@ Evidências A3.2:
 - o PostgreSQL recusou lançamento retroativo em período encerrado;
 - ensaios transacionais foram revertidos e a conferência final encontrou zero estados, fechamentos e lançamentos de teste;
 - Advisor sem chave estrangeira não indexada; avisos de índices sem uso são esperados antes de carga produtiva;
+- navegação visual no modo demonstração confirmou a tela de fechamento e o bloqueio explícito diante de 5 linhas de extrato e 3 movimentos pendentes, sem erro no console;
 - guia operacional ampliado com procedimentos e respostas a erros.
 
 ### A4. Estado operacional complementar
 
 - [ ] persistir Comercial e vínculos históricos;
 - [ ] persistir políticas e versões aprovadas;
-- [ ] persistir tarefas, responsáveis, prazos e histórico;
+- [x] persistir tarefas, responsáveis, prazos e histórico;
 - [ ] persistir Carteira sem depender do navegador;
 - [ ] criar manuais por perfil para Comercial, Risco, Controladoria e Financeiro.
+
+Progresso A4.1 — Central do Dia persistente:
+
+- [x] preservar o motor e a experiência existentes da Central do Dia;
+- [x] persistir agregado, tarefas, responsáveis, prazos e histórico por tenant;
+- [x] usar o diretório ativo do tenant na delegação;
+- [x] aplicar versão otimista, comandos idempotentes, eventos e outbox;
+- [x] impedir remoção de tarefas, reescrita de histórico e autoria incompatível com a sessão;
+- [x] manter demonstração no navegador e modo real no servidor autenticado;
+- [x] publicar o guia operacional da Central do Dia;
+- [ ] homologar visualmente a concorrência com duas sessões reais.
+
+Evidências A4.1:
+
+- migrações `create_task_workflow_storage` e `add_task_owner_foreign_key_index` aplicadas no Supabase;
+- ensaio da migração executado em transação e revertido antes da aplicação;
+- repositório confirmou criação, replay idempotente, conflito de chave, conclusão, trava de versão e projeções normalizadas;
+- rollback integral confirmado com zero tenants, estados, tarefas, históricos e comandos descartáveis;
+- Advisor sem chaves estrangeiras não indexadas após a correção;
+- testes automatizados cobrem integridade do agregado, autoria e imutabilidade do histórico;
+- guia publicado em `docs/user-guides/CENTRAL_DO_DIA_E_TAREFAS.md`.
 
 ### A5. Segurança e comandos materiais
 

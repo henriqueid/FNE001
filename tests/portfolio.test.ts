@@ -6,6 +6,7 @@ import {
   migratePortfolioState,
   portfolioBalance,
   portfolioDisplayStatus,
+  portfolioHomeTitles,
   seedPortfolio,
   syncPortfolio,
   updatePortfolioConfirmation,
@@ -82,6 +83,25 @@ describe("carteira operacional", () => {
     expect(portfolioBalance(title)).toBe(600);
     expect(portfolioDisplayStatus(title, "2026-09-30")).toBe("Vencido");
     expect(portfolioDisplayStatus({ ...title, status: "Prorrogado" }, "2026-09-30")).toBe("Prorrogado");
+  });
+
+  it("prioriza o saldo oficial importado e o entrega aos painéis do sistema", () => {
+    const original = seedPortfolio(initialOperations).titles[0];
+    const imported = {
+      ...original,
+      status: "Em aberto" as const,
+      originalAmount: 1000,
+      openAmount: 725.5,
+      paidAmount: 900,
+      discountAmount: 100,
+      abatementAmount: 0,
+    };
+    const closed = { ...imported, id: "closed", status: "Pago" as const };
+
+    expect(portfolioBalance(imported)).toBe(725.5);
+    expect(portfolioHomeTitles({ version: 3, titles: [imported, closed] })).toEqual([
+      expect.objectContaining({ id: imported.id, amount: 725.5 }),
+    ]);
   });
 
   it("mantém dados de pagamento e os estados operacionais solicitados", () => {

@@ -12,6 +12,7 @@ import { useRegistry } from "@/src/app/registry-context";
 import { linkClient, transferClient } from "@/src/domain/commercial/actions";
 import { type ClientLink } from "@/src/domain/commercial/types";
 import { type Debtor, type Operation } from "@/src/domain/core/types";
+import type { PortfolioTitle } from "@/src/domain/home/metrics";
 import { emptyParty, onlyDigits, partyRoles, type Party, type PartyRole } from "@/src/domain/registry/parties";
 import { type ClientRecord } from "@/src/domain/registry/registry";
 import { BY } from "@/src/features/finance/finance-ui";
@@ -35,9 +36,10 @@ type Props = {
   operations: Operation[];
   onOpenOperation: (operation: Operation) => void;
   onNavigate: (view: AppView) => void;
+  portfolioTitles?: PortfolioTitle[];
 };
 
-export default function RegistryModule({ debtors, operations, onOpenOperation, onNavigate }: Props) {
+export default function RegistryModule({ debtors, operations, onOpenOperation, onNavigate, portfolioTitles }: Props) {
   const { parties, commercial, onCommercial } = useRegistry();
   const [tab, setTab] = useState<Tab>("cedente");
   const [repFilter, setRepFilter] = useState("");
@@ -152,6 +154,7 @@ export default function RegistryModule({ debtors, operations, onOpenOperation, o
           onTransfer={link => setLinkModal({ type: "transfer", link })}
           onLink={record => setLinkModal({ type: "link", record })}
           repFilter={repFilter}
+          portfolioTitlesOverride={portfolioTitles}
         />
       )}
       {tab === "sacado" && (
@@ -160,6 +163,7 @@ export default function RegistryModule({ debtors, operations, onOpenOperation, o
           operations={operations}
           onEditDocument={openByDocument}
           onEditParty={setEditing}
+          portfolioTitlesOverride={portfolioTitles}
         />
       )}
       {tab !== "cedente" && tab !== "sacado" && <PartiesTab role={tab} onEdit={setEditing} />}

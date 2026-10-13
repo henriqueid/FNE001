@@ -275,6 +275,8 @@ export type CollectionRegistration = { sentAt: string; confirmedAt?: string; tit
 
 export type FinanceState = {
   version: 1;
+  /** Versão otimista do agregado persistido; ausente na demonstração ou antes da primeira gravação. */
+  persistenceVersion?: number;
   accounts: CompanyBankAccount[];
   chart: ChartAccount[];
   categories: Category[];

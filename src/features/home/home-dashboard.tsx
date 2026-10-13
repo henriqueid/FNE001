@@ -17,7 +17,7 @@ import { useQualityPolicy } from "@/src/features/risk/use-quality-policy";
 import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { type CarteiraFlow } from "@/src/domain/finance/reports";
 import type { FinanceState } from "@/src/domain/finance/model";
-import type { OpFinancial } from "@/src/domain/home/metrics";
+import type { OpFinancial, PortfolioTitle } from "@/src/domain/home/metrics";
 import type { OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
 
 export { layouts, type SectionId } from "./home-sections-map";
@@ -36,6 +36,7 @@ export default function HomeDashboard({
   revenueGoals,
   originationGoals,
   includeDemoPortfolio = false,
+  portfolioTitlesOverride,
 }: {
   operations: Operation[];
   debtors: Debtor[];
@@ -50,6 +51,7 @@ export default function HomeDashboard({
   revenueGoals: OperationalDefaultsState["revenueGoals"];
   originationGoals: OperationalDefaultsState["originationGoals"];
   includeDemoPortfolio?: boolean;
+  portfolioTitlesOverride?: PortfolioTitle[];
 }) {
   const { period, setPeriod, profile, chooseProfile, now, positionDate, setPositionDate } = useHomePreferences();
   const position = new Date(`${positionDate}T12:00:00`);
@@ -68,6 +70,7 @@ export default function HomeDashboard({
     revenueGoals,
     originationGoals,
     includeDemoPortfolio,
+    portfolioTitlesOverride,
   });
 
   return (

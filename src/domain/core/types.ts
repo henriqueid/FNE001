@@ -255,6 +255,8 @@ export type Stage = {
 
 export type Operation = {
   id: string;
+  /** Versão do agregado persistido; ausente em dados de demonstração ou ainda não gravados. */
+  persistenceVersion?: number;
   proposal: string;
   aditivoNumber: string;
   borderoNumber: string;

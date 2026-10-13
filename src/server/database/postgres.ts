@@ -79,6 +79,26 @@ class PostgresDatabase implements DecisionDatabase {
   async exec(query: string) {
     return (this.client as unknown as QueryExecutor).unsafe(query);
   }
+
+  async transaction<T>(work: (database: DecisionDatabase) => Promise<T>) {
+    return this.client.begin(async transaction => {
+      const executor = transaction as unknown as QueryExecutor;
+      const scoped: DecisionDatabase = {
+        prepare: query => new PostgresStatement(executor, query, value => this.client.json(value as never)),
+        batch: async <R = unknown>(statements: DecisionStatement[]) => {
+          const results: unknown[] = [];
+          for (const statement of statements) {
+            if (!(statement instanceof PostgresStatement))
+              throw new Error("Comando de banco incompatível com PostgreSQL.");
+            results.push(await statement.executeWith(executor));
+          }
+          return results as R[];
+        },
+        exec: query => executor.unsafe(query),
+      };
+      return work(scoped);
+    }) as Promise<T>;
+  }
 }
 
 let database: PostgresDatabase | undefined;

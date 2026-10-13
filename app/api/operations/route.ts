@@ -1,0 +1,66 @@
+import type { Operation } from "@/src/domain/core/types";
+import type { Permission } from "@/src/domain/access/model";
+import { validatePersistedOperation } from "@/src/domain/operations/persistence";
+import { sessionPrincipal } from "@/src/server/access/session";
+import { getDatabase } from "@/src/server/database/postgres";
+import { loadOperations, saveOperation } from "@/src/server/operations/repository";
+import { ReceivableDuplicateError } from "@/src/server/receivables/repository";
+
+const json = (body: unknown, status = 200) => Response.json(body, { status });
+
+async function context(request: Request) {
+  const tenantId = request.headers.get("x-strato-tenant-id")?.trim();
+  if (!tenantId) return { error: json({ error: "Empresa não informada." }, 400) } as const;
+  const db = getDatabase();
+  const principal = await sessionPrincipal(db, request.headers, tenantId);
+  if (!principal) return { error: json({ error: "Sessão ausente ou expirada." }, 401) } as const;
+  return { db, tenantId, principal } as const;
+}
+
+export async function GET(request: Request) {
+  const access = await context(request);
+  if ("error" in access) return access.error;
+  return json({ operations: await loadOperations(access.db, access.tenantId) });
+}
+
+export async function PUT(request: Request) {
+  const access = await context(request);
+  if ("error" in access) return access.error;
+  const allowed = (
+    ["operations:edit", "risk:decide", "controlleria:formalize", "finance:release"] as Permission[]
+  ).some(permission => access.principal.permissions.includes(permission));
+  if (!allowed) return json({ error: "Sem permissão para alterar operações." }, 403);
+  const command = (await request.json().catch(() => null)) as {
+    operation?: Operation;
+    expectedVersion?: number;
+  } | null;
+  if (!command?.operation || !Number.isInteger(command.expectedVersion) || Number(command.expectedVersion) < 0)
+    return json({ error: "Comando de persistência inválido." }, 400);
+  const error = validatePersistedOperation(command.operation);
+  if (error) return json({ error }, 400);
+  try {
+    const operation = await saveOperation(
+      access.db,
+      access.tenantId,
+      access.principal.id,
+      command.operation,
+      Number(command.expectedVersion),
+    );
+    if (!operation)
+      return json(
+        { error: "A operação foi alterada por outra pessoa. Atualize a tela antes de tentar novamente." },
+        409,
+      );
+    return json({ operation });
+  } catch (reason) {
+    if (reason instanceof ReceivableDuplicateError)
+      return json(
+        {
+          error: `Este recebível já pertence à operação ${reason.existingOperationId}. Revise a duplicidade antes de continuar.`,
+        },
+        409,
+      );
+    console.error("operation_save_failed", reason);
+    return json({ error: "O banco não conseguiu salvar a operação. Tente novamente." }, 500);
+  }
+}

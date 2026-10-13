@@ -1,7 +1,8 @@
 import { cedentPortfolioTitles } from "@/src/domain/core/demo/portfolio";
 import { type ManualEntry, type Operation, type OperationSource } from "@/src/domain/core/types";
-import { isReleased } from "@/src/domain/home/metrics";
+import { isReleased, type PortfolioTitle } from "@/src/domain/home/metrics";
 import { shiftDateText } from "@/src/domain/core/demo/relative-dates";
+import { receivableIdFor, type ReceivableRecord } from "@/src/domain/receivables/model";
 
 export type PortfolioTitleStatus =
   | "Em aberto"
@@ -75,6 +76,7 @@ export type PortfolioConfirmation = {
 
 export type PortfolioTitleRecord = {
   id: string;
+  receivableId?: string;
   status: PortfolioTitleStatus;
   bankStatus: PortfolioBankStatus;
   source: "Carteira anterior" | "Operação liberada";
@@ -96,6 +98,8 @@ export type PortfolioTitleRecord = {
   originalDueDate: string;
   dueDate: string;
   originalAmount: number;
+  /** Saldo oficial da posição importada; quando presente prevalece no cálculo da carteira. */
+  openAmount?: number;
   paidAmount: number;
   repurchasedAmount: number;
   discountAmount: number;
@@ -128,6 +132,8 @@ export type PortfolioTitleRecord = {
 export type PortfolioState = {
   version: 3;
   titles: PortfolioTitleRecord[];
+  positionDate?: string;
+  historicalTitleCount?: number;
 };
 
 export type StoredPortfolioState = Omit<PortfolioState, "version"> & { version: 1 | 2 | 3 };
@@ -143,9 +149,10 @@ export type PortfolioDisplayStatus = PortfolioTitleStatus | "A vencer" | "Vencid
 export function portfolioBalance(
   title: Pick<
     PortfolioTitleRecord,
-    "originalAmount" | "paidAmount" | "repurchasedAmount" | "discountAmount" | "abatementAmount"
+    "originalAmount" | "openAmount" | "paidAmount" | "repurchasedAmount" | "discountAmount" | "abatementAmount"
   >,
 ) {
+  if (title.openAmount !== undefined) return Math.max(0, title.openAmount);
   return Math.max(
     0,
     title.originalAmount -
@@ -156,6 +163,24 @@ export function portfolioBalance(
   );
 }
 
+export function portfolioHomeTitles(portfolio: PortfolioState): PortfolioTitle[] {
+  return portfolio.titles
+    .map(title => ({ title, amount: portfolioBalance(title) }))
+    .filter(({ title, amount }) => !["Pago", "Recomprado", "Cancelado"].includes(title.status) && amount > 0)
+    .map(({ title, amount }) => ({
+      id: title.id,
+      ownerDocument: title.ownerDocument,
+      ownerName: title.ownerName,
+      debtorName: title.debtorName,
+      debtorDocument: title.debtorDocument,
+      dueDate: title.dueDate,
+      amount,
+      source: title.source === "Operação liberada" ? "Operação liberada" : "Carteira",
+      reference: title.documentNumber,
+      vehicle: title.company,
+    }));
+}
+
 export function portfolioDisplayStatus(title: PortfolioTitleRecord, today: string): PortfolioDisplayStatus {
   if (title.status !== "Em aberto") return title.status;
   return title.dueDate < today ? "Vencido" : "A vencer";
@@ -164,6 +189,7 @@ export function portfolioDisplayStatus(title: PortfolioTitleRecord, today: strin
 function operationEntry(op: Operation, entry: ManualEntry): PortfolioTitleRecord {
   return {
     id: `${op.id}-${entry.id}`,
+    receivableId: receivableIdFor(op.id, entry.id),
     status: "Em aberto",
     bankStatus: entry.ourNumber ? "Pendente de integração" : "Sem boleto",
     source: "Operação liberada",
@@ -214,6 +240,71 @@ function operationEntry(op: Operation, entry: ManualEntry): PortfolioTitleRecord
         detail: `Título recebido da ${op.proposal}, aditivo ${op.aditivoNumber} e borderô ${op.borderoNumber}.`,
       },
     ],
+  };
+}
+
+/** Projeção de Carteira produzida diretamente pela fonte única Receivable. */
+export function portfolioTitleFromReceivable(receivable: ReceivableRecord): PortfolioTitleRecord {
+  return {
+    id: `${receivable.operationId}-${receivable.sourceEntryId}`,
+    receivableId: receivable.id,
+    status: "Em aberto",
+    bankStatus: receivable.entry.ourNumber ? "Pendente de integração" : "Sem boleto",
+    source: "Operação liberada",
+    receivableType: receivable.receivableType,
+    company: receivable.company,
+    institution: receivable.institution,
+    operationId: receivable.operationId,
+    proposal: receivable.proposal,
+    aditivoNumber: receivable.aditivoNumber,
+    borderoNumber: receivable.borderoNumber,
+    operationType: receivable.operationType,
+    documentNumber: receivable.entry.documentNumber,
+    ownerName: receivable.ownerName,
+    ownerDocument: receivable.ownerDocument,
+    debtorName: receivable.entry.debtorName,
+    debtorDocument: receivable.entry.debtorDocument,
+    issueDate: receivable.entry.issueDate,
+    originalDueDate: receivable.entry.dueDate,
+    dueDate: receivable.entry.dueDate,
+    originalAmount: receivable.entry.amount,
+    paidAmount: 0,
+    repurchasedAmount: 0,
+    discountAmount: receivable.entry.discount ?? 0,
+    abatementAmount: 0,
+    payments: [],
+    nfeKey: receivable.entry.nfeKey,
+    ourNumber: receivable.entry.ourNumber,
+    cfop: receivable.entry.cfop,
+    observation: receivable.entry.observation,
+    cmc7: receivable.entry.cmc7,
+    bank: receivable.entry.bank,
+    agency: receivable.entry.agency,
+    account: receivable.entry.account,
+    collectionOccurrences: [],
+    confirmation: { status: "Não iniciada" },
+    compensation: receivable.entry.compensation,
+    country: receivable.entry.country,
+    state: receivable.entry.state,
+    city: receivable.entry.city,
+    events: [
+      {
+        id: `origin-${receivable.id}`,
+        at: receivable.entry.issueDate ?? receivable.entry.dueDate,
+        by: "Operação",
+        action: "Entrada na carteira",
+        detail: `Recebível cedido pela ${receivable.proposal}, aditivo ${receivable.aditivoNumber} e borderô ${receivable.borderoNumber}.`,
+      },
+    ],
+  };
+}
+
+export function portfolioProjectionFromReceivables(receivables: ReceivableRecord[]): PortfolioState {
+  return {
+    version: 3,
+    titles: receivables
+      .filter(receivable => receivable.lifecycleStatus === "ASSIGNED")
+      .map(portfolioTitleFromReceivable),
   };
 }
 

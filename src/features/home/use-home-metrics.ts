@@ -36,6 +36,7 @@ import {
   teamRows,
   vehicleExposure,
   type OpFinancial,
+  type PortfolioTitle,
 } from "@/src/domain/home/metrics";
 import { homeSettings, periodLabels, type HomePeriod, type HomeProfile } from "@/src/domain/home/settings";
 import { demoCedentHistories, demoDebtorHistories } from "@/src/domain/core/demo/quality-history";
@@ -64,6 +65,7 @@ export type HomeMetricsInput = {
   revenueGoals: OperationalDefaultsState["revenueGoals"];
   originationGoals: OperationalDefaultsState["originationGoals"];
   includeDemoPortfolio?: boolean;
+  portfolioTitlesOverride?: PortfolioTitle[];
 };
 
 export type HealthTone = "critical" | "watch" | "ok";
@@ -84,6 +86,7 @@ export function useHomeMetrics({
   revenueGoals,
   originationGoals,
   includeDemoPortfolio = false,
+  portfolioTitlesOverride,
 }: HomeMetricsInput) {
   const registryCedents = useCedents();
   const fin = financials;
@@ -121,10 +124,10 @@ export function useHomeMetrics({
   // carteira: títulos em aberto + títulos das operações liberadas ao financeiro
   const titles = useMemo(
     () =>
-      portfolioTitles(operations, includeDemoPortfolio).filter(
+      (portfolioTitlesOverride ?? portfolioTitles(operations, includeDemoPortfolio)).filter(
         t => companyScope === "Consolidado" || t.vehicle === companyScope,
       ),
-    [operations, companyScope, includeDemoPortfolio],
+    [operations, companyScope, includeDemoPortfolio, portfolioTitlesOverride],
   );
   const portfolioTotal = titles.reduce((s, t) => s + t.amount, 0);
   const agingBuckets = useMemo(() => aging(titles, today), [titles, today]);

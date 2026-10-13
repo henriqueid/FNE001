@@ -17,6 +17,7 @@ export type DecisionDatabase = {
   prepare(query: string): DecisionStatement;
   batch<T = unknown>(statements: DecisionStatement[]): Promise<T[]>;
   exec(query: string): Promise<unknown>;
+  transaction?<T>(work: (database: DecisionDatabase) => Promise<T>): Promise<T>;
 };
 
 export class DecisionConflictError extends Error {}

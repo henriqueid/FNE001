@@ -194,8 +194,16 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
           <section className="pf-foundation" aria-label="Estado da carteira">
             <div>
               <span>BASE OPERACIONAL</span>
-              <b>{portfolio.titles.length} títulos controlados</b>
-              <small>Dados históricos e novas operações na mesma estrutura</small>
+              <b>
+                {(portfolio.historicalTitleCount ?? portfolio.titles.length).toLocaleString("pt-BR")} títulos
+                controlados
+              </b>
+              <small>
+                {portfolio.titles.length.toLocaleString("pt-BR")} em aberto
+                {portfolio.positionDate
+                  ? ` · posição ${new Date(`${portfolio.positionDate}T12:00:00`).toLocaleDateString("pt-BR")}`
+                  : ""}
+              </small>
             </div>
             <div>
               <span>EMPRESA ATIVA</span>

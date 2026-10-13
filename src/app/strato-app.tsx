@@ -8,7 +8,7 @@
 import { normalizedPricing, pricingCalculation } from "@/src/domain/operations/pricing";
 import { Badge } from "@/src/features/operations/components/status";
 import type { NewOperationInput } from "@/src/features/operations/new-operation/new-operation-modal";
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   clearPersistedState,
   loadPersistedState,
@@ -36,7 +36,7 @@ import { QualityContext, type QualityValue, useQualityPolicyState } from "@/src/
 import { mergeParties, type Party, partyToCedent, seedParties } from "@/src/domain/registry/parties";
 import { saveParty as savePartyRecord } from "@/src/domain/registry/party-save";
 import { buildRegistry, effectiveCedents, repurchaseEvents } from "@/src/domain/registry/registry";
-import { seedPortfolio, syncPortfolio } from "@/src/domain/portfolio/model";
+import { portfolioHomeTitles, seedPortfolio, syncPortfolio } from "@/src/domain/portfolio/model";
 import { Shell } from "@/src/features/shell/shell";
 import { type AppView, ShellContext } from "@/src/features/shell/shell-context";
 import { RegistryContext, type RegistryValue } from "./registry-context";
@@ -72,6 +72,12 @@ import { syncPublishedNotifications } from "./notification-client";
 import { useStratoAuth } from "@/src/features/auth/auth-context";
 import { loadRegistryParties, persistRegistryParty } from "./registry-client";
 import { useCompanyDestinations } from "./company-context";
+import {
+  loadOperations as loadServerOperations,
+  persistOperation as persistServerOperation,
+} from "./operations-client";
+import { loadFinanceState as loadServerFinance, persistFinanceState as persistServerFinance } from "./finance-client";
+import { loadCurrentPortfolio } from "./portfolio-client";
 
 const CommercialModule = lazy(() => import("@/src/features/commercial/commercial-module"));
 const ControlleriaModule = lazy(() => import("@/src/features/controlleria/controlleria-module"));
@@ -113,6 +119,9 @@ export default function StratoApp() {
   const destinations = useCompanyDestinations();
   const deepLinkHandled = useRef(false);
   const [operations, setOperations] = useState(() => (isDemo ? initialOperations : []));
+  const [operationsServerReady, setOperationsServerReady] = useState(isDemo);
+  const [operationPersistenceError, setOperationPersistenceError] = useState<string>();
+  const operationSaveQueues = useRef(new Map<string, Promise<Operation>>());
   const [debtors, setDebtors] = useState(() => (isDemo ? initialDebtors : []));
   const [selected, setSelected] = useState<Operation | null>(null);
   const [showNew, setShowNew] = useState(false);
@@ -135,9 +144,15 @@ export default function StratoApp() {
     setView(target);
   };
   const [finance, setFinance] = useState<FinanceState>(() => (isDemo ? seedFinance() : emptyFinance()));
+  const [financeServerReady, setFinanceServerReady] = useState(isDemo);
+  const [financePersistenceError, setFinancePersistenceError] = useState<string>();
+  const financeSaveQueue = useRef<Promise<FinanceState> | null>(null);
+  const financeRef = useRef(finance);
   const [portfolio, setPortfolio] = useState(() =>
     isDemo ? seedPortfolio(initialOperations) : { version: 3 as const, titles: [] },
   );
+  const [portfolioServerReady, setPortfolioServerReady] = useState(isDemo);
+  const [portfolioLoadError, setPortfolioLoadError] = useState<string>();
   // Vínculo comercial do cliente (carteira, comitês, comissões): compartilhado por Cadastro, Operação, Carteira e Comercial.
   const [commercial, setCommercial] = useState<CommercialState>(() => (isDemo ? seedCommercial() : emptyCommercial()));
   // Cadastro de pessoas (cedentes, sacados, fornecedores, representantes, investidores...).
@@ -150,6 +165,79 @@ export default function StratoApp() {
   const [tasks, setTasks] = useState(() => seedTaskState());
   const [publishedNotifications, setPublishedNotifications] = useState<PublishedNotification[]>([]);
   const [taskClock, setTaskClock] = useState(() => Date.now());
+
+  useEffect(() => {
+    financeRef.current = finance;
+  }, [finance]);
+
+  function persistRealOperation(candidate: Operation) {
+    if (isDemo) return;
+    const prior = operationSaveQueues.current.get(candidate.id) ?? Promise.resolve(candidate);
+    const queued = prior
+      .catch(() => candidate)
+      .then(serverBase =>
+        persistServerOperation({
+          ...candidate,
+          persistenceVersion: serverBase.persistenceVersion ?? candidate.persistenceVersion,
+        }),
+      );
+    operationSaveQueues.current.set(candidate.id, queued);
+    void queued
+      .then(saved => {
+        setOperationPersistenceError(undefined);
+        setOperations(current =>
+          current.map(operation =>
+            operation.id === saved.id ? { ...operation, persistenceVersion: saved.persistenceVersion } : operation,
+          ),
+        );
+        setSelected(current =>
+          current?.id === saved.id ? { ...current, persistenceVersion: saved.persistenceVersion } : current,
+        );
+      })
+      .catch(reason => {
+        setOperationPersistenceError(
+          reason instanceof Error ? reason.message : "Não foi possível salvar a operação no banco.",
+        );
+      })
+      .finally(() => {
+        if (operationSaveQueues.current.get(candidate.id) === queued) operationSaveQueues.current.delete(candidate.id);
+      });
+  }
+
+  const persistRealFinance = useCallback(
+    (candidate: FinanceState) => {
+      if (isDemo) return;
+      const prior = financeSaveQueue.current ?? Promise.resolve(candidate);
+      const queued = prior
+        .catch(() => candidate)
+        .then(serverBase =>
+          persistServerFinance({
+            ...candidate,
+            persistenceVersion: serverBase.persistenceVersion ?? candidate.persistenceVersion,
+          }),
+        );
+      financeSaveQueue.current = queued;
+      void queued
+        .then(saved => {
+          setFinancePersistenceError(undefined);
+          setFinance(current => ({ ...current, persistenceVersion: saved.persistenceVersion }));
+        })
+        .catch(reason => {
+          setFinancePersistenceError(
+            reason instanceof Error ? reason.message : "Não foi possível salvar o Financeiro no banco.",
+          );
+        })
+        .finally(() => {
+          if (financeSaveQueue.current === queued) financeSaveQueue.current = null;
+        });
+    },
+    [isDemo],
+  );
+
+  function applyFinanceState(candidate: FinanceState) {
+    setFinance(candidate);
+    persistRealFinance(candidate);
+  }
   // Resultado financeiro de cada operação, pela mesma precificação da etapa Preço, para a Visão geral.
   const homeFinancials = useMemo(
     () =>
@@ -177,58 +265,68 @@ export default function StratoApp() {
   );
   // Liberações enviadas ao financeiro viram títulos a pagar e a compra é contabilizada.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza liberações com o financeiro sempre que as operações mudam
-    setFinance(current => syncReleases(current, operations, homeFinancials));
-  }, [operations, homeFinancials]);
+    if (!isDemo && !financeServerReady) return;
+    const current = financeRef.current;
+    const next = syncReleases(current, operations, homeFinancials);
+    if (next === current) return;
+    setFinance(next);
+    persistRealFinance(next);
+  }, [operations, homeFinancials, financeServerReady, isDemo, persistRealFinance]);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- novas liberações entram na carteira sem apagar manutenções
     setPortfolio(current => syncPortfolio(current, operations));
   }, [operations]);
   function applyFinanceEffects(effects: Effect[]) {
     if (!can(currentUser, "finance:release")) return;
-    setOperations(current =>
-      current.map(operation => {
-        const mine = effects.filter(effect => effect.operationId === operation.id);
-        if (!mine.length || !operation.releaseReview) return operation;
-        return {
-          ...operation,
-          releaseReview: {
-            ...operation.releaseReview,
-            payables: (operation.releaseReview.payables ?? []).map(payable => {
-              const effect = mine.find(item => item.payableKey === payableKey(payable));
-              return effect ? { ...payable, status: effect.status, paidAt: effect.paidAt } : payable;
-            }),
-            audit: [
-              ...(operation.releaseReview.audit ?? []),
-              ...mine.map(effect => ({
-                at: new Intl.DateTimeFormat("pt-BR", {
-                  dateStyle: "short",
-                  timeStyle: "short",
-                  timeZone: "America/Sao_Paulo",
-                }).format(new Date()),
-                by: "Financeiro",
-                action: effect.status === "Pago" ? "Pagamento realizado" : "Pagamento estornado",
-                detail: effect.payableKey.split("@")[0],
-              })),
-            ],
-          },
-        };
-      }),
-    );
+    const nextOperations = operations.map(operation => {
+      const mine = effects.filter(effect => effect.operationId === operation.id);
+      if (!mine.length || !operation.releaseReview) return operation;
+      return {
+        ...operation,
+        releaseReview: {
+          ...operation.releaseReview,
+          payables: (operation.releaseReview.payables ?? []).map(payable => {
+            const effect = mine.find(item => item.payableKey === payableKey(payable));
+            return effect ? { ...payable, status: effect.status, paidAt: effect.paidAt } : payable;
+          }),
+          audit: [
+            ...(operation.releaseReview.audit ?? []),
+            ...mine.map(effect => ({
+              at: new Intl.DateTimeFormat("pt-BR", {
+                dateStyle: "short",
+                timeStyle: "short",
+                timeZone: "America/Sao_Paulo",
+              }).format(new Date()),
+              by: "Financeiro",
+              action: effect.status === "Pago" ? "Pagamento realizado" : "Pagamento estornado",
+              detail: effect.payableKey.split("@")[0],
+            })),
+          ],
+        },
+      };
+    });
+    setOperations(nextOperations);
+    nextOperations
+      .filter(operation => effects.some(effect => effect.operationId === operation.id))
+      .forEach(persistRealOperation);
   }
   function patchOperation(id: string, patch: Partial<Operation>) {
     if (!can(currentUser, "finance:release")) return;
-    setOperations(current => current.map(operation => (operation.id === id ? { ...operation, ...patch } : operation)));
+    const current = operations.find(operation => operation.id === id);
+    if (!current) return;
+    const updated = { ...current, ...patch };
+    setOperations(items => items.map(operation => (operation.id === id ? updated : operation)));
+    persistRealOperation(updated);
   }
   // A empresa do título acompanha a projeção de caixa do Financeiro (antes entrava em qualquer recorte).
   const carteiraFlows = useMemo(
     () =>
-      portfolioTitles(operations, isDemo).map(title => ({
+      (isDemo ? portfolioTitles(operations, true) : portfolioHomeTitles(portfolio)).map(title => ({
         date: title.dueDate,
         amount: title.amount,
         company: title.vehicle,
       })),
-    [operations, isDemo],
+    [operations, isDemo, portfolio],
   );
 
   // Restaura o que foi salvo depois de montar (evita divergência na hidratação do SSR).
@@ -337,6 +435,73 @@ export default function StratoApp() {
   }, [isDemo, storageReady]);
 
   useEffect(() => {
+    if (!storageReady || isDemo || operationsServerReady) return;
+    let cancelled = false;
+    loadServerOperations()
+      .then(serverOperations => {
+        if (cancelled) return;
+        setOperations(serverOperations);
+        setOperationPersistenceError(undefined);
+      })
+      .catch(reason => {
+        if (cancelled) return;
+        setOperationPersistenceError(
+          reason instanceof Error ? reason.message : "Não foi possível carregar as operações do banco.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setOperationsServerReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemo, operationsServerReady, storageReady]);
+
+  useEffect(() => {
+    if (!storageReady || isDemo || financeServerReady) return;
+    let cancelled = false;
+    loadServerFinance()
+      .then(serverFinance => {
+        if (cancelled) return;
+        setFinance(serverFinance ?? emptyFinance());
+        setFinancePersistenceError(undefined);
+      })
+      .catch(reason => {
+        if (cancelled) return;
+        setFinancePersistenceError(
+          reason instanceof Error ? reason.message : "Não foi possível carregar o Financeiro do banco.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setFinanceServerReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [financeServerReady, isDemo, storageReady]);
+
+  useEffect(() => {
+    if (!storageReady || isDemo || portfolioServerReady) return;
+    let cancelled = false;
+    loadCurrentPortfolio()
+      .then(serverPortfolio => {
+        if (cancelled) return;
+        setPortfolio(serverPortfolio);
+        setPortfolioLoadError(undefined);
+      })
+      .catch(reason => {
+        if (cancelled) return;
+        setPortfolioLoadError(reason instanceof Error ? reason.message : "Não foi possível carregar a carteira.");
+      })
+      .finally(() => {
+        if (!cancelled) setPortfolioServerReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemo, portfolioServerReady, storageReady]);
+
+  useEffect(() => {
     if (!accessServerReady || isDemo) return;
     const timer = window.setTimeout(() => {
       void saveAccessDirectory(intelligence.tenantId, access).catch(() => {
@@ -421,6 +586,7 @@ export default function StratoApp() {
       return;
     setOperations(current => current.map(operation => (operation.id === updated.id ? updated : operation)));
     setSelected(updated);
+    persistRealOperation(updated);
   }
 
   function registerDebtor(debtor: Debtor) {
@@ -471,6 +637,7 @@ export default function StratoApp() {
     setOperations([next, ...operations]);
     setShowNew(false);
     setSelected(next);
+    persistRealOperation(next);
   }
   const openSettings = () => navigate("settings");
   const carteiraEvents = useMemo(() => repurchaseEvents(operations), [operations]);
@@ -617,13 +784,17 @@ export default function StratoApp() {
     }
     if (selected && !scopedOperations.some(operation => operation.id === selected.id)) setSelected(null);
   }, [currentUser, companyScope, scopedOperations, selected, storageReady, view]);
+  const livePortfolioTitles = useMemo(
+    () => (isDemo ? portfolioTitles(operations, true) : portfolioHomeTitles(portfolio)),
+    [isDemo, operations, portfolio],
+  );
   const dailyBriefing = useMemo(
     () =>
       buildDailyBriefing({
         user: currentUser,
         operations,
         financials: homeFinancials,
-        titles: portfolioTitles(operations, isDemo),
+        titles: livePortfolioTitles,
         referenceDate: today,
         revenueTarget: operationalDefaults.revenueGoals.consolidated.mes,
         scope: userScope,
@@ -635,30 +806,30 @@ export default function StratoApp() {
       operationalDefaults.revenueGoals.consolidated.mes,
       userScope,
       currentUser,
-      isDemo,
+      livePortfolioTitles,
     ],
   );
   const systemAttentionItems = useMemo(
     () =>
       buildAttentionItems({
         operations,
-        titles: portfolioTitles(operations, isDemo),
+        titles: livePortfolioTitles,
         user: demoAdminUser,
         referenceDate: today,
         scope: userScope,
       }),
-    [operations, today, userScope, isDemo],
+    [operations, today, userScope, livePortfolioTitles],
   );
   const detectedAttentionItems = useMemo(
     () =>
       buildAttentionItems({
         operations,
-        titles: portfolioTitles(operations, isDemo),
+        titles: livePortfolioTitles,
         user: currentUser,
         referenceDate: today,
         scope: userScope,
       }),
-    [operations, today, userScope, currentUser, isDemo],
+    [operations, today, userScope, currentUser, livePortfolioTitles],
   );
   const publishedAttentionItems = useMemo(
     () =>
@@ -712,7 +883,8 @@ export default function StratoApp() {
   );
   const runTaskCommand = (id: string, command: TaskCommand) =>
     setTasks(current => applyTaskCommand(current, id, command, new Date().toISOString()));
-  if (!isDemo && !accessServerReady) return <ModuleLoading />;
+  if (!isDemo && (!accessServerReady || !operationsServerReady || !financeServerReady || !portfolioServerReady))
+    return <ModuleLoading />;
   const shellContext = {
     operations: scopedOperations,
     navigate,
@@ -761,7 +933,7 @@ export default function StratoApp() {
     page = (
       <FinanceModule
         state={finance}
-        onState={setFinance}
+        onState={applyFinanceState}
         onEffects={applyFinanceEffects}
         onPatchOperation={patchOperation}
         operations={scopedOperations}
@@ -778,7 +950,7 @@ export default function StratoApp() {
         operations={scopedOperations}
         financials={homeFinancials}
         finance={finance}
-        onFinance={setFinance}
+        onFinance={applyFinanceState}
         onOpenOperation={setSelected}
         onNavigate={navigate}
       />
@@ -799,6 +971,7 @@ export default function StratoApp() {
         revenueGoals={operationalDefaults.revenueGoals}
         originationGoals={operationalDefaults.originationGoals}
         includeDemoPortfolio={isDemo}
+        portfolioTitlesOverride={livePortfolioTitles}
       />
     );
   else if (view === "registry")
@@ -808,6 +981,7 @@ export default function StratoApp() {
         operations={scopedOperations}
         onOpenOperation={setSelected}
         onNavigate={navigate}
+        portfolioTitles={livePortfolioTitles}
       />
     );
   else if (view === "portfolio")
@@ -896,6 +1070,24 @@ export default function StratoApp() {
                 }}
                 demoMode={isDemo}
               >
+                {operationPersistenceError && (
+                  <div className="empty-state" role="alert">
+                    <strong>Alterações da operação ainda não foram salvas</strong>
+                    <span>{operationPersistenceError}</span>
+                  </div>
+                )}
+                {financePersistenceError && (
+                  <div className="empty-state" role="alert">
+                    <strong>Alterações do Financeiro ainda não foram salvas</strong>
+                    <span>{financePersistenceError}</span>
+                  </div>
+                )}
+                {portfolioLoadError && (
+                  <div className="empty-state" role="alert">
+                    <strong>A carteira não foi carregada</strong>
+                    <span>{portfolioLoadError}</span>
+                  </div>
+                )}
                 <Suspense fallback={<ModuleLoading />}>{page}</Suspense>
               </Shell>
               {showNew && can(currentUser, "operations:edit") && (

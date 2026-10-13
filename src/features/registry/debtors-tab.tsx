@@ -7,6 +7,7 @@
 import { digits } from "@/src/domain/commercial/calendar";
 import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { portfolioTitles } from "@/src/domain/home/metrics";
+import type { PortfolioTitle } from "@/src/domain/home/metrics";
 import { partyToDebtor, type Party } from "@/src/domain/registry/parties";
 import { searchRegistryParties } from "@/src/app/registry-client";
 import type { RegistryPartySearchItem } from "@/src/server/registry/repository";
@@ -20,6 +21,7 @@ type Props = {
   operations: Operation[];
   onEditDocument: (document: string) => void;
   onEditParty: (party: Party) => void;
+  portfolioTitlesOverride?: PortfolioTitle[];
 };
 type DebtorRow = {
   debtor: Debtor;
@@ -30,7 +32,7 @@ type DebtorRow = {
 };
 const pageSize = 50;
 
-export function DebtorsTab({ debtors, operations, onEditDocument, onEditParty }: Props) {
+export function DebtorsTab({ debtors, operations, onEditDocument, onEditParty, portfolioTitlesOverride }: Props) {
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
   const [offset, setOffset] = useState(0);
@@ -38,7 +40,10 @@ export function DebtorsTab({ debtors, operations, onEditDocument, onEditParty }:
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const titles = useMemo(() => portfolioTitles(operations), [operations]);
+  const titles = useMemo(
+    () => portfolioTitlesOverride ?? portfolioTitles(operations),
+    [operations, portfolioTitlesOverride],
+  );
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setLoading(true);

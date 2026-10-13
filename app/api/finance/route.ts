@@ -1,0 +1,57 @@
+import type { FinanceState } from "@/src/domain/finance/model";
+import { validateFinanceState } from "@/src/domain/finance/persistence";
+import { sessionPrincipal } from "@/src/server/access/session";
+import { getDatabase } from "@/src/server/database/postgres";
+import { loadFinanceState, saveFinanceState } from "@/src/server/finance/repository";
+
+const json = (body: unknown, status = 200) => Response.json(body, { status });
+
+async function context(request: Request) {
+  const tenantId = request.headers.get("x-strato-tenant-id")?.trim();
+  if (!tenantId) return { error: json({ error: "Empresa não informada." }, 400) } as const;
+  const db = getDatabase();
+  const principal = await sessionPrincipal(db, request.headers, tenantId);
+  if (!principal) return { error: json({ error: "Sessão ausente ou expirada." }, 401) } as const;
+  return { db, tenantId, principal } as const;
+}
+
+export async function GET(request: Request) {
+  const access = await context(request);
+  if ("error" in access) return access.error;
+  if (!access.principal.permissions.includes("finance:view"))
+    return json({ error: "Sem permissão para consultar o Financeiro." }, 403);
+  return json({ finance: await loadFinanceState(access.db, access.tenantId) });
+}
+
+export async function PUT(request: Request) {
+  const access = await context(request);
+  if ("error" in access) return access.error;
+  if (!access.principal.permissions.includes("finance:release"))
+    return json({ error: "Sem permissão para alterar o Financeiro." }, 403);
+  const command = (await request.json().catch(() => null)) as {
+    finance?: FinanceState;
+    expectedVersion?: number;
+  } | null;
+  if (!command?.finance || !Number.isInteger(command.expectedVersion) || Number(command.expectedVersion) < 0)
+    return json({ error: "Comando financeiro inválido." }, 400);
+  const error = validateFinanceState(command.finance);
+  if (error) return json({ error }, 400);
+  try {
+    const finance = await saveFinanceState(
+      access.db,
+      access.tenantId,
+      access.principal.id,
+      command.finance,
+      Number(command.expectedVersion),
+    );
+    if (!finance)
+      return json(
+        { error: "O Financeiro foi alterado por outra pessoa. Atualize a tela antes de tentar novamente." },
+        409,
+      );
+    return json({ finance });
+  } catch (reason) {
+    console.error("finance_save_failed", reason);
+    return json({ error: "O banco não conseguiu salvar o Financeiro. Tente novamente." }, 500);
+  }
+}

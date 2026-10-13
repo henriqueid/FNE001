@@ -10,7 +10,7 @@ import { digits } from "@/src/domain/commercial/calendar";
 import { type ClientLink } from "@/src/domain/commercial/types";
 import { type Operation } from "@/src/domain/core/types";
 import { todayIso } from "@/src/domain/finance/ledger";
-import { portfolioTitles } from "@/src/domain/home/metrics";
+import { portfolioTitles, type PortfolioTitle } from "@/src/domain/home/metrics";
 import { type ClientRecord } from "@/src/domain/registry/registry";
 import { br, compact } from "@/src/features/finance/finance-ui";
 import { type AppView } from "@/src/features/shell/shell-context";
@@ -26,14 +26,27 @@ type Props = {
   onTransfer: (link: ClientLink) => void;
   onLink: (record: ClientRecord) => void;
   repFilter: string;
+  portfolioTitlesOverride?: PortfolioTitle[];
 };
 
-export function CedentsTab({ operations, onOpenOperation, onNavigate, onEdit, onTransfer, onLink, repFilter }: Props) {
+export function CedentsTab({
+  operations,
+  onOpenOperation,
+  onNavigate,
+  onEdit,
+  onTransfer,
+  onLink,
+  repFilter,
+  portfolioTitlesOverride,
+}: Props) {
   const { records, commercial } = useRegistry();
   const today = todayIso();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
-  const titles = useMemo(() => portfolioTitles(operations), [operations]);
+  const titles = useMemo(
+    () => portfolioTitlesOverride ?? portfolioTitles(operations),
+    [operations, portfolioTitlesOverride],
+  );
   const openOps = (document: string) =>
     operations.filter(
       op =>

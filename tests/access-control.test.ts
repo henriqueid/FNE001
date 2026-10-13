@@ -5,6 +5,7 @@ import {
   canAccessView,
   defaultViewFor,
   migrateAccessState,
+  permissionsForAreas,
   permissionsFor,
   seedAccessState,
   startUserPreview,
@@ -49,6 +50,9 @@ describe("identidade e autorização", () => {
     expect(permissionsFor("Risco e crédito", "operator")).toContain("risk:decide");
     expect(permissionsFor("Operações", "operator")).not.toContain("finance:release");
     expect(permissionsFor("Operações", "manager")).toContain("users:manage");
+    expect(permissionsForAreas(["Cadastro", "Operações"], "operator")).toEqual(
+      expect.arrayContaining(["registry:edit", "operations:edit"]),
+    );
   });
 
   it("protege módulos e escolhe uma entrada permitida para cada perfil", () => {
@@ -78,6 +82,23 @@ describe("identidade e autorização", () => {
 
     expect(scoped.length).toBeGreaterThan(0);
     expect(scoped.every(operation => operation.vehicle === vehicle)).toBe(true);
+  });
+
+  it("combina a visão das várias áreas atribuídas ao mesmo usuário", () => {
+    const user = {
+      id: "multi-area",
+      name: "Pessoa multifuncional",
+      role: "Analista",
+      department: "Cadastro" as const,
+      functionalAreas: ["Cadastro", "Operações"] as Array<"Cadastro" | "Operações">,
+      access: "operator" as const,
+      responsibilities: ["Cadastro", "Esteira"],
+      operationOwner: initialOperations[0].owner,
+    };
+    const scoped = operationsForUser(initialOperations, user);
+
+    expect(scoped.some(operation => operation.stage === 1)).toBe(true);
+    expect(scoped.some(operation => operation.owner === initialOperations[0].owner)).toBe(true);
   });
 
   it("migra dados antigos preservando novos usuários padrão", () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { type DecisionEvent } from "@/src/domain/decisions/model";
 import { nextRetryAt, notificationForDecisionEvent, outboxFailureDisposition } from "@/src/server/outbox/publisher";
+import { functionalAreasMatchQueue } from "@/src/domain/copilot/daily-briefing";
 
 const event = (eventType: DecisionEvent["eventType"], overrides: Partial<DecisionEvent> = {}): DecisionEvent => ({
   eventId: "event-1",
@@ -62,5 +63,11 @@ describe("publicador da outbox", () => {
       status: "FAILED",
       availableAt: now.toISOString(),
     });
+  });
+
+  it("roteia notificações pela combinação de áreas do usuário", () => {
+    expect(functionalAreasMatchQueue(["Cadastro", "Operações"], "Cadastro")).toBe(true);
+    expect(functionalAreasMatchQueue(["Cadastro", "Operações"], "Carteira e cobrança")).toBe(true);
+    expect(functionalAreasMatchQueue(["Cadastro", "Operações"], "Financeiro")).toBe(false);
   });
 });

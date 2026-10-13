@@ -1,5 +1,7 @@
 import type { TaskState } from "@/src/domain/tasks/model";
 import { validateTaskState } from "@/src/domain/tasks/persistence";
+import { functionalAreasMatchQueue } from "@/src/domain/copilot/daily-briefing";
+import type { ServerPrincipal } from "@/src/server/access/repository";
 import { sessionPrincipal } from "@/src/server/access/session";
 import { getDatabase } from "@/src/server/database/postgres";
 import {
@@ -11,6 +13,16 @@ import {
 } from "@/src/server/tasks/repository";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
+
+const taskVisibleTo = (task: TaskState["tasks"][number], principal: ServerPrincipal) =>
+  principal.access === "admin" ||
+  task.owner === principal.name ||
+  functionalAreasMatchQueue(principal.functionalAreas, task.department);
+
+const visibleTaskState = (state: TaskState | null, principal: ServerPrincipal): TaskState | null =>
+  state && principal.access !== "admin"
+    ? { ...state, tasks: state.tasks.filter(task => taskVisibleTo(task, principal)) }
+    : state;
 
 async function context(request: Request) {
   const tenantId = request.headers.get("x-strato-tenant-id")?.trim();
@@ -26,7 +38,7 @@ async function context(request: Request) {
 export async function GET(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
-  return json({ tasks: await loadTaskState(access.db, access.tenantId) });
+  return json({ tasks: visibleTaskState(await loadTaskState(access.db, access.tenantId), access.principal) });
 }
 
 export async function PUT(request: Request) {
@@ -48,11 +60,31 @@ export async function PUT(request: Request) {
   const validationError = validateTaskState(command.tasks);
   if (validationError) return json({ error: validationError }, 400);
   const expectedVersion = Number(command.expectedVersion);
+  let nextState = command.tasks;
+  if (access.principal.access !== "admin") {
+    const current = await loadTaskState(access.db, access.tenantId);
+    if (!current) return json({ error: "A Central do Dia ainda precisa ser inicializada por um administrador." }, 409);
+    const visibleCurrent = current.tasks.filter(task => taskVisibleTo(task, access.principal));
+    const visibleIds = new Set(visibleCurrent.map(task => task.id));
+    if (
+      command.tasks.tasks.some(task => !visibleIds.has(task.id)) ||
+      visibleCurrent.some(task => !command.tasks!.tasks.some(candidate => candidate.id === task.id))
+    )
+      return json({ error: "O comando contém tarefa fora das funções e do perfil deste usuário." }, 403);
+    const replacements = new Map(command.tasks.tasks.map(task => [task.id, task]));
+    nextState = {
+      ...current,
+      tasks: current.tasks.map(task => replacements.get(task.id) ?? task),
+      persistenceVersion: command.tasks.persistenceVersion,
+    };
+  }
+  const mergedValidationError = validateTaskState(nextState);
+  if (mergedValidationError) return json({ error: mergedValidationError }, 400);
   const requestHash = await taskRequestHash({
     tenantId: access.tenantId,
     actorId: access.principal.id,
     expectedVersion,
-    state: command.tasks,
+    state: nextState,
   });
   try {
     const tasks = await saveTaskState(
@@ -60,7 +92,7 @@ export async function PUT(request: Request) {
       access.tenantId,
       access.principal.id,
       access.principal.name,
-      command.tasks,
+      nextState,
       expectedVersion,
       command.commandId,
       requestHash,
@@ -70,7 +102,7 @@ export async function PUT(request: Request) {
         { error: "As tarefas foram alteradas por outra pessoa. Atualize a Central do Dia antes de tentar novamente." },
         409,
       );
-    return json({ tasks });
+    return json({ tasks: visibleTaskState(tasks, access.principal) });
   } catch (reason) {
     if (reason instanceof TaskCommandConflictError || reason instanceof TaskTransitionError)
       return json({ error: reason.message }, 409);

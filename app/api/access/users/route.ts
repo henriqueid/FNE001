@@ -98,6 +98,16 @@ export async function PUT(request: Request) {
   if ("error" in access) return access.error;
   const state = (await request.json()) as AccessState;
   if (state?.version !== 2 || !Array.isArray(state.users)) return json({ error: "Diretório de acesso inválido." }, 400);
+  if (
+    state.users.some(
+      user =>
+        !departments.includes(user.department) ||
+        !Array.isArray(user.functionalAreas) ||
+        !user.functionalAreas.includes(user.department) ||
+        user.functionalAreas.some(area => !departments.includes(area)),
+    )
+  )
+    return json({ error: "As áreas de atuação do usuário são inválidas ou não incluem a área principal." }, 400);
   await saveAccessDirectory(access.db, access.tenantId, access.principal.id, state);
   return json(await loadAccessDirectory(access.db, access.tenantId, access.principal.id));
 }

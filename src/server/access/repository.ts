@@ -6,6 +6,7 @@ import {
   type Permission,
 } from "@/src/domain/access/model";
 import { normalizeCpf, normalizeLoginName } from "@/src/domain/access/identity";
+import { userFunctionalAreas, type UserDepartment } from "@/src/domain/copilot/daily-briefing";
 import { type DecisionDatabase } from "@/src/server/decisions/repository";
 import { verifyPassword } from "./password";
 
@@ -14,6 +15,7 @@ export type ServerPrincipal = {
   name: string;
   role: string;
   department: AccessUser["department"];
+  functionalAreas: UserDepartment[];
   access: AccessUser["access"];
   status: "active" | "suspended";
   tenantId: string;
@@ -68,11 +70,18 @@ export async function principalForSession(
     )
     .bind(tenantId, user.user_id, at, at)
     .all<{ authority_id: string }>();
+  const functions = await db
+    .prepare(
+      "SELECT function_area FROM private.user_function_assignments WHERE tenant_id = ? AND user_id = ? ORDER BY function_area",
+    )
+    .bind(tenantId, user.user_id)
+    .all<{ function_area: UserDepartment }>();
   return {
     id: user.user_id,
     name: user.name,
     role: user.role,
     department: user.department,
+    functionalAreas: functions.results.length ? functions.results.map(item => item.function_area) : [user.department],
     access: user.access_level,
     status: user.status,
     tenantId: user.tenant_id,
@@ -196,6 +205,13 @@ export async function registerAccessRequest(
     .run();
   await db
     .prepare(
+      `INSERT INTO private.user_function_assignments
+        (tenant_id, user_id, function_area, assigned_by, created_at) VALUES (?, ?, ?, ?, ?)`,
+    )
+    .bind(input.tenantId, userId, input.department, userId, now)
+    .run();
+  await db
+    .prepare(
       `INSERT INTO private.access_credentials
         (user_id, password_hash, status, failed_attempts, locked_until, created_at, updated_at)
        VALUES (?, ?, ?, 0, NULL, ?, ?)
@@ -274,6 +290,12 @@ export async function createManagedAccessUser(
         "INSERT INTO private.tenant_memberships (tenant_id, user_id, company_scopes, created_at) VALUES (?, ?, '[]'::jsonb, ?)",
       )
       .bind(input.tenantId, userId, now),
+    db
+      .prepare(
+        `INSERT INTO private.user_function_assignments
+          (tenant_id, user_id, function_area, assigned_by, created_at) VALUES (?, ?, ?, ?, ?)`,
+      )
+      .bind(input.tenantId, userId, input.department, input.actorId, now),
     db
       .prepare(
         `INSERT INTO private.access_credentials
@@ -371,6 +393,12 @@ export async function loadAccessDirectory(
       .prepare("SELECT authority_id FROM private.authority_assignments WHERE tenant_id = ? AND user_id = ?")
       .bind(tenantId, row.user_id)
       .all<{ authority_id: string }>();
+    const functions = await db
+      .prepare(
+        "SELECT function_area FROM private.user_function_assignments WHERE tenant_id = ? AND user_id = ? ORDER BY function_area",
+      )
+      .bind(tenantId, row.user_id)
+      .all<{ function_area: UserDepartment }>();
     const base = seeded.get(row.user_id);
     users.push({
       ...(base ?? {
@@ -384,6 +412,7 @@ export async function loadAccessDirectory(
       name: row.name,
       role: row.role,
       department: row.department,
+      functionalAreas: functions.results.length ? functions.results.map(item => item.function_area) : [row.department],
       access: row.access_level,
       status: row.status,
       tenantIds: [tenantId],
@@ -459,6 +488,18 @@ export async function saveAccessDirectory(db: DecisionDatabase, tenantId: string
       .bind(tenantId, user.id, user.companyScopes, now)
       .run();
     await db
+      .prepare("DELETE FROM private.user_function_assignments WHERE tenant_id = ? AND user_id = ?")
+      .bind(tenantId, user.id)
+      .run();
+    for (const area of userFunctionalAreas(user))
+      await db
+        .prepare(
+          `INSERT INTO private.user_function_assignments
+            (tenant_id, user_id, function_area, assigned_by, created_at) VALUES (?, ?, ?, ?, ?)`,
+        )
+        .bind(tenantId, user.id, area, actorId, now)
+        .run();
+    await db
       .prepare("DELETE FROM private.access_permissions WHERE tenant_id = ? AND user_id = ?")
       .bind(tenantId, user.id)
       .run();
@@ -496,6 +537,7 @@ export async function saveAccessDirectory(db: DecisionDatabase, tenantId: string
         {
           role: user.role,
           department: user.department,
+          functionalAreas: userFunctionalAreas(user),
           access: user.access,
           status: user.status,
           companyScopes: user.companyScopes,

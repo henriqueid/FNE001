@@ -2,6 +2,7 @@ import { type Permission } from "@/src/domain/access/model";
 import { type DecisionEvent, type DecisionEventType } from "@/src/domain/decisions/model";
 import { type PublishedNotification, type OutboxHealth } from "@/src/domain/notifications/model";
 import { type ServerPrincipal } from "@/src/server/access/repository";
+import { functionalAreasMatchQueue } from "@/src/domain/copilot/daily-briefing";
 import { type DecisionDatabase } from "@/src/server/decisions/repository";
 
 const MAX_ATTEMPTS = 5;
@@ -267,7 +268,7 @@ export async function listPublishedNotifications(db: DecisionDatabase, tenantId:
   return result.results
     .filter(row => !row.required_permission || principal.permissions.includes(row.required_permission))
     .filter(row => !row.authority_id || principal.authorityIds.includes(row.authority_id))
-    .filter(row => principal.access === "admin" || row.department === principal.department)
+    .filter(row => principal.access === "admin" || functionalAreasMatchQueue(principal.functionalAreas, row.department))
     .map((row): PublishedNotification => ({
       id: row.notification_id,
       sourceEventId: row.source_event_id,

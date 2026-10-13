@@ -120,4 +120,35 @@ describe("motor de tarefas", () => {
       true,
     );
   });
+
+  it("mostra tarefas de todas as áreas funcionais e inclui cobrança para Operações", () => {
+    const state = reconcileTasks(seedTaskState(), detected, now);
+    const tasks = managedTasks(state, detected, now);
+    const synthetic = [
+      ...tasks,
+      {
+        ...tasks[0],
+        id: "cadastro-task",
+        department: "Cadastro",
+        operation: undefined,
+      },
+      {
+        ...tasks[0],
+        id: "collection-task",
+        department: "Carteira e cobrança",
+        operation: undefined,
+      },
+    ];
+    const visible = visibleTasksForUser(synthetic, {
+      id: "multi-area",
+      name: "Analista",
+      role: "Analista multifuncional",
+      department: "Cadastro",
+      functionalAreas: ["Cadastro", "Operações"],
+      access: "operator",
+      responsibilities: ["Cadastro", "Operação", "Cobrança"],
+    });
+
+    expect(visible.map(task => task.id)).toEqual(expect.arrayContaining(["cadastro-task", "collection-task"]));
+  });
 });

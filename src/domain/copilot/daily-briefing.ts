@@ -10,6 +10,8 @@ export type AppUserProfile = {
   name: string;
   role: string;
   department: UserDepartment;
+  /** Áreas em que a pessoa atua. O departamento permanece como área principal. */
+  functionalAreas?: UserDepartment[];
   access: "admin" | "manager" | "operator";
   responsibilities: string[];
   operationOwner?: string;
@@ -57,48 +59,52 @@ const money = (value: number) =>
 
 const digits = (value: string) => value.replace(/\D/g, "");
 
-export function operationBelongsToUser(operation: Operation, user: AppUserProfile, scope?: UserScopeContext) {
-  if (user.access === "admin" || user.department === "Diretoria") return true;
-  if (user.companyScopes && !user.companyScopes.includes(operation.vehicle)) return false;
-  const directDocuments = new Set((user.cedentDocuments ?? []).map(digits));
-  if (directDocuments.has(digits(operation.document))) return true;
+export function userFunctionalAreas(user: AppUserProfile): UserDepartment[] {
+  return [...new Set([user.department, ...(user.functionalAreas ?? [])])];
+}
+
+export function userHasFunctionalArea(user: AppUserProfile, area: UserDepartment) {
+  return userFunctionalAreas(user).includes(area);
+}
+
+export function functionalAreasMatchQueue(functionalAreas: UserDepartment[], department: string) {
+  if (department === "Carteira e cobrança")
+    return functionalAreas.some(area => area === "Operações" || area === "Comercial" || area === "Financeiro");
+  return functionalAreas.includes(department as UserDepartment);
+}
+
+function operationMatchesArea(
+  operation: Operation,
+  user: AppUserProfile,
+  area: UserDepartment,
+  scope?: UserScopeContext,
+) {
   const repId = operation.commercialRepId ?? scope?.repOfCedent?.(operation.document, scope.referenceDate);
   const managerId = operation.accountManagerId ?? scope?.managerOfCedent?.(operation.document);
-
-  if (user.department === "Comercial") {
+  if (area === "Comercial")
     return (
       (!!user.commercialRepId && repId === user.commercialRepId) ||
       (!!user.accountManagerId && managerId === user.accountManagerId)
     );
-  }
+  if (area === "Operações") return user.access === "manager" || operation.owner === (user.operationOwner ?? user.name);
+  if (area === "Risco e crédito") return operation.blockers > 0 || operation.alerts > 0 || operation.stage === 2;
+  if (area === "Controladoria") return operation.stage >= 3 && operation.stage <= 5;
+  if (area === "Financeiro")
+    return operation.status === "Pronta para liberar" || operation.status === "Liberada ao financeiro";
+  if (area === "Cadastro") return operation.stage === 1;
+  return area === "Diretoria";
+}
 
-  if (user.access === "manager") {
-    if (user.department === "Operações") return true;
-    if (user.department === "Risco e crédito")
-      return operation.blockers > 0 || operation.alerts > 0 || operation.stage === 2;
-    if (user.department === "Controladoria") return operation.stage >= 3 && operation.stage <= 5;
-    if (user.department === "Financeiro")
-      return operation.status === "Pronta para liberar" || operation.status === "Liberada ao financeiro";
-    if (user.department === "Cadastro") return operation.stage === 1;
-  }
-
-  switch (user.department) {
-    case "Risco e crédito":
-      return operation.blockers > 0 || operation.alerts > 0 || operation.stage === 2;
-    case "Controladoria":
-      return operation.stage >= 3 && operation.stage <= 5;
-    case "Financeiro":
-      return operation.status === "Pronta para liberar" || operation.status === "Liberada ao financeiro";
-    case "Cadastro":
-      return operation.stage === 1;
-    case "Operações":
-    default:
-      return operation.owner === (user.operationOwner ?? user.name);
-  }
+export function operationBelongsToUser(operation: Operation, user: AppUserProfile, scope?: UserScopeContext) {
+  if (user.access === "admin" || userHasFunctionalArea(user, "Diretoria")) return true;
+  if (user.companyScopes && !user.companyScopes.includes(operation.vehicle)) return false;
+  const directDocuments = new Set((user.cedentDocuments ?? []).map(digits));
+  if (directDocuments.has(digits(operation.document))) return true;
+  return userFunctionalAreas(user).some(area => operationMatchesArea(operation, user, area, scope));
 }
 
 export function operationsForUser(operations: Operation[], user: AppUserProfile, scope?: UserScopeContext) {
-  if (user.access === "admin" || user.department === "Diretoria") return operations;
+  if (user.access === "admin" || userHasFunctionalArea(user, "Diretoria")) return operations;
   return operations.filter(operation => operationBelongsToUser(operation, user, scope));
 }
 
@@ -127,7 +133,7 @@ export function buildDailyBriefing({
     ...(user.cedentDocuments ?? []).map(digits),
   ]);
   const scopedTitles =
-    user.access === "admin" || user.department === "Diretoria"
+    user.access === "admin" || userHasFunctionalArea(user, "Diretoria")
       ? titles
       : titles.filter(title => documents.has(title.ownerDocument.replace(/\D/g, "")));
   const blocked = scopedOperations.filter(operation => operation.blockers > 0);
@@ -202,7 +208,9 @@ export function buildDailyBriefing({
     user,
     referenceDate,
     scopeLabel:
-      user.access === "admin" ? "Visão consolidada" : `${user.department} · ${user.responsibilities.join(" · ")}`,
+      user.access === "admin"
+        ? "Visão consolidada"
+        : `${userFunctionalAreas(user).join(" + ")} · ${user.responsibilities.join(" · ")}`,
     taskCount: priorities.reduce((sum, priority) => sum + priority.count, 0),
     activeOperations: scopedOperations.filter(
       operation => operation.status !== "Liberada ao financeiro" && operation.status !== "Cancelada",

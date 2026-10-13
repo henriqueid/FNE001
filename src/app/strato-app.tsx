@@ -928,14 +928,14 @@ export default function StratoApp() {
     [publishedAttentionItems, systemAttentionItems],
   );
   useEffect(() => {
-    if (!storageReady || !tasksServerReady) return;
+    if (!storageReady || !tasksServerReady || (!isDemo && sessionUser.access !== "admin")) return;
     const current = taskRef.current;
     const next = reconcileTasks(current, persistentAttentionItems, new Date().toISOString());
     if (next === current) return;
     taskRef.current = next;
     setTasks(next);
     persistRealTasks(next);
-  }, [persistentAttentionItems, persistRealTasks, storageReady, tasksServerReady]);
+  }, [isDemo, persistentAttentionItems, persistRealTasks, sessionUser.access, storageReady, tasksServerReady]);
   const taskItems = useMemo(() => {
     const allManaged = managedTasks(
       tasks,

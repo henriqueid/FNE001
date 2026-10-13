@@ -1,6 +1,8 @@
 import { type AttentionItem } from "@/src/domain/copilot/attention-center";
 import {
   operationBelongsToUser,
+  functionalAreasMatchQueue,
+  userFunctionalAreas,
   type AppUserProfile,
   type UserScopeContext,
 } from "@/src/domain/copilot/daily-briefing";
@@ -183,12 +185,12 @@ export function actionableAttentionItems(tasks: ManagedTask[], now: string): Att
 
 /** Última barreira de visibilidade: também protege tarefas históricas já persistidas. */
 export function visibleTasksForUser(tasks: ManagedTask[], user: AppUserProfile, scope?: UserScopeContext) {
-  if (user.access === "admin" || user.department === "Diretoria") return tasks;
+  const areas = userFunctionalAreas(user);
+  if (user.access === "admin" || areas.includes("Diretoria")) return tasks;
   return tasks.filter(task => {
     if (task.owner === user.name) return true;
     if (task.operation) return operationBelongsToUser(task.operation, user, scope);
-    if (user.access === "manager" && task.department === user.department) return true;
-    return task.department === user.department && user.access === "operator";
+    return functionalAreasMatchQueue(areas, task.department);
   });
 }
 

@@ -1,4 +1,4 @@
-import { operationsForUser, type AppUserProfile, type UserScopeContext } from "./daily-briefing";
+import { operationsForUser, userHasFunctionalArea, type AppUserProfile, type UserScopeContext } from "./daily-briefing";
 import { money } from "@/src/domain/core/format";
 import { stages } from "@/src/domain/core/stages";
 import { type Operation } from "@/src/domain/core/types";
@@ -56,7 +56,7 @@ export function buildAttentionItems({
         impact: `${money.format(operation.amount)} em originação aguardando decisão`,
         nextAction: "Revisar bloqueios e registrar a decisão",
         owner: operation.owner,
-        department: operation.stage === 2 ? "Risco e crédito" : "Operações",
+        department: operation.stage === 1 ? "Cadastro" : operation.stage === 2 ? "Risco e crédito" : "Operações",
         timing: "Agora",
         view: "operations",
         operation,
@@ -116,7 +116,7 @@ export function buildAttentionItems({
     title =>
       title.dueDate < referenceDate &&
       (user.access === "admin" ||
-        user.department === "Diretoria" ||
+        userHasFunctionalArea(user, "Diretoria") ||
         documents.has(title.ownerDocument.replace(/\D/g, ""))),
   );
   if (overdue.length) {

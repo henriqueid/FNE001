@@ -2,7 +2,7 @@
 
 import {
   authenticatedUser,
-  permissionsFor,
+  permissionsForAreas,
   startUserPreview,
   stopUserPreview,
   updateAccessUser,
@@ -13,7 +13,7 @@ import {
 import { createManagedUser, saveAccessDirectory } from "@/src/app/access-directory-client";
 import { useCompanyDestinations } from "@/src/app/company-context";
 import { getStratoTenantId } from "@/src/app/tenant";
-import { type UserDepartment } from "@/src/domain/copilot/daily-briefing";
+import { userFunctionalAreas, type UserDepartment } from "@/src/domain/copilot/daily-briefing";
 import { formatCpf, normalizeCpf } from "@/src/domain/access/identity";
 import { type FormEvent, useMemo, useState } from "react";
 
@@ -79,8 +79,16 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
   );
 
   const save = (patch: Partial<AccessUser>) => onState(updateAccessUser(state, { ...selected, ...patch }));
-  const setProfile = (department: UserDepartment, access: AccessUser["access"]) =>
-    save({ department, access, permissions: permissionsFor(department, access) });
+  const setProfile = (department: UserDepartment, access: AccessUser["access"]) => {
+    const areas = [...new Set([department, ...userFunctionalAreas(selected)])];
+    save({ department, functionalAreas: areas, access, permissions: permissionsForAreas(areas, access) });
+  };
+  const toggleFunctionalArea = (area: UserDepartment) => {
+    const current = userFunctionalAreas(selected);
+    const areas = current.includes(area) ? current.filter(item => item !== area) : [...current, area];
+    const normalized = [...new Set([selected.department, ...areas])];
+    save({ functionalAreas: normalized, permissions: permissionsForAreas(normalized, selected.access) });
+  };
 
   const approveSelected = async () => {
     const nextState = updateAccessUser(state, { ...selected, status: "active" });
@@ -138,8 +146,8 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
           <span>aguardando aprovação</span>
         </article>
         <article>
-          <b>{departments.filter(department => state.users.some(user => user.department === department)).length}</b>
-          <span>departamentos</span>
+          <b>{departments.filter(area => state.users.some(user => userFunctionalAreas(user).includes(area))).length}</b>
+          <span>áreas cobertas</span>
         </article>
         <article>
           <b>{destinations.length}</b>
@@ -152,7 +160,7 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
           <small>{state.previewUserId ? "VISÃO EM TESTE" : "SESSÃO ATUAL"}</small>
           <b>{active.name}</b>
           <span>
-            {active.role} · {active.department}
+            {active.role} · {userFunctionalAreas(active).join(" + ")}
           </span>
         </div>
         {state.previewUserId ? (
@@ -191,7 +199,7 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
               <span>
                 <b>{user.name}</b>
                 <small>
-                  {user.role} · {user.department}
+                  {user.role} · {userFunctionalAreas(user).join(" + ")}
                 </small>
               </span>
               <em data-status={user.status}>{statusLabel[user.status]}</em>
@@ -252,7 +260,7 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
               <input value={selected.role} onChange={event => save({ role: event.target.value })} />
             </label>
             <label>
-              Departamento
+              Área principal
               <select
                 value={selected.department}
                 onChange={event => setProfile(event.target.value as UserDepartment, selected.access)}
@@ -291,7 +299,36 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
             </label>
           </div>
 
-          {selected.department === "Comercial" && (
+          <section className="access-permissions">
+            <header>
+              <div>
+                <small>ÁREAS DE ATUAÇÃO</small>
+                <b>Funções acumuladas pelo usuário</b>
+              </div>
+              <span>{userFunctionalAreas(selected).length} área(s)</span>
+            </header>
+            <div>
+              {departments.map(area => {
+                const checked = userFunctionalAreas(selected).includes(area);
+                return (
+                  <label key={area}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={area === selected.department || selected.access === "admin"}
+                      onChange={() => toggleFunctionalArea(area)}
+                    />
+                    <span>
+                      {area}
+                      {area === selected.department ? " · principal" : ""}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </section>
+
+          {userFunctionalAreas(selected).includes("Comercial") && (
             <div className="access-link-fields">
               <label>
                 Agente/comercial vinculado

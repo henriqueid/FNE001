@@ -1,5 +1,5 @@
 import { destinations } from "@/src/domain/core/demo/companies";
-import { type AppUserProfile, type UserDepartment } from "@/src/domain/copilot/daily-briefing";
+import { userFunctionalAreas, type AppUserProfile, type UserDepartment } from "@/src/domain/copilot/daily-briefing";
 
 export type Permission =
   | "dashboard:view"
@@ -78,6 +78,11 @@ export function permissionsFor(department: UserDepartment, access: AppUserProfil
   if (access === "admin") return adminPermissions;
   if (access === "manager" && !base.includes("users:manage")) return [...base, "users:manage"];
   return base;
+}
+
+export function permissionsForAreas(areas: UserDepartment[], access: AppUserProfile["access"]): Permission[] {
+  if (access === "admin") return adminPermissions;
+  return [...new Set(areas.flatMap(area => permissionsFor(area, access)))];
 }
 
 export const seedAccessState = (): AccessState => ({
@@ -256,7 +261,10 @@ export function migrateAccessState(value: unknown): AccessState {
   const candidate = value as Omit<Partial<AccessState>, "version"> & { version?: number; activeUserId?: string };
   if ((candidate.version !== 1 && candidate.version !== 2) || !Array.isArray(candidate.users)) return seeded;
   const known = new Map(candidate.users.map(user => [user.id, user]));
-  const users = seeded.users.map(user => ({ ...user, ...known.get(user.id) }));
+  const users = seeded.users.map(user => {
+    const merged = { ...user, ...known.get(user.id) };
+    return { ...merged, functionalAreas: userFunctionalAreas(merged) };
+  });
   const legacyActiveUserId = candidate.activeUserId;
   const requestedActor = candidate.authenticatedUserId ?? seeded.authenticatedUserId;
   const authenticatedUserId = users.some(user => user.id === requestedActor && user.status === "active")

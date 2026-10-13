@@ -28,6 +28,8 @@ async function context(request: Request) {
 export async function GET(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
+  if (!access.principal.permissions.includes("registry:view"))
+    return json({ error: "Sem permissão para consultar evidências cadastrais." }, 403);
   const partyId = new URL(request.url).searchParams.get("partyId")?.trim();
   if (!partyId) return json({ error: "Cadastro não informado." }, 400);
   return json({ evidence: await latestCnpjEvidence(access.db, access.tenantId, partyId) });

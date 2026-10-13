@@ -36,6 +36,7 @@ const permissionLabels: Record<Permission, string> = {
   "portfolio:manage": "Gerenciar carteira",
   "finance:view": "Consultar financeiro",
   "finance:release": "Preparar liberações",
+  "registry:view": "Consultar cadastros",
   "registry:edit": "Editar cadastros",
   "settings:manage": "Alterar configurações",
   "users:manage": "Administrar usuários",

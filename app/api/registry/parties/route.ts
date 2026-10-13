@@ -21,6 +21,8 @@ async function context(request: Request) {
 export async function GET(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
+  if (!access.principal.permissions.includes("registry:view"))
+    return json({ error: "Sem permissão para consultar cadastros." }, 403);
   const params = new URL(request.url).searchParams;
   if (params.get("stats") === "1") return json({ stats: await loadRegistryPartyStats(access.db, access.tenantId) });
   if (params.has("role") || params.has("q") || params.has("offset")) {

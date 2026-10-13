@@ -13,6 +13,7 @@ const allowed: Permission[] = [
   "operations:edit",
   "portfolio:manage",
   "finance:view",
+  "registry:view",
   "registry:edit",
   "settings:manage",
 ];

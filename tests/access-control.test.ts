@@ -51,7 +51,7 @@ describe("identidade e autorização", () => {
     expect(permissionsFor("Operações", "operator")).not.toContain("finance:release");
     expect(permissionsFor("Operações", "manager")).toContain("users:manage");
     expect(permissionsForAreas(["Cadastro", "Operações"], "operator")).toEqual(
-      expect.arrayContaining(["registry:edit", "operations:edit"]),
+      expect.arrayContaining(["registry:view", "registry:edit", "operations:edit"]),
     );
   });
 
@@ -112,5 +112,17 @@ describe("identidade e autorização", () => {
     expect(migrated.users[0].role).toBe("Administrador principal");
     expect(migrated.users.length).toBe(seeded.users.length);
     expect(migrated.version).toBe(2);
+  });
+
+  it("migra editores antigos de cadastro sem perder a nova capacidade de leitura", () => {
+    const seeded = seedAccessState();
+    const legacy = seeded.users.map(user => ({
+      ...user,
+      permissions: user.permissions.filter(permission => permission !== "registry:view"),
+    }));
+    const migrated = migrateAccessState({ ...seeded, users: legacy });
+    const editor = migrated.users.find(user => user.permissions.includes("registry:edit"));
+
+    expect(editor?.permissions).toContain("registry:view");
   });
 });

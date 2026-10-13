@@ -25,6 +25,7 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 - decisões versionadas, idempotência, eventos imutáveis, outbox e notificações;
 - escopo de empresa em Operações, Decisões, Carteira, Recebíveis, Financeiro, Tarefas, notificações e reprocessamento da outbox;
 - maker-checker para exceção de risco e liberação financeira;
+- leitura cadastral separada da edição e contexto do Copiloto filtrado novamente por empresa no backend;
 - funil comercial, comitê, onboarding, carteira/cobrança inicial e Central do Dia;
 - guias operacionais por domínio e por perfil.
 
@@ -34,7 +35,7 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 | --- | --- | --- | ---: |
 | Homologação multiusuário | Backend recusa versão obsoleta | testar duas sessões reais em Operações, Financeiro, Carteira, Comercial, Políticas e Tarefas | 3–5 dias |
 | Ataques cruzados | testes unitários cobrem escopo | ensaio com dois tenants, duas empresas e requisições deliberadamente cruzadas | 2–3 dias |
-| Escopo residual de APIs | núcleo operacional protegido | revisar Cadastro, Comercial, Copiloto, Integrações e Configurações; criar permissão explícita de leitura do Cadastro | 3–5 dias |
+| Escopo residual de APIs | Cadastro e fontes do Copiloto protegidos por capacidade/empresa | segmentar Comercial com merge seguro, separar leitura de configurações e mover projeções da IA integralmente ao servidor | 2–4 dias |
 | Maker-checker residual | exceção e liberação protegidas | configurações críticas, conta bancária, credenciais e alteração de favorecido | 3–5 dias |
 | Contrato comum de comandos | cada agregado possui implementação confiável | unificar recibo idempotente, event ledger, outbox, correlação e respostas de conflito | 5–8 dias |
 | Segurança de conta | sessão e bloqueio existem | MFA para perfis críticos, política de senha comprometida, recuperação e revisão de sessão | 4–7 dias |

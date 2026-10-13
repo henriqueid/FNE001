@@ -249,6 +249,19 @@ Progresso A5.4 — segregação maker-checker:
 - [ ] aplicar maker-checker a alterações críticas de configuração e dados bancários;
 - [ ] homologar o fluxo com duas sessões reais e usuários distintos.
 
+Progresso A5.5 — escopos residuais de APIs:
+
+- [x] separar consulta (`registry:view`) de manutenção (`registry:edit`) no Cadastro;
+- [x] propagar a leitura cadastral explícita para evidências CNPJ e fontes públicas;
+- [x] migrar os editores existentes sem perda de acesso e publicar a nova capacidade na administração de usuários;
+- [x] reduzir no backend o contexto do Copiloto por empresa/veículo e por contrato de campos permitido;
+- [x] limitar cedentes do Copiloto aos documentos alcançáveis por operações ou títulos visíveis;
+- [x] publicar guia de escopo e fontes do Copiloto;
+- [ ] segmentar o agregado Comercial por responsável/gerente com merge seguro dos dados não visíveis;
+- [ ] revisar leitura do perfil da empresa e demais configurações para separar consulta de manutenção;
+- [ ] substituir o contexto do Copiloto montado no cliente por projeções lidas integralmente no servidor;
+- [ ] homologar Cadastro, Comercial, Copiloto, Integrações e Configurações com perfis cruzados reais.
+
 Relatório consolidado de pendências e estimativas: `docs/implementation/STRATO_REMAINING_WORK_REPORT.md`.
 
 ## Ondas seguintes

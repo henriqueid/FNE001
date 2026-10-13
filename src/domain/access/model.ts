@@ -10,6 +10,7 @@ export type Permission =
   | "portfolio:manage"
   | "finance:view"
   | "finance:release"
+  | "registry:view"
   | "registry:edit"
   | "settings:manage"
   | "users:manage";
@@ -58,6 +59,7 @@ const adminPermissions: Permission[] = [
   "portfolio:manage",
   "finance:view",
   "finance:release",
+  "registry:view",
   "registry:edit",
   "settings:manage",
   "users:manage",
@@ -70,7 +72,7 @@ const basePermissions: Record<UserDepartment, Permission[]> = {
   Controladoria: ["dashboard:view", "operations:view", "controlleria:formalize"],
   Financeiro: ["dashboard:view", "finance:view", "finance:release"],
   Comercial: ["dashboard:view", "operations:view", "portfolio:manage"],
-  Cadastro: ["dashboard:view", "registry:edit"],
+  Cadastro: ["dashboard:view", "registry:view", "registry:edit"],
 };
 
 export function permissionsFor(department: UserDepartment, access: AppUserProfile["access"]): Permission[] {
@@ -202,7 +204,7 @@ const viewPermissions: Record<AccessView, Permission[]> = {
   portfolio: ["portfolio:manage"],
   commercial: ["portfolio:manage"],
   finance: ["finance:view"],
-  registry: ["registry:edit"],
+  registry: ["registry:view", "registry:edit"],
   policies: ["settings:manage"],
   integrations: ["settings:manage"],
   settings: ["settings:manage"],
@@ -263,7 +265,10 @@ export function migrateAccessState(value: unknown): AccessState {
   const known = new Map(candidate.users.map(user => [user.id, user]));
   const users = seeded.users.map(user => {
     const merged = { ...user, ...known.get(user.id) };
-    return { ...merged, functionalAreas: userFunctionalAreas(merged) };
+    const permissions = [...new Set(merged.permissions ?? [])];
+    if (permissions.includes("registry:edit") && !permissions.includes("registry:view"))
+      permissions.push("registry:view");
+    return { ...merged, permissions, functionalAreas: userFunctionalAreas(merged) };
   });
   const legacyActiveUserId = candidate.activeUserId;
   const requestedActor = candidate.authenticatedUserId ?? seeded.authenticatedUserId;

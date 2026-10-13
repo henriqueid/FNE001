@@ -21,6 +21,7 @@ export type ServerPrincipal = {
   tenantId: string;
   permissions: Permission[];
   authorityIds: string[];
+  companyScopes: string[];
 };
 
 export async function ensureAccessSchema(_db: DecisionDatabase) {
@@ -39,6 +40,7 @@ type PrincipalRow = {
   access_level: AccessUser["access"];
   status: "active" | "suspended";
   tenant_id: string;
+  company_scopes_json: string;
 };
 
 export async function principalForSession(
@@ -50,7 +52,8 @@ export async function principalForSession(
   await seedAccessDirectory(db);
   const user = await db
     .prepare(
-      `SELECT u.user_id, u.name, u.role, u.department, u.access_level, u.status, m.tenant_id
+      `SELECT u.user_id, u.name, u.role, u.department, u.access_level, u.status, m.tenant_id,
+              m.company_scopes::text AS company_scopes_json
        FROM private.app_sessions s
        JOIN private.access_users u ON u.user_id = s.user_id
        JOIN private.tenant_memberships m ON m.user_id = u.user_id AND m.tenant_id = ?
@@ -87,6 +90,7 @@ export async function principalForSession(
     tenantId: user.tenant_id,
     permissions: permissions.results.map(item => item.permission),
     authorityIds: authorities.results.map(item => item.authority_id),
+    companyScopes: JSON.parse(user.company_scopes_json) as string[],
   };
 }
 

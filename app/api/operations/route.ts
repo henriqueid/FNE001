@@ -2,6 +2,7 @@ import type { Operation } from "@/src/domain/core/types";
 import type { Permission } from "@/src/domain/access/model";
 import { validatePersistedOperation } from "@/src/domain/operations/persistence";
 import { sessionPrincipal } from "@/src/server/access/session";
+import { filterCompanyScope, operationCompany, operationWriteScopeError } from "@/src/server/access/scope";
 import { getDatabase } from "@/src/server/database/postgres";
 import { loadOperations, saveOperation } from "@/src/server/operations/repository";
 import { ReceivableDuplicateError } from "@/src/server/receivables/repository";
@@ -20,7 +21,12 @@ async function context(request: Request) {
 export async function GET(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
-  return json({ operations: await loadOperations(access.db, access.tenantId) });
+  const allowed = (
+    ["operations:view", "risk:decide", "controlleria:formalize", "finance:release"] as Permission[]
+  ).some(permission => access.principal.permissions.includes(permission));
+  if (!allowed) return json({ error: "Sem permissão para consultar operações." }, 403);
+  const operations = await loadOperations(access.db, access.tenantId);
+  return json({ operations: filterCompanyScope(access.principal, operations, operation => operation.vehicle) });
 }
 
 export async function PUT(request: Request) {
@@ -38,6 +44,9 @@ export async function PUT(request: Request) {
     return json({ error: "Comando de persistência inválido." }, 400);
   const error = validatePersistedOperation(command.operation);
   if (error) return json({ error }, 400);
+  const currentCompany = await operationCompany(access.db, access.tenantId, command.operation.id);
+  const scopeError = operationWriteScopeError(access.principal, currentCompany, command.operation.vehicle);
+  if (scopeError) return json({ error: scopeError }, 403);
   try {
     const operation = await saveOperation(
       access.db,

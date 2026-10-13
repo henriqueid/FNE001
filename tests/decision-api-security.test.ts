@@ -22,6 +22,7 @@ const principal = (permissions: Permission[], authorityIds: string[] = []): Serv
   tenantId: "strato-demo",
   permissions,
   authorityIds,
+  companyScopes: ["FINANCIA FIDC"],
 });
 
 describe("seguranca da API de decisoes", () => {

@@ -3,6 +3,7 @@ import { assertDecisionPermission, DecisionAccessError, decisionPrincipal } from
 import { appendDecisionEvent, DecisionConflictError, listDecisionEvents } from "@/src/server/decisions/repository";
 import { parseDecisionEventDraft } from "@/src/server/decisions/validation";
 import { getDatabase } from "@/src/server/database/postgres";
+import { principalCanAccessOperation } from "@/src/server/access/scope";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
@@ -21,6 +22,8 @@ export async function GET(request: Request) {
     const decisionId = new URL(request.url).searchParams.get("decisionId")?.trim();
     if (!decisionId) return json({ error: "Decisão não informada." }, 400);
     const events = await listDecisionEvents(db, principal.tenantId, decisionId);
+    if (events[0] && !(await principalCanAccessOperation(db, principal.user, events[0].operationId)))
+      return json({ error: "Decisão fora do seu escopo de empresa." }, 403);
     return json({ version: 1, events });
   } catch (error) {
     return failure(error);
@@ -36,6 +39,8 @@ export async function POST(request: Request) {
       return json({ error: "Chave de idempotência ausente ou inválida." }, 400);
     const draft = parseDecisionEventDraft(await request.json());
     assertDecisionPermission(principal.user, draft.eventType as DecisionEventType, draft.authorityId);
+    if (!(await principalCanAccessOperation(db, principal.user, draft.operationId)))
+      return json({ error: "Operação fora do seu escopo de empresa." }, 403);
     const result = await appendDecisionEvent(
       db,
       { tenantId: principal.tenantId, actorId: principal.user.id, actorRole: principal.user.role },

@@ -198,6 +198,25 @@ Evidências A4.4:
 - [ ] testar acesso cruzado entre tenants e empresas;
 - [ ] publicar matriz de perfis, permissões e alçadas.
 
+Progresso A5.1 — isolamento de Operações e Decisões:
+
+- [x] carregar `company_scopes` na identidade autenticada do backend;
+- [x] filtrar a leitura de operações por empresa/veículo autorizado;
+- [x] validar veículo atual e solicitado antes de alterar uma operação;
+- [x] bloquear leitura e criação de decisão fora do escopo da operação;
+- [x] documentar a matriz atual de APIs, permissões, escopos e lacunas;
+- [x] testar escopo vazio, curinga explícito, filtragem, vínculo ao tenant e tentativa de mover operação alheia;
+- [ ] propagar o escopo de empresa para Carteira, Recebíveis, Financeiro, tarefas e notificações;
+- [ ] homologar ataques cruzados com duas sessões reais e dois tenants.
+
+Evidências A5.1:
+
+- identidade de servidor agora deriva empresas autorizadas diretamente do vínculo `tenant_memberships`;
+- consulta de escopo da operação usa sempre `tenant_id + operation_id`;
+- atualização recusa tanto origem fora do escopo quanto destino fora do escopo;
+- Decisões validam o veículo da operação antes de ler ou registrar eventos;
+- matriz publicada em `docs/security/MATRIZ_DE_ACESSO_E_ESCOPO.md`.
+
 ## Ondas seguintes
 
 ### Onda B — cunha comercial completa

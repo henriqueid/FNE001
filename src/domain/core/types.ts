@@ -129,6 +129,12 @@ export type ReleasePayable = {
 
 export type ReleaseReview = {
   status: "Em preparação" | "Enviada ao financeiro";
+  preparedById?: string;
+  preparedBy?: string;
+  preparedAt?: string;
+  approvedById?: string;
+  approvedBy?: string;
+  approvedAt?: string;
   payingAccountId?: string;
   balanceCheckedAt?: string;
   paymentDate?: string;

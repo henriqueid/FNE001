@@ -58,10 +58,12 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 - O Financeiro filtra todo o grafo por empresa e recompõe o agregado completo na gravação, sem apagar ou substituir dados ocultos.
 - Tarefas com operação vinculada exigem o escopo da empresa dessa operação; o perfil administrativo não ignora essa barreira.
 - Publicação, contadores de saúde e reprocessamento manual da outbox usam a empresa da operação do evento como filtro no banco.
+- Exceções de risco exigem solicitante e decisor distintos; a mesma solicitação aceita uma única decisão terminal.
+- Liberações financeiras exigem um preparador e um aprovador distintos, ambos derivados de sessões autenticadas.
 
 ## Próximos endurecimentos
 
 1. Separar permissões de leitura e manutenção onde hoje uma permissão ampla atende aos dois usos.
-2. Aplicar maker-checker em liberação financeira, exceção de risco e alterações críticas de configuração.
+2. Aplicar maker-checker às alterações críticas de configuração e dados bancários; liberação e exceção já estão protegidas.
 3. Centralizar recibos idempotentes, event ledger e outbox em um contrato comum.
 4. Executar homologação com duas sessões e dois tenants, incluindo tentativas deliberadas de acesso cruzado.

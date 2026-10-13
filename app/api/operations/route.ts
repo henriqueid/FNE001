@@ -4,7 +4,12 @@ import { validatePersistedOperation } from "@/src/domain/operations/persistence"
 import { sessionPrincipal } from "@/src/server/access/session";
 import { filterCompanyScope, operationCompany, operationWriteScopeError } from "@/src/server/access/scope";
 import { getDatabase } from "@/src/server/database/postgres";
-import { loadOperations, saveOperation } from "@/src/server/operations/repository";
+import {
+  governReleaseTransition,
+  OperationGovernanceError,
+  releaseReviewChanged,
+} from "@/src/server/operations/governance";
+import { loadOperationSnapshot, loadOperations, saveOperation } from "@/src/server/operations/repository";
 import { ReceivableDuplicateError } from "@/src/server/receivables/repository";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
@@ -44,15 +49,19 @@ export async function PUT(request: Request) {
     return json({ error: "Comando de persistência inválido." }, 400);
   const error = validatePersistedOperation(command.operation);
   if (error) return json({ error }, 400);
-  const currentCompany = await operationCompany(access.db, access.tenantId, command.operation.id);
+  const current = await loadOperationSnapshot(access.db, access.tenantId, command.operation.id);
+  const currentCompany = current?.vehicle ?? (await operationCompany(access.db, access.tenantId, command.operation.id));
   const scopeError = operationWriteScopeError(access.principal, currentCompany, command.operation.vehicle);
   if (scopeError) return json({ error: scopeError }, 403);
   try {
+    if (releaseReviewChanged(current, command.operation) && !access.principal.permissions.includes("finance:release"))
+      return json({ error: "Somente o Financeiro pode preparar ou aprovar uma liberação." }, 403);
+    const governed = governReleaseTransition(current, command.operation, access.principal);
     const operation = await saveOperation(
       access.db,
       access.tenantId,
       access.principal.id,
-      command.operation,
+      governed,
       Number(command.expectedVersion),
     );
     if (!operation)
@@ -62,6 +71,7 @@ export async function PUT(request: Request) {
       );
     return json({ operation });
   } catch (reason) {
+    if (reason instanceof OperationGovernanceError) return json({ error: reason.message }, 409);
     if (reason instanceof ReceivableDuplicateError)
       return json(
         {

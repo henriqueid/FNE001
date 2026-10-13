@@ -238,6 +238,19 @@ Progresso A5.3 — escopo em Financeiro, tarefas e outbox:
 - [x] limitar publicação, saúde e reprocessamento administrativo da outbox às empresas atribuídas;
 - [x] testar filtragem, preservação do agregado oculto, injeção cruzada e consultas SQL parametrizadas por empresa.
 
+Progresso A5.4 — segregação maker-checker:
+
+- [x] impedir que o solicitante decida a própria exceção de risco;
+- [x] exigir solicitação aberta antes de aprovar ou rejeitar uma exceção e impedir segunda decisão terminal;
+- [x] separar preparação e aprovação da liberação financeira entre duas identidades autenticadas;
+- [x] atribuir preparador e aprovador pela sessão do servidor, ignorando autoria enviada pelo navegador;
+- [x] tornar a liberação aprovada imutável, exigindo cancelamento ou estorno para correção;
+- [x] orientar a experiência da etapa de Liberação com os estados “concluir preparação”, “aguardar segundo aprovador” e “aprovar e liberar”;
+- [ ] aplicar maker-checker a alterações críticas de configuração e dados bancários;
+- [ ] homologar o fluxo com duas sessões reais e usuários distintos.
+
+Relatório consolidado de pendências e estimativas: `docs/implementation/STRATO_REMAINING_WORK_REPORT.md`.
+
 ## Ondas seguintes
 
 ### Onda B — cunha comercial completa

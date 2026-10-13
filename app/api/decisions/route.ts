@@ -4,12 +4,14 @@ import { appendDecisionEvent, DecisionConflictError, listDecisionEvents } from "
 import { parseDecisionEventDraft } from "@/src/server/decisions/validation";
 import { getDatabase } from "@/src/server/database/postgres";
 import { principalCanAccessOperation } from "@/src/server/access/scope";
+import { DecisionGovernanceError } from "@/src/server/decisions/governance";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
 function failure(error: unknown) {
   if (error instanceof DecisionAccessError) return json({ error: error.message }, error.status);
   if (error instanceof DecisionConflictError) return json({ error: error.message }, 409);
+  if (error instanceof DecisionGovernanceError) return json({ error: error.message }, 409);
   if (error instanceof Error) return json({ error: error.message }, 400);
   return json({ error: "Falha inesperada na trilha de decisões." }, 500);
 }

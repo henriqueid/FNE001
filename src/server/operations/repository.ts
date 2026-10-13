@@ -28,6 +28,14 @@ export async function loadOperations(db: DecisionDatabase, tenantId: string): Pr
   return hydrateOperationsFromReceivables(db, tenantId, operations);
 }
 
+export async function loadOperationSnapshot(db: DecisionDatabase, tenantId: string, operationId: string) {
+  const row = await db
+    .prepare("select payload, aggregate_version from private.operations where tenant_id = ? and operation_id = ?")
+    .bind(tenantId, operationId)
+    .first<OperationRow>();
+  return row ? { ...row.payload, persistenceVersion: row.aggregate_version } : null;
+}
+
 async function saveOperationRecord(
   db: DecisionDatabase,
   tenantId: string,

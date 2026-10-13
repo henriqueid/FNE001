@@ -5,6 +5,7 @@ import {
   type DecisionEventType,
   type DecisionOutcome,
 } from "@/src/domain/decisions/model";
+import { assertExceptionMakerChecker } from "@/src/server/decisions/governance";
 
 export type DecisionStatement = {
   bind(...values: unknown[]): DecisionStatement;
@@ -164,6 +165,8 @@ export async function appendDecisionEvent(
   if (replay) return { event: replay, replayed: true } as const;
   const createdAt = new Date().toISOString();
   for (let attempt = 0; attempt < 3; attempt++) {
+    const history = await listDecisionEvents(db, scope.tenantId, draft.decisionId);
+    assertExceptionMakerChecker(history, scope.actorId, draft.eventType);
     const latest = await db
       .prepare(
         "SELECT COALESCE(MAX(event_version), 0) AS version FROM private.decision_events WHERE tenant_id = ? AND decision_id = ?",

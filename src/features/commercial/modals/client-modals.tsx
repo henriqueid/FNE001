@@ -18,6 +18,7 @@ import {
   type Prospect,
   isAccountManager,
 } from "@/src/domain/commercial/types";
+import { consultLeadCnpj } from "@/src/app/cnpj-enrichment-client";
 import { inputMoney, num } from "@/src/features/commercial/commercial-ui";
 import { BY, Field, Modal } from "@/src/features/finance/finance-ui";
 import { useState } from "react";
@@ -110,6 +111,30 @@ export function ProspectModal({
     email: "",
     phone: "",
   });
+  const [cnpjLookup, setCnpjLookup] = useState<"idle" | "loading" | "success">("idle");
+  const [cnpjError, setCnpjError] = useState("");
+  const lookupCnpj = async () => {
+    setCnpjLookup("loading");
+    setCnpjError("");
+    try {
+      const evidence = await consultLeadCnpj(form.document);
+      setForm(current => ({
+        ...current,
+        document: evidence.registrationNumber,
+        name: evidence.legalName || current.name,
+        tradeName: evidence.tradeName || current.tradeName,
+        segment: evidence.mainActivity.description || current.segment,
+        city: evidence.address.city || current.city,
+        state: evidence.address.state || current.state,
+        email: evidence.email || current.email,
+        phone: evidence.phones[0] || current.phone,
+      }));
+      setCnpjLookup("success");
+    } catch (reason) {
+      setCnpjLookup("idle");
+      setCnpjError(reason instanceof Error ? reason.message : "Não foi possível consultar o CNPJ.");
+    }
+  };
   return (
     <Modal
       wide
@@ -166,12 +191,30 @@ export function ProspectModal({
             <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
           </Field>
           <Field label="CNPJ">
-            <input
-              value={form.document}
-              onChange={e => setForm({ ...form, document: e.target.value })}
-              placeholder="00.000.000/0000-00"
-            />
+            <div className="cm-cnpj-lookup">
+              <input
+                value={form.document}
+                onChange={e => {
+                  setForm({ ...form, document: e.target.value });
+                  setCnpjLookup("idle");
+                  setCnpjError("");
+                }}
+                placeholder="00.000.000/0000-00"
+              />
+              <button
+                type="button"
+                className="fn-btn ghost"
+                disabled={cnpjLookup === "loading" || form.document.replace(/\D/g, "").length !== 14}
+                onClick={lookupCnpj}
+              >
+                {cnpjLookup === "loading" ? "Consultando…" : "Consultar"}
+              </button>
+            </div>
           </Field>
+          {cnpjError && <p className="fn-note bad">{cnpjError}</p>}
+          {cnpjLookup === "success" && (
+            <p className="fn-note good">Dados cadastrais conferidos e preenchidos pela fonte pública.</p>
+          )}
           <Field label="Nome fantasia">
             <input value={form.tradeName} onChange={e => setForm({ ...form, tradeName: e.target.value })} />
           </Field>
@@ -253,12 +296,31 @@ export function ConvertModal({
 }) {
   const approved = state.committees.find(c => c.clientName === prospect.name && c.approved);
   const [form, setForm] = useState({
-    document: "",
+    document: prospect.document || prospect.dossier?.document || "",
     limit: inputMoney(approved?.approved ?? 0),
-    segment: "",
-    city: "",
+    segment: prospect.dossier?.segment || "",
+    city: prospect.dossier?.city || "",
     managerId: state.reps.find(rep => rep.active && isAccountManager(rep))?.id ?? "",
   });
+  const [cnpjLookup, setCnpjLookup] = useState<"idle" | "loading" | "success">("idle");
+  const [cnpjError, setCnpjError] = useState("");
+  const lookupCnpj = async () => {
+    setCnpjLookup("loading");
+    setCnpjError("");
+    try {
+      const evidence = await consultLeadCnpj(form.document);
+      setForm(current => ({
+        ...current,
+        document: evidence.registrationNumber,
+        segment: evidence.mainActivity.description || current.segment,
+        city: evidence.address.city || current.city,
+      }));
+      setCnpjLookup("success");
+    } catch (reason) {
+      setCnpjLookup("idle");
+      setCnpjError(reason instanceof Error ? reason.message : "Não foi possível consultar o CNPJ.");
+    }
+  };
   return (
     <Modal
       title="Virar conta nova"
@@ -293,12 +355,30 @@ export function ConvertModal({
     >
       <div className="fn-form">
         <Field label="CNPJ">
-          <input
-            value={form.document}
-            onChange={e => setForm({ ...form, document: e.target.value })}
-            placeholder="00.000.000/0000-00"
-          />
+          <div className="cm-cnpj-lookup">
+            <input
+              value={form.document}
+              onChange={e => {
+                setForm({ ...form, document: e.target.value });
+                setCnpjLookup("idle");
+                setCnpjError("");
+              }}
+              placeholder="00.000.000/0000-00"
+            />
+            <button
+              type="button"
+              className="fn-btn ghost"
+              disabled={cnpjLookup === "loading" || form.document.replace(/\D/g, "").length !== 14}
+              onClick={lookupCnpj}
+            >
+              {cnpjLookup === "loading" ? "Consultando…" : "Consultar"}
+            </button>
+          </div>
         </Field>
+        {cnpjError && <p className="fn-note bad">{cnpjError}</p>}
+        {cnpjLookup === "success" && (
+          <p className="fn-note good">CNPJ conferido; segmento e cidade foram atualizados pela fonte pública.</p>
+        )}
         <Field label="Limite aprovado (R$)">
           <input
             inputMode="decimal"

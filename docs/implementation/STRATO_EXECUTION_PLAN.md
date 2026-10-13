@@ -207,7 +207,7 @@ Progresso A5.1 — isolamento de Operações e Decisões:
 - [x] documentar a matriz atual de APIs, permissões, escopos e lacunas;
 - [x] testar escopo vazio, curinga explícito, filtragem, vínculo ao tenant e tentativa de mover operação alheia;
 - [x] propagar o escopo de empresa para Carteira, Recebíveis e notificações operacionais;
-- [ ] propagar o escopo de empresa para Financeiro, tarefas e reprocessamento da outbox;
+- [x] propagar o escopo de empresa para Financeiro, tarefas e reprocessamento da outbox;
 - [ ] homologar ataques cruzados com duas sessões reais e dois tenants.
 
 Evidências A5.1:
@@ -227,6 +227,16 @@ Progresso A5.2 — escopo em Carteira, Recebíveis e notificações:
 - [x] filtrar Recebíveis pelo veículo da operação de origem;
 - [x] filtrar notificações pela empresa da operação associada;
 - [x] testar preservação de dados não visíveis e bloqueio de notificações cruzadas.
+
+Progresso A5.3 — escopo em Financeiro, tarefas e outbox:
+
+- [x] filtrar contas, títulos, movimentos, extratos, lançamentos, fechamentos e vínculos operacionais do Financeiro por empresa;
+- [x] recompor o agregado financeiro completo no servidor, preservando integralmente empresas não visíveis;
+- [x] recusar referências cruzadas para contas, títulos, lançamentos ou operações fora do escopo;
+- [x] reservar plano de contas, categorias e de-para globais a usuários com `settings:manage`;
+- [x] impedir que tarefas ligadas a operações de outra empresa sejam exibidas ou alteradas, inclusive por administradores de escopo restrito;
+- [x] limitar publicação, saúde e reprocessamento administrativo da outbox às empresas atribuídas;
+- [x] testar filtragem, preservação do agregado oculto, injeção cruzada e consultas SQL parametrizadas por empresa.
 
 ## Ondas seguintes
 

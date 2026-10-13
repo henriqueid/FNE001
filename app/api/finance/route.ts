@@ -1,7 +1,9 @@
 import type { FinanceState } from "@/src/domain/finance/model";
 import { validateFinanceState } from "@/src/domain/finance/persistence";
 import { sessionPrincipal } from "@/src/server/access/session";
+import { operationCompanyMap } from "@/src/server/access/scope";
 import { getDatabase } from "@/src/server/database/postgres";
+import { filterFinanceState, mergeFinanceState } from "@/src/server/finance/access";
 import {
   financeRequestHash,
   FinanceCommandConflictError,
@@ -26,7 +28,11 @@ export async function GET(request: Request) {
   if ("error" in access) return access.error;
   if (!access.principal.permissions.includes("finance:view"))
     return json({ error: "Sem permissão para consultar o Financeiro." }, 403);
-  return json({ finance: await loadFinanceState(access.db, access.tenantId) });
+  const [finance, operationCompanies] = await Promise.all([
+    loadFinanceState(access.db, access.tenantId),
+    operationCompanyMap(access.db, access.tenantId),
+  ]);
+  return json({ finance: filterFinanceState(finance, access.principal, operationCompanies) });
 }
 
 export async function PUT(request: Request) {
@@ -51,6 +57,15 @@ export async function PUT(request: Request) {
   if (error) return json({ error }, 400);
   try {
     const expectedVersion = Number(command.expectedVersion);
+    const [current, operationCompanies] = await Promise.all([
+      loadFinanceState(access.db, access.tenantId),
+      operationCompanyMap(access.db, access.tenantId),
+    ]);
+    if (!current) return json({ error: "O Financeiro ainda precisa ser inicializado." }, 409);
+    const merged = mergeFinanceState(current, command.finance, access.principal, operationCompanies);
+    if (!merged.state) return json({ error: merged.error }, 403);
+    const mergedError = validateFinanceState(merged.state);
+    if (mergedError) return json({ error: mergedError }, 400);
     const requestHash = await financeRequestHash({
       tenantId: access.tenantId,
       actorId: access.principal.id,
@@ -61,7 +76,7 @@ export async function PUT(request: Request) {
       access.db,
       access.tenantId,
       access.principal.id,
-      command.finance,
+      merged.state,
       expectedVersion,
       command.commandId,
       requestHash,
@@ -71,7 +86,7 @@ export async function PUT(request: Request) {
         { error: "O Financeiro foi alterado por outra pessoa. Atualize a tela antes de tentar novamente." },
         409,
       );
-    return json({ finance });
+    return json({ finance: filterFinanceState(finance, access.principal, operationCompanies) });
   } catch (reason) {
     if (reason instanceof FinanceCommandConflictError || reason instanceof FinanceTransitionError)
       return json({ error: reason.message }, 409);

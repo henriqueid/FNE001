@@ -14,6 +14,6 @@ export async function GET(request: Request) {
     return json({ error: "Usuário sem acesso à Central do Dia." }, 403);
   return json({
     notifications: await listPublishedNotifications(db, tenantId, principal),
-    health: principal.access === "admin" ? await outboxHealth(db, tenantId) : undefined,
+    health: principal.access === "admin" ? await outboxHealth(db, tenantId, principal.companyScopes) : undefined,
   });
 }

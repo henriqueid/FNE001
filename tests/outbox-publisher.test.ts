@@ -5,6 +5,8 @@ import {
   nextRetryAt,
   notificationForDecisionEvent,
   outboxFailureDisposition,
+  outboxHealth,
+  retryFailedOutbox,
 } from "@/src/server/outbox/publisher";
 import { functionalAreasMatchQueue } from "@/src/domain/copilot/daily-briefing";
 import type { DecisionDatabase } from "@/src/server/decisions/repository";
@@ -138,5 +140,44 @@ describe("publicador da outbox", () => {
 
     const notifications = await listPublishedNotifications(db, "tenant-1", principal);
     expect(notifications.map(notification => notification.id)).toEqual(["allowed"]);
+  });
+
+  it("aplica o escopo da empresa à saúde e ao reprocessamento da fila", async () => {
+    const queries: string[] = [];
+    const bindings: unknown[][] = [];
+    const db = {
+      prepare(query: string) {
+        queries.push(query);
+        return {
+          bind(...values: unknown[]) {
+            bindings.push(values);
+            return this;
+          },
+          async first() {
+            return null;
+          },
+          async all() {
+            return { results: [] };
+          },
+          async run() {
+            return { success: true };
+          },
+        };
+      },
+      async batch() {
+        return [];
+      },
+      async exec() {},
+    } as DecisionDatabase;
+
+    await outboxHealth(db, "tenant-1", ["Empresa A"]);
+    await retryFailedOutbox(db, "tenant-1", new Date("2026-10-13T12:00:00.000Z"), ["Empresa A"]);
+
+    expect(queries[0]).toContain("JOIN private.operations operation");
+    expect(queries[0]).toContain("lower(trim(operation.vehicle)) IN (?)");
+    expect(bindings[0]).toEqual(["tenant-1", "empresa a"]);
+    expect(queries[1]).toContain("SELECT candidate.outbox_id");
+    expect(queries[1]).toContain("candidate.event_id");
+    expect(bindings[1]).toEqual(["2026-10-13T12:00:00.000Z", "tenant-1", "tenant-1", "empresa a"]);
   });
 });

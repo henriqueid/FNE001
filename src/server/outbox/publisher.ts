@@ -21,6 +21,20 @@ type OutboxRow = {
   attempts: number;
 };
 
+const scopedOperationJoin = (companyScopes?: string[]) => {
+  if (!companyScopes || companyScopes.includes("*")) return { join: "", predicate: "", bindings: [] as string[] };
+  const scopes = companyScopes.map(scope => scope.trim().toLocaleLowerCase("pt-BR")).filter(Boolean);
+  if (!scopes.length) return { join: "", predicate: " AND 1 = 0", bindings: [] as string[] };
+  return {
+    join: ` JOIN private.decision_events event
+              ON event.tenant_id = outbox.tenant_id AND event.event_id = outbox.event_id
+            JOIN private.operations operation
+              ON operation.tenant_id = event.tenant_id AND operation.operation_id = event.operation_id`,
+    predicate: ` AND lower(trim(operation.vehicle)) IN (${scopes.map(() => "?").join(", ")})`,
+    bindings: scopes,
+  };
+};
+
 const resolutionEvents = new Set<DecisionEventType>([
   "EXCEPTION_APPROVED",
   "EXCEPTION_REJECTED",
@@ -194,15 +208,23 @@ async function publishRow(db: DecisionDatabase, row: OutboxRow, now: Date) {
   await db.batch([insert, complete]);
 }
 
-export async function publishDecisionOutbox(db: DecisionDatabase, tenantId: string, limit = 25, now = new Date()) {
+export async function publishDecisionOutbox(
+  db: DecisionDatabase,
+  tenantId: string,
+  limit = 25,
+  now = new Date(),
+  companyScopes?: string[],
+) {
   await ensurePublisherSchema(db);
+  const scope = scopedOperationJoin(companyScopes);
   const pending = await db
     .prepare(
-      `SELECT tenant_id, outbox_id, event_id, payload::text AS payload_json, attempts FROM private.decision_outbox
-       WHERE tenant_id = ? AND status = 'PENDING' AND available_at <= ?
-       ORDER BY available_at, created_at LIMIT ?`,
+      `SELECT outbox.tenant_id, outbox.outbox_id, outbox.event_id, outbox.payload::text AS payload_json, outbox.attempts
+       FROM private.decision_outbox outbox${scope.join}
+       WHERE outbox.tenant_id = ? AND outbox.status = 'PENDING' AND outbox.available_at <= ?${scope.predicate}
+       ORDER BY outbox.available_at, outbox.created_at LIMIT ?`,
     )
-    .bind(tenantId, now.toISOString(), Math.min(Math.max(limit, 1), 100))
+    .bind(tenantId, now.toISOString(), ...scope.bindings, Math.min(Math.max(limit, 1), 100))
     .all<OutboxRow>();
   let published = 0;
   let retried = 0;
@@ -298,23 +320,46 @@ export async function listPublishedNotifications(db: DecisionDatabase, tenantId:
     }));
 }
 
-export async function outboxHealth(db: DecisionDatabase, tenantId: string): Promise<OutboxHealth> {
+export async function outboxHealth(
+  db: DecisionDatabase,
+  tenantId: string,
+  companyScopes?: string[],
+): Promise<OutboxHealth> {
+  const scope = scopedOperationJoin(companyScopes);
   const result = await db
-    .prepare("SELECT status, COUNT(*) AS total FROM private.decision_outbox WHERE tenant_id = ? GROUP BY status")
-    .bind(tenantId)
+    .prepare(
+      `SELECT outbox.status, COUNT(*) AS total FROM private.decision_outbox outbox${scope.join}
+       WHERE outbox.tenant_id = ?${scope.predicate} GROUP BY outbox.status`,
+    )
+    .bind(tenantId, ...scope.bindings)
     .all<{ status: "PENDING" | "PUBLISHED" | "FAILED"; total: number }>();
   const health: OutboxHealth = { pending: 0, failed: 0, published: 0 };
   for (const row of result.results) health[row.status.toLowerCase() as keyof OutboxHealth] = Number(row.total);
   return health;
 }
 
-export async function retryFailedOutbox(db: DecisionDatabase, tenantId: string, now = new Date()) {
+export async function retryFailedOutbox(
+  db: DecisionDatabase,
+  tenantId: string,
+  now = new Date(),
+  companyScopes?: string[],
+) {
+  const scope = scopedOperationJoin(companyScopes);
+  const retryJoin = scope.join
+    .replaceAll("outbox.tenant_id", "candidate.tenant_id")
+    .replaceAll("outbox.event_id", "candidate.event_id");
+  const retryPredicate = scope.predicate.replaceAll("outbox.", "candidate.");
   const result = await db
     .prepare(
-      `UPDATE private.decision_outbox SET status = 'PENDING', attempts = 0, available_at = ?, last_error = NULL
-       WHERE tenant_id = ? AND status = 'FAILED'`,
+      `UPDATE private.decision_outbox AS outbox
+       SET status = 'PENDING', attempts = 0, available_at = ?, last_error = NULL
+       WHERE outbox.tenant_id = ? AND outbox.status = 'FAILED'
+         AND outbox.outbox_id IN (
+           SELECT candidate.outbox_id FROM private.decision_outbox candidate${retryJoin}
+           WHERE candidate.tenant_id = ? AND candidate.status = 'FAILED'${retryPredicate}
+         )`,
     )
-    .bind(now.toISOString(), tenantId)
+    .bind(now.toISOString(), tenantId, tenantId, ...scope.bindings)
     .run();
   return result.success;
 }

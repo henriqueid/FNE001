@@ -18,8 +18,17 @@ async function context(request: Request) {
 export async function POST(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
-  const result = await publishDecisionOutbox(access.db, access.tenantId);
-  return json({ ...result, health: await outboxHealth(access.db, access.tenantId) });
+  const result = await publishDecisionOutbox(
+    access.db,
+    access.tenantId,
+    25,
+    new Date(),
+    access.principal.companyScopes,
+  );
+  return json({
+    ...result,
+    health: await outboxHealth(access.db, access.tenantId, access.principal.companyScopes),
+  });
 }
 
 export async function PUT(request: Request) {
@@ -27,7 +36,16 @@ export async function PUT(request: Request) {
   if ("error" in access) return access.error;
   if (!access.principal.permissions.includes("users:manage"))
     return json({ error: "Somente administradores podem reprocessar a fila de falhas." }, 403);
-  await retryFailedOutbox(access.db, access.tenantId);
-  const result = await publishDecisionOutbox(access.db, access.tenantId);
-  return json({ ...result, health: await outboxHealth(access.db, access.tenantId) });
+  await retryFailedOutbox(access.db, access.tenantId, new Date(), access.principal.companyScopes);
+  const result = await publishDecisionOutbox(
+    access.db,
+    access.tenantId,
+    25,
+    new Date(),
+    access.principal.companyScopes,
+  );
+  return json({
+    ...result,
+    health: await outboxHealth(access.db, access.tenantId, access.principal.companyScopes),
+  });
 }

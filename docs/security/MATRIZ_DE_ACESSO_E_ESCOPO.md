@@ -33,17 +33,17 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 | `/api/decisions`                  | `operations:view`            | permissão por tipo de evento + alçada quando exigida                                    | tenant + empresa/veículo da operação                            | empresa aplicada                        |
 | `/api/commercial`                 | `dashboard:view`             | `portfolio:manage`; decisão exige `risk:decide`                                         | tenant                                                          | revisar segmentação futura              |
 | `/api/portfolio`                  | `dashboard:view`             | `portfolio:manage` ou `controlleria:formalize`                                          | tenant + empresa do título; merge preserva títulos não visíveis | empresa aplicada                        |
-| `/api/finance`                    | `finance:view`               | `finance:release`                                                                       | tenant                                                          | empresa pendente                        |
+| `/api/finance`                    | `finance:view`               | `finance:release`; configuração global exige `settings:manage`                          | tenant + empresa; merge preserva dados não visíveis             | empresa aplicada                        |
 | `/api/registry/parties`           | sessão do tenant             | `registry:edit`                                                                         | tenant                                                          | permissão de leitura explícita pendente |
 | `/api/receivables`                | capacidade operacional       | sem escrita direta                                                                      | tenant + empresa da operação                                    | empresa aplicada                        |
-| `/api/tasks`                      | `dashboard:view`             | `dashboard:view`, com regras de autoria                                                 | tenant                                                          | empresa por referência pendente         |
+| `/api/tasks`                      | `dashboard:view`             | `dashboard:view`, com regras de autoria                                                 | tenant + empresa da operação referenciada                       | empresa aplicada                        |
 | `/api/eligibility-policies`       | `settings:manage`            | `settings:manage` + aprovação identificada                                              | tenant                                                          | concluído                               |
 | `/api/access/users`               | `users:manage`               | `users:manage`                                                                          | tenant                                                          | concluído                               |
 | `/api/company`                    | sessão do tenant             | `settings:manage`                                                                       | tenant                                                          | concluído                               |
 | `/api/integrations/cnpj`          | sessão/permissões funcionais | consulta externa autorizada                                                             | tenant                                                          | concluído                               |
 | `/api/intelligence/configuration` | `settings:manage`            | `settings:manage`                                                                       | tenant                                                          | concluído                               |
 | `/api/copilot/chat`               | `dashboard:view`             | consulta assistida, sem comando material                                                | tenant                                                          | revisar fontes por empresa              |
-| `/api/outbox/process`             | `operations:view`            | reprocessamento exige `users:manage`                                                    | tenant; notificações por empresa da operação                    | reprocessamento por empresa pendente    |
+| `/api/outbox/process`             | `operations:view`            | reprocessamento exige `users:manage`                                                    | tenant + empresa da operação                                    | empresa aplicada                        |
 
 ## Regras já verificadas
 
@@ -55,11 +55,13 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 - A Carteira retorna somente títulos das empresas autorizadas e recompõe o agregado completo no servidor, preservando títulos de outros escopos durante a gravação.
 - Recebíveis são filtrados pela empresa da operação de origem; consulta explícita a operação fora do escopo é recusada.
 - Notificações operacionais exigem que a operação relacionada pertença a uma empresa autorizada.
+- O Financeiro filtra todo o grafo por empresa e recompõe o agregado completo na gravação, sem apagar ou substituir dados ocultos.
+- Tarefas com operação vinculada exigem o escopo da empresa dessa operação; o perfil administrativo não ignora essa barreira.
+- Publicação, contadores de saúde e reprocessamento manual da outbox usam a empresa da operação do evento como filtro no banco.
 
 ## Próximos endurecimentos
 
-1. Propagar empresa/veículo para Financeiro, tarefas e reprocessamento administrativo da outbox.
-2. Separar permissões de leitura e manutenção onde hoje uma permissão ampla atende aos dois usos.
-3. Aplicar maker-checker em liberação financeira, exceção de risco e alterações críticas de configuração.
-4. Centralizar recibos idempotentes, event ledger e outbox em um contrato comum.
-5. Executar homologação com duas sessões e dois tenants, incluindo tentativas deliberadas de acesso cruzado.
+1. Separar permissões de leitura e manutenção onde hoje uma permissão ampla atende aos dois usos.
+2. Aplicar maker-checker em liberação financeira, exceção de risco e alterações críticas de configuração.
+3. Centralizar recibos idempotentes, event ledger e outbox em um contrato comum.
+4. Executar homologação com duas sessões e dois tenants, incluindo tentativas deliberadas de acesso cruzado.

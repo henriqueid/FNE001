@@ -45,3 +45,11 @@ export async function operationCompany(db: DecisionDatabase, tenantId: string, o
     .first<{ vehicle: string }>();
   return operation?.vehicle ?? null;
 }
+
+export async function operationCompanyMap(db: DecisionDatabase, tenantId: string) {
+  const operations = await db
+    .prepare("select operation_id, vehicle from private.operations where tenant_id = ?")
+    .bind(tenantId)
+    .all<{ operation_id: string; vehicle: string }>();
+  return new Map(operations.results.map(operation => [operation.operation_id, operation.vehicle]));
+}

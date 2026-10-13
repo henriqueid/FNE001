@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   filterCompanyScope,
   operationCompany,
+  operationCompanyMap,
   operationWriteScopeError,
   principalCanAccessOperation,
   principalHasCompanyScope,
@@ -67,5 +68,7 @@ describe("escopo de tenant e empresa", () => {
     expect(bindings[0]).toEqual(["tenant-a", "operation-1"]);
     expect(await operationCompany(db, "tenant-b", "operation-1")).toBe("FINANCIA FIDC");
     expect(bindings[1]).toEqual(["tenant-b", "operation-1"]);
+    expect(await operationCompanyMap(db, "tenant-c")).toEqual(new Map());
+    expect(bindings[2]).toEqual(["tenant-c"]);
   });
 });

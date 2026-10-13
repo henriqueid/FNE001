@@ -12,6 +12,7 @@ export type Permission =
   | "finance:release"
   | "registry:view"
   | "registry:edit"
+  | "settings:view"
   | "settings:manage"
   | "users:manage";
 
@@ -61,18 +62,19 @@ const adminPermissions: Permission[] = [
   "finance:release",
   "registry:view",
   "registry:edit",
+  "settings:view",
   "settings:manage",
   "users:manage",
 ];
 
 const basePermissions: Record<UserDepartment, Permission[]> = {
   Diretoria: adminPermissions,
-  Operações: ["dashboard:view", "operations:view", "operations:edit"],
-  "Risco e crédito": ["dashboard:view", "operations:view", "risk:decide"],
-  Controladoria: ["dashboard:view", "operations:view", "controlleria:formalize"],
-  Financeiro: ["dashboard:view", "finance:view", "finance:release"],
-  Comercial: ["dashboard:view", "operations:view", "portfolio:manage"],
-  Cadastro: ["dashboard:view", "registry:view", "registry:edit"],
+  Operações: ["dashboard:view", "operations:view", "operations:edit", "settings:view"],
+  "Risco e crédito": ["dashboard:view", "operations:view", "risk:decide", "settings:view"],
+  Controladoria: ["dashboard:view", "operations:view", "controlleria:formalize", "settings:view"],
+  Financeiro: ["dashboard:view", "finance:view", "finance:release", "settings:view"],
+  Comercial: ["dashboard:view", "operations:view", "portfolio:manage", "settings:view"],
+  Cadastro: ["dashboard:view", "registry:view", "registry:edit", "settings:view"],
 };
 
 export function permissionsFor(department: UserDepartment, access: AppUserProfile["access"]): Permission[] {
@@ -268,6 +270,7 @@ export function migrateAccessState(value: unknown): AccessState {
     const permissions = [...new Set(merged.permissions ?? [])];
     if (permissions.includes("registry:edit") && !permissions.includes("registry:view"))
       permissions.push("registry:view");
+    if (!permissions.includes("settings:view")) permissions.push("settings:view");
     return { ...merged, permissions, functionalAreas: userFunctionalAreas(merged) };
   });
   const legacyActiveUserId = candidate.activeUserId;

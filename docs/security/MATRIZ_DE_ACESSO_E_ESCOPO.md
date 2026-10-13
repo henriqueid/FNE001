@@ -37,9 +37,9 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 | `/api/registry/parties`           | `registry:view`                     | `registry:edit`                                                                         | tenant                                                          | concluído            |
 | `/api/receivables`                | capacidade operacional              | sem escrita direta                                                                      | tenant + empresa da operação                                    | empresa aplicada     |
 | `/api/tasks`                      | `dashboard:view`                    | `dashboard:view`, com regras de autoria                                                 | tenant + empresa da operação referenciada                       | empresa aplicada     |
-| `/api/eligibility-policies`       | `settings:manage`                   | `settings:manage` + aprovação identificada                                              | tenant                                                          | concluído            |
+| `/api/eligibility-policies`       | `settings:view`                     | `settings:manage` + aprovação identificada                                              | tenant                                                          | concluído            |
 | `/api/access/users`               | `users:manage`                      | `users:manage`                                                                          | tenant                                                          | concluído            |
-| `/api/company`                    | sessão do tenant                    | `settings:manage`                                                                       | tenant                                                          | concluído            |
+| `/api/company`                    | `settings:view`                     | `settings:manage`                                                                       | tenant                                                          | concluído            |
 | `/api/integrations/cnpj`          | `registry:view`                     | consulta externa por capacidade funcional                                               | tenant                                                          | concluído            |
 | `/api/intelligence/configuration` | `settings:manage`                   | `settings:manage`                                                                       | tenant                                                          | concluído            |
 | `/api/copilot/chat`               | `dashboard:view`                    | consulta assistida, sem comando material                                                | tenant + empresa das fontes                                     | empresa aplicada     |
@@ -63,6 +63,7 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 - O Cadastro separa leitura (`registry:view`) de manutenção (`registry:edit`), inclusive nas evidências cadastrais.
 - Antes de chamar a IA, o backend reduz o contexto do Copiloto às empresas da sessão, remove campos não previstos e só mantém cedentes alcançáveis por operações ou títulos visíveis.
 - O Comercial filtra executivo e gerente vinculados na identidade do servidor; uma gravação segmentada recompõe o agregado completo e não apaga carteiras ocultas.
+- Dados institucionais e políticas efetivas usam `settings:view`; qualquer manutenção continua reservada a `settings:manage`.
 
 ## Próximos endurecimentos
 

@@ -49,6 +49,8 @@ describe("identidade e autorização", () => {
   it("aplica permissões padrão por departamento e nível", () => {
     expect(permissionsFor("Risco e crédito", "operator")).toContain("risk:decide");
     expect(permissionsFor("Operações", "operator")).not.toContain("finance:release");
+    expect(permissionsFor("Operações", "operator")).toContain("settings:view");
+    expect(permissionsFor("Operações", "operator")).not.toContain("settings:manage");
     expect(permissionsFor("Operações", "manager")).toContain("users:manage");
     expect(permissionsForAreas(["Cadastro", "Operações"], "operator")).toEqual(
       expect.arrayContaining(["registry:view", "registry:edit", "operations:edit"]),
@@ -124,5 +126,6 @@ describe("identidade e autorização", () => {
     const editor = migrated.users.find(user => user.permissions.includes("registry:edit"));
 
     expect(editor?.permissions).toContain("registry:view");
+    expect(migrated.users.every(user => user.permissions.includes("settings:view"))).toBe(true);
   });
 });

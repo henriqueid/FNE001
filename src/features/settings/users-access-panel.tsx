@@ -38,6 +38,7 @@ const permissionLabels: Record<Permission, string> = {
   "finance:release": "Preparar liberações",
   "registry:view": "Consultar cadastros",
   "registry:edit": "Editar cadastros",
+  "settings:view": "Consultar empresa e políticas",
   "settings:manage": "Alterar configurações",
   "users:manage": "Administrar usuários",
 };

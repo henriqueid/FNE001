@@ -15,6 +15,11 @@ async function context(request: Request) {
 export async function GET(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
+  if (
+    !access.principal.permissions.includes("settings:view") &&
+    !access.principal.permissions.includes("settings:manage")
+  )
+    return json({ error: "Sem permissão para consultar os dados institucionais." }, 403);
   return json({ company: await loadCompanyProfile(access.db, access.tenantId) });
 }
 export async function PUT(request: Request) {

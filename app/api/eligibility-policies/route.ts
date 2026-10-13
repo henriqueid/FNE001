@@ -18,20 +18,25 @@ async function context(request: Request) {
   const db = getDatabase();
   const principal = await sessionPrincipal(db, request.headers, tenantId);
   if (!principal) return { error: json({ error: "Sessão ausente ou expirada." }, 401) } as const;
-  if (!principal.permissions.includes("settings:manage"))
-    return { error: json({ error: "Sem permissão para administrar políticas." }, 403) } as const;
   return { db, tenantId, principal } as const;
 }
 
 export async function GET(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
+  if (
+    !access.principal.permissions.includes("settings:view") &&
+    !access.principal.permissions.includes("settings:manage")
+  )
+    return json({ error: "Sem permissão para consultar políticas." }, 403);
   return json({ policies: await loadEligibilityPolicyState(access.db, access.tenantId) });
 }
 
 export async function PUT(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
+  if (!access.principal.permissions.includes("settings:manage"))
+    return json({ error: "Sem permissão para administrar políticas." }, 403);
   const command = (await request.json().catch(() => null)) as {
     policies?: EligibilityPolicyState;
     expectedVersion?: number;

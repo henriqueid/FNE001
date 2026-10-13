@@ -258,7 +258,7 @@ Progresso A5.5 — escopos residuais de APIs:
 - [x] limitar cedentes do Copiloto aos documentos alcançáveis por operações ou títulos visíveis;
 - [x] publicar guia de escopo e fontes do Copiloto;
 - [x] segmentar o agregado Comercial por responsável/gerente com merge seguro dos dados não visíveis;
-- [ ] revisar leitura do perfil da empresa e demais configurações para separar consulta de manutenção;
+- [x] separar consulta de empresa/políticas (`settings:view`) da manutenção administrativa (`settings:manage`);
 - [ ] substituir o contexto do Copiloto montado no cliente por projeções lidas integralmente no servidor;
 - [ ] homologar Cadastro, Comercial, Copiloto, Integrações e Configurações com perfis cruzados reais.
 

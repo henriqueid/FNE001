@@ -88,6 +88,7 @@ export const emptyDebtorDraft = {
   zipCode: "",
   email: "",
   phone: "",
+  publicStatus: "",
 };
 
 export type DebtorDraft = typeof emptyDebtorDraft;

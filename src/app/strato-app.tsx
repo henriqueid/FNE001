@@ -1356,6 +1356,7 @@ export default function StratoApp() {
                 showJourney={showJourney}
                 currentUser={currentUser}
                 intelligence={intelligence}
+                onIntelligence={setIntelligence}
                 dailyBriefing={dailyBriefing}
                 attentionItems={attentionItems}
                 taskItems={taskItems}

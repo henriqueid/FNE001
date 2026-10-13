@@ -11,13 +11,9 @@ import { OperationalParametersEditor } from "@/src/features/registry/operational
 import { type HomePeriod } from "@/src/domain/home/settings";
 import { type AccessState } from "@/src/domain/access/model";
 import { UsersAccessPanel } from "./users-access-panel";
-import {
-  aiStatusLabel,
-  effectiveAIStatus,
-  type AIStatus,
-  type IntelligenceState,
-} from "@/src/domain/intelligence/model";
+import { aiStatusLabel, effectiveAIStatus, type IntelligenceState } from "@/src/domain/intelligence/model";
 import { OutboxHealthPanel } from "./outbox-health-panel";
+import { AIConfigurationPanel } from "./ai-configuration-panel";
 
 const goalPeriods: Array<{ id: HomePeriod; label: string }> = [
   { id: "dia", label: "Dia" },
@@ -345,6 +341,7 @@ export default function SettingsModule({
                   <b>{intelligence.monthlyTokenBudget.toLocaleString("pt-BR")}</b> orçamento mensal
                 </span>
               </div>
+              <AIConfigurationPanel />
               <div className="settings-interface-grid">
                 <label>
                   <input
@@ -386,27 +383,24 @@ export default function SettingsModule({
               </div>
               <div className="settings-goal-row">
                 <span>
-                  <strong>Estado operacional da IA</strong>
+                  <strong>Orçamento mensal de tokens</strong>
                   <small>{aiStatusLabel(intelligence)}</small>
                 </span>
                 <label>
-                  <select
-                    aria-label="Estado operacional da IA"
-                    value={intelligence.status}
+                  <input
+                    type="number"
+                    min="0"
+                    step="10000"
+                    aria-label="Orçamento mensal de tokens da IA"
+                    value={intelligence.monthlyTokenBudget}
                     onChange={event =>
                       onIntelligence({
                         ...intelligence,
-                        status: event.target.value as AIStatus,
+                        monthlyTokenBudget: Math.max(0, Number(event.target.value)),
                         updatedAt: new Date().toISOString(),
                       })
                     }
-                  >
-                    <option value="AI_AVAILABLE">Disponível</option>
-                    <option value="AI_DEGRADED">Capacidade reduzida</option>
-                    <option value="AI_UNAVAILABLE">Indisponível</option>
-                    <option value="AI_PROCESSING">Processando</option>
-                    <option value="AI_DISABLED">Desativada</option>
-                  </select>
+                  />
                 </label>
               </div>
               <p className="settings-integration-requirements">

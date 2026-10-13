@@ -22,6 +22,7 @@ import { createAuthorityGrant, decisionFingerprint } from "@/src/domain/decision
 import { emptyDecisionLedger, type DecisionEventDraft } from "@/src/domain/decisions/model";
 import { canUseGenerativeAI, type IntelligenceState } from "@/src/domain/intelligence/model";
 import { loadDecisionLedger, persistDecisionEvent } from "./decision-ledger-client";
+import { askConfiguredCopilot } from "@/src/app/intelligence-client";
 
 export type DeskStage = "idle" | "recebida" | "validando" | "extraindo" | "calculando" | "concluida";
 export type DeskDecision = "pending" | "approved" | "rejected" | null;
@@ -51,6 +52,7 @@ export function useCopilotDesk(
   intelligence: IntelligenceState,
   defaultCedentId = "",
   demoMode = false,
+  onUsage?: (tokens: number) => void,
 ) {
   const [cedent, setCedent] = useState(defaultCedentId);
   const [files, setFiles] = useState<DeskFile[]>([]);
@@ -65,6 +67,7 @@ export function useCopilotDesk(
   const [unread, setUnread] = useState(false);
   const [decisionLedger, setDecisionLedger] = useState(emptyDecisionLedger);
   const [decisionError, setDecisionError] = useState("");
+  const [asking, setAsking] = useState(false);
   const alive = useRef(true);
   /** Identifica a tarefa em curso; limpar a conversa invalida a anterior. */
   const run = useRef(0);
@@ -298,7 +301,7 @@ export function useCopilotDesk(
   const locked = decision !== null;
 
   /** Pergunta livre: primeiro sobre o cenário em análise (se houver); senão, consulta a base e a política. */
-  const ask = (text: string) => {
+  const ask = async (text: string) => {
     push({ role: "me", text });
     if (!aiAvailable) {
       push({
@@ -319,7 +322,30 @@ export function useCopilotDesk(
         return;
       }
     }
-    push({ role: "ai", reply: answerSystemQuestion(text, knowledge) });
+    const localAnswer = answerSystemQuestion(text, knowledge);
+    if (localAnswer.tool) {
+      push({ role: "ai", reply: localAnswer });
+      return;
+    }
+    setAsking(true);
+    try {
+      const result = await askConfiguredCopilot(text, knowledge);
+      push({ role: "ai", reply: result.reply });
+      if (result.usage.totalTokens > 0) onUsage?.(result.usage.totalTokens);
+    } catch (error) {
+      push({
+        role: "ai",
+        reply: {
+          paragraphs: [
+            error instanceof Error
+              ? error.message
+              : "A IA não conseguiu responder agora. As consultas estruturadas continuam disponíveis.",
+          ],
+        },
+      });
+    } finally {
+      setAsking(false);
+    }
   };
 
   const toggleTitle = (id: string) => {
@@ -462,6 +488,7 @@ export function useCopilotDesk(
     unread,
     clearUnread: () => setUnread(false),
     busy: stage !== "idle" && stage !== "concluida" && !waitingAuth,
+    asking,
     context,
     start,
     authorize,

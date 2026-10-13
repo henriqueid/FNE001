@@ -1,5 +1,5 @@
 import { type Operation } from "@/src/domain/core/types";
-import { effectiveRunSummary } from "./decision";
+import { effectiveEvaluationOutcome, effectiveRunSummary } from "./decision";
 
 export type EligibilityRouteState =
   "AGUARDANDO_EXECUCAO" | "FLUXO_NORMAL" | "FLUXO_COM_ALERTA" | "DECISAO_HUMANA" | "BLOQUEADA";
@@ -60,12 +60,17 @@ export function eligibilityRouteFor(operation: Operation): EligibilityRoute {
     };
   }
   if (summary.counts.NAO_AVALIADO > 0) {
+    const missing = review.run.evaluations
+      .filter(item => effectiveEvaluationOutcome(item, review.overrides) === "NAO_AVALIADO")
+      .slice(0, 3)
+      .map(item => `${item.subjectLabel} — ${item.ruleName}`);
+    const missingDetail = missing.length ? ` Pendência: ${missing.join("; ")}.` : "";
     return {
       state: "DECISAO_HUMANA",
       canAdvance: false,
       requiresHumanDecision: true,
       label: "Análise incompleta",
-      explanation: `${summary.counts.NAO_AVALIADO} avaliação(ões) não possuem dados suficientes.`,
+      explanation: `${summary.counts.NAO_AVALIADO} avaliação(ões) não possuem dados suficientes.${missingDetail}`,
       blockers: summary.counts.NAO_AVALIADO,
       alerts: summary.counts.ALERTA,
       nextAction: "Completar dados ou deliberar análise incompleta",

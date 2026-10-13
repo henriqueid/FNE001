@@ -6,8 +6,10 @@
  * usuário digita; erros bloqueiam a gravação, avisos só orientam.
  */
 import { useRegistry } from "@/src/app/registry-context";
-import { consultCnpj } from "@/src/app/cnpj-enrichment-client";
+import { consultCnpj, consultLeadCnpj } from "@/src/app/cnpj-enrichment-client";
+import { consultCep, listPublicBanks } from "@/src/app/public-enrichment-client";
 import { cnpjEvidenceChanges, type CnpjEvidence } from "@/src/domain/integrations/cnpj";
+import { formatBankLabel, type BankEvidence } from "@/src/domain/integrations/public-data";
 import {
   defaultRoleData,
   formatDocument,
@@ -22,7 +24,7 @@ import {
 } from "@/src/domain/registry/parties";
 import { Field, Modal, br } from "@/src/features/finance/finance-ui";
 import { AlertIcon, CheckIcon, CloseIcon, PlusIcon } from "@/src/ui/icons";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PartyRoleFields } from "./party-role-fields";
 import { CedentProfileFields } from "./cedent-profile-fields";
 
@@ -98,6 +100,9 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
   const [cnpjEvidence, setCnpjEvidence] = useState<CnpjEvidence>();
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const [cnpjError, setCnpjError] = useState("");
+  const [cepLoading, setCepLoading] = useState(false);
+  const [publicDataError, setPublicDataError] = useState("");
+  const [banks, setBanks] = useState<BankEvidence[]>([]);
   const set = (patch: Partial<Party>) => setDraft(current => ({ ...current, ...patch }));
   const setAddress = (patch: Partial<Party["address"]>) =>
     setDraft(current => ({ ...current, address: { ...current.address, ...patch } }));
@@ -128,13 +133,49 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
     setCnpjLoading(true);
     setCnpjError("");
     try {
-      setCnpjEvidence(await consultCnpj(draft.id));
+      setCnpjEvidence(isNew ? await consultLeadCnpj(draft.document) : await consultCnpj(draft.id));
     } catch (reason) {
       setCnpjError(reason instanceof Error ? reason.message : "Não foi possível consultar o CNPJ.");
     } finally {
       setCnpjLoading(false);
     }
   };
+
+  const requestCepEvidence = async () => {
+    setCepLoading(true);
+    setPublicDataError("");
+    try {
+      const evidence = await consultCep(draft.address.zipCode);
+      setAddress({
+        zipCode: evidence.zipCode,
+        street: evidence.street || draft.address.street,
+        district: evidence.district || draft.address.district,
+        city: evidence.city,
+        state: evidence.state,
+      });
+      if (!changeReason && !isNew) setChangeReason("Endereço conferido em fonte pública de CEP");
+    } catch (reason) {
+      setPublicDataError(reason instanceof Error ? reason.message : "Não foi possível consultar o CEP.");
+    } finally {
+      setCepLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSection !== "relationship" || banks.length) return;
+    let active = true;
+    listPublicBanks()
+      .then(items => {
+        if (active) setBanks(items);
+      })
+      .catch(reason => {
+        if (active)
+          setPublicDataError(reason instanceof Error ? reason.message : "Não foi possível carregar os bancos.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [activeSection, banks.length]);
 
   const applyCnpjEvidence = () => {
     if (!cnpjEvidence) return;
@@ -274,12 +315,12 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
                     placeholder={draft.kind === "PJ" ? "00.000.000/0000-00" : "000.000.000-00"}
                   />
                 </Field>
-                {draft.kind === "PJ" && onlyDigits(draft.document).length === 14 && !isNew && (
+                {draft.kind === "PJ" && onlyDigits(draft.document).length === 14 && (
                   <div className="rg-inline-alert">
                     <span>
                       <b>Consulta cadastral externa</b>
                       <br />
-                      Busque razão social, situação, endereço, atividades e quadro societário com evidência registrada.
+                      Busque razão social, situação, endereço, atividades e quadro societário em fonte pública.
                     </span>
                     <button
                       type="button"
@@ -410,13 +451,23 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
                 <legend>Endereço</legend>
                 <div className="fn-form">
                   <Field label="CEP" hint={issueFor("zipCode")}>
-                    <input
-                      id="addr-zip"
-                      inputMode="numeric"
-                      value={draft.address.zipCode}
-                      onChange={e => setAddress({ zipCode: formatZip(e.target.value) })}
-                      placeholder="00000-000"
-                    />
+                    <div className="rg-input-action">
+                      <input
+                        id="addr-zip"
+                        inputMode="numeric"
+                        value={draft.address.zipCode}
+                        onChange={e => setAddress({ zipCode: formatZip(e.target.value) })}
+                        placeholder="00000-000"
+                      />
+                      <button
+                        type="button"
+                        className="fn-btn small ghost"
+                        disabled={cepLoading || onlyDigits(draft.address.zipCode).length !== 8}
+                        onClick={() => void requestCepEvidence()}
+                      >
+                        {cepLoading ? "Buscando…" : "Buscar CEP"}
+                      </button>
+                    </div>
                   </Field>
                   <Field label="Logradouro" wide>
                     <input
@@ -527,6 +578,7 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
                 {draft.bankAccounts.map(account => (
                   <div className="rg-row" key={account.id}>
                     <input
+                      list="public-bank-catalog"
                       aria-label="Banco"
                       placeholder="Banco (ex.: 341 · Itaú)"
                       value={account.bank}
@@ -591,6 +643,17 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
                 >
                   <PlusIcon /> Adicionar conta
                 </button>
+                <datalist id="public-bank-catalog">
+                  {banks.map(bank => (
+                    <option key={`${bank.ispb}-${bank.code ?? "ispb"}`} value={formatBankLabel(bank)}>
+                      ISPB {bank.ispb} · {bank.fullName}
+                    </option>
+                  ))}
+                </datalist>
+                <small className="rg-public-source-note">
+                  Catálogo bancário público do Banco Central via BrasilAPI. A instituição é conferida; agência, conta e
+                  chave Pix dependem de validação bancária própria.
+                </small>
               </fieldset>
             </>
           )}
@@ -684,6 +747,7 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
               ))}
             </div>
           )}
+          {publicDataError && <p className="rg-issue warn">{publicDataError}</p>}
         </div>
       </div>
     </Modal>

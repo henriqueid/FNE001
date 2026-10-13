@@ -4,6 +4,9 @@ import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { type CompanyProfile } from "@/src/domain/company/profile";
 import { getStratoTenantId } from "@/src/app/tenant";
 import { CompanyProvider } from "@/src/app/company-context";
+import { consultLeadCnpj } from "@/src/app/cnpj-enrichment-client";
+import { consultCep } from "@/src/app/public-enrichment-client";
+import { formatDocument, formatZip, onlyDigits } from "@/src/domain/registry/parties";
 import styles from "./company-onboarding.module.css";
 
 const emptyCompany: CompanyProfile = {
@@ -23,6 +26,8 @@ export function CompanyOnboarding({ children }: { children: ReactNode }) {
   const [company, setCompany] = useState<CompanyProfile>(emptyCompany);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [lookingUp, setLookingUp] = useState<"cnpj" | "cep" | null>(null);
+  const [lookupMessage, setLookupMessage] = useState("");
   useEffect(() => {
     let active = true;
     fetch("/api/company", { cache: "no-store", headers: { "x-strato-tenant-id": getStratoTenantId() } })
@@ -75,6 +80,61 @@ export function CompanyOnboarding({ children }: { children: ReactNode }) {
   };
   const address = (key: keyof CompanyProfile["address"], value: string) =>
     setCompany(current => ({ ...current, address: { ...current.address, [key]: value } }));
+  const lookupCnpj = async () => {
+    setLookingUp("cnpj");
+    setError("");
+    setLookupMessage("");
+    try {
+      const evidence = await consultLeadCnpj(company.document);
+      setCompany(current => ({
+        ...current,
+        legalName: evidence.legalName || current.legalName,
+        tradeName: evidence.tradeName || evidence.legalName || current.tradeName,
+        foundationDate: evidence.openedAt || current.foundationDate,
+        email: evidence.email || current.email,
+        phone: evidence.phones[0] || current.phone,
+        address: {
+          ...current.address,
+          zipCode: evidence.address.zipCode || current.address.zipCode,
+          street: evidence.address.street || current.address.street,
+          number: evidence.address.number || current.address.number,
+          complement: evidence.address.complement || current.address.complement,
+          district: evidence.address.district || current.address.district,
+          city: evidence.address.city || current.address.city,
+          state: evidence.address.state || current.address.state,
+        },
+      }));
+      setLookupMessage(`CNPJ consultado · situação ${evidence.registrationStatus.label} · BrasilAPI`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível consultar o CNPJ.");
+    } finally {
+      setLookingUp(null);
+    }
+  };
+  const lookupCep = async () => {
+    setLookingUp("cep");
+    setError("");
+    setLookupMessage("");
+    try {
+      const evidence = await consultCep(company.address.zipCode);
+      setCompany(current => ({
+        ...current,
+        address: {
+          ...current.address,
+          zipCode: evidence.zipCode,
+          street: evidence.street || current.address.street,
+          district: evidence.district || current.address.district,
+          city: evidence.city,
+          state: evidence.state,
+        },
+      }));
+      setLookupMessage(`CEP conferido · ${evidence.city}/${evidence.state} · ${evidence.provider}`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível consultar o CEP.");
+    } finally {
+      setLookingUp(null);
+    }
+  };
   return (
     <main className={styles.stage}>
       <section className={styles.card}>
@@ -106,12 +166,22 @@ export function CompanyOnboarding({ children }: { children: ReactNode }) {
             </label>
             <label>
               <span>CNPJ *</span>
-              <input
-                required
-                inputMode="numeric"
-                value={company.document}
-                onChange={e => setCompany({ ...company, document: e.target.value })}
-              />
+              <div className={styles.lookupRow}>
+                <input
+                  required
+                  inputMode="numeric"
+                  value={company.document}
+                  onChange={e => setCompany({ ...company, document: formatDocument(e.target.value) })}
+                />
+                <button
+                  type="button"
+                  className={styles.lookupButton}
+                  disabled={lookingUp != null || onlyDigits(company.document).length !== 14}
+                  onClick={() => void lookupCnpj()}
+                >
+                  {lookingUp === "cnpj" ? "Consultando…" : "Consultar"}
+                </button>
+              </div>
             </label>
             <label>
               <span>Tipo de instituição *</span>
@@ -150,7 +220,17 @@ export function CompanyOnboarding({ children }: { children: ReactNode }) {
             </label>
             <label>
               <span>CEP</span>
-              <input value={company.address.zipCode} onChange={e => address("zipCode", e.target.value)} />
+              <div className={styles.lookupRow}>
+                <input value={company.address.zipCode} onChange={e => address("zipCode", formatZip(e.target.value))} />
+                <button
+                  type="button"
+                  className={styles.lookupButton}
+                  disabled={lookingUp != null || onlyDigits(company.address.zipCode).length !== 8}
+                  onClick={() => void lookupCep()}
+                >
+                  {lookingUp === "cep" ? "Buscando…" : "Buscar"}
+                </button>
+              </div>
             </label>
             <label>
               <span>Logradouro</span>
@@ -174,6 +254,7 @@ export function CompanyOnboarding({ children }: { children: ReactNode }) {
             </label>
           </div>
           {error && <p className={styles.error}>{error}</p>}
+          {lookupMessage && <p className={styles.success}>{lookupMessage}</p>}
           <footer>
             <small>Você poderá completar e alterar os dados em Configurações.</small>
             <button disabled={saving}>{saving ? "Salvando…" : "Criar empresa e começar"}</button>

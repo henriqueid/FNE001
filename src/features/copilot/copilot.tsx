@@ -33,6 +33,7 @@ export function Copilot({
   onOpenAttention,
   currentUser,
   intelligence,
+  onIntelligence,
   demoMode = false,
 }: {
   suggestion?: CopilotSuggestion;
@@ -41,6 +42,7 @@ export function Copilot({
   onOpenAttention: (itemId?: string) => void;
   currentUser: AccessUser;
   intelligence: IntelligenceState;
+  onIntelligence?: (state: IntelligenceState) => void;
   demoMode?: boolean;
 }) {
   const cedents = useCedents();
@@ -58,7 +60,14 @@ export function Copilot({
     }),
     [operations, cedents, policies],
   );
-  const desk = useCopilotDesk(knowledge, currentUser, intelligence, cedents[0]?.id ?? "", demoMode);
+  const desk = useCopilotDesk(knowledge, currentUser, intelligence, cedents[0]?.id ?? "", demoMode, tokens =>
+    onIntelligence?.({
+      ...intelligence,
+      usedTokens: intelligence.usedTokens + tokens,
+      status: "AI_AVAILABLE",
+      updatedAt: new Date().toISOString(),
+    }),
+  );
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState("");
@@ -97,8 +106,8 @@ export function Copilot({
 
   const send = (text: string) => {
     const value = text.trim();
-    if (!value) return;
-    desk.ask(value);
+    if (!value || desk.asking) return;
+    void desk.ask(value);
     setDraft("");
   };
 
@@ -143,7 +152,7 @@ export function Copilot({
       {(hasResult || desk.messages.length > 0) && (
         <div className="cpl-chips">
           {chips.map(item => (
-            <button type="button" key={item} onClick={() => send(item)} disabled={!desk.aiAvailable}>
+            <button type="button" key={item} onClick={() => send(item)} disabled={!desk.aiAvailable || desk.asking}>
               {item}
             </button>
           ))}
@@ -173,12 +182,14 @@ export function Copilot({
             desk.aiAvailable ? "Pergunte, investigue ou simule um cenário…" : "IA indisponível nesta organização"
           }
           aria-label="Mensagem para o Copiloto"
-          disabled={!desk.aiAvailable}
+          disabled={!desk.aiAvailable || desk.asking}
         />
-        <button type="submit" aria-label="Enviar" disabled={!draft.trim() || !desk.aiAvailable}>
+        <button type="submit" aria-label="Enviar" disabled={!draft.trim() || !desk.aiAvailable || desk.asking}>
           <SendIcon />
         </button>
-        <small className="cpl-input-hint">Enter envia · Shift + Enter quebra a linha</small>
+        <small className="cpl-input-hint">
+          {desk.asking ? "Consultando o provedor de IA…" : "Enter envia · Shift + Enter quebra a linha"}
+        </small>
       </form>
     </div>
   );

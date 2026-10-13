@@ -1,4 +1,10 @@
 import type { CnpjEvidence } from "@/src/domain/integrations/cnpj";
+import type {
+  BankEvidence,
+  CepEvidence,
+  HolidayEvidence,
+  PixParticipantEvidence,
+} from "@/src/domain/integrations/public-data";
 
 type BrasilApiResponse = Record<string, unknown> & {
   cnpj?: string;
@@ -116,4 +122,155 @@ export async function fetchBrasilApiCnpj(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+const publicDataCache = new Map<string, { expiresAt: number; value: unknown }>();
+
+async function cachedPublicJson<T>(key: string, url: string, ttlMs: number, fetcher: typeof fetch = fetch): Promise<T> {
+  const cached = publicDataCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.value as T;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetcher(url, {
+      headers: { accept: "application/json", "user-agent": "STRATO-Receivables-OS/0.7" },
+      signal: controller.signal,
+    });
+    const body = (await response.json().catch(() => ({}))) as T & { message?: string };
+    if (!response.ok) throw new Error(body.message || `Fonte pública respondeu HTTP ${response.status}.`);
+    publicDataCache.set(key, { expiresAt: Date.now() + ttlMs, value: body });
+    return body;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+const expiry = (fetchedAt: Date, days: number) => {
+  const expiresAt = new Date(fetchedAt);
+  expiresAt.setUTCDate(expiresAt.getUTCDate() + days);
+  return expiresAt.toISOString();
+};
+
+type BrasilApiCepResponse = {
+  cep?: string;
+  state?: string;
+  city?: string;
+  neighborhood?: string;
+  street?: string;
+  service?: string;
+  ibge?: { city?: string; state?: string };
+  location?: { coordinates?: { latitude?: string | number; longitude?: string | number } };
+};
+
+export async function fetchBrasilApiCep(zipCode: string, fetcher: typeof fetch = fetch): Promise<CepEvidence> {
+  const zip = digits(zipCode);
+  if (!/^\d{8}$/.test(zip)) throw new Error("CEP inválido.");
+  const raw = await cachedPublicJson<BrasilApiCepResponse>(
+    `cep:${zip}`,
+    `https://brasilapi.com.br/api/cep/v2/${zip}`,
+    7 * 86_400_000,
+    fetcher,
+  );
+  if (!clean(raw.city) || !clean(raw.state)) throw new Error("A fonte de CEP retornou dados incompletos.");
+  const fetchedAt = new Date();
+  const latitude = Number(raw.location?.coordinates?.latitude);
+  const longitude = Number(raw.location?.coordinates?.longitude);
+  return {
+    provider: "BRASIL_API",
+    fetchedAt: fetchedAt.toISOString(),
+    expiresAt: expiry(fetchedAt, 30),
+    zipCode: formatZip(raw.cep || zip),
+    state: clean(raw.state).toUpperCase(),
+    city: clean(raw.city),
+    district: clean(raw.neighborhood),
+    street: clean(raw.street),
+    service: clean(raw.service),
+    ibgeCity: clean(raw.ibge?.city),
+    ibgeState: clean(raw.ibge?.state),
+    location: Number.isFinite(latitude) && Number.isFinite(longitude) ? { latitude, longitude } : undefined,
+  };
+}
+
+type BrasilApiBankResponse = { ispb?: string; name?: string; code?: number | null; fullName?: string };
+
+export async function fetchBrasilApiBanks(fetcher: typeof fetch = fetch): Promise<BankEvidence[]> {
+  const raw = await cachedPublicJson<BrasilApiBankResponse[]>(
+    "banks:all",
+    "https://brasilapi.com.br/api/banks/v1",
+    7 * 86_400_000,
+    fetcher,
+  );
+  const fetchedAt = new Date();
+  return raw
+    .filter(item => clean(item.ispb) && (clean(item.name) || clean(item.fullName)))
+    .map(item => ({
+      provider: "BRASIL_API_BCB" as const,
+      fetchedAt: fetchedAt.toISOString(),
+      expiresAt: expiry(fetchedAt, 30),
+      code: typeof item.code === "number" ? item.code : undefined,
+      ispb: clean(item.ispb),
+      name: clean(item.name),
+      fullName: clean(item.fullName),
+    }))
+    .sort((left, right) => (left.code ?? 9999) - (right.code ?? 9999));
+}
+
+type BrasilApiHolidayResponse = { date?: string; name?: string; type?: string };
+
+export async function fetchBrasilApiHolidays(
+  year: number,
+  state?: string,
+  fetcher: typeof fetch = fetch,
+): Promise<HolidayEvidence[]> {
+  if (!Number.isInteger(year) || year < 1900 || year > 2199) throw new Error("Ano inválido.");
+  const uf = clean(state).toUpperCase();
+  if (uf && !/^[A-Z]{2}$/.test(uf)) throw new Error("UF inválida.");
+  const query = uf ? `?uf=${encodeURIComponent(uf)}` : "";
+  const raw = await cachedPublicJson<BrasilApiHolidayResponse[]>(
+    `holidays:${year}:${uf}`,
+    `https://brasilapi.com.br/api/feriados/v1/${year}${query}`,
+    30 * 86_400_000,
+    fetcher,
+  );
+  const fetchedAt = new Date();
+  return raw
+    .filter(item => /^\d{4}-\d{2}-\d{2}$/.test(clean(item.date)))
+    .map(item => ({
+      provider: "BRASIL_API" as const,
+      fetchedAt: fetchedAt.toISOString(),
+      expiresAt: expiry(fetchedAt, 90),
+      date: clean(item.date),
+      name: clean(item.name),
+      type: clean(item.type),
+    }));
+}
+
+type BrasilApiPixParticipant = {
+  ispb?: string;
+  nome?: string;
+  nome_reduzido?: string;
+  modalidade_participacao?: string;
+  tipo_participacao?: string;
+};
+
+export async function fetchBrasilApiPixParticipants(fetcher: typeof fetch = fetch): Promise<PixParticipantEvidence[]> {
+  const raw = await cachedPublicJson<BrasilApiPixParticipant[]>(
+    "pix:participants",
+    "https://brasilapi.com.br/api/pix/v1/participants",
+    24 * 60 * 60_000,
+    fetcher,
+  );
+  const fetchedAt = new Date();
+  return raw
+    .filter(item => clean(item.ispb) && clean(item.nome))
+    .map(item => ({
+      provider: "BRASIL_API_BCB" as const,
+      fetchedAt: fetchedAt.toISOString(),
+      expiresAt: expiry(fetchedAt, 7),
+      ispb: clean(item.ispb),
+      name: clean(item.nome),
+      shortName: clean(item.nome_reduzido),
+      participationMode: clean(item.modalidade_participacao),
+      participationType: clean(item.tipo_participacao),
+    }));
 }

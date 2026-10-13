@@ -39,7 +39,10 @@ export async function POST(request: Request) {
   if (
     !access.principal.permissions.some(
       permission =>
-        permission === "registry:edit" || permission === "settings:manage" || permission === "portfolio:manage",
+        permission === "registry:edit" ||
+        permission === "settings:manage" ||
+        permission === "portfolio:manage" ||
+        permission === "operations:edit",
     )
   )
     return json({ error: "Sem permissão para consultar dados cadastrais externos." }, 403);
@@ -52,7 +55,10 @@ export async function POST(request: Request) {
     if (
       !access.principal.permissions.some(
         permission =>
-          permission === "portfolio:manage" || permission === "registry:edit" || permission === "settings:manage",
+          permission === "portfolio:manage" ||
+          permission === "registry:edit" ||
+          permission === "settings:manage" ||
+          permission === "operations:edit",
       )
     )
       return json({ error: "Sem permissão para consultar dados cadastrais externos." }, 403);

@@ -48,6 +48,7 @@ export function Shell({
   showJourney = false,
   currentUser,
   intelligence,
+  onIntelligence,
   dailyBriefing,
   attentionItems,
   taskItems,
@@ -69,6 +70,7 @@ export function Shell({
   showJourney?: boolean;
   currentUser: AccessUser;
   intelligence: IntelligenceState;
+  onIntelligence?: (state: IntelligenceState) => void;
   dailyBriefing: DailyBriefingData;
   attentionItems: AttentionItem[];
   taskItems: ManagedTask[];
@@ -318,6 +320,7 @@ export function Shell({
           attentionItems={attentionItems}
           currentUser={currentUser}
           intelligence={intelligence}
+          onIntelligence={onIntelligence}
           demoMode={demoMode}
           onOpenAttention={openAttention}
           onNavigate={view => (onNavigate ?? context?.navigate)?.(view)}

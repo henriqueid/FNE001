@@ -213,6 +213,9 @@ export function PolicyExecutionPanel({
           <span className="exception">
             <b>{effective.counts.EXCECAO}</b> exceções
           </span>
+          <span className="not-evaluated">
+            <b>{effective.counts.NAO_AVALIADO}</b> sem dados
+          </span>
           <span className="rejected">
             <b>{effective.counts.REPROVADO}</b> inelegíveis
           </span>
@@ -244,6 +247,11 @@ export function PolicyExecutionPanel({
               <span>Exceções</span>
               <strong>{effective.counts.EXCECAO}</strong>
               <small>exigem decisão humana</small>
+            </div>
+            <div className="not-evaluated">
+              <span>Sem dados</span>
+              <strong>{effective.counts.NAO_AVALIADO}</strong>
+              <small>complete ou delibere</small>
             </div>
             <div className="rejected">
               <span>Inelegíveis</span>
@@ -311,7 +319,8 @@ export function PolicyExecutionPanel({
                         <small>{item.explanation}</small>
                         {override && (
                           <em className={override.decision === "APROVAR_EXCECAO" ? "approved" : "rejected"}>
-                            {override.decision === "APROVAR_EXCECAO" ? "Exceção aprovada" : "Exceção rejeitada"} por{" "}
+                            {item.outcome === "NAO_AVALIADO" ? "Pendência" : "Exceção"}{" "}
+                            {override.decision === "APROVAR_EXCECAO" ? "aprovada" : "rejeitada"} por{" "}
                             {override.decidedBy}
                           </em>
                         )}
@@ -366,61 +375,63 @@ export function PolicyExecutionPanel({
                           </small>
                         </div>
                       )}
-                      {!override && item.outcome === "EXCECAO" && item.overrideAllowed && (
-                        <div className="policy-override-actions">
-                          {readOnly ? (
-                            <small>Etapa concluída: decisão disponível somente para consulta.</small>
-                          ) : pendingDecision?.evaluationId === item.id ? (
-                            <div className="policy-override-form">
-                              <label>
-                                Justificativa obrigatória
-                                <textarea
-                                  value={justification}
-                                  onChange={event => setJustification(event.target.value)}
-                                  placeholder="Registre o contexto e o fundamento da decisão..."
-                                />
-                              </label>
-                              <div>
-                                <button type="button" onClick={() => setPendingDecision(null)}>
-                                  Cancelar
-                                </button>
-                                <button
-                                  type="button"
-                                  className="action-confirm"
-                                  disabled={justification.trim().length < 8}
-                                  onClick={registerOverride}
-                                >
-                                  Confirmar decisão
-                                </button>
+                      {!override &&
+                        (item.outcome === "EXCECAO" || item.outcome === "NAO_AVALIADO") &&
+                        item.overrideAllowed && (
+                          <div className="policy-override-actions">
+                            {readOnly ? (
+                              <small>Etapa concluída: decisão disponível somente para consulta.</small>
+                            ) : pendingDecision?.evaluationId === item.id ? (
+                              <div className="policy-override-form">
+                                <label>
+                                  Justificativa obrigatória
+                                  <textarea
+                                    value={justification}
+                                    onChange={event => setJustification(event.target.value)}
+                                    placeholder="Registre o contexto e o fundamento da decisão..."
+                                  />
+                                </label>
+                                <div>
+                                  <button type="button" onClick={() => setPendingDecision(null)}>
+                                    Cancelar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="action-confirm"
+                                    disabled={justification.trim().length < 8}
+                                    onClick={registerOverride}
+                                  >
+                                    Confirmar decisão
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                          ) : (
-                            <>
-                              <span>Decisão da alçada: {item.overrideAuthority}</span>
-                              <div>
-                                <button
-                                  type="button"
-                                  className="action-danger"
-                                  onClick={() =>
-                                    setPendingDecision({ evaluationId: item.id, decision: "REJEITAR_EXCECAO" })
-                                  }
-                                >
-                                  Rejeitar exceção
-                                </button>
-                                <button
-                                  type="button"
-                                  className="action-confirm"
-                                  onClick={() =>
-                                    setPendingDecision({ evaluationId: item.id, decision: "APROVAR_EXCECAO" })
-                                  }
-                                >
-                                  Aprovar override
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )}
+                            ) : (
+                              <>
+                                <span>Decisão da alçada: {item.overrideAuthority}</span>
+                                <div>
+                                  <button
+                                    type="button"
+                                    className="action-danger"
+                                    onClick={() =>
+                                      setPendingDecision({ evaluationId: item.id, decision: "REJEITAR_EXCECAO" })
+                                    }
+                                  >
+                                    Não liberar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="action-confirm"
+                                    onClick={() =>
+                                      setPendingDecision({ evaluationId: item.id, decision: "APROVAR_EXCECAO" })
+                                    }
+                                  >
+                                    Aprovar pela alçada
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
                     </div>
                   </details>
                 );

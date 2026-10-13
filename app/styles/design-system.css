@@ -4258,13 +4258,14 @@ a.fn-btn:not([href]) {
   color: var(--ds-warning);
 }
 .policy-outcome.excecao,
-.policy-outcome.reprovado {
+.policy-outcome.reprovado,
+.policy-outcome.nao_avaliado {
   border-color: color-mix(in srgb, var(--ds-danger) 34%, var(--ds-border));
   color: var(--ds-danger);
 }
 .policy-collapsed-summary {
   display: grid;
-  grid-template-columns: repeat(5, auto) minmax(180px, 1fr);
+  grid-template-columns: repeat(6, auto) minmax(180px, 1fr);
   align-items: center;
   gap: 14px;
   width: 100%;
@@ -4294,7 +4295,8 @@ a.fn-btn:not([href]) {
   color: var(--ds-warning);
 }
 .policy-collapsed-summary .exception b,
-.policy-collapsed-summary .rejected b {
+.policy-collapsed-summary .rejected b,
+.policy-collapsed-summary .not-evaluated b {
   color: var(--ds-danger);
 }
 .policy-collapsed-summary small {
@@ -4304,7 +4306,7 @@ a.fn-btn:not([href]) {
 }
 .policy-summary {
   display: grid;
-  grid-template-columns: 1.3fr repeat(4, 1fr);
+  grid-template-columns: 1.3fr repeat(5, 1fr);
   border-bottom: 1px solid var(--ds-border);
 }
 .policy-summary > div {
@@ -4339,7 +4341,8 @@ a.fn-btn:not([href]) {
   color: var(--ds-warning);
 }
 .policy-summary .exception strong,
-.policy-summary .rejected strong {
+.policy-summary .rejected strong,
+.policy-summary .not-evaluated strong {
   color: var(--ds-danger);
 }
 .policy-toolbar {
@@ -4480,7 +4483,8 @@ a.fn-btn:not([href]) {
   color: var(--ds-warning);
 }
 .policy-result.excecao .policy-result-state,
-.policy-result.reprovado .policy-result-state {
+.policy-result.reprovado .policy-result-state,
+.policy-result.nao_avaliado .policy-result-state {
   background: color-mix(in srgb, var(--ds-danger) 11%, transparent);
   color: var(--ds-danger);
 }
@@ -5072,6 +5076,180 @@ a.fn-btn:not([href]) {
 }
 .settings-integration-grid article small {
   color: var(--muted);
+}
+.settings-ai-provider {
+  display: grid;
+  gap: 16px;
+  margin: 18px;
+  padding: 18px;
+  border: 1px solid #cbd8e7;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f7faff, #fbfcfe);
+}
+.settings-ai-provider > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+.settings-ai-provider > header div {
+  display: grid;
+  gap: 4px;
+}
+.settings-ai-provider > header span {
+  color: #52647b;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+.settings-ai-provider > header h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+}
+.settings-ai-provider > header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+.settings-ai-provider > header > b {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #f6ecec;
+  color: #8f4242;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.settings-ai-provider > header > b[data-state="configured"] {
+  background: #e8f5ee;
+  color: #26704f;
+}
+.settings-ai-details {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.settings-ai-details > span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  padding: 12px;
+  border-right: 1px solid var(--border);
+}
+.settings-ai-details > span:last-child {
+  border-right: 0;
+}
+.settings-ai-details small {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.settings-ai-details strong {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-ai-instructions {
+  padding: 13px 15px;
+  border-left: 3px solid #b88631;
+  border-radius: 4px 9px 9px 4px;
+  background: #fff8e9;
+  color: #73561e;
+  font-size: 10px;
+}
+.settings-ai-instructions ol {
+  display: grid;
+  gap: 5px;
+  margin: 8px 0 0;
+  padding-left: 17px;
+}
+.settings-ai-instructions code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 70%);
+}
+.settings-ai-actions {
+  display: flex;
+  gap: 8px;
+}
+.settings-ai-actions button {
+  padding: 9px 13px;
+  border: 1px solid #315f91;
+  border-radius: 8px;
+  background: #315f91;
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+}
+.settings-ai-actions button.secondary {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+.settings-ai-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.settings-ai-feedback {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #e8f5ee;
+  color: #26704f;
+  font-size: 10px;
+  font-weight: 700;
+}
+.settings-ai-feedback[data-state="error"] {
+  background: #f9ecec;
+  color: #934040;
+}
+.settings-interface-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 18px 18px;
+}
+.settings-interface-grid > label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fafbfc;
+  cursor: pointer;
+}
+.settings-interface-grid > label > input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--brand);
+}
+.settings-interface-grid > label > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+.settings-interface-grid > label strong {
+  color: var(--text);
+  font-size: 11px;
+}
+.settings-interface-grid > label small {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+.settings-interface-grid > label > b {
+  color: var(--muted);
+  font-size: 9px;
+  white-space: nowrap;
 }
 .access-panel {
   display: grid;
@@ -6879,6 +7057,15 @@ a.fn-btn:not([href]) {
   .settings-integration-grid {
     grid-template-columns: 1fr 1fr;
   }
+  .settings-ai-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .settings-ai-details > span:nth-child(2) {
+    border-right: 0;
+  }
+  .settings-ai-details > span:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--border);
+  }
   .access-workspace {
     grid-template-columns: 1fr;
   }
@@ -6954,6 +7141,25 @@ a.fn-btn:not([href]) {
   .settings-inline-option {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .settings-ai-provider > header,
+  .settings-ai-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .settings-ai-details {
+    grid-template-columns: 1fr;
+  }
+  .settings-interface-grid {
+    grid-template-columns: 1fr;
+  }
+  .settings-ai-details > span,
+  .settings-ai-details > span:nth-child(2) {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-ai-details > span:last-child {
+    border-bottom: 0;
   }
   .access-summary,
   .access-users,

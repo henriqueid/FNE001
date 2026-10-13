@@ -17883,3 +17883,46 @@ textarea:focus-visible {
 .vg-card.span-6 .vg-stats.four {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+/* Public enrichment controls shared by Registry and Operations. */
+.rg-input-action,
+.public-lookup-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.public-lookup-row button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #cbd8eb;
+  border-radius: 9px;
+  background: #eef4ff;
+  color: #1457b8;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.public-lookup-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.public-lookup-feedback,
+.rg-public-source-note {
+  display: block;
+  margin: 9px 0 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.public-lookup-feedback.success {
+  color: #116149;
+}
+.public-lookup-feedback.error {
+  color: #b42318;
+}
+@media (max-width: 700px) {
+  .rg-input-action,
+  .public-lookup-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -162,6 +162,59 @@ describe("Motor Universal de Elegibilidade", () => {
     expect(eligibilityRouteFor(rejectedException)).toMatchObject({ state: "BLOQUEADA", canAdvance: false });
   });
 
+  it("explica e libera pela alçada uma avaliação sem dado quando a política permite override", () => {
+    const operation = initialOperations.find(item => item.aditivoNumber === "20260925004")!;
+    const cedent = initialCedents.find(item => item.document === operation.document);
+    const evaluated = evaluateOperationEligibility({ operation, debtors: initialDebtors, cedent, asOf: "2026-10-01" });
+    const source = evaluated.evaluations[0];
+    const unavailable = {
+      ...source,
+      outcome: "NAO_AVALIADO" as const,
+      observed: null,
+      overrideAllowed: true,
+      overrideAuthority: "Gerente de crédito",
+    };
+    const run = {
+      ...evaluated,
+      evaluations: [unavailable],
+      overallOutcome: "NAO_AVALIADO" as const,
+      counts: { APROVADO: 0, ALERTA: 0, EXCECAO: 0, REPROVADO: 0, NAO_AVALIADO: 1 },
+    };
+    const pending = { ...operation, eligibilityReview: { run, overrides: [] } };
+
+    expect(eligibilityRouteFor(pending)).toMatchObject({
+      state: "DECISAO_HUMANA",
+      canAdvance: false,
+      explanation: expect.stringContaining(`${unavailable.subjectLabel} — ${unavailable.ruleName}`),
+    });
+
+    const decided = {
+      ...pending,
+      eligibilityReview: {
+        run,
+        overrides: [
+          {
+            id: "override:missing-data",
+            evaluationId: unavailable.id,
+            ruleId: unavailable.ruleId,
+            subjectId: unavailable.subjectId,
+            originalOutcome: unavailable.outcome,
+            observed: unavailable.observed,
+            parameter: unavailable.parameter,
+            decision: "APROVAR_EXCECAO" as const,
+            justification: "Dado validado pela alçada responsável.",
+            authority: unavailable.overrideAuthority!,
+            decidedBy: "Henrique",
+            decidedAt: "2026-10-01T12:00:00",
+            evidence: unavailable.evidence,
+          },
+        ],
+      },
+    };
+
+    expect(eligibilityRouteFor(decided)).toMatchObject({ state: "FLUXO_NORMAL", canAdvance: true });
+  });
+
   it("usa um único motor para os três perfis e prepara dados de score sem inventar nota", () => {
     const expectedLevels = ["TITULO", "SACADO", "CEDENTE", "OPERACAO", "CARTEIRA", "ESTRUTURA"];
     expect(Object.values(eligibilityProfiles)).toHaveLength(3);

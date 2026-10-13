@@ -5,6 +5,7 @@
  */
 import { inScope } from "@/src/domain/finance/banking";
 import { chartToCsv } from "@/src/domain/finance/chart-import";
+import { closeFinancePeriod, closureHistory } from "@/src/domain/finance/closing";
 import { todayIso, type Result } from "@/src/domain/finance/ledger";
 import { type FinanceState } from "@/src/domain/finance/model";
 import { incomeStatement, trialBalance } from "@/src/domain/finance/reports";
@@ -23,10 +24,11 @@ export function AccountingTab({
   onApply: (r: Result) => void;
 }) {
   const today = todayIso();
-  const [view, setView] = useState<"diario" | "balancete" | "dre" | "plano">("balancete");
+  const [view, setView] = useState<"diario" | "balancete" | "dre" | "plano" | "fechamento">("balancete");
   const [importing, setImporting] = useState(false);
   const [from, setFrom] = useState(`${today.slice(0, 8)}01`);
   const [to, setTo] = useState(today);
+  const [closeDate, setCloseDate] = useState(today);
   const [newAcc, setNewAcc] = useState({
     code: "",
     name: "",
@@ -62,6 +64,7 @@ export function AccountingTab({
               ["dre", "DRE"],
               ["diario", "Diário"],
               ["plano", "Plano de contas"],
+              ["fechamento", "Fechamento"],
             ] as const
           ).map(([id, label]) => (
             <button key={id} className={view === id ? "active" : ""} onClick={() => setView(id)}>
@@ -70,7 +73,7 @@ export function AccountingTab({
           ))}
         </div>
       </header>
-      {view !== "plano" && (
+      {view !== "plano" && view !== "fechamento" && (
         <div className="fn-toolbar">
           <Field label="De">
             <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
@@ -223,6 +226,48 @@ export function AccountingTab({
               Importar plano de contas
             </button>
           </div>
+        </div>
+      )}
+      {view === "fechamento" && (
+        <div className="fn-chart">
+          <div className="fn-chart-list">
+            <h3>Histórico de fechamentos</h3>
+            {closureHistory(state)
+              .filter(closure => inScope(closure.company, scope))
+              .map(closure => (
+                <p key={closure.id} className="analytic">
+                  <b>{br(closure.throughDate)}</b>
+                  <span>{closure.company}</span>
+                  <small>
+                    {closure.closedBy} · {closure.closedAt} · {closure.summary.journalEntries} lançamento(s) ·{" "}
+                    {closure.summary.statementLines} linha(s) de extrato
+                  </small>
+                </p>
+              ))}
+            {!closureHistory(state).some(closure => inScope(closure.company, scope)) && (
+              <div className="fn-empty">Nenhum fechamento registrado neste escopo.</div>
+            )}
+          </div>
+          <aside>
+            <h4>Fechar por data-base</h4>
+            <p className="fn-note">
+              O fechamento exige extratos e movimentos conciliados até a data e bloqueia lançamentos retroativos.
+            </p>
+            <div className="fn-form single">
+              <Field label="Data-base">
+                <input type="date" value={closeDate} max={today} onChange={event => setCloseDate(event.target.value)} />
+              </Field>
+              <button
+                className="fn-btn primary"
+                onClick={() => onApply(closeFinancePeriod(state, scope, closeDate, "Controladoria"))}
+              >
+                Conferir e fechar período
+              </button>
+            </div>
+            <p className="fn-note">
+              Em Consolidado, o STRATO fecha separadamente cada empresa ou veículo encontrado no escopo.
+            </p>
+          </aside>
         </div>
       )}
       {importing && <ChartImportModal state={state} onClose={() => setImporting(false)} onApply={onApply} />}

@@ -50,6 +50,7 @@ export function draftOf(s: FinanceState): Draft {
     categories: [...s.categories],
     roles: { ...s.roles },
     chartImports: [...(s.chartImports ?? [])],
+    periodClosures: [...(s.periodClosures ?? [])],
   };
 }
 export function nextId(d: Draft, prefix: string) {
@@ -144,6 +145,7 @@ export function emptyState(openingDate: string): FinanceState {
     registrations: {},
     purchasePosted: {},
     statement: [],
+    periodClosures: [],
     seq: 0,
   };
 }

@@ -273,6 +273,20 @@ export type JournalEntry = {
 
 export type CollectionRegistration = { sentAt: string; confirmedAt?: string; titles: number; account: string };
 
+export type FinancePeriodClosure = {
+  id: string;
+  company: string;
+  throughDate: string;
+  closedAt: string;
+  closedBy: string;
+  summary: {
+    bankAccounts: number;
+    movements: number;
+    journalEntries: number;
+    statementLines: number;
+  };
+};
+
 export type FinanceState = {
   version: 1;
   /** Versão otimista do agregado persistido; ausente na demonstração ou antes da primeira gravação. */
@@ -289,6 +303,7 @@ export type FinanceState = {
   roles?: Partial<Record<LedgerRole, string>>; // de-para das contas-chave (ausente = plano modelo)
   chartOrigin?: "modelo" | "importado";
   chartImports?: ChartImportLog[];
+  periodClosures?: FinancePeriodClosure[];
   seq: number;
 };
 

@@ -373,6 +373,7 @@ export function emptyFinance(): FinanceState {
     registrations: {},
     purchasePosted: {},
     statement: [],
+    periodClosures: [],
     chartOrigin: "modelo",
     seq: 0,
   };

@@ -10,7 +10,7 @@ import {
   type AccessUser,
   type Permission,
 } from "@/src/domain/access/model";
-import { createManagedUser } from "@/src/app/access-directory-client";
+import { createManagedUser, saveAccessDirectory } from "@/src/app/access-directory-client";
 import { useCompanyDestinations } from "@/src/app/company-context";
 import { getStratoTenantId } from "@/src/app/tenant";
 import { type UserDepartment } from "@/src/domain/copilot/daily-briefing";
@@ -60,6 +60,8 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
   const [creating, setCreating] = useState(false);
   const [savingNewUser, setSavingNewUser] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [approvingUserId, setApprovingUserId] = useState<string>();
+  const [approvalFeedback, setApprovalFeedback] = useState<{ tone: "success" | "error"; message: string }>();
   const [draft, setDraft] = useState({
     name: "",
     loginName: "",
@@ -79,6 +81,24 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
   const save = (patch: Partial<AccessUser>) => onState(updateAccessUser(state, { ...selected, ...patch }));
   const setProfile = (department: UserDepartment, access: AccessUser["access"]) =>
     save({ department, access, permissions: permissionsFor(department, access) });
+
+  const approveSelected = async () => {
+    const nextState = updateAccessUser(state, { ...selected, status: "active" });
+    setApprovingUserId(selected.id);
+    setApprovalFeedback(undefined);
+    try {
+      const persisted = await saveAccessDirectory(getStratoTenantId(), nextState);
+      onState({ ...persisted, previewUserId: state.previewUserId });
+      setApprovalFeedback({ tone: "success", message: `Acesso de ${selected.name} aprovado e ativado.` });
+    } catch (error) {
+      setApprovalFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Não foi possível aprovar e ativar o acesso.",
+      });
+    } finally {
+      setApprovingUserId(undefined);
+    }
+  };
 
   const addUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -162,7 +182,10 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
               type="button"
               key={user.id}
               className={selected.id === user.id ? "is-selected" : ""}
-              onClick={() => setSelectedId(user.id)}
+              onClick={() => {
+                setSelectedId(user.id);
+                setApprovalFeedback(undefined);
+              }}
             >
               <i>{initials(user.name)}</i>
               <span>
@@ -188,8 +211,8 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
               </p>
             </div>
             {selected.status === "pending" ? (
-              <button type="button" onClick={() => save({ status: "active" })}>
-                Aprovar e ativar acesso
+              <button type="button" disabled={approvingUserId === selected.id} onClick={() => void approveSelected()}>
+                {approvingUserId === selected.id ? "Aprovando…" : "Aprovar e ativar acesso"}
               </button>
             ) : (
               <button
@@ -201,6 +224,16 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
               </button>
             )}
           </header>
+
+          {approvalFeedback && (
+            <p
+              className="access-approval-feedback"
+              data-tone={approvalFeedback.tone}
+              role={approvalFeedback.tone === "error" ? "alert" : "status"}
+            >
+              {approvalFeedback.message}
+            </p>
+          )}
 
           <div className="access-form-grid">
             <label>

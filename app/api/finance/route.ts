@@ -2,7 +2,13 @@ import type { FinanceState } from "@/src/domain/finance/model";
 import { validateFinanceState } from "@/src/domain/finance/persistence";
 import { sessionPrincipal } from "@/src/server/access/session";
 import { getDatabase } from "@/src/server/database/postgres";
-import { loadFinanceState, saveFinanceState } from "@/src/server/finance/repository";
+import {
+  financeRequestHash,
+  FinanceCommandConflictError,
+  FinanceTransitionError,
+  loadFinanceState,
+  saveFinanceState,
+} from "@/src/server/finance/repository";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
@@ -31,18 +37,34 @@ export async function PUT(request: Request) {
   const command = (await request.json().catch(() => null)) as {
     finance?: FinanceState;
     expectedVersion?: number;
+    commandId?: string;
   } | null;
-  if (!command?.finance || !Number.isInteger(command.expectedVersion) || Number(command.expectedVersion) < 0)
+  if (
+    !command?.finance ||
+    !Number.isInteger(command.expectedVersion) ||
+    Number(command.expectedVersion) < 0 ||
+    !command.commandId ||
+    !/^[A-Za-z0-9._:-]{8,200}$/.test(command.commandId)
+  )
     return json({ error: "Comando financeiro inválido." }, 400);
   const error = validateFinanceState(command.finance);
   if (error) return json({ error }, 400);
   try {
+    const expectedVersion = Number(command.expectedVersion);
+    const requestHash = await financeRequestHash({
+      tenantId: access.tenantId,
+      actorId: access.principal.id,
+      expectedVersion,
+      state: command.finance,
+    });
     const finance = await saveFinanceState(
       access.db,
       access.tenantId,
       access.principal.id,
       command.finance,
-      Number(command.expectedVersion),
+      expectedVersion,
+      command.commandId,
+      requestHash,
     );
     if (!finance)
       return json(
@@ -51,6 +73,8 @@ export async function PUT(request: Request) {
       );
     return json({ finance });
   } catch (reason) {
+    if (reason instanceof FinanceCommandConflictError || reason instanceof FinanceTransitionError)
+      return json({ error: reason.message }, 409);
     console.error("finance_save_failed", reason);
     return json({ error: "O banco não conseguiu salvar o Financeiro. Tente novamente." }, 500);
   }

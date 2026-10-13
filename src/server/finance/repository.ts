@@ -1,13 +1,57 @@
 import type { FinanceState } from "@/src/domain/finance/model";
+import { validateFinanceTransition } from "@/src/domain/finance/persistence";
 import { jsonParameter } from "@/src/server/database/postgres";
 import type { DecisionDatabase, DecisionStatement } from "@/src/server/decisions/repository";
 
-type FinanceRow = { payload: FinanceState; aggregate_version: number };
+type FinanceRow = { payload: FinanceState; aggregate_version: number; event_id?: string };
+type FinanceCommandRow = { request_hash: string; result_payload: FinanceState; result_version: number };
+
+export class FinanceCommandConflictError extends Error {}
+export class FinanceTransitionError extends Error {}
 
 const snapshot = (state: FinanceState): FinanceState => {
   const { persistenceVersion: _persistenceVersion, ...payload } = state;
   return payload;
 };
+
+const stable = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(stable);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([key]) => key !== "persistenceVersion")
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, stable(item)]),
+    );
+  return value;
+};
+
+const hex = (bytes: Uint8Array) => Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+
+export async function financeRequestHash(input: {
+  tenantId: string;
+  actorId: string;
+  expectedVersion: number;
+  state: FinanceState;
+}) {
+  const body = JSON.stringify(stable(input));
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
+  return hex(new Uint8Array(digest));
+}
+
+async function replayedFinanceCommand(db: DecisionDatabase, tenantId: string, commandId: string, requestHash: string) {
+  const row = await db
+    .prepare(
+      `select request_hash, result_payload, result_version
+       from private.finance_commands where tenant_id = ? and command_id = ?`,
+    )
+    .bind(tenantId, commandId)
+    .first<FinanceCommandRow>();
+  if (!row) return null;
+  if (row.request_hash !== requestHash)
+    throw new FinanceCommandConflictError("A chave deste comando financeiro já foi usada com outro conteúdo.");
+  return { ...row.result_payload, persistenceVersion: row.result_version };
+}
 
 export async function loadFinanceState(db: DecisionDatabase, tenantId: string): Promise<FinanceState | null> {
   const row = await db
@@ -61,7 +105,8 @@ async function saveEnvelope(
              'tenantId', ?::text, 'aggregateVersion', aggregate_version)
          from recorded
        )
-       select payload, aggregate_version from saved`,
+       select saved.payload, saved.aggregate_version, recorded.event_id
+       from saved join recorded on recorded.aggregate_version = saved.aggregate_version`,
     )
     .bind(
       tenantId,
@@ -310,6 +355,26 @@ function projectionStatements(db: DecisionDatabase, tenantId: string, actorId: s
         )
         .bind(tenantId, operationId, journalEntryId),
     );
+  for (const closure of state.periodClosures ?? [])
+    commands.push(
+      db
+        .prepare(
+          `insert into private.finance_period_closures
+             (tenant_id, closure_id, company, through_date, summary, closed_by, source_closed_by, source_closed_at)
+           values (?, ?, ?, ?, ?::jsonb, ?, ?, ?)
+           on conflict (tenant_id, closure_id) do nothing`,
+        )
+        .bind(
+          tenantId,
+          closure.id,
+          closure.company,
+          closure.throughDate,
+          jsonParameter(closure.summary),
+          actorId,
+          closure.closedBy,
+          closure.closedAt,
+        ),
+    );
   return commands;
 }
 
@@ -319,12 +384,40 @@ export async function saveFinanceState(
   actorId: string,
   state: FinanceState,
   expectedVersion: number,
+  commandId: string,
+  requestHash: string,
 ): Promise<FinanceState | null> {
   const work = async (transaction: DecisionDatabase) => {
+    const replay = await replayedFinanceCommand(transaction, tenantId, commandId, requestHash);
+    if (replay) return replay;
+    const previous = await loadFinanceState(transaction, tenantId);
+    if ((previous?.persistenceVersion ?? 0) === expectedVersion) {
+      const transitionError = validateFinanceTransition(previous, state);
+      if (transitionError) throw new FinanceTransitionError(transitionError);
+    }
     const row = await saveEnvelope(transaction, tenantId, actorId, state, expectedVersion);
-    if (!row) return null;
+    if (!row) return replayedFinanceCommand(transaction, tenantId, commandId, requestHash);
     const commands = projectionStatements(transaction, tenantId, actorId, state);
     if (commands.length) await transaction.batch(commands);
+    if (!row.event_id) throw new Error("Evento do comando financeiro não foi registrado.");
+    await transaction
+      .prepare(
+        `insert into private.finance_commands
+           (tenant_id, command_id, command_type, request_hash, expected_version,
+            result_version, result_payload, event_id, actor_id)
+         values (?, ?, 'FINANCE_STATE_CHANGE', ?, ?, ?, ?::jsonb, ?, ?)`,
+      )
+      .bind(
+        tenantId,
+        commandId,
+        requestHash,
+        expectedVersion,
+        row.aggregate_version,
+        jsonParameter(row.payload),
+        row.event_id,
+        actorId,
+      )
+      .run();
     return { ...row.payload, persistenceVersion: row.aggregate_version };
   };
   return db.transaction ? db.transaction(work) : work(db);

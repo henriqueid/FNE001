@@ -28,6 +28,7 @@ Thumbs.db
 
 # Local generated output
 output/
+.codex-artifacts/
 .preview/dist/
 tsconfig.tsbuildinfo
 .preview/dist-artifact/

@@ -65,6 +65,10 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 - O Comercial filtra executivo e gerente vinculados na identidade do servidor; uma gravação segmentada recompõe o agregado completo e não apaga carteiras ocultas.
 - Dados institucionais e políticas efetivas usam `settings:view`; qualquer manutenção continua reservada a `settings:manage`.
 
+## Homologação A5.5
+
+Em 13/10/2026, sessões reais temporárias validaram no backend: leitura institucional/políticas por `settings:view`, bloqueio do Cadastro sem `registry:view`, escopo empresarial vazio retornando zero operações e segmentação do Comercial entre visão consolidada e executivo `rep-1`. Usuário, sessões e estado comercial temporários foram removidos, sem resíduos no banco.
+
 ## Próximos endurecimentos
 
 1. Separar permissões de leitura e manutenção onde hoje uma permissão ampla atende aos dois usos.

@@ -17,6 +17,7 @@ export function FunnelTab({
   onNew,
   onLost,
   onOpenDossier,
+  onVisit,
   onCommittee,
 }: {
   state: CommercialState;
@@ -26,6 +27,7 @@ export function FunnelTab({
   onNew: () => void;
   onLost: (p: Prospect) => void;
   onOpenDossier: (p: Prospect) => void;
+  onVisit: (p: Prospect) => void;
   onCommittee: (p: Prospect) => void;
 }) {
   const open = state.prospects.filter(p => !p.lost && (!repFilter || p.repId === repFilter));
@@ -100,9 +102,23 @@ export function FunnelTab({
                       <span>{compact(p.dossier?.requestedLimit || p.potential)} solicitados</span>
                       <span>{daysBetween(p.updatedAt, today)}d na etapa</span>
                     </div>
+                    {(() => {
+                      const visits = state.visits.filter(
+                        visit => visit.prospectId === p.id || (!visit.prospectId && visit.target === p.name),
+                      );
+                      const completed = visits.filter(visit => visit.status === "Realizada").length;
+                      return (
+                        <div className="cm-lead-evidence">
+                          <span>{visits.length ? `${visits.length} visita(s)` : "Sem visita"}</span>
+                          <span className={completed ? "ready" : "pending"}>
+                            {completed ? `${completed} relatório(s)` : "Relatório pendente"}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     <div className="cm-card-actions">
                       <button className="fn-btn small ghost" onClick={() => onOpenDossier(p)}>
-                        Dossiê
+                        Proposta e dossiê
                       </button>
                       {si > 0 && (
                         <button
@@ -113,7 +129,24 @@ export function FunnelTab({
                           ←
                         </button>
                       )}
-                      {s === "Proposta" ? (
+                      {s === "Lead" ? (
+                        <button className="fn-btn small primary" onClick={() => onVisit(p)}>
+                          Agendar visita
+                        </button>
+                      ) : s === "Visita" ? (
+                        <button
+                          className="fn-btn small primary"
+                          onClick={() => {
+                            const result = moveProspect(state, p.id, "Proposta");
+                            if (onApply(result)) {
+                              const updated = result.state.prospects.find(item => item.id === p.id);
+                              if (updated) onOpenDossier(updated);
+                            }
+                          }}
+                        >
+                          Preparar proposta
+                        </button>
+                      ) : s === "Proposta" ? (
                         <button
                           className="fn-btn small primary"
                           disabled={!dossierReadiness(p).ready}
@@ -121,20 +154,13 @@ export function FunnelTab({
                         >
                           Enviar ao comitê
                         </button>
+                      ) : s === "Comitê" ? (
+                        <span className="fn-chip warn">Em pauta</span>
                       ) : s === "Aprovado" ? (
                         <span className={`fn-chip ${p.convertedAt ? "ok" : "warn"}`}>
                           {p.convertedAt ? "Cedente criado" : "Cadastro pendente"}
                         </span>
-                      ) : (
-                        s !== "Comitê" && (
-                          <button
-                            className="fn-btn small ghost"
-                            onClick={() => onApply(moveProspect(state, p.id, funnelStages[si + 1]))}
-                          >
-                            Avançar →
-                          </button>
-                        )
-                      )}
+                      ) : null}
                       <button className="fn-btn small link" onClick={() => onLost(p)}>
                         Perdido
                       </button>

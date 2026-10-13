@@ -5,7 +5,7 @@
  */
 import { closeCommission, commercialToCsv, reopenCommission } from "@/src/domain/commercial/actions";
 import { monthEnd, monthLabel, monthOf, shiftMonth, stamp } from "@/src/domain/commercial/calendar";
-import { computeCommission, repAt } from "@/src/domain/commercial/rules";
+import { commissionBaseLabel, commissionBaseValue, computeCommission, repAt } from "@/src/domain/commercial/rules";
 import { type CResult, type CommercialState, type CommissionLine, type Deal } from "@/src/domain/commercial/types";
 import type { FinanceState } from "@/src/domain/finance/model";
 import { addCategory, addChartAccount } from "@/src/domain/finance/setup";
@@ -159,7 +159,7 @@ export function CommissionsTab({
         <div>
           <h2>Apuração de comissões</h2>
           <p>
-            Base: {rules.base === "receita" ? "receita (deságio + tarifas)" : "volume operado"} · faixas{" "}
+            Base: {commissionBaseLabel(rules.base)} · faixas{" "}
             {rules.tiers.map(t => `${t.from}%→${String(t.rate).replace(".", ",")}%`).join(", ")} · bônus de{" "}
             {money(rules.newAccountBonus)} por conta nova ativada{rules.clawback ? " · estorno de recompras" : ""}
           </p>
@@ -340,9 +340,7 @@ export function CommissionsTab({
                                     <small className="bad">recompra {compact(d.repurchased)}</small>
                                   ) : null}
                                 </td>
-                                <td className="num">
-                                  {money(((rules.base === "receita" ? d.revenue : d.face) * l.rate) / 100)}
-                                </td>
+                                <td className="num">{money((commissionBaseValue(d, rules.base) * l.rate) / 100)}</td>
                               </tr>
                             ))}
                           </tbody>

@@ -1121,12 +1121,116 @@ span.bad {
   color: #a14343;
 }
 
+.cm-lead-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 2px;
+}
+.cm-lead-evidence span {
+  padding: 3px 7px;
+  border: 1px solid var(--c-bd-d7dee5);
+  border-radius: 999px;
+  color: var(--fn-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.cm-lead-evidence .ready {
+  border-color: #8fd0b0;
+  background: #f3fbf7;
+  color: #216a48;
+}
+.cm-lead-evidence .pending {
+  border-color: #e7c77d;
+  background: #fffaf0;
+  color: #7b591a;
+}
+
+.cm-proposal-summary {
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid #b9cff7;
+  border-radius: 18px;
+  background: radial-gradient(circle at 92% 0%, #e8f0ff 0, transparent 40%), #fff;
+}
+.cm-proposal-summary header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.cm-proposal-summary header div {
+  display: grid;
+  gap: 4px;
+}
+.cm-proposal-summary header div > span {
+  color: #2d63b8;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.cm-proposal-summary header strong {
+  font-size: 20px;
+}
+.cm-proposal-summary > div {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+}
+.cm-proposal-summary > div > span,
+.cm-committee-technical > div {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--c-bd-d7dee5);
+  border-radius: 12px;
+  background: #f8fafc;
+  color: var(--fn-muted);
+  font-size: 10px;
+}
+.cm-proposal-summary > div b,
+.cm-committee-technical b {
+  color: var(--c-fg-253746);
+  font-size: 12px;
+}
+.cm-proposal-summary > p {
+  margin: 0;
+  color: var(--fn-muted);
+  line-height: 1.55;
+}
+
+.cm-committee-technical {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+.cm-committee-technical > div:last-child {
+  grid-column: span 4;
+}
+.cm-committee-technical > div.bad {
+  border-color: #e1abab;
+  background: #fff6f6;
+}
+.cm-committee-technical > div.ok {
+  border-color: #8fd0b0;
+  background: #f3fbf7;
+}
+
 @media (width<=980px) {
   .cm-pipeline-overview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .cm-history-grid {
     grid-template-columns: 1fr;
+  }
+  .cm-proposal-summary > div,
+  .cm-committee-technical {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cm-committee-technical > div:last-child {
+    grid-column: span 2;
   }
 }
 
@@ -1138,5 +1242,16 @@ span.bad {
   .cm-form-section-head {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .cm-proposal-summary header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .cm-proposal-summary > div,
+  .cm-committee-technical {
+    grid-template-columns: 1fr;
+  }
+  .cm-committee-technical > div:last-child {
+    grid-column: auto;
   }
 }

@@ -124,7 +124,7 @@ export default function CommercialModule({
   const [repFilter, setRepFilter] = useState("");
   const [modal, setModal] = useState<
     | null
-    | { type: "visit"; visit?: Visit }
+    | { type: "visit"; visit?: Visit; prospect?: Prospect }
     | { type: "committee"; committee?: Committee; preset?: Partial<Committee> }
     | { type: "rep"; rep?: SalesRep }
     | { type: "rules" }
@@ -180,7 +180,16 @@ export default function CommercialModule({
     v => v.status === "Agendada" && v.date < today && (!repFilter || v.repId === repFilter),
   );
   const pauta = state.committees
-    .filter(c => c.status === "Em pauta" && (!repFilter || c.repId === repFilter))
+    .filter(c => {
+      const prospect = state.prospects.find(
+        item => item.id === c.prospectId || (!c.prospectId && item.name === c.clientName),
+      );
+      return (
+        c.status === "Em pauta" &&
+        Boolean(prospect && prospect.stage === "Comitê" && !prospect.lost) &&
+        (!repFilter || c.repId === repFilter)
+      );
+    })
     .sort((a, b) => a.date.localeCompare(b.date));
   const idle = shown.flatMap(m =>
     m.idle.map(l => ({ link: l, last: deals.filter(d => digits(d.document) === digits(l.document)).at(-1)?.date })),
@@ -628,7 +637,6 @@ export default function CommercialModule({
           to={to}
           today={today}
           repFilter={repFilter}
-          onCommittee={preset => setModal({ type: "committee", preset })}
         />
       )}
 
@@ -653,10 +661,12 @@ export default function CommercialModule({
           onNew={() => setModal({ type: "prospect" })}
           onLost={prospect => setModal({ type: "lost", prospect })}
           onOpenDossier={prospect => setModal({ type: "dossier", prospect })}
+          onVisit={prospect => setModal({ type: "visit", prospect })}
           onCommittee={p =>
             setModal({
               type: "committee",
               preset: {
+                prospectId: p.id,
                 clientName: p.name,
                 document: p.dossier?.document || p.document,
                 repId: p.repId,
@@ -677,7 +687,6 @@ export default function CommercialModule({
           repFilter={repFilter}
           from={from}
           to={to}
-          onNew={() => setModal({ type: "committee" })}
           onDecide={committee => setModal({ type: "committee", committee })}
           onOpenDossier={prospect => setModal({ type: "dossier", prospect })}
           canDecide={canDecideCommittee}
@@ -702,6 +711,7 @@ export default function CommercialModule({
         <VisitModal
           state={state}
           visit={modal.visit}
+          prospect={modal.prospect}
           defaultRep={repFilter}
           onClose={() => setModal(null)}
           onApply={apply}
@@ -742,6 +752,7 @@ export default function CommercialModule({
             setModal({
               type: "committee",
               preset: {
+                prospectId: prospect.id,
                 clientName: prospect.name,
                 document: prospect.dossier?.document || prospect.document,
                 repId: prospect.repId,

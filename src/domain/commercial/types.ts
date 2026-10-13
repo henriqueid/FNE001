@@ -23,7 +23,17 @@ export type SalesRep = {
 /** Gerentes de conta cuidam da operação recorrente e do pós-venda da carteira. */
 export const isAccountManager = (rep: SalesRep) => rep.role.toLocaleLowerCase("pt-BR").includes("gerente");
 
-export type LinkOrigin = "Prospecção ativa" | "Indicação" | "Inbound" | "Carteira transferida";
+export type LinkOrigin =
+  | "Prospecção ativa"
+  | "Indicação"
+  | "Indicação interna"
+  | "Inbound"
+  | "Site / marketing"
+  | "Evento"
+  | "Parceiro / canal"
+  | "Base própria"
+  | "Reativação"
+  | "Carteira transferida";
 
 export type ClientLink = {
   id: string;
@@ -53,6 +63,8 @@ export type Deal = {
   discount: number;
   fees: number;
   revenue: number;
+  /** Valor líquido liberado na operação (VOP). */
+  net?: number;
   rate: number;
   titles: number;
   repurchased?: number;
@@ -68,6 +80,7 @@ export type Visit = {
   time: string;
   repId: string;
   target: string;
+  prospectId?: string;
   document?: string;
   kind: VisitKind;
   status: "Agendada" | "Realizada" | "Cancelada" | "Não realizada";
@@ -84,6 +97,8 @@ export type CommitteeStatus = "Em pauta" | "Aprovado" | "Aprovado com ressalvas"
 
 export type Committee = {
   id: string;
+  /** Originação inicial: a pauta nasce obrigatoriamente de um prospect no funil. */
+  prospectId?: string;
   date: string;
   clientName: string;
   document?: string;
@@ -167,7 +182,8 @@ export type Prospect = {
 export type CommissionTier = { from: number; rate: number };
 
 export type CommissionRules = {
-  base: "receita" | "volume";
+  /** `volume` é mantido para compatibilidade e equivale a `originacao`. */
+  base: "receita" | "volume" | "originacao" | "vop";
   tiers: CommissionTier[];
   newAccountBonus: number; // pago na competência da 1ª operação da conta nova
   newAccountWindow: number; // dias entre o vínculo e a 1ª operação para contar como conta nova ativada

@@ -5,7 +5,7 @@
  */
 import { daysBetween, digits, inRange } from "@/src/domain/commercial/calendar";
 import { firstDealDate } from "@/src/domain/commercial/rules";
-import { type CommercialState, type Committee, type Deal } from "@/src/domain/commercial/types";
+import { type CommercialState, type Deal } from "@/src/domain/commercial/types";
 import { Avatar, type Metrics, committeeTone, pct } from "@/src/features/commercial/commercial-ui";
 import { br, compact, money } from "@/src/features/finance/finance-ui";
 
@@ -17,7 +17,6 @@ export function NewAccountsTab({
   to,
   today,
   repFilter,
-  onCommittee,
 }: {
   state: CommercialState;
   deals: Deal[];
@@ -26,7 +25,6 @@ export function NewAccountsTab({
   to: string;
   today: string;
   repFilter: string;
-  onCommittee: (p: Partial<Committee>) => void;
 }) {
   const list = state.links
     .filter(
@@ -143,19 +141,7 @@ export function NewAccountsTab({
                           {c.status === "Em pauta" ? ` · ${br(c.date).slice(0, 5)}` : ""}
                         </span>
                       ) : (
-                        <button
-                          className="fn-btn small ghost"
-                          onClick={() =>
-                            onCommittee({
-                              clientName: l.clientName,
-                              document: l.document,
-                              repId: l.repId,
-                              request: "Limite inicial",
-                            })
-                          }
-                        >
-                          Enviar ao comitê
-                        </button>
+                        <span className="fn-chip">Vínculo direto</span>
                       )}
                     </td>
                     <td className="num">{l.approvedLimit ? compact(l.approvedLimit) : "—"}</td>

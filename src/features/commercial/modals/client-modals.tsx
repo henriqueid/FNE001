@@ -232,9 +232,21 @@ export function ProspectModal({
           </Field>
           <Field label="Origem">
             <select value={form.source} onChange={e => setForm({ ...form, source: e.target.value as LinkOrigin })}>
-              <option>Prospecção ativa</option>
-              <option>Indicação</option>
-              <option>Inbound</option>
+              {(
+                [
+                  "Prospecção ativa",
+                  "Indicação",
+                  "Indicação interna",
+                  "Inbound",
+                  "Site / marketing",
+                  "Evento",
+                  "Parceiro / canal",
+                  "Base própria",
+                  "Reativação",
+                ] as LinkOrigin[]
+              ).map(origin => (
+                <option key={origin}>{origin}</option>
+              ))}
             </select>
           </Field>
           <Field label="Potencial de volume mensal (R$)">

@@ -54,7 +54,10 @@ export function RulesModal({
         <Field label="Base de cálculo">
           <select value={rules.base} onChange={e => setRules({ ...rules, base: e.target.value as typeof rules.base })}>
             <option value="receita">Receita (deságio + tarifas)</option>
-            <option value="volume">Volume operado (valor de face)</option>
+            <option value="originacao">Originação (valor de face liberado)</option>
+            <option value="vop">VOP (valor líquido liberado)</option>
+            <option value="volume">Originação — regra legada</option>
+            <option disabled>Título liquidado — depende do evento real de baixa</option>
           </select>
         </Field>
         <Field label="Bônus por conta nova ativada (R$)">
@@ -127,7 +130,8 @@ export function RulesModal({
       </button>
       <p className="fn-note">
         A faixa atingida vale para toda a base do mês (não é progressiva). Comerciais com % fixo, como agentes, não usam
-        as faixas.
+        as faixas. A base por título liquidado será habilitada somente quando a baixa da Carteira estiver ligada à
+        competência da comissão; ela não é simulada.
       </p>
     </Modal>
   );

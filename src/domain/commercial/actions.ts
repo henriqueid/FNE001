@@ -151,6 +151,22 @@ export function scheduleVisit(state: CommercialState, v: Omit<Visit, "id" | "sta
   const s = { ...state, visits: [...state.visits] };
   s.visits.push({ ...v, id: nextId(s, "vs"), status: "Agendada" });
   s.visits.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  const prospect = state.prospects.find(item => item.id === v.prospectId || (!v.prospectId && item.name === v.target));
+  if (prospect)
+    s.prospects = state.prospects.map(item =>
+      item.id !== prospect.id
+        ? item
+        : {
+            ...item,
+            stage: item.stage === "Lead" ? "Visita" : item.stage,
+            nextStep: `Visita agendada para ${v.date.split("-").reverse().join("/")} às ${v.time}`,
+            updatedAt: todayIso(),
+            history: [
+              ...(item.history ?? []),
+              { at: stamp(), by: "Comercial", action: "Visita agendada", detail: `${v.kind} · ${v.date} ${v.time}` },
+            ],
+          },
+    );
   return { state: s, message: `Visita agendada para ${v.date.split("-").reverse().join("/")} às ${v.time}.` };
 }
 
@@ -163,8 +179,38 @@ export function recordVisit(
     return { state, error: "Descreva o resultado da visita." };
   if ((patch.status === "Cancelada" || patch.status === "Não realizada") && !patch.notes?.trim())
     return { state, error: "Informe o motivo." };
+  const visit = state.visits.find(item => item.id === id);
+  const prospect = visit
+    ? state.prospects.find(item => item.id === visit.prospectId || (!visit.prospectId && item.name === visit.target))
+    : undefined;
   return {
-    state: { ...state, visits: state.visits.map(v => (v.id === id ? { ...v, ...patch } : v)) },
+    state: {
+      ...state,
+      visits: state.visits.map(v => (v.id === id ? { ...v, ...patch } : v)),
+      prospects: prospect
+        ? state.prospects.map(item =>
+            item.id !== prospect.id
+              ? item
+              : {
+                  ...item,
+                  nextStep:
+                    patch.status === "Realizada"
+                      ? patch.nextStep?.trim() || "Preparar proposta comercial"
+                      : "Reagendar contato ou encerrar oportunidade",
+                  updatedAt: todayIso(),
+                  history: [
+                    ...(item.history ?? []),
+                    {
+                      at: stamp(),
+                      by: "Comercial",
+                      action: `Visita ${patch.status.toLowerCase()}`,
+                      detail: patch.outcome || patch.notes || "Registro atualizado",
+                    },
+                  ],
+                },
+          )
+        : state.prospects,
+    },
     message: `Visita marcada como ${patch.status.toLowerCase()}.`,
   };
 }
@@ -173,7 +219,7 @@ export function submitCommittee(
   state: CommercialState,
   c: Pick<
     Committee,
-    "clientName" | "document" | "repId" | "request" | "requested" | "rate" | "commercialOpinion" | "date"
+    "prospectId" | "clientName" | "document" | "repId" | "request" | "requested" | "rate" | "commercialOpinion" | "date"
   >,
   by: string,
 ): CResult {
@@ -181,18 +227,27 @@ export function submitCommittee(
   if (!c.commercialOpinion.trim())
     return { state, error: "Escreva o parecer comercial: é o que o comitê lê primeiro." };
   if (c.request !== "Taxa especial" && !(c.requested > 0)) return { state, error: "Informe o valor solicitado." };
-  const prospect = state.prospects.find(x => x.name === c.clientName && !x.lost);
+  const prospect = state.prospects.find(
+    x => x.id === c.prospectId || (!c.prospectId && x.name === c.clientName && !x.lost),
+  );
+  if (c.request === "Limite inicial" && !prospect)
+    return { state, error: "O limite inicial só pode entrar no comitê a partir de um cliente do funil." };
+  if (c.request === "Limite inicial" && prospect?.stage !== "Proposta")
+    return { state, error: "O cliente precisa concluir visita e proposta antes de entrar no comitê." };
   if (c.request === "Limite inicial" && prospect && !dossierReadiness(prospect).ready)
-    return { state, error: "Complete o dossiê do lead antes de enviá-lo ao comitê." };
+    return { state, error: "Complete o dossiê técnico antes de enviá-lo ao comitê." };
+  if (prospect && state.committees.some(item => item.prospectId === prospect.id && item.status === "Em pauta"))
+    return { state, error: "Este cliente já possui uma pauta de comitê em andamento." };
   const s = { ...state, committees: [...state.committees] };
   s.committees.push({
     ...c,
+    prospectId: prospect?.id,
     id: nextId(s, "cm"),
     status: "Em pauta",
     members: committeeMembers,
     history: [{ at: stamp(), by, action: "Enviado ao comitê", detail: c.request }],
   });
-  const p = s.prospects.find(x => x.name === c.clientName && !x.lost);
+  const p = s.prospects.find(x => x.id === prospect?.id);
   if (p && funnelStages.indexOf(p.stage) < funnelStages.indexOf("Comitê"))
     s.prospects = s.prospects.map(x =>
       x.id === p.id
@@ -315,7 +370,9 @@ export function decideCommittee(
         ),
       };
     }
-    const approvedProspect = s.prospects.find(p => p.name === c.clientName && !p.lost);
+    const approvedProspect = s.prospects.find(
+      p => p.id === c.prospectId || (!c.prospectId && p.name === c.clientName && !p.lost),
+    );
     const canConvertProspect = !!approvedProspect?.dossier && isValidCnpj(approvedProspect.dossier.document);
     if (
       approvedProspect?.dossier &&
@@ -346,7 +403,7 @@ export function decideCommittee(
     s = {
       ...s,
       prospects: s.prospects.map(p =>
-        p.name === c.clientName && !p.lost
+        (p.id === c.prospectId || (!c.prospectId && p.name === c.clientName)) && !p.lost
           ? {
               ...p,
               stage: "Aprovado",
@@ -372,7 +429,7 @@ export function decideCommittee(
     s = {
       ...s,
       prospects: s.prospects.map(p =>
-        p.name === c.clientName && !p.lost
+        (p.id === c.prospectId || (!c.prospectId && p.name === c.clientName)) && !p.lost
           ? {
               ...p,
               lost: `Reprovado no comitê: ${d.conditions}`,
@@ -398,6 +455,19 @@ export function moveProspect(
   reason?: string,
 ): CResult {
   if (stage === "Perdido" && !reason?.trim()) return { state, error: "Informe o motivo da perda." };
+  const prospect = state.prospects.find(item => item.id === id);
+  if (!prospect) return { state, error: "Oportunidade não encontrada." };
+  if (stage === "Comitê")
+    return { state, error: "A etapa Comitê só é aberta pelo envio do dossiê técnico para a pauta." };
+  if (
+    stage === "Proposta" &&
+    !state.visits.some(
+      visit =>
+        visit.status === "Realizada" &&
+        (visit.prospectId === prospect.id || (!visit.prospectId && visit.target === prospect.name)),
+    )
+  )
+    return { state, error: "Registre o relatório de uma visita realizada antes de preparar a proposta." };
   return {
     state: {
       ...state,

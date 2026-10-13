@@ -30,6 +30,7 @@ export function CommitteeModal({
   onApply: (r: CResult) => boolean;
 }) {
   const [form, setForm] = useState({
+    prospectId: preset?.prospectId,
     clientName: preset?.clientName ?? "",
     document: preset?.document ?? "",
     repId: preset?.repId ?? state.reps.find(rep => rep.active)?.id ?? "",

@@ -53,7 +53,7 @@ export function ProspectDossierModal({
   return (
     <Modal
       wide
-      title="Dossiê comercial"
+      title="Dossiê técnico e proposta"
       subtitle={`${prospect.name} · ${state.reps.find(rep => rep.id === prospect.repId)?.name ?? "Sem responsável"}`}
       onClose={onClose}
       footer={
@@ -67,7 +67,7 @@ export function ProspectDossierModal({
               if (save().ok) onClose();
             }}
           >
-            Salvar dossiê
+            Salvar proposta e dossiê
           </button>
           <button
             className="fn-btn primary"
@@ -86,7 +86,7 @@ export function ProspectDossierModal({
     >
       <div className="cm-dossier-hero">
         <div>
-          <span>PRONTIDÃO PARA O COMITÊ</span>
+          <span>PRONTIDÃO TÉCNICA PARA O COMITÊ</span>
           <strong>{readiness.percent}%</strong>
           <p>
             {readiness.ready
@@ -105,6 +105,39 @@ export function ProspectDossierModal({
           ))}
         </div>
       </div>
+
+      <section className="cm-proposal-summary">
+        <header>
+          <div>
+            <span>PROPOSTA COMERCIAL</span>
+            <strong>{candidate.legalName || prospect.name}</strong>
+          </div>
+          <span className={`fn-chip ${readiness.ready ? "ok" : "warn"}`}>
+            {readiness.ready ? "Pronta para deliberação" : "Em preparação"}
+          </span>
+        </header>
+        <div>
+          <span>
+            Limite proposto <b>R$ {inputMoney(candidate.requestedLimit) || "0"}</b>
+          </span>
+          <span>
+            Taxa <b>{String(candidate.proposedRate || 0).replace(".", ",")}% a.m.</b>
+          </span>
+          <span>
+            Prazo médio <b>{candidate.averageTermDays} dias</b>
+          </span>
+          <span>
+            Carteira <b>{candidate.receivableType}</b>
+          </span>
+          <span>
+            Concentração máxima observada <b>{candidate.largestDebtorPercent}%</b>
+          </span>
+        </div>
+        <p>
+          {candidate.commercialSummary ||
+            "O parecer comercial consolidará o contexto, a oportunidade, os riscos observados e a recomendação para o comitê."}
+        </p>
+      </section>
 
       <div className="cm-form-section">
         <div className="cm-form-section-head">

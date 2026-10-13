@@ -4,7 +4,13 @@
  * Agendar e registrar visita (resultado, próximo passo ou motivo).
  */
 import { recordVisit, scheduleVisit } from "@/src/domain/commercial/actions";
-import { type CResult, type CommercialState, type Visit, type VisitKind } from "@/src/domain/commercial/types";
+import {
+  type CResult,
+  type CommercialState,
+  type Prospect,
+  type Visit,
+  type VisitKind,
+} from "@/src/domain/commercial/types";
 import { addDays, todayIso } from "@/src/domain/finance/ledger";
 import { Field, Modal, br } from "@/src/features/finance/finance-ui";
 import { useState } from "react";
@@ -12,24 +18,26 @@ import { useState } from "react";
 export function VisitModal({
   state,
   visit,
+  prospect,
   defaultRep,
   onClose,
   onApply,
 }: {
   state: CommercialState;
   visit?: Visit;
+  prospect?: Prospect;
   defaultRep: string;
   onClose: () => void;
   onApply: (r: CResult) => boolean;
 }) {
   const targets = [...state.links.map(l => l.clientName), ...state.prospects.filter(p => !p.lost).map(p => p.name)];
   const [form, setForm] = useState({
-    repId: defaultRep || state.reps[0].id,
-    target: "",
+    repId: prospect?.repId || defaultRep || state.reps[0]?.id || "",
+    target: prospect?.name || "",
     date: addDays(todayIso(), 1),
     time: "10:00",
-    kind: "Relacionamento" as VisitKind,
-    address: "",
+    kind: (prospect ? "Prospecção" : "Relacionamento") as VisitKind,
+    address: prospect?.dossier ? `${prospect.dossier.city}/${prospect.dossier.state}` : "",
     notes: "",
   });
   const [result, setResult] = useState<{ status: Visit["status"]; outcome: string; nextStep: string; notes: string }>({
@@ -114,7 +122,8 @@ export function VisitModal({
                 onApply(
                   scheduleVisit(state, {
                     ...form,
-                    document: link?.document,
+                    prospectId: prospect?.id,
+                    document: prospect?.dossier?.document || prospect?.document || link?.document,
                     address: form.address || link?.city || "",
                   }),
                 )

@@ -6,11 +6,13 @@ import {
   dossierReadiness,
   emptyProspectDossier,
   moveProspect,
+  recordVisit,
   saveProspectDossier,
+  scheduleVisit,
   submitCommittee,
   transferClient,
 } from "@/src/domain/commercial/actions";
-import { computeCommission, managerOf, repAt, tierRate } from "@/src/domain/commercial/rules";
+import { commissionBaseValue, computeCommission, managerOf, repAt, tierRate } from "@/src/domain/commercial/rules";
 import { seedCommercial } from "@/src/domain/commercial/seed";
 import { todayIso } from "@/src/domain/finance/ledger";
 import { approvedProspectToParty } from "@/src/domain/registry/commercial-onboarding";
@@ -47,6 +49,12 @@ describe("regras comerciais", () => {
     computeCommission(state, state.deals, month).forEach(line => {
       expect(line.total).toBeCloseTo(line.commission + line.bonus - line.clawback, 2);
     });
+  });
+  it("distingue receita, originação e VOP sem simular liquidação", () => {
+    const deal = state.deals[0];
+    expect(commissionBaseValue(deal, "receita")).toBe(deal.revenue);
+    expect(commissionBaseValue(deal, "originacao")).toBe(deal.face);
+    expect(commissionBaseValue(deal, "vop")).toBe(deal.net ?? Math.max(0, deal.face - deal.discount - deal.fees));
   });
   it("recompra registrada na carteira estorna a comissão do dono do cliente", () => {
     const month = TODAY.slice(0, 7);
@@ -106,10 +114,27 @@ describe("regras comerciais", () => {
     const documented = saveProspectDossier(created, prospect.id, dossier, "Rafael").state;
     const ready = documented.prospects.find(item => item.id === prospect.id)!;
     expect(dossierReadiness(ready).ready).toBe(true);
-    const proposed = moveProspect(documented, prospect.id, "Proposta").state;
+    const scheduled = scheduleVisit(documented, {
+      prospectId: prospect.id,
+      repId: prospect.repId,
+      target: prospect.name,
+      document: dossier.document,
+      date: TODAY,
+      time: "10:00",
+      kind: "Prospecção",
+      address: "Curitiba/PR",
+    }).state;
+    const visit = scheduled.visits.find(item => item.prospectId === prospect.id)!;
+    const visited = recordVisit(scheduled, visit.id, {
+      status: "Realizada",
+      outcome: "Carteira e necessidade de crédito confirmadas.",
+      nextStep: "Preparar proposta",
+    }).state;
+    const proposed = moveProspect(visited, prospect.id, "Proposta").state;
     const queued = submitCommittee(
       proposed,
       {
+        prospectId: prospect.id,
         clientName: prospect.name,
         document: dossier.document,
         repId: prospect.repId,
@@ -136,6 +161,23 @@ describe("regras comerciais", () => {
     const party = approvedProspectToParty(converted, approved, "Henrique");
     expect(party?.roles).toContain("cedente");
     expect(party?.roleData.cedente?.creditLimit).toBe(450_000);
+  });
+
+  it("impede que um limite inicial entre no comitê fora da esteira do funil", () => {
+    const result = submitCommittee(
+      state,
+      {
+        clientName: "Empresa fora do funil",
+        document: "11.222.333/0001-81",
+        repId: "rep-1",
+        request: "Limite inicial",
+        requested: 100_000,
+        commercialOpinion: "Pedido criado sem uma oportunidade comercial vinculada ao funil.",
+        date: TODAY,
+      },
+      "Comercial",
+    );
+    expect(result.error).toContain("a partir de um cliente do funil");
   });
 
   it("mantém a reprovação no histórico do lead", () => {

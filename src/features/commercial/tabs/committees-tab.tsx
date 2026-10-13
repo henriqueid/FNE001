@@ -4,10 +4,11 @@
  * Pauta e histórico de comitês.
  */
 import { inRange } from "@/src/domain/commercial/calendar";
+import { dossierReadiness } from "@/src/domain/commercial/actions";
 import { type CommercialState, type Committee, type Prospect } from "@/src/domain/commercial/types";
 import { committeeTone, pct } from "@/src/features/commercial/commercial-ui";
 import { br, compact, money } from "@/src/features/finance/finance-ui";
-import { PlusIcon, SearchIcon } from "@/src/ui/icons";
+import { SearchIcon } from "@/src/ui/icons";
 import { Fragment, useState } from "react";
 
 export function CommitteesTab({
@@ -16,7 +17,6 @@ export function CommitteesTab({
   repFilter,
   from,
   to,
-  onNew,
   onDecide,
   onOpenDossier,
   canDecide,
@@ -26,7 +26,6 @@ export function CommitteesTab({
   repFilter: string;
   from: string;
   to: string;
-  onNew: () => void;
   onDecide: (c: Committee) => void;
   onOpenDossier: (p: Prospect) => void;
   canDecide: boolean;
@@ -57,60 +56,105 @@ export function CommitteesTab({
             <h2>Pauta do comitê</h2>
             <p>{pauta.length} pedido(s) aguardando decisão</p>
           </div>
-          <button className="fn-btn primary" onClick={onNew}>
-            <PlusIcon /> Enviar pedido ao comitê
-          </button>
+          <span className="fn-chip">Entrada exclusiva pela etapa Proposta do funil</span>
         </header>
         <div className="cm-pauta">
-          {pauta.map(c => (
-            <article key={c.id}>
-              <header>
-                <div>
-                  <b>{c.clientName}</b>
-                  <small>
-                    {c.request} · {rep(c.repId)?.name} · reunião de {br(c.date)}
-                  </small>
+          {pauta.map(c => {
+            const prospect = state.prospects.find(
+              item => item.id === c.prospectId || (!c.prospectId && item.name === c.clientName),
+            );
+            const dossier = prospect?.dossier;
+            const readiness = prospect ? dossierReadiness(prospect) : null;
+            return (
+              <article key={c.id}>
+                <header>
+                  <div>
+                    <b>{c.clientName}</b>
+                    <small>
+                      {c.request} · {rep(c.repId)?.name} · reunião de {br(c.date)}
+                    </small>
+                  </div>
+                  <strong>
+                    {c.request === "Taxa especial"
+                      ? `${String(c.rate ?? "").replace(".", ",")}% a.m.`
+                      : money(c.requested)}
+                  </strong>
+                </header>
+                <div className="cm-opinion">
+                  <span>Comercial</span>
+                  <p>{c.commercialOpinion}</p>
                 </div>
-                <strong>
-                  {c.request === "Taxa especial"
-                    ? `${String(c.rate ?? "").replace(".", ",")}% a.m.`
-                    : money(c.requested)}
-                </strong>
-              </header>
-              <div className="cm-opinion">
-                <span>Comercial</span>
-                <p>{c.commercialOpinion}</p>
-              </div>
-              {c.riskOpinion ? (
-                <div className={`cm-opinion ${/desfavor/i.test(c.riskOpinion) ? "bad" : ""}`}>
-                  <span>Risco</span>
-                  <p>{c.riskOpinion}</p>
-                </div>
-              ) : (
-                <div className="cm-opinion muted">
-                  <span>Risco</span>
-                  <p>Parecer pendente</p>
-                </div>
-              )}
-              <footer>
-                {state.prospects.find(item => item.name === c.clientName) && (
-                  <button
-                    className="fn-btn ghost small"
-                    onClick={() => onOpenDossier(state.prospects.find(item => item.name === c.clientName)!)}
-                  >
-                    Ver dossiê
-                  </button>
-                )}
-                {canDecide ? (
-                  <button className="fn-btn primary small" onClick={() => onDecide(c)}>
-                    Registrar decisão
-                  </button>
+                {c.riskOpinion ? (
+                  <div className={`cm-opinion ${/desfavor/i.test(c.riskOpinion) ? "bad" : ""}`}>
+                    <span>Risco</span>
+                    <p>{c.riskOpinion}</p>
+                  </div>
                 ) : (
-                  <span className="fn-chip warn">Aguardando alçada de risco</span>
+                  <div className="cm-opinion muted">
+                    <span>Risco</span>
+                    <p>Parecer pendente</p>
+                  </div>
                 )}
-              </footer>
-            </article>
-          ))}
+                {dossier && (
+                  <div className="cm-committee-technical">
+                    <div>
+                      <span>Faturamento mensal</span>
+                      <b>{money(dossier.monthlyRevenue)}</b>
+                    </div>
+                    <div>
+                      <span>Limite solicitado</span>
+                      <b>{money(dossier.requestedLimit)}</b>
+                    </div>
+                    <div>
+                      <span>Taxa proposta</span>
+                      <b>{String(dossier.proposedRate).replace(".", ",")}% a.m.</b>
+                    </div>
+                    <div>
+                      <span>Prazo médio</span>
+                      <b>{dossier.averageTermDays} dias</b>
+                    </div>
+                    <div>
+                      <span>Sacados</span>
+                      <b>{dossier.debtorCount}</b>
+                    </div>
+                    <div>
+                      <span>Maior concentração</span>
+                      <b>{dossier.largestDebtorPercent}%</b>
+                    </div>
+                    <div>
+                      <span>Recebível</span>
+                      <b>{dossier.receivableType}</b>
+                    </div>
+                    <div>
+                      <span>Prontidão documental</span>
+                      <b>{readiness?.percent ?? 0}%</b>
+                    </div>
+                    <div className={dossier.hasRestrictiveIssues ? "bad" : "ok"}>
+                      <span>Restrições declaradas</span>
+                      <b>{dossier.hasRestrictiveIssues ? dossier.restrictiveIssues || "Sim" : "Não"}</b>
+                    </div>
+                  </div>
+                )}
+                <footer>
+                  {state.prospects.find(item => item.name === c.clientName) && (
+                    <button
+                      className="fn-btn ghost small"
+                      onClick={() => onOpenDossier(state.prospects.find(item => item.name === c.clientName)!)}
+                    >
+                      Ver dossiê
+                    </button>
+                  )}
+                  {canDecide ? (
+                    <button className="fn-btn primary small" onClick={() => onDecide(c)}>
+                      Registrar decisão
+                    </button>
+                  ) : (
+                    <span className="fn-chip warn">Aguardando alçada de risco</span>
+                  )}
+                </footer>
+              </article>
+            );
+          })}
           {!pauta.length && <div className="fn-empty">Nenhum pedido em pauta.</div>}
         </div>
       </section>

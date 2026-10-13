@@ -75,6 +75,7 @@ export function liveDeals(
           discount: f.discount,
           fees: f.fees,
           revenue: f.revenue,
+          net: f.net,
           rate: f.rate,
           titles: op.titleCount,
           operationId: op.id,
@@ -158,6 +159,18 @@ export function tierRate(rules: CommissionRules, attainment: number) {
   );
 }
 
+export function commissionBaseValue(deal: Deal, base: CommissionRules["base"]) {
+  if (base === "receita") return deal.revenue;
+  if (base === "vop") return deal.net ?? Math.max(0, deal.face - deal.discount - deal.fees);
+  return deal.face;
+}
+
+export function commissionBaseLabel(base: CommissionRules["base"]) {
+  if (base === "receita") return "Receita (deságio + tarifas)";
+  if (base === "vop") return "VOP líquido liberado";
+  return "Originação (valor de face liberado)";
+}
+
 export function computeCommission(
   state: CommercialState,
   deals: Deal[],
@@ -170,7 +183,7 @@ export function computeCommission(
     .filter(r => r.active)
     .map(rep => {
       const mine = deals.filter(d => d.repId === rep.id && inRange(d.date, from, to));
-      const base = round2(mine.reduce((s, d) => s + (rules.base === "receita" ? d.revenue : d.face), 0));
+      const base = round2(mine.reduce((s, d) => s + commissionBaseValue(d, rules.base), 0));
       const revenue = round2(mine.reduce((s, d) => s + d.revenue, 0));
       const goal = rep.monthlyGoal;
       const attainment = goal ? round2((revenue / goal) * 100) : 0;
@@ -191,15 +204,16 @@ export function computeCommission(
       const bonus = round2(bonusAccounts.length * rules.newAccountBonus);
       const dealClawback = mine
         .filter(d => d.repurchased)
-        .reduce((s, d) => s + (rules.base === "receita" ? d.revenue : d.face) * (d.repurchased! / d.face) * pct, 0);
+        .reduce((s, d) => s + commissionBaseValue(d, rules.base) * (d.repurchased! / d.face) * pct, 0);
       // Recompras registradas na Carteira: estorno proporcional à receita que o cliente gera por real de face.
       const carteiraClawback = (state.carteiraEvents ?? [])
         .filter(e => inRange(e.date, from, to) && repAt(state, e.document, e.date) === rep.id)
         .reduce((s, e) => {
           const clientDeals = deals.filter(d => digits(d.document) === digits(e.document));
           const face = clientDeals.reduce((t, d) => t + d.face, 0);
-          const take =
-            rules.base === "receita" ? (face ? clientDeals.reduce((t, d) => t + d.revenue, 0) / face : 0) : 1;
+          const take = face
+            ? clientDeals.reduce((total, deal) => total + commissionBaseValue(deal, rules.base), 0) / face
+            : 0;
           return s + e.amount * take * pct;
         }, 0);
       const clawback = rules.clawback ? round2(dealClawback + carteiraClawback) : 0;

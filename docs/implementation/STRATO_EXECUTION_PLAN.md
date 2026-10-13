@@ -96,7 +96,7 @@ Evidências A3.2:
 - [ ] persistir Comercial e vínculos históricos;
 - [x] persistir políticas e versões aprovadas;
 - [x] persistir tarefas, responsáveis, prazos e histórico;
-- [ ] persistir Carteira sem depender do navegador;
+- [x] persistir Carteira sem depender do navegador;
 - [ ] criar manuais por perfil para Comercial, Risco, Controladoria e Financeiro.
 
 Progresso A4.1 — Central do Dia persistente:
@@ -142,6 +142,28 @@ Evidências A4.2:
 - testes automatizados cobrem validação, autoria da aprovação, vigência, imutabilidade e hash do comando;
 - inspeção visual confirmou versão ativa imutável, autoria/justificativa visíveis e novo rascunho com o comando “Aprovar e ativar”, sem erros no console;
 - guia publicado em `docs/user-guides/POLITICAS_DE_ELEGIBILIDADE.md`.
+
+Progresso A4.3 — manutenção persistente da Carteira:
+
+- [x] unir títulos originados no STRATO e posições importadas na leitura do servidor;
+- [x] persistir cobranças, confirmações, situação e histórico por tenant;
+- [x] preservar dados de origem do título e tornar ocorrências/eventos append-only;
+- [x] atribuir ações à identidade autenticada, inclusive fora do usuário de demonstração;
+- [x] aplicar versão otimista, comandos idempotentes, eventos e outbox;
+- [x] manter demonstração no navegador e modo real no servidor autenticado;
+- [x] publicar o guia operacional da Carteira;
+- [ ] homologar visualmente a concorrência com duas sessões reais.
+
+Evidências A4.3:
+
+- migração `create_portfolio_maintenance_storage` aplicada no Supabase e reconciliada com o histórico remoto;
+- ensaio completo da migração executado e revertido antes da aplicação;
+- repositório confirmou cobrança, confirmação, replay idempotente, conflito de chave, trava de versão e projeções normalizadas;
+- rollback integral confirmado com zero tenants, estados, ocorrências, confirmações e comandos descartáveis;
+- Advisor sem chaves estrangeiras não indexadas; avisos de índices sem uso são esperados antes da carga produtiva;
+- testes automatizados cobrem autoria, imutabilidade da origem, histórico append-only e hash do comando;
+- inspeção visual confirmou a Central de cobrança, 18 títulos, prioridades, agenda e régua de recuperação sem erros no console;
+- guia publicado em `docs/user-guides/CARTEIRA_COBRANCA_E_CONFIRMACAO.md`.
 
 ### A5. Segurança e comandos materiais
 

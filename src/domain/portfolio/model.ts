@@ -134,6 +134,7 @@ export type PortfolioState = {
   titles: PortfolioTitleRecord[];
   positionDate?: string;
   historicalTitleCount?: number;
+  persistenceVersion?: number;
 };
 
 export type StoredPortfolioState = Omit<PortfolioState, "version"> & { version: 1 | 2 | 3 };

@@ -4,6 +4,15 @@
 
 O módulo Comercial organiza a originação desde o primeiro contato até a criação do cedente no Cadastro. O ciclo mantém responsável, dossiê, pareceres, decisão e histórico, sem depender de anotações paralelas.
 
+## Quem enxerga cada carteira
+
+- o executivo comercial vê leads, visitas, vínculos, negócios e comitês ligados ao seu identificador;
+- o gerente de conta vê os clientes sob sua gestão e os negócios desses clientes;
+- gestores comerciais e usuários de Risco com competência de decisão mantêm a visão consolidada;
+- o vínculo é definido em **Configurações > Usuários e acessos** pelos campos de agente/comercial e gerente de conta.
+
+Ao salvar uma visão segmentada, o STRATO recompõe o estado completo no servidor. Registros de outros executivos permanecem preservados e uma tentativa de enviar dados de outra carteira é recusada.
+
 ## Fluxo recomendado
 
 1. Cadastre o lead no **Funil** com CNPJ, responsável, potencial e próximo passo.

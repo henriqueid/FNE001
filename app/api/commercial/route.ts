@@ -1,6 +1,7 @@
 import { validateCommercialState } from "@/src/domain/commercial/persistence";
 import type { CommercialState } from "@/src/domain/commercial/types";
 import { sessionPrincipal } from "@/src/server/access/session";
+import { CommercialScopeError, filterCommercialState, mergeCommercialScope } from "@/src/server/commercial/access";
 import {
   commercialRequestHash,
   CommercialCommandConflictError,
@@ -24,9 +25,13 @@ async function context(request: Request) {
 export async function GET(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
-  if (!access.principal.permissions.includes("dashboard:view"))
+  if (
+    !access.principal.permissions.includes("portfolio:manage") &&
+    !access.principal.permissions.includes("risk:decide")
+  )
     return json({ error: "Sem permissão para consultar os vínculos comerciais." }, 403);
-  return json({ commercial: await loadCommercialState(access.db, access.tenantId) });
+  const commercial = await loadCommercialState(access.db, access.tenantId);
+  return json({ commercial: commercial ? filterCommercialState(commercial, access.principal) : null });
 }
 
 export async function PUT(request: Request) {
@@ -50,7 +55,16 @@ export async function PUT(request: Request) {
   const validationError = validateCommercialState(command.commercial);
   if (validationError) return json({ error: validationError }, 400);
   const previous = await loadCommercialState(access.db, access.tenantId);
-  const registersDecision = command.commercial.committees.some(committee => {
+  let merged: CommercialState;
+  try {
+    merged = mergeCommercialScope(previous, command.commercial, access.principal);
+  } catch (reason) {
+    if (reason instanceof CommercialScopeError) return json({ error: reason.message }, 403);
+    throw reason;
+  }
+  const mergedValidationError = validateCommercialState(merged);
+  if (mergedValidationError) return json({ error: mergedValidationError }, 400);
+  const registersDecision = merged.committees.some(committee => {
     const prior = previous?.committees.find(item => item.id === committee.id);
     return prior?.status === "Em pauta" && committee.status !== "Em pauta";
   });
@@ -61,7 +75,7 @@ export async function PUT(request: Request) {
     tenantId: access.tenantId,
     actorId: access.principal.id,
     expectedVersion,
-    state: command.commercial,
+    state: merged,
   });
   try {
     const commercial = await saveCommercialState(
@@ -69,14 +83,14 @@ export async function PUT(request: Request) {
       access.tenantId,
       access.principal.id,
       access.principal.name,
-      command.commercial,
+      merged,
       expectedVersion,
       command.commandId,
       requestHash,
     );
     if (!commercial)
       return json({ error: "O Comercial foi alterado por outra pessoa. Atualize a tela antes de salvar." }, 409);
-    return json({ commercial });
+    return json({ commercial: filterCommercialState(commercial, access.principal) });
   } catch (reason) {
     if (reason instanceof CommercialCommandConflictError || reason instanceof CommercialTransitionError)
       return json({ error: reason.message }, 409);

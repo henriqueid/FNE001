@@ -31,45 +31,45 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 
 ## 3. Pendências para produção controlada — P0 imediato
 
-| Entrega | Situação atual | Falta | Estimativa |
-| --- | --- | --- | ---: |
-| Homologação multiusuário | Backend recusa versão obsoleta | testar duas sessões reais em Operações, Financeiro, Carteira, Comercial, Políticas e Tarefas | 3–5 dias |
-| Ataques cruzados | testes unitários cobrem escopo | ensaio com dois tenants, duas empresas e requisições deliberadamente cruzadas | 2–3 dias |
-| Escopo residual de APIs | Cadastro e fontes do Copiloto protegidos por capacidade/empresa | segmentar Comercial com merge seguro, separar leitura de configurações e mover projeções da IA integralmente ao servidor | 2–4 dias |
-| Maker-checker residual | exceção e liberação protegidas | configurações críticas, conta bancária, credenciais e alteração de favorecido | 3–5 dias |
-| Contrato comum de comandos | cada agregado possui implementação confiável | unificar recibo idempotente, event ledger, outbox, correlação e respostas de conflito | 5–8 dias |
-| Segurança de conta | sessão e bloqueio existem | MFA para perfis críticos, política de senha comprometida, recuperação e revisão de sessão | 4–7 dias |
-| Operação de plataforma | build e banco existem | backup/restore ensaiado, métricas, logs, alertas, retenção, runbook e deploy produtivo | 5–8 dias |
-| Estado real vazio | separação demo/real implementada | executar checklist integral sem seeds e confirmar zero vazamento de demonstração | 2–3 dias |
+| Entrega                    | Situação atual                                                            | Falta                                                                                                         | Estimativa |
+| -------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------: |
+| Homologação multiusuário   | Backend recusa versão obsoleta                                            | testar duas sessões reais em Operações, Financeiro, Carteira, Comercial, Políticas e Tarefas                  |   3–5 dias |
+| Ataques cruzados           | testes unitários cobrem escopo                                            | ensaio com dois tenants, duas empresas e requisições deliberadamente cruzadas                                 |   2–3 dias |
+| Escopo residual de APIs    | Cadastro, Comercial e fontes do Copiloto protegidos por capacidade/escopo | separar leitura de configurações, mover projeções da IA integralmente ao servidor e homologar perfis cruzados |   1–3 dias |
+| Maker-checker residual     | exceção e liberação protegidas                                            | configurações críticas, conta bancária, credenciais e alteração de favorecido                                 |   3–5 dias |
+| Contrato comum de comandos | cada agregado possui implementação confiável                              | unificar recibo idempotente, event ledger, outbox, correlação e respostas de conflito                         |   5–8 dias |
+| Segurança de conta         | sessão e bloqueio existem                                                 | MFA para perfis críticos, política de senha comprometida, recuperação e revisão de sessão                     |   4–7 dias |
+| Operação de plataforma     | build e banco existem                                                     | backup/restore ensaiado, métricas, logs, alertas, retenção, runbook e deploy produtivo                        |   5–8 dias |
+| Estado real vazio          | separação demo/real implementada                                          | executar checklist integral sem seeds e confirmar zero vazamento de demonstração                              |   2–3 dias |
 
 **Subtotal P0 imediato:** aproximadamente **27–44 dias úteis**. Parte pode ser executada em paralelo.
 
 ## 4. Cunha comercial completa — Onda B
 
-| Capacidade | O que falta de fato | Estimativa |
-| --- | --- | ---: |
-| Estrutura institucional/FIDC | empresa, veículo, fundo, classe/subclasse, participantes e matriz de responsabilidades | 6–10 dias |
-| Onboarding e prontidão | checklist por produto/veículo, documentos vencidos, bloqueios e pendências por uso | 6–10 dias |
-| Entrada produtiva | XML/CSV/XLSX/API, preservação do original, prévia, rejeições e lote idempotente | 10–15 dias |
-| Enriquecimento essencial | fontes oficiais/bureaus com evidência, validade, qualidade, cache e indisponibilidade explícita | 8–15 dias |
-| Política produtiva | catálogos reais, vigência, herança, simulação e publicação maker-checker | 5–8 dias |
-| Hub documental | arquivo, hash, versão, classificação, vínculo, retenção, acesso e trilha de download | 12–20 dias |
-| Assinatura | envelopes, ordem, autenticação, webhooks, recusas, expiração e certificado | 8–15 dias |
-| Cessão/registro/pagamento | pacote verificável, protocolo, rejeição, retorno e compensação | 10–18 dias |
+| Capacidade                   | O que falta de fato                                                                             | Estimativa |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- | ---------: |
+| Estrutura institucional/FIDC | empresa, veículo, fundo, classe/subclasse, participantes e matriz de responsabilidades          |  6–10 dias |
+| Onboarding e prontidão       | checklist por produto/veículo, documentos vencidos, bloqueios e pendências por uso              |  6–10 dias |
+| Entrada produtiva            | XML/CSV/XLSX/API, preservação do original, prévia, rejeições e lote idempotente                 | 10–15 dias |
+| Enriquecimento essencial     | fontes oficiais/bureaus com evidência, validade, qualidade, cache e indisponibilidade explícita |  8–15 dias |
+| Política produtiva           | catálogos reais, vigência, herança, simulação e publicação maker-checker                        |   5–8 dias |
+| Hub documental               | arquivo, hash, versão, classificação, vínculo, retenção, acesso e trilha de download            | 12–20 dias |
+| Assinatura                   | envelopes, ordem, autenticação, webhooks, recusas, expiração e certificado                      |  8–15 dias |
+| Cessão/registro/pagamento    | pacote verificável, protocolo, rejeição, retorno e compensação                                  | 10–18 dias |
 
 **Subtotal Onda B:** aproximadamente **65–111 dias úteis**.
 
 ## 5. Ciclo do dinheiro — Onda C
 
-| Capacidade | O que falta de fato | Estimativa |
-| --- | --- | ---: |
-| Runtime de integrações | cofre de credenciais, jobs, retry, dead-letter, webhooks, payload bruto e observabilidade | 10–15 dias |
-| Primeiro banco produtivo | homologação de conta/carteira/layout, autenticação e retorno operacional | 10–20 dias |
-| Cobrança bancária | boleto/Nosso Número, remessa, retorno, instruções, baixa e rejeição | 12–20 dias |
-| Conciliação produtiva | extrato/retorno, matching seguro, divergência e reprocessamento | 8–12 dias |
-| Conta gráfica e recompra | retenções, compensações, regresso, saldo do cedente e contabilização | 8–12 dias |
-| Caso de cobrança | promessa, acordo/parcelas, prorrogação, protesto/IEPTB, negativação e jurídico | 15–25 dias |
-| Exportação contábil | layouts, centros/classificações, validação, lote, protocolo e reexecução | 6–10 dias |
+| Capacidade               | O que falta de fato                                                                       | Estimativa |
+| ------------------------ | ----------------------------------------------------------------------------------------- | ---------: |
+| Runtime de integrações   | cofre de credenciais, jobs, retry, dead-letter, webhooks, payload bruto e observabilidade | 10–15 dias |
+| Primeiro banco produtivo | homologação de conta/carteira/layout, autenticação e retorno operacional                  | 10–20 dias |
+| Cobrança bancária        | boleto/Nosso Número, remessa, retorno, instruções, baixa e rejeição                       | 12–20 dias |
+| Conciliação produtiva    | extrato/retorno, matching seguro, divergência e reprocessamento                           |  8–12 dias |
+| Conta gráfica e recompra | retenções, compensações, regresso, saldo do cedente e contabilização                      |  8–12 dias |
+| Caso de cobrança         | promessa, acordo/parcelas, prorrogação, protesto/IEPTB, negativação e jurídico            | 15–25 dias |
+| Exportação contábil      | layouts, centros/classificações, validação, lote, protocolo e reexecução                  |  6–10 dias |
 
 **Subtotal Onda C:** aproximadamente **69–114 dias úteis**, além dos prazos externos de homologação.
 

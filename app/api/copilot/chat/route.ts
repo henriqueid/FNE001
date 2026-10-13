@@ -1,6 +1,6 @@
 import { sessionPrincipal } from "@/src/server/access/session";
 import { getDatabase } from "@/src/server/database/postgres";
-import { authorizeCopilotContext } from "@/src/server/intelligence/authorized-context";
+import { loadAuthorizedCopilotContext } from "@/src/server/intelligence/authorized-context";
 import { createOpenAIResponse } from "@/src/server/intelligence/openai-gateway";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
@@ -16,18 +16,19 @@ Quando citar um fato, identifique a origem como cadastro, operação, carteira o
 export async function POST(request: Request) {
   const tenantId = request.headers.get("x-strato-tenant-id")?.trim();
   if (!tenantId) return json({ error: "Empresa não informada." }, 400);
-  const principal = await sessionPrincipal(getDatabase(), request.headers, tenantId);
+  const db = getDatabase();
+  const principal = await sessionPrincipal(db, request.headers, tenantId);
   if (!principal) return json({ error: "Sessão ausente ou expirada." }, 401);
   if (!principal.permissions.includes("dashboard:view"))
     return json({ error: "Seu perfil não possui acesso ao Copiloto." }, 403);
 
-  const body = (await request.json().catch(() => null)) as { question?: string; context?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as { question?: string } | null;
   const question = body?.question?.trim();
   if (!question) return json({ error: "Escreva uma pergunta para o Copiloto." }, 400);
   if (question.length > 2_000) return json({ error: "A pergunta deve ter no máximo 2.000 caracteres." }, 400);
 
   try {
-    const context = JSON.stringify(authorizeCopilotContext(body?.context, principal.companyScopes));
+    const context = JSON.stringify(await loadAuthorizedCopilotContext(db, principal));
     const result = await createOpenAIResponse(
       `PERGUNTA DO USUÁRIO:\n${question}\n\nCONTEXTO AUTORIZADO DO STRATO (JSON):\n${context}`,
       COPILOT_INSTRUCTIONS,

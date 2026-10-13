@@ -34,56 +34,11 @@ export async function testAIConfiguration() {
   }>(response);
 }
 
-function compactKnowledge(knowledge: SystemKnowledge) {
-  return {
-    referenceDate: knowledge.today,
-    operations: knowledge.operations.map(operation => ({
-      id: operation.id,
-      cedent: operation.cedent,
-      document: operation.document,
-      amount: operation.amount,
-      status: operation.status,
-      stage: operation.stage,
-      vehicle: operation.vehicle,
-      institution: operation.institution,
-      blockers: operation.blockers,
-    })),
-    cedents: knowledge.cedents.map(cedent => ({
-      id: cedent.id,
-      name: cedent.name,
-      document: cedent.document,
-      score: cedent.score,
-      creditLimit: cedent.creditLimit,
-      usedLimit: cedent.usedLimit,
-      settlements: cedent.settlements,
-      lateSettlements: cedent.lateSettlements,
-      averageDelayDays: cedent.averageDelayDays,
-      repurchases: cedent.repurchases,
-    })),
-    portfolio: knowledge.titles.map(title => ({
-      debtor: title.debtorName,
-      cedentDocument: title.ownerDocument,
-      amount: title.amount,
-      dueDate: title.dueDate,
-      source: title.source,
-      vehicle: title.vehicle,
-    })),
-    policies: knowledge.policies.map(policy => ({
-      id: policy.id,
-      name: policy.name,
-      company: policy.company,
-      status: policy.status,
-      version: policy.version,
-      bindings: policy.bindings,
-    })),
-  };
-}
-
-export async function askConfiguredCopilot(question: string, knowledge: SystemKnowledge) {
+export async function askConfiguredCopilot(question: string, _knowledge: SystemKnowledge) {
   const response = await fetch("/api/copilot/chat", {
     method: "POST",
     headers: headers(),
-    body: JSON.stringify({ question, context: compactKnowledge(knowledge) }),
+    body: JSON.stringify({ question }),
   });
   return bodyOf<{
     reply: DeskReply;

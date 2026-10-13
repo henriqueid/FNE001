@@ -9,7 +9,7 @@ O Copiloto do STRATO explica informações já autorizadas para o usuário. Ele 
 - cedentes associados às operações ou aos títulos visíveis;
 - políticas vinculadas às empresas permitidas.
 
-Antes da consulta ao provedor de inteligência, o servidor confere novamente o escopo empresarial e remove qualquer campo que não pertença ao contrato autorizado.
+O navegador envia somente a pergunta. Antes da consulta ao provedor de inteligência, o servidor lê as fontes diretamente do banco, confere o tenant e o escopo empresarial e remove qualquer campo que não pertença ao contrato autorizado.
 
 ## Quando uma informação não aparece
 

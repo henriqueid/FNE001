@@ -25,22 +25,22 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 - decisões versionadas, idempotência, eventos imutáveis, outbox e notificações;
 - escopo de empresa em Operações, Decisões, Carteira, Recebíveis, Financeiro, Tarefas, notificações e reprocessamento da outbox;
 - maker-checker para exceção de risco e liberação financeira;
-- leitura cadastral separada da edição e contexto do Copiloto filtrado novamente por empresa no backend;
+- leitura cadastral separada da edição e Copiloto alimentado por fontes lidas e filtradas integralmente no backend;
 - funil comercial, comitê, onboarding, carteira/cobrança inicial e Central do Dia;
 - guias operacionais por domínio e por perfil.
 
 ## 3. Pendências para produção controlada — P0 imediato
 
-| Entrega                    | Situação atual                                                                                       | Falta                                                                                        | Estimativa |
-| -------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------: |
-| Homologação multiusuário   | Backend recusa versão obsoleta                                                                       | testar duas sessões reais em Operações, Financeiro, Carteira, Comercial, Políticas e Tarefas |   3–5 dias |
-| Ataques cruzados           | testes unitários cobrem escopo                                                                       | ensaio com dois tenants, duas empresas e requisições deliberadamente cruzadas                |   2–3 dias |
-| Escopo residual de APIs    | Cadastro, Comercial, configurações consultivas e fontes do Copiloto protegidos por capacidade/escopo | mover projeções da IA integralmente ao servidor e homologar perfis cruzados                  |   1–2 dias |
-| Maker-checker residual     | exceção e liberação protegidas                                                                       | configurações críticas, conta bancária, credenciais e alteração de favorecido                |   3–5 dias |
-| Contrato comum de comandos | cada agregado possui implementação confiável                                                         | unificar recibo idempotente, event ledger, outbox, correlação e respostas de conflito        |   5–8 dias |
-| Segurança de conta         | sessão e bloqueio existem                                                                            | MFA para perfis críticos, política de senha comprometida, recuperação e revisão de sessão    |   4–7 dias |
-| Operação de plataforma     | build e banco existem                                                                                | backup/restore ensaiado, métricas, logs, alertas, retenção, runbook e deploy produtivo       |   5–8 dias |
-| Estado real vazio          | separação demo/real implementada                                                                     | executar checklist integral sem seeds e confirmar zero vazamento de demonstração             |   2–3 dias |
+| Entrega                    | Situação atual                                                                 | Falta                                                                                        | Estimativa |
+| -------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ---------: |
+| Homologação multiusuário   | Backend recusa versão obsoleta                                                 | testar duas sessões reais em Operações, Financeiro, Carteira, Comercial, Políticas e Tarefas |   3–5 dias |
+| Ataques cruzados           | testes unitários cobrem escopo                                                 | ensaio com dois tenants, duas empresas e requisições deliberadamente cruzadas                |   2–3 dias |
+| Escopo residual de APIs    | Cadastro, Comercial, Configurações e Copiloto protegidos por capacidade/escopo | homologar perfis cruzados em sessões reais                                                   |      1 dia |
+| Maker-checker residual     | exceção e liberação protegidas                                                 | configurações críticas, conta bancária, credenciais e alteração de favorecido                |   3–5 dias |
+| Contrato comum de comandos | cada agregado possui implementação confiável                                   | unificar recibo idempotente, event ledger, outbox, correlação e respostas de conflito        |   5–8 dias |
+| Segurança de conta         | sessão e bloqueio existem                                                      | MFA para perfis críticos, política de senha comprometida, recuperação e revisão de sessão    |   4–7 dias |
+| Operação de plataforma     | build e banco existem                                                          | backup/restore ensaiado, métricas, logs, alertas, retenção, runbook e deploy produtivo       |   5–8 dias |
+| Estado real vazio          | separação demo/real implementada                                               | executar checklist integral sem seeds e confirmar zero vazamento de demonstração             |   2–3 dias |
 
 **Subtotal P0 imediato:** aproximadamente **27–44 dias úteis**. Parte pode ser executada em paralelo.
 

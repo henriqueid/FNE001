@@ -1,3 +1,14 @@
+import { portfolioHomeTitles } from "@/src/domain/portfolio/model";
+import { partyToCedent } from "@/src/domain/registry/parties";
+import type { ServerPrincipal } from "@/src/server/access/repository";
+import { filterCompanyScope } from "@/src/server/access/scope";
+import type { DecisionDatabase } from "@/src/server/decisions/repository";
+import { loadEligibilityPolicyState } from "@/src/server/eligibility/policy-repository";
+import { loadOperations } from "@/src/server/operations/repository";
+import { filterPortfolioScope } from "@/src/server/portfolio/access";
+import { loadCurrentPortfolio } from "@/src/server/portfolio/repository";
+import { loadRegistryParties } from "@/src/server/registry/repository";
+
 const MAX_CONTEXT_LENGTH = 60_000;
 
 type JsonObject = Record<string, unknown>;
@@ -21,8 +32,6 @@ const hasScope = (companyScopes: string[], company: string) => {
  * O filtro não concede acesso: ele reduz novamente os dados já obtidos pelas APIs para as empresas da sessão.
  */
 export function authorizeCopilotContext(value: unknown, companyScopes: string[]) {
-  const raw = JSON.stringify(value ?? {});
-  if (raw.length > MAX_CONTEXT_LENGTH) throw new Error("O contexto autorizado excede o limite da conversa.");
   const source = isObject(value) ? value : {};
 
   const operations = rows(source.operations, 250)
@@ -92,11 +101,61 @@ export function authorizeCopilotContext(value: unknown, companyScopes: string[])
       })),
     }));
 
-  return {
+  const authorized = {
     referenceDate: /^\d{4}-\d{2}-\d{2}$/.test(text(source.referenceDate, 10)) ? text(source.referenceDate, 10) : "",
     operations,
     cedents,
     portfolio,
     policies,
   };
+  if (JSON.stringify(authorized).length > MAX_CONTEXT_LENGTH)
+    throw new Error("O contexto autorizado excede o limite da conversa.");
+  return authorized;
+}
+
+const saoPauloDate = () =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+
+/** Carrega cada fonte diretamente do banco; nenhum dado de negócio enviado pelo navegador é reutilizado. */
+export async function loadAuthorizedCopilotContext(db: DecisionDatabase, principal: ServerPrincipal) {
+  const [allOperations, fullPortfolio, parties, policyState] = await Promise.all([
+    loadOperations(db, principal.tenantId),
+    loadCurrentPortfolio(db, principal.tenantId),
+    loadRegistryParties(db, principal.tenantId),
+    loadEligibilityPolicyState(db, principal.tenantId),
+  ]);
+  const operations = filterCompanyScope(principal, allOperations, operation => operation.vehicle);
+  const titles = portfolioHomeTitles(filterPortfolioScope(principal, fullPortfolio));
+  return authorizeCopilotContext(
+    {
+      referenceDate: saoPauloDate(),
+      operations: operations.map(operation => ({
+        id: operation.id,
+        cedent: operation.cedent,
+        document: operation.document,
+        amount: operation.amount,
+        status: operation.status,
+        stage: operation.stage,
+        vehicle: operation.vehicle,
+        institution: operation.institution,
+        blockers: operation.blockers,
+      })),
+      cedents: parties.filter(party => party.roles.includes("cedente")).map(partyToCedent),
+      portfolio: titles.map(title => ({
+        debtor: title.debtorName,
+        cedentDocument: title.ownerDocument,
+        amount: title.amount,
+        dueDate: title.dueDate,
+        source: title.source,
+        vehicle: title.vehicle,
+      })),
+      policies: policyState?.policies ?? [],
+    },
+    principal.companyScopes,
+  );
 }

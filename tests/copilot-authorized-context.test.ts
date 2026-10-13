@@ -71,7 +71,17 @@ describe("contexto autorizado do Copiloto", () => {
 
   it("recusa contexto acima do limite operacional", () => {
     expect(() =>
-      authorizeCopilotContext({ operations: [{ vehicle: "Empresa A", data: "x".repeat(61_000) }] }, ["*"]),
+      authorizeCopilotContext(
+        {
+          operations: Array.from({ length: 250 }, (_, index) => ({
+            id: `op-${index}`,
+            vehicle: "Empresa A",
+            cedent: "x".repeat(500),
+            institution: "x".repeat(500),
+          })),
+        },
+        ["*"],
+      ),
     ).toThrow("excede o limite");
   });
 });

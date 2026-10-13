@@ -61,7 +61,7 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 - Exceções de risco exigem solicitante e decisor distintos; a mesma solicitação aceita uma única decisão terminal.
 - Liberações financeiras exigem um preparador e um aprovador distintos, ambos derivados de sessões autenticadas.
 - O Cadastro separa leitura (`registry:view`) de manutenção (`registry:edit`), inclusive nas evidências cadastrais.
-- Antes de chamar a IA, o backend reduz o contexto do Copiloto às empresas da sessão, remove campos não previstos e só mantém cedentes alcançáveis por operações ou títulos visíveis.
+- O Copiloto recebe do navegador somente a pergunta; o backend lê as fontes no banco, reduz o contexto às empresas da sessão, remove campos não previstos e só mantém cedentes alcançáveis por operações ou títulos visíveis.
 - O Comercial filtra executivo e gerente vinculados na identidade do servidor; uma gravação segmentada recompõe o agregado completo e não apaga carteiras ocultas.
 - Dados institucionais e políticas efetivas usam `settings:view`; qualquer manutenção continua reservada a `settings:manage`.
 

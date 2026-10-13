@@ -259,7 +259,7 @@ Progresso A5.5 — escopos residuais de APIs:
 - [x] publicar guia de escopo e fontes do Copiloto;
 - [x] segmentar o agregado Comercial por responsável/gerente com merge seguro dos dados não visíveis;
 - [x] separar consulta de empresa/políticas (`settings:view`) da manutenção administrativa (`settings:manage`);
-- [ ] substituir o contexto do Copiloto montado no cliente por projeções lidas integralmente no servidor;
+- [x] substituir o contexto do Copiloto montado no cliente por projeções lidas integralmente no servidor;
 - [ ] homologar Cadastro, Comercial, Copiloto, Integrações e Configurações com perfis cruzados reais.
 
 Relatório consolidado de pendências e estimativas: `docs/implementation/STRATO_REMAINING_WORK_REPORT.md`.

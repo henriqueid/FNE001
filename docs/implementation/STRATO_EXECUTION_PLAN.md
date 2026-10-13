@@ -206,7 +206,8 @@ Progresso A5.1 — isolamento de Operações e Decisões:
 - [x] bloquear leitura e criação de decisão fora do escopo da operação;
 - [x] documentar a matriz atual de APIs, permissões, escopos e lacunas;
 - [x] testar escopo vazio, curinga explícito, filtragem, vínculo ao tenant e tentativa de mover operação alheia;
-- [ ] propagar o escopo de empresa para Carteira, Recebíveis, Financeiro, tarefas e notificações;
+- [x] propagar o escopo de empresa para Carteira, Recebíveis e notificações operacionais;
+- [ ] propagar o escopo de empresa para Financeiro, tarefas e reprocessamento da outbox;
 - [ ] homologar ataques cruzados com duas sessões reais e dois tenants.
 
 Evidências A5.1:
@@ -216,6 +217,16 @@ Evidências A5.1:
 - atualização recusa tanto origem fora do escopo quanto destino fora do escopo;
 - Decisões validam o veículo da operação antes de ler ou registrar eventos;
 - matriz publicada em `docs/security/MATRIZ_DE_ACESSO_E_ESCOPO.md`.
+
+Progresso A5.2 — escopo em Carteira, Recebíveis e notificações:
+
+- [x] exigir `dashboard:view` na leitura da Carteira e capacidade operacional na leitura de Recebíveis;
+- [x] filtrar títulos por empresa sem expor a contagem global;
+- [x] recompor o agregado completo no servidor ao salvar uma parcela visível da Carteira;
+- [x] recusar injeção, remoção ou manutenção de título fora do escopo;
+- [x] filtrar Recebíveis pelo veículo da operação de origem;
+- [x] filtrar notificações pela empresa da operação associada;
+- [x] testar preservação de dados não visíveis e bloqueio de notificações cruzadas.
 
 ## Ondas seguintes
 

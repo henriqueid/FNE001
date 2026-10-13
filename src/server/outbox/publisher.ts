@@ -2,6 +2,7 @@ import { type Permission } from "@/src/domain/access/model";
 import { type DecisionEvent, type DecisionEventType } from "@/src/domain/decisions/model";
 import { type PublishedNotification, type OutboxHealth } from "@/src/domain/notifications/model";
 import { type ServerPrincipal } from "@/src/server/access/repository";
+import { principalHasCompanyScope } from "@/src/server/access/scope";
 import { functionalAreasMatchQueue } from "@/src/domain/copilot/daily-briefing";
 import { type DecisionDatabase } from "@/src/server/decisions/repository";
 
@@ -254,18 +255,24 @@ type NotificationRow = {
   required_permission: Permission | null;
   authority_id: string | null;
   created_at: string;
+  vehicle: string;
 };
 
 export async function listPublishedNotifications(db: DecisionDatabase, tenantId: string, principal: ServerPrincipal) {
   await ensurePublisherSchema(db);
   const result = await db
     .prepare(
-      `SELECT * FROM private.decision_notifications WHERE tenant_id = ? AND status = 'OPEN'
-       ORDER BY created_at DESC LIMIT 100`,
+      `SELECT notification.*, operation.vehicle
+       FROM private.decision_notifications notification
+       JOIN private.operations operation
+         ON operation.tenant_id = notification.tenant_id AND operation.operation_id = notification.operation_id
+       WHERE notification.tenant_id = ? AND notification.status = 'OPEN'
+       ORDER BY notification.created_at DESC LIMIT 100`,
     )
     .bind(tenantId)
     .all<NotificationRow>();
   return result.results
+    .filter(row => principalHasCompanyScope(principal, row.vehicle))
     .filter(row => !row.required_permission || principal.permissions.includes(row.required_permission))
     .filter(row => !row.authority_id || principal.authorityIds.includes(row.authority_id))
     .filter(row => principal.access === "admin" || functionalAreasMatchQueue(principal.functionalAreas, row.department))

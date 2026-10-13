@@ -9,6 +9,7 @@ import {
   PortfolioTransitionError,
   savePortfolioState,
 } from "@/src/server/portfolio/repository";
+import { filterPortfolioScope, mergePortfolioScope } from "@/src/server/portfolio/access";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
@@ -18,7 +19,9 @@ export async function GET(request: Request) {
   const db = getDatabase();
   const principal = await sessionPrincipal(db, request.headers, tenantId);
   if (!principal) return json({ error: "Sessão ausente ou expirada." }, 401);
-  return json({ portfolio: await loadCurrentPortfolio(db, tenantId) });
+  if (!principal.permissions.includes("dashboard:view"))
+    return json({ error: "Sem permissão para consultar a Carteira." }, 403);
+  return json({ portfolio: filterPortfolioScope(principal, await loadCurrentPortfolio(db, tenantId)) });
 }
 
 export async function PUT(request: Request) {
@@ -45,6 +48,8 @@ export async function PUT(request: Request) {
   const validationError = validatePortfolioState(command.portfolio);
   if (validationError) return json({ error: validationError }, 400);
   const expectedVersion = Number(command.expectedVersion);
+  const merged = mergePortfolioScope(principal, await loadCurrentPortfolio(db, tenantId), command.portfolio);
+  if (!merged.state) return json({ error: merged.error }, 403);
   const requestHash = await portfolioRequestHash({
     tenantId,
     actorId: principal.id,
@@ -56,14 +61,14 @@ export async function PUT(request: Request) {
       db,
       tenantId,
       { id: principal.id, name: principal.name },
-      command.portfolio,
+      merged.state,
       expectedVersion,
       command.commandId,
       requestHash,
     );
     if (!portfolio)
       return json({ error: "A Carteira foi alterada por outra pessoa. Atualize a página e tente novamente." }, 409);
-    return json({ portfolio });
+    return json({ portfolio: filterPortfolioScope(principal, portfolio) });
   } catch (reason) {
     if (reason instanceof PortfolioCommandConflictError || reason instanceof PortfolioTransitionError)
       return json({ error: reason.message }, 409);

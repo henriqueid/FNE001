@@ -207,6 +207,14 @@ export async function findRegistryPartyByDocument(
   return row?.payload ?? null;
 }
 
+export async function findRegistryPartyById(db: DecisionDatabase, tenantId: string, partyId: string) {
+  const row = await db
+    .prepare(`select payload from private.registry_parties where tenant_id = ? and party_id = ?`)
+    .bind(tenantId, partyId)
+    .first<{ payload: Party }>();
+  return row?.payload ?? null;
+}
+
 export async function saveRegistryParty(db: DecisionDatabase, tenantId: string, actorId: string, party: Party) {
   const previous = await db
     .prepare(`select status from private.registry_parties where tenant_id = ? and party_id = ?`)

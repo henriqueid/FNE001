@@ -3,6 +3,7 @@ import { sessionPrincipal } from "@/src/server/access/session";
 import { getDatabase } from "@/src/server/database/postgres";
 import {
   findRegistryPartyByDocument,
+  findRegistryPartyById,
   loadRegistryParties,
   loadRegistryPartyStats,
   saveRegistryParty,
@@ -51,6 +52,18 @@ export async function PUT(request: Request) {
   const blocking = validateParty(party, sameDocument ? [sameDocument] : []).find(issue => issue.blocking);
   if (blocking) return json({ error: blocking.message }, 400);
   try {
+    const current = await findRegistryPartyById(access.db, access.tenantId, party.id);
+    if (
+      (!current && party.bankAccounts.length > 0) ||
+      (current && JSON.stringify(current.bankAccounts) !== JSON.stringify(party.bankAccounts))
+    )
+      return json(
+        {
+          error:
+            "Alterações de contas bancárias exigem solicitação e aprovação por outra pessoa no fluxo de segurança do Cadastro.",
+        },
+        409,
+      );
     await saveRegistryParty(access.db, access.tenantId, access.principal.id, party);
     return json({ party });
   } catch (reason) {

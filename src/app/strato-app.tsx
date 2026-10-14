@@ -207,7 +207,9 @@ export default function StratoApp() {
       void queued
         .then(saved => {
           setPolicyPersistenceError(undefined);
-          setPolicies(current => ({ ...current, persistenceVersion: saved.persistenceVersion }));
+          setPolicies(current =>
+            current === candidate ? saved : { ...current, persistenceVersion: saved.persistenceVersion },
+          );
         })
         .catch(reason => {
           setPolicyPersistenceError(

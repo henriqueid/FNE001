@@ -49,6 +49,18 @@ export type EligibilityPolicy = {
   effectiveFrom: string;
   effectiveTo?: string;
   status: "RASCUNHO" | "ATIVA" | "ENCERRADA";
+  publicationRequest?: {
+    requestedById: string;
+    requestedBy: string;
+    requestedAt: string;
+    justification: string;
+  };
+  publicationRejection?: {
+    rejectedById: string;
+    rejectedBy: string;
+    rejectedAt: string;
+    justification: string;
+  };
   approval?: {
     approvedById: string;
     approvedBy: string;

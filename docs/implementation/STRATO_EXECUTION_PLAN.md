@@ -273,7 +273,8 @@ Progresso A5.6 — maker-checker residual:
 - [x] proteger a fila no banco com RLS forçada, privilégios revogados, decisão terminal e uma pendência por cadastro;
 - [x] publicar o procedimento de conferência, rejeição e reapresentação de contas bancárias;
 - [x] disponibilizar no Cadastro a solicitação, comparação antes/depois, fila pendente, aprovação e rejeição;
-- [ ] aplicar dupla aprovação à publicação de configurações críticas;
+- [x] aplicar dupla aprovação à publicação de políticas de elegibilidade, com congelamento, aprovação ou rejeição independente;
+- [ ] estender dupla aprovação às demais configurações materiais que alterem cálculo, integração ou segurança;
 - [ ] proteger elevação de privilégios e alterações administrativas de credenciais;
 - [ ] homologar o fluxo residual com duas sessões reais e usuários distintos.
 

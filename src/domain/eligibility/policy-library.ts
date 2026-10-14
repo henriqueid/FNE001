@@ -81,7 +81,12 @@ export function createBlankPolicy(input: {
 }
 
 export function addPolicyRule(policy: EligibilityPolicy, ruleId: string): EligibilityPolicy {
-  if (policy.status !== "RASCUNHO" || policy.bindings.some(binding => binding.ruleId === ruleId)) return policy;
+  if (
+    policy.status !== "RASCUNHO" ||
+    policy.publicationRequest ||
+    policy.bindings.some(binding => binding.ruleId === ruleId)
+  )
+    return policy;
   return {
     ...policy,
     bindings: [
@@ -113,6 +118,8 @@ export function createPolicyVersion(policy: EligibilityPolicy, effectiveFrom: st
     effectiveFrom,
     effectiveTo: undefined,
     status: "RASCUNHO",
+    publicationRequest: undefined,
+    publicationRejection: undefined,
     approval: undefined,
     bindings: policy.bindings.map(binding => ({ ...binding })),
   };
@@ -123,7 +130,7 @@ export function updatePolicyBinding(
   ruleId: string,
   patch: Partial<PolicyRuleBinding>,
 ): EligibilityPolicy {
-  if (policy.status !== "RASCUNHO") return policy;
+  if (policy.status !== "RASCUNHO" || policy.publicationRequest) return policy;
   return {
     ...policy,
     bindings: policy.bindings.map(binding => (binding.ruleId === ruleId ? { ...binding, ...patch } : binding)),

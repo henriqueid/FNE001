@@ -1,5 +1,9 @@
 import type { EligibilityPolicyState } from "@/src/domain/eligibility/policy-library";
-import { validateEligibilityPolicyTransition } from "@/src/domain/eligibility/policy-persistence";
+import {
+  governEligibilityPolicyTransition,
+  validateEligibilityPolicyState,
+  validateEligibilityPolicyTransition,
+} from "@/src/domain/eligibility/policy-persistence";
 import { jsonParameter } from "@/src/server/database/postgres";
 import type { DecisionDatabase, DecisionStatement } from "@/src/server/decisions/repository";
 
@@ -241,11 +245,14 @@ export async function saveEligibilityPolicyState(
     if (repeated) return repeated;
     const previous = await loadEligibilityPolicyState(transaction, tenantId);
     if ((previous?.persistenceVersion ?? 0) !== expectedVersion) return null;
-    const transitionError = validateEligibilityPolicyTransition(previous, state, actor);
+    const governed = governEligibilityPolicyTransition(previous, state, actor);
+    const stateError = validateEligibilityPolicyState(governed);
+    if (stateError) throw new PolicyTransitionError(stateError);
+    const transitionError = validateEligibilityPolicyTransition(previous, governed, actor);
     if (transitionError) throw new PolicyTransitionError(transitionError);
-    const saved = await saveEnvelope(transaction, tenantId, actor.id, state, expectedVersion);
+    const saved = await saveEnvelope(transaction, tenantId, actor.id, governed, expectedVersion);
     if (!saved) return replayedPolicyCommand(transaction, tenantId, commandId, requestHash);
-    const projections = projectionStatements(transaction, tenantId, state);
+    const projections = projectionStatements(transaction, tenantId, governed);
     if (projections.length) await transaction.batch(projections);
     await transaction
       .prepare(

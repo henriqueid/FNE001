@@ -27,23 +27,23 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 
 ## Matriz de APIs
 
-| API                               | Leitura                             | Escrita                                                                                 | Escopo adicional                                                | Situação             |
-| --------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------- | -------------------- |
-| `/api/operations`                 | capacidade operacional              | uma entre `operations:edit`, `risk:decide`, `controlleria:formalize`, `finance:release` | tenant + empresa/veículo atual e solicitado                     | empresa aplicada     |
-| `/api/decisions`                  | `operations:view`                   | permissão por tipo de evento + alçada quando exigida                                    | tenant + empresa/veículo da operação                            | empresa aplicada     |
-| `/api/commercial`                 | `portfolio:manage` ou `risk:decide` | `portfolio:manage`; decisão exige `risk:decide`                                         | tenant + responsável/gerente; merge preserva dados não visíveis | segmentação aplicada |
-| `/api/portfolio`                  | `dashboard:view`                    | `portfolio:manage` ou `controlleria:formalize`                                          | tenant + empresa do título; merge preserva títulos não visíveis | empresa aplicada     |
-| `/api/finance`                    | `finance:view`                      | `finance:release`; configuração global exige `settings:manage`                          | tenant + empresa; merge preserva dados não visíveis             | empresa aplicada     |
-| `/api/registry/parties`           | `registry:view`                     | `registry:edit`                                                                         | tenant                                                          | concluído            |
-| `/api/receivables`                | capacidade operacional              | sem escrita direta                                                                      | tenant + empresa da operação                                    | empresa aplicada     |
-| `/api/tasks`                      | `dashboard:view`                    | `dashboard:view`, com regras de autoria                                                 | tenant + empresa da operação referenciada                       | empresa aplicada     |
-| `/api/eligibility-policies`       | `settings:view`                     | `settings:manage` + aprovação identificada                                              | tenant                                                          | concluído            |
-| `/api/access/users`               | `users:manage`                      | `users:manage`                                                                          | tenant                                                          | concluído            |
-| `/api/company`                    | `settings:view`                     | `settings:manage`                                                                       | tenant                                                          | concluído            |
-| `/api/integrations/cnpj`          | `registry:view`                     | consulta externa por capacidade funcional                                               | tenant                                                          | concluído            |
-| `/api/intelligence/configuration` | `settings:manage`                   | `settings:manage`                                                                       | tenant                                                          | concluído            |
-| `/api/copilot/chat`               | `dashboard:view`                    | consulta assistida, sem comando material                                                | tenant + empresa das fontes                                     | empresa aplicada     |
-| `/api/outbox/process`             | `operations:view`                   | reprocessamento exige `users:manage`                                                    | tenant + empresa da operação                                    | empresa aplicada     |
+| API                               | Leitura                             | Escrita                                                                                 | Escopo adicional                                                | Situação               |
+| --------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------- |
+| `/api/operations`                 | capacidade operacional              | uma entre `operations:edit`, `risk:decide`, `controlleria:formalize`, `finance:release` | tenant + empresa/veículo atual e solicitado                     | empresa aplicada       |
+| `/api/decisions`                  | `operations:view`                   | permissão por tipo de evento + alçada quando exigida                                    | tenant + empresa/veículo da operação                            | empresa aplicada       |
+| `/api/commercial`                 | `portfolio:manage` ou `risk:decide` | `portfolio:manage`; decisão exige `risk:decide`                                         | tenant + responsável/gerente; merge preserva dados não visíveis | segmentação aplicada   |
+| `/api/portfolio`                  | `dashboard:view`                    | `portfolio:manage` ou `controlleria:formalize`                                          | tenant + empresa do título; merge preserva títulos não visíveis | empresa aplicada       |
+| `/api/finance`                    | `finance:view`                      | `finance:release`; configuração global exige `settings:manage`                          | tenant + empresa; merge preserva dados não visíveis             | empresa aplicada       |
+| `/api/registry/parties`           | `registry:view`                     | `registry:edit`                                                                         | tenant                                                          | concluído              |
+| `/api/receivables`                | capacidade operacional              | sem escrita direta                                                                      | tenant + empresa da operação                                    | empresa aplicada       |
+| `/api/tasks`                      | `dashboard:view`                    | `dashboard:view`, com regras de autoria                                                 | tenant + empresa da operação referenciada                       | empresa aplicada       |
+| `/api/eligibility-policies`       | `settings:view`                     | `settings:manage` + solicitante e aprovador distintos                                   | tenant                                                          | maker-checker aplicado |
+| `/api/access/users`               | `users:manage`                      | `users:manage`                                                                          | tenant                                                          | concluído              |
+| `/api/company`                    | `settings:view`                     | `settings:manage`                                                                       | tenant                                                          | concluído              |
+| `/api/integrations/cnpj`          | `registry:view`                     | consulta externa por capacidade funcional                                               | tenant                                                          | concluído              |
+| `/api/intelligence/configuration` | `settings:manage`                   | `settings:manage`                                                                       | tenant                                                          | concluído              |
+| `/api/copilot/chat`               | `dashboard:view`                    | consulta assistida, sem comando material                                                | tenant + empresa das fontes                                     | empresa aplicada       |
+| `/api/outbox/process`             | `operations:view`                   | reprocessamento exige `users:manage`                                                    | tenant + empresa da operação                                    | empresa aplicada       |
 
 ## Regras já verificadas
 
@@ -62,6 +62,7 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 - Liberações financeiras exigem um preparador e um aprovador distintos, ambos derivados de sessões autenticadas.
 - O pacote de favorecidos fica congelado entre preparação e aprovação; lançamentos a pagar e auditoria são reconstruídos no backend, sem confiar no navegador.
 - Contas bancárias cadastrais só mudam por solicitação pendente e decisão de outra identidade; a API comum recusa inclusão ou troca direta.
+- Políticas de elegibilidade são congeladas após o envio; outra identidade precisa aprovar ou rejeitar, e o servidor autentica todas as autorias.
 - O Cadastro separa leitura (`registry:view`) de manutenção (`registry:edit`), inclusive nas evidências cadastrais.
 - O Copiloto recebe do navegador somente a pergunta; o backend lê as fontes no banco, reduz o contexto às empresas da sessão, remove campos não previstos e só mantém cedentes alcançáveis por operações ou títulos visíveis.
 - O Comercial filtra executivo e gerente vinculados na identidade do servidor; uma gravação segmentada recompõe o agregado completo e não apaga carteiras ocultas.
@@ -74,6 +75,6 @@ Em 13/10/2026, sessões reais temporárias validaram no backend: leitura institu
 ## Próximos endurecimentos
 
 1. Separar permissões de leitura e manutenção onde hoje uma permissão ampla atende aos dois usos.
-2. Aplicar maker-checker às alterações críticas de configuração, dados bancários cadastrais e elevação de privilégios; liberação, favorecidos e exceção já estão protegidos.
+2. Estender o maker-checker às demais configurações materiais e à elevação de privilégios; políticas, contas bancárias, liberação, favorecidos e exceções já estão protegidos.
 3. Centralizar recibos idempotentes, event ledger e outbox em um contrato comum.
 4. Executar homologação com duas sessões e dois tenants, incluindo tentativas deliberadas de acesso cruzado.

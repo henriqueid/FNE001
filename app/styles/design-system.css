@@ -6598,6 +6598,16 @@ a.fn-btn:not([href]) {
   color: #24644d;
   font-size: 13px;
 }
+.policy-publication-request {
+  margin: 14px 22px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.policy-publication-request small {
+  flex-basis: 100%;
+  color: var(--muted);
+}
 .policies-layout {
   display: grid;
   grid-template-columns: 285px minmax(0, 1fr);

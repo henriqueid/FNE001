@@ -43,11 +43,13 @@ export default function PoliciesModule({
   state,
   onState,
   approvalActor,
+  demoMode = false,
   embedded = false,
 }: {
   state: EligibilityPolicyState;
   onState: (state: EligibilityPolicyState) => void;
   approvalActor: { id: string; name: string };
+  demoMode?: boolean;
   embedded?: boolean;
 }) {
   const destinations = useCompanyDestinations();
@@ -116,6 +118,26 @@ export default function PoliciesModule({
       setMessage("Registre uma justificativa de aprovação com pelo menos 10 caracteres.");
       return;
     }
+    if (!demoMode && !selected.publicationRequest) {
+      replacePolicy({
+        ...selected,
+        publicationRequest: {
+          requestedById: approvalActor.id,
+          requestedBy: approvalActor.name,
+          requestedAt: new Date().toISOString(),
+          justification: approvalJustification.trim(),
+        },
+      });
+      setApprovalJustification("");
+      setMessage("Política enviada para aprovação. O conteúdo foi congelado e deve ser aprovado por outra pessoa.");
+      return;
+    }
+    if (!demoMode && selected.publicationRequest?.requestedById === approvalActor.id) {
+      setMessage(
+        "A publicação aguarda outro usuário com permissão. O solicitante não pode aprovar a própria política.",
+      );
+      return;
+    }
     onState({
       ...state,
       policies: activatePolicyVersion(state.policies, selected.id, selected.effectiveFrom, {
@@ -127,6 +149,30 @@ export default function PoliciesModule({
     });
     setApprovalJustification("");
     setMessage("Versão aprovada e ativada. Novas análises usarão esta vigência; o histórico ficou congelado.");
+  };
+
+  const rejectPublication = () => {
+    if (!selected?.publicationRequest || selected.status !== "RASCUNHO" || demoMode) return;
+    if (selected.publicationRequest.requestedById === approvalActor.id) {
+      setMessage("O solicitante não pode rejeitar a própria publicação.");
+      return;
+    }
+    if (approvalJustification.trim().length < 10) {
+      setMessage("Registre o motivo da rejeição com pelo menos 10 caracteres.");
+      return;
+    }
+    const { publicationRequest: _publicationRequest, ...policy } = selected;
+    replacePolicy({
+      ...policy,
+      publicationRejection: {
+        rejectedById: approvalActor.id,
+        rejectedBy: approvalActor.name,
+        rejectedAt: new Date().toISOString(),
+        justification: approvalJustification.trim(),
+      },
+    });
+    setApprovalJustification("");
+    setMessage("Publicação rejeitada. O rascunho foi liberado para correção e um novo envio.");
   };
 
   const downloadTemplate = () => {
@@ -267,11 +313,31 @@ export default function PoliciesModule({
               </span>
             </header>
 
+            {selected.publicationRequest && (
+              <div className="policy-module-message policy-publication-request">
+                <strong>Publicação solicitada por {selected.publicationRequest.requestedBy}</strong> em{" "}
+                {new Date(selected.publicationRequest.requestedAt).toLocaleString("pt-BR")}.{" "}
+                {selected.publicationRequest.justification}
+                {selected.publicationRequest.requestedById === approvalActor.id && !demoMode && (
+                  <small>Aguardando aprovação independente de outro usuário.</small>
+                )}
+              </div>
+            )}
+
+            {selected.publicationRejection && !selected.publicationRequest && (
+              <div className="policy-module-message policy-publication-request">
+                <strong>Última publicação rejeitada por {selected.publicationRejection.rejectedBy}</strong> em{" "}
+                {new Date(selected.publicationRejection.rejectedAt).toLocaleString("pt-BR")}.{" "}
+                {selected.publicationRejection.justification}
+              </div>
+            )}
+
             {selected.status === "RASCUNHO" && (
               <div className="policy-draft-controls">
                 <label>
                   Empresa / veículo
                   <select
+                    disabled={!!selected.publicationRequest && !demoMode}
                     value={selected.company ?? ""}
                     onChange={event => {
                       const destination = destinations.find(item => item.name === event.target.value)!;
@@ -287,6 +353,7 @@ export default function PoliciesModule({
                   Início da vigência
                   <input
                     type="date"
+                    disabled={!!selected.publicationRequest && !demoMode}
                     value={selected.effectiveFrom}
                     onChange={event => replacePolicy({ ...selected, effectiveFrom: event.target.value })}
                   />
@@ -294,21 +361,43 @@ export default function PoliciesModule({
                 <label>
                   Versão
                   <input
+                    disabled={!!selected.publicationRequest && !demoMode}
                     value={selected.version}
                     onChange={event => replacePolicy({ ...selected, version: event.target.value })}
                   />
                 </label>
                 <label>
-                  Justificativa da aprovação
+                  {selected.publicationRequest && !demoMode
+                    ? "Justificativa da aprovação"
+                    : demoMode
+                      ? "Justificativa da aprovação"
+                      : "Justificativa do envio"}
                   <input
                     value={approvalJustification}
                     placeholder="Ex.: revisão anual aprovada pela Diretoria"
                     onChange={event => setApprovalJustification(event.target.value)}
                   />
                 </label>
-                <button type="button" onClick={activate}>
-                  Aprovar e ativar
+                <button
+                  type="button"
+                  onClick={activate}
+                  disabled={!demoMode && selected.publicationRequest?.requestedById === approvalActor.id}
+                >
+                  {demoMode
+                    ? "Aprovar e ativar"
+                    : selected.publicationRequest
+                      ? selected.publicationRequest.requestedById === approvalActor.id
+                        ? "Aguardando outro aprovador"
+                        : "Aprovar e ativar"
+                      : "Enviar para aprovação"}
                 </button>
+                {!demoMode &&
+                  selected.publicationRequest &&
+                  selected.publicationRequest.requestedById !== approvalActor.id && (
+                    <button type="button" className="secondary-action" onClick={rejectPublication}>
+                      Rejeitar publicação
+                    </button>
+                  )}
               </div>
             )}
 
@@ -367,7 +456,7 @@ export default function PoliciesModule({
                       )}
                       {selected.bindings.map(binding => {
                         const rule = catalog.get(binding.ruleId);
-                        const editable = selected.status === "RASCUNHO";
+                        const editable = selected.status === "RASCUNHO" && (!selected.publicationRequest || demoMode);
                         return (
                           <tr key={binding.ruleId}>
                             <td>
@@ -515,7 +604,7 @@ export default function PoliciesModule({
                         {rule.requiredData && <small>Dado necessário: {rule.requiredData}</small>}
                         <button
                           type="button"
-                          disabled={selected.status !== "RASCUNHO"}
+                          disabled={selected.status !== "RASCUNHO" || (!!selected.publicationRequest && !demoMode)}
                           onClick={() => replacePolicy(addPolicyRule(selected, rule.id))}
                         >
                           Adicionar à política

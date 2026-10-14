@@ -315,7 +315,13 @@ export default function SettingsModule({
           )}
 
           {section === "policies" && (
-            <PoliciesModule state={policies} onState={onPolicies} approvalActor={policyApprovalActor} embedded />
+            <PoliciesModule
+              state={policies}
+              onState={onPolicies}
+              approvalActor={policyApprovalActor}
+              demoMode={demoMode}
+              embedded
+            />
           )}
 
           {section === "access" && <UsersAccessPanel state={access} onState={onAccess} />}

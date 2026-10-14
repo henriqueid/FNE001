@@ -5,6 +5,14 @@ const unique = (values: string[]) => new Set(values).size === values.length;
 const validDate = (value: string | undefined) => !!value && /^\d{4}-\d{2}-\d{2}$/.test(value);
 const validInstant = (value: string | undefined) => !!value && Number.isFinite(new Date(value).getTime());
 const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
+const withoutPublicationRequest = (policy: EligibilityPolicy) => {
+  const { publicationRequest: _publicationRequest, ...editable } = policy;
+  return editable;
+};
+const withoutPublicationDecision = (policy: EligibilityPolicy) => {
+  const { publicationRequest: _publicationRequest, publicationRejection: _publicationRejection, ...editable } = policy;
+  return editable;
+};
 const withoutPersistence = (state: EligibilityPolicyState) => {
   const { persistenceVersion: _persistenceVersion, ...snapshot } = state;
   return snapshot;
@@ -24,6 +32,22 @@ function validPolicy(policy: EligibilityPolicy) {
     )
   )
     return false;
+  if (
+    policy.publicationRequest &&
+    (!policy.publicationRequest.requestedById.trim() ||
+      !policy.publicationRequest.requestedBy.trim() ||
+      !validInstant(policy.publicationRequest.requestedAt) ||
+      policy.publicationRequest.justification.trim().length < 10)
+  )
+    return false;
+  if (
+    policy.publicationRejection &&
+    (!policy.publicationRejection.rejectedById.trim() ||
+      !policy.publicationRejection.rejectedBy.trim() ||
+      !validInstant(policy.publicationRejection.rejectedAt) ||
+      policy.publicationRejection.justification.trim().length < 10)
+  )
+    return false;
   if (policy.status === "RASCUNHO") return !policy.approval && !policy.effectiveTo;
   return (
     !!policy.approval?.approvedById.trim() &&
@@ -32,6 +56,61 @@ function validPolicy(policy: EligibilityPolicy) {
     policy.approval.justification.trim().length >= 10 &&
     policy.bindings.some(binding => binding.enabled && binding.parameter !== null)
   );
+}
+
+/** Aplica identidades e horários confiáveis antes de validar e persistir o comando. */
+export function governEligibilityPolicyTransition(
+  previous: EligibilityPolicyState | null,
+  next: EligibilityPolicyState,
+  actor: { id: string; name: string },
+  now = new Date().toISOString(),
+): EligibilityPolicyState {
+  if (!previous) return next;
+  const priorById = new Map(previous.policies.map(policy => [policy.id, policy]));
+  return {
+    ...next,
+    policies: next.policies.map(candidate => {
+      const prior = priorById.get(candidate.id);
+      if (!prior || prior.status !== "RASCUNHO") return candidate;
+      if (!prior.publicationRequest && candidate.status === "RASCUNHO" && candidate.publicationRequest)
+        return {
+          ...candidate,
+          publicationRequest: {
+            ...candidate.publicationRequest,
+            requestedById: actor.id,
+            requestedBy: actor.name,
+            requestedAt: now,
+          },
+        };
+      if (prior.publicationRequest && candidate.status === "ATIVA" && candidate.approval)
+        return {
+          ...candidate,
+          publicationRequest: prior.publicationRequest,
+          approval: {
+            ...candidate.approval,
+            approvedById: actor.id,
+            approvedBy: actor.name,
+            approvedAt: now,
+          },
+        };
+      if (
+        prior.publicationRequest &&
+        candidate.status === "RASCUNHO" &&
+        !candidate.publicationRequest &&
+        candidate.publicationRejection
+      )
+        return {
+          ...candidate,
+          publicationRejection: {
+            ...candidate.publicationRejection,
+            rejectedById: actor.id,
+            rejectedBy: actor.name,
+            rejectedAt: now,
+          },
+        };
+      return candidate;
+    }),
+  };
 }
 
 const scope = (policy: EligibilityPolicy) =>
@@ -55,6 +134,8 @@ export function validateEligibilityPolicyTransition(
   if (!previous) {
     if (next.policies.some(policy => policy.status !== "RASCUNHO"))
       return "O estado inicial só pode conter políticas em rascunho.";
+    if (next.policies.some(policy => policy.publicationRequest))
+      return "Salve o rascunho antes de enviá-lo para aprovação.";
     return null;
   }
   const nextById = new Map(next.policies.map(policy => [policy.id, policy]));
@@ -71,11 +152,54 @@ export function validateEligibilityPolicyTransition(
     }
     if (prior.status === "RASCUNHO" && candidate.status === "ENCERRADA")
       return `A política ${prior.name} ${prior.version} precisa ser aprovada antes de ser encerrada.`;
+    if (prior.status === "RASCUNHO" && prior.publicationRequest) {
+      if (candidate.status === "RASCUNHO" && !same(prior, candidate)) {
+        const validRejection =
+          !candidate.publicationRequest &&
+          !!candidate.publicationRejection &&
+          !same(prior.publicationRejection, candidate.publicationRejection) &&
+          same(withoutPublicationDecision(prior), withoutPublicationDecision(candidate));
+        if (!validRejection)
+          return `A política ${prior.name} ${prior.version} está aguardando aprovação e não pode ser alterada.`;
+        if (prior.publicationRequest.requestedById === actor.id)
+          return "Quem solicitou a publicação não pode rejeitar a própria política.";
+        if (
+          candidate.publicationRejection?.rejectedById !== actor.id ||
+          candidate.publicationRejection.rejectedBy !== actor.name ||
+          !validInstant(candidate.publicationRejection.rejectedAt)
+        )
+          return "A rejeição da política não corresponde à sessão autenticada.";
+      }
+      if (candidate.status === "ATIVA") {
+        if (!same(prior.publicationRequest, candidate.publicationRequest))
+          return "A solicitação de publicação não pode ser alterada durante a aprovação.";
+        const { approval: _approval, ...activated } = candidate;
+        if (!same(prior, { ...activated, status: "RASCUNHO" }))
+          return "O conteúdo da política não pode ser alterado durante a aprovação.";
+        if (prior.publicationRequest.requestedById === actor.id)
+          return "Quem solicitou a publicação não pode aprovar a própria política.";
+        if (
+          candidate.approval?.approvedById !== actor.id ||
+          candidate.approval.approvedBy !== actor.name ||
+          !validInstant(candidate.approval.approvedAt)
+        )
+          return "A aprovação da política não corresponde à sessão autenticada.";
+      }
+    }
+    if (
+      prior.status === "RASCUNHO" &&
+      !prior.publicationRequest &&
+      candidate.publicationRequest &&
+      (candidate.status !== "RASCUNHO" || !same(withoutPublicationRequest(prior), withoutPublicationRequest(candidate)))
+    )
+      return "Salve todas as alterações antes de enviar a política para aprovação.";
   }
   for (const candidate of next.policies) {
     const prior = previous.policies.find(policy => policy.id === candidate.id);
     if (!prior && candidate.status !== "RASCUNHO") return "Uma política nova deve começar como rascunho.";
+    if (!prior && candidate.publicationRequest) return "Salve o rascunho antes de enviá-lo para aprovação.";
     if (prior?.status === "RASCUNHO" && candidate.status === "ATIVA") {
+      if (!prior.publicationRequest) return "Envie a política para aprovação antes de ativá-la.";
       if (
         candidate.approval?.approvedById !== actor.id ||
         candidate.approval.approvedBy !== actor.name ||

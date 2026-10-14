@@ -6,6 +6,7 @@ import { evaluateOperationEligibility } from "@/src/domain/eligibility/operation
 import { autoAdvanceWithinPolicy } from "@/src/domain/operations/auto-advance";
 import { lastroAssessmentFor, type LastroReviewItem } from "@/src/domain/operations/lastro";
 import { buildDefaultApprovals } from "@/src/features/operations/approval/approval-model";
+import { automationFor, stageAdvanceBlocker } from "@/src/features/operations/workspace/workspace-model";
 
 const base = initialOperations.find(op => (op.manualEntry?.entries.length ?? 0) > 0)!;
 
@@ -62,5 +63,36 @@ describe("exceções de confirmação no lastro", () => {
     expect(credit(0)?.status).toBe("Aprovado");
     expect(credit(2)).toMatchObject({ status: "Pendente", approver: "Comitê de Crédito" });
     expect(credit(2)?.note).toContain("Exceção de lastro");
+  });
+
+  it("usa o mesmo cadastro real de sacados na tela e no bloqueio de avanço", () => {
+    const entries = (base.manualEntry?.entries ?? []).map(entry =>
+      entry.id === "risk-3408-3"
+        ? { ...entry, nfeKey: "41260952927676000129550010000664201002468102", cfop: "5102" }
+        : entry,
+    );
+    const items = Object.fromEntries(
+      entries.map(entry => [
+        entry.id,
+        {
+          evidenceDecision: "Validada" as const,
+          confirmation: entry.debtorId === "sacado-2" ? ("Confirmado" as const) : ("Pendente" as const),
+        },
+      ]),
+    );
+    const realOperation: Operation = {
+      ...base,
+      id: "operacao-real-lastro",
+      risk: "Baixo",
+      stage: 3,
+      blockers: 0,
+      eligibilityReview: undefined,
+      manualEntry: { ...base.manualEntry!, entries },
+      lastroReview: { items },
+    };
+
+    expect(lastroAssessmentFor(realOperation, initialDebtors).ready).toBe(true);
+    expect(lastroAssessmentFor(realOperation, []).ready).toBe(false);
+    expect(stageAdvanceBlocker(realOperation, automationFor(realOperation), initialDebtors)).toBeNull();
   });
 });

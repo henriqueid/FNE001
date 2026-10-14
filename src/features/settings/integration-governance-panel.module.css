@@ -1,0 +1,105 @@
+.panel {
+  display: grid;
+  gap: 1rem;
+  margin-block: 1rem 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border-subtle, #dbe4e1);
+  border-radius: 1rem;
+  background: var(--surface-raised, #fff);
+}
+
+.panel header,
+.queue,
+.capabilities,
+.queue article,
+.capabilities fieldset {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.panel header h3,
+.panel header p,
+.queue h4,
+.queue p {
+  margin: 0;
+}
+
+.success,
+.error {
+  margin: 0;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+}
+
+.success {
+  color: #155e46;
+  background: #ecfdf5;
+}
+
+.error {
+  color: #991b1b;
+  background: #fef2f2;
+}
+
+.queue article,
+.capabilities fieldset {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--border-subtle, #dbe4e1);
+  border-radius: 0.8rem;
+}
+
+.queue small,
+.provider small {
+  display: block;
+  color: var(--text-muted, #64748b);
+}
+
+.queue ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.provider {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) minmax(9rem, 0.5fr) minmax(7rem, 0.35fr);
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.provider label,
+.reason,
+.queue label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.provider select,
+.provider input,
+.reason textarea,
+.queue textarea {
+  width: 100%;
+  min-height: 2.5rem;
+}
+
+.reason textarea,
+.queue textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+@media (max-width: 760px) {
+  .provider {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+  }
+}

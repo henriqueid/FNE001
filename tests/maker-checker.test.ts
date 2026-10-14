@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { initialOperations } from "@/src/domain/core/demo/operations";
+import { initialDebtors } from "@/src/domain/core/demo/debtors";
 import type { DecisionEvent } from "@/src/domain/decisions/model";
+import { evaluateOperationEligibility } from "@/src/domain/eligibility/operation-adapter";
+import {
+  hydrateOperationReceivables,
+  receivablesFromOperation,
+  stripReceivablesFromOperation,
+} from "@/src/domain/receivables/model";
 import { assertExceptionMakerChecker } from "@/src/server/decisions/governance";
 import {
   assertOperationTransition,
@@ -116,6 +123,45 @@ describe("maker-checker de decisões materiais", () => {
     expect(operationMutationPermissionError(base, releaseChange, ["finance:release"])).toBeNull();
   });
 
+  it("compara permissões com o snapshot reidratado e permite a conclusão por Risco", () => {
+    const base = initialOperations[0];
+    const persisted = stripReceivablesFromOperation(base);
+    const hydrated = hydrateOperationReceivables(persisted, receivablesFromOperation(base));
+    const run = evaluateOperationEligibility({ operation: hydrated, debtors: initialDebtors });
+    const decided = {
+      ...hydrated,
+      eligibilityReview: {
+        run: { ...run, evaluations: run.evaluations.map(item => ({ ...item, outcome: "APROVADO" as const })) },
+        overrides: [],
+      },
+    };
+    const advanced = {
+      ...decided,
+      stage: 3,
+      status: "Em andamento" as const,
+      stageCompletions: [{ stageId: 2, completedBy: "Risco", completedAt: "13/10/2026, 12:00" }],
+    };
+
+    expect(hydrated.manualEntry?.entries).toHaveLength(base.manualEntry?.entries.length ?? 0);
+    expect(operationMutationPermissionError(hydrated, decided, ["risk:decide"])).toBeNull();
+    expect(operationMutationPermissionError(decided, advanced, ["risk:decide"])).toBeNull();
+
+    const manualDecisions = {
+      ...hydrated,
+      eligibilityReview: undefined,
+      riskReview: {
+        cedentDecision: "Aprovado" as const,
+        debtorDecisions: Object.fromEntries(
+          hydrated.manualEntry!.entries.map(entry => [entry.debtorId || entry.debtorDocument, "Aprovado" as const]),
+        ),
+        titleDecisions: Object.fromEntries(hydrated.manualEntry!.entries.map(entry => [entry.id, "Aprovado" as const])),
+      },
+    };
+    expect(
+      operationMutationPermissionError(manualDecisions, { ...manualDecisions, stage: 3 }, ["risk:decide"]),
+    ).toBeNull();
+  });
+
   it("valida estados terminais e liberação no servidor", () => {
     const released = { ...initialOperations[0], stage: 6, status: "Liberada ao financeiro" as const };
     expect(() => assertOperationTransition(released, { ...released, blockers: 99 })).toThrow("somente para consulta");
@@ -130,5 +176,62 @@ describe("maker-checker de decisões materiais", () => {
     expect(() => assertOperationTransition(null, { ...initialOperations[0], stage: 2, titleCount: 0 })).toThrow(
       "ao menos um título",
     );
+    expect(() =>
+      assertOperationTransition(initialOperations[0], {
+        ...initialOperations[0],
+        releaseReview: { status: "Em preparação" },
+      }),
+    ).toThrow("etapa de Liberação");
+    expect(() =>
+      assertOperationTransition({ ...initialOperations[0], stage: 1 }, { ...initialOperations[0], stage: 6 }),
+    ).toThrow("etapa intermediária");
+    expect(() =>
+      assertOperationTransition({ ...initialOperations[0], stage: 5 }, { ...initialOperations[0], stage: 6 }),
+    ).toThrow("aprovação, documentos e assinaturas");
+  });
+
+  it("permite baixa e estorno financeiro sem reabrir a operação liberada", () => {
+    const payable = {
+      id: "pay-1",
+      payee: "Cedente",
+      document: "52927676000129",
+      method: "PIX" as const,
+      destination: "chave-pix",
+      amount: 100,
+      dueDate: "2026-10-13",
+      payingAccount: "Conta principal",
+      status: "Pendente de pagamento" as const,
+      createdAt: "13/10/2026, 10:00",
+    };
+    const released = {
+      ...initialOperations[0],
+      stage: 6,
+      status: "Liberada ao financeiro" as const,
+      releaseReview: { status: "Enviada ao financeiro" as const, payables: [payable], audit: [] },
+    };
+    const paid = {
+      ...released,
+      releaseReview: {
+        ...released.releaseReview,
+        payables: [{ ...payable, status: "Pago" as const, paidAt: "2026-10-13" }],
+        audit: [{ at: "13/10/2026, 12:00", by: "Financeiro", action: "Pagamento realizado", detail: "pay-1" }],
+      },
+    };
+    expect(() => assertOperationTransition(released, paid)).not.toThrow();
+    expect(() => governReleaseTransition(released, paid, { id: "finance", name: "Financeiro" })).not.toThrow();
+
+    const reversed = {
+      ...paid,
+      releaseReview: {
+        ...paid.releaseReview,
+        payables: [{ ...payable }],
+        audit: [
+          ...paid.releaseReview.audit,
+          { at: "13/10/2026, 12:10", by: "Financeiro", action: "Pagamento estornado", detail: "pay-1" },
+        ],
+      },
+    };
+    expect(() => assertOperationTransition(paid, reversed)).not.toThrow();
+    expect(() => governReleaseTransition(paid, reversed, { id: "finance", name: "Financeiro" })).not.toThrow();
   });
 });

@@ -33,7 +33,11 @@ export async function loadOperationSnapshot(db: DecisionDatabase, tenantId: stri
     .prepare("select payload, aggregate_version from private.operations where tenant_id = ? and operation_id = ?")
     .bind(tenantId, operationId)
     .first<OperationRow>();
-  return row ? { ...row.payload, persistenceVersion: row.aggregate_version } : null;
+  if (!row) return null;
+  const [operation] = await hydrateOperationsFromReceivables(db, tenantId, [
+    { ...row.payload, persistenceVersion: row.aggregate_version },
+  ]);
+  return operation;
 }
 
 async function saveOperationRecord(

@@ -3,7 +3,7 @@
  * (regras em `workspace-model.ts`) e registra a conclusão quando possível.
  */
 import { stages } from "@/src/domain/core/stages";
-import { type Operation } from "@/src/domain/core/types";
+import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { type AutomationBreakdown } from "@/src/domain/operations/automation";
 import { type AutoAdvanceResult, autoAdvanceMessage } from "@/src/domain/operations/auto-advance";
 import { stageAdvanceBlocker, type WorkspaceFeedback, withCurrentStageCompleted } from "./workspace-model";
@@ -11,6 +11,7 @@ import { stageAdvanceBlocker, type WorkspaceFeedback, withCurrentStageCompleted 
 export function useStageAdvance({
   operation,
   automation,
+  debtors,
   commit,
   onActiveChange,
   onFeedback,
@@ -18,13 +19,14 @@ export function useStageAdvance({
 }: {
   operation: Operation;
   automation: AutomationBreakdown;
+  debtors: Debtor[];
   commit: (next: Operation) => AutoAdvanceResult | void;
   onActiveChange: (stageId: number) => void;
   onFeedback: (feedback: WorkspaceFeedback) => void;
   onRequireCedent: () => void;
 }) {
   return function advance() {
-    const blocker = stageAdvanceBlocker(operation, automation);
+    const blocker = stageAdvanceBlocker(operation, automation, debtors);
     if (blocker) {
       if (blocker.requireCedent) onRequireCedent();
       onFeedback(blocker.feedback);

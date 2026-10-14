@@ -369,6 +369,51 @@ export function approvalPackageComplete(review: ApprovalReview) {
   );
 }
 
+/**
+ * Devolve a operação ao Risco preservando a trilha, mas invalida o pacote
+ * decisório. Alçadas, documentos e assinaturas serão recalculados a partir da
+ * nova análise, impedindo o reaproveitamento silencioso de aprovações antigas.
+ */
+export function withOperationReturnedToRisk(
+  operation: Operation,
+  review: ApprovalReview,
+  justification: string,
+  by = "Henrique",
+  at = nowLabel(),
+): Operation {
+  const reason = justification.trim();
+  return {
+    ...operation,
+    stage: 2,
+    status: "Em atenção",
+    blockers: Math.max(1, operation.blockers),
+    nextAction: "Revisar política, dados e exceções da operação devolvida",
+    approvalReview: {
+      status: "Preparação",
+      observation: reason,
+      approvals: [],
+      documents: [],
+      signatures: [],
+      finalDecision: {
+        outcome: "DEVOLVIDA",
+        decidedAt: at,
+        decidedBy: by,
+        justification: reason,
+      },
+      audit: [
+        ...(review.audit ?? []),
+        { at, by, action: "Operação devolvida", detail: reason },
+        {
+          at,
+          by: "Orquestrador FNE001",
+          action: "Pacote decisório invalidado",
+          detail: "Alçadas, documentos e assinaturas anteriores devem ser refeitos após a nova análise de risco.",
+        },
+      ],
+    },
+  };
+}
+
 /** Disponibiliza a operação para liberação assim que a última formalidade humana é concluída. */
 export function withFormalizationCompleted(operation: Operation, review: ApprovalReview, at = nowLabel()): Operation {
   if (!approvalPackageComplete(review)) return { ...operation, approvalReview: review };

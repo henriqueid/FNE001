@@ -4,6 +4,7 @@ import { useCompanyDestinations, useCompanyDirectory } from "@/src/app/company-c
 import { masterRuleCatalog } from "@/src/domain/eligibility/master-rule-catalog";
 import { type EligibilityPolicyState } from "@/src/domain/eligibility/policy-library";
 import PoliciesModule from "@/src/features/policies/policies-module";
+import IntegrationGovernancePanel from "./integration-governance-panel";
 import { useEffect, useState } from "react";
 import { type IntegrationState, updateIntegrationMode } from "@/src/domain/integrations/model";
 import {
@@ -1048,6 +1049,15 @@ export default function SettingsModule({
                   configuradas
                 </span>
               </div>
+              {!demoMode && (integrations.connections?.length ?? 0) > 0 && (
+                <IntegrationGovernancePanel
+                  key={(integrations.connections ?? [])
+                    .map(connection => `${connection.providerId}:${connection.updatedAt}`)
+                    .join("|")}
+                  integrations={integrations}
+                  onIntegrations={onIntegrations}
+                />
+              )}
               <div className="settings-integration-grid">
                 {integrations.providers.map(provider => (
                   <article key={provider.id} className={`integration-${provider.mode.toLowerCase()}`}>

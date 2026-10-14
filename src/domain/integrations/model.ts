@@ -15,13 +15,43 @@ export type IntegrationProviderId =
 
 export type IntegrationMode = "DEMONSTRACAO" | "NAO_CONFIGURADA" | "ATIVA" | "INDISPONIVEL";
 
+export type IntegrationCapability =
+  "CNPJ_LOOKUP" | "CEP_LOOKUP" | "BANK_DIRECTORY" | "HOLIDAY_CALENDAR" | "PIX_DIRECTORY";
+
 export type IntegrationConnection = {
   providerId: string;
-  capability: string;
+  capability: IntegrationCapability;
   status: "ACTIVE" | "DEGRADED" | "PLANNED" | "SUSPENDED";
+  priority: number;
   sourceType: "PUBLIC" | "INSTITUTIONAL";
   label: string;
   updatedAt: string;
+};
+
+export type IntegrationConfigurationSnapshot = Pick<
+  IntegrationConnection,
+  "providerId" | "capability" | "status" | "priority" | "sourceType" | "label"
+>;
+
+export type IntegrationChangeProposal = Pick<
+  IntegrationConfigurationSnapshot,
+  "providerId" | "capability" | "status" | "priority"
+>;
+
+export type IntegrationChangeRequest = {
+  id: string;
+  capability: IntegrationCapability;
+  previous: IntegrationConfigurationSnapshot[];
+  proposed: IntegrationConfigurationSnapshot[];
+  reason: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  requestedById: string;
+  requestedBy: string;
+  requestedAt: string;
+  decidedById?: string;
+  decidedBy?: string;
+  decidedAt?: string;
+  decisionReason?: string;
 };
 
 export type IntegrationProvider = {
@@ -35,7 +65,12 @@ export type IntegrationProvider = {
   connection?: IntegrationConnection;
 };
 
-export type IntegrationState = { version: 1; providers: IntegrationProvider[] };
+export type IntegrationState = {
+  version: 1;
+  providers: IntegrationProvider[];
+  connections?: IntegrationConnection[];
+  changeRequests?: IntegrationChangeRequest[];
+};
 
 const providerCatalog: Omit<IntegrationProvider, "mode">[] = [
   {

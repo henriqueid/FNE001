@@ -22,23 +22,27 @@ export function StageContent({
   active,
   stageInsight,
   stageLocked,
+  stageReadOnly,
   debtors,
   onRegisterDebtor,
   onSaveManualEntry,
   onChange,
   showGuidance,
   onGoToCurrentStage,
+  actor,
 }: {
   operation: Operation;
   active: number;
   stageInsight: StageInsight;
   stageLocked: boolean;
+  stageReadOnly: boolean;
   debtors: Debtor[];
   onRegisterDebtor: (debtor: Debtor) => void;
   onSaveManualEntry: (data: ManualEntryData) => void;
   onChange: (operation: Operation) => void;
   showGuidance: boolean;
   onGoToCurrentStage: () => void;
+  actor: { id: string; name: string };
 }) {
   const activeStage = stages[active - 1];
   return (
@@ -76,7 +80,7 @@ export function StageContent({
           <Badge tone="live">DADOS PRESERVADOS</Badge>
         </div>
       )}
-      {active === 1 && operation.stage === 1 && operation.source === "Digitação manual" && (
+      {active === 1 && !stageReadOnly && operation.stage === 1 && operation.source === "Digitação manual" && (
         <ManualEntryPanel
           operation={operation}
           debtors={debtors}
@@ -84,7 +88,7 @@ export function StageContent({
           onSave={onSaveManualEntry}
         />
       )}
-      {active === 1 && !(operation.stage === 1 && operation.source === "Digitação manual") && (
+      {active === 1 && (stageReadOnly || !(operation.stage === 1 && operation.source === "Digitação manual")) && (
         <EntryRecordPanel operation={operation} />
       )}
       {stageLocked && (
@@ -109,18 +113,36 @@ export function StageContent({
           )}
         </section>
       )}
-      {!stageLocked && active === 2 && (
+      {!stageLocked && !stageReadOnly && active === 2 && (
         <RiskEligibilityPanel operation={operation} debtors={debtors} onChange={onChange} />
       )}
-      {!stageLocked && active === 3 && (
+      {!stageLocked && !stageReadOnly && active === 3 && (
         <LastroValidationPanel operation={operation} debtors={debtors} onChange={onChange} />
       )}
-      {!stageLocked && active === 4 && (
+      {!stageLocked && !stageReadOnly && active === 4 && (
         <PricingPanel operation={operation} onChange={onChange} showGuidance={showGuidance} />
       )}
-      {!stageLocked && active === 5 && <ApprovalPanel operation={operation} onChange={onChange} />}
-      {active === 6 && operation.stage === 6 && <ReleasePanel operation={operation} onChange={onChange} />}
+      {!stageLocked && !stageReadOnly && active === 5 && (
+        <ApprovalPanel operation={operation} debtors={debtors} onChange={onChange} />
+      )}
+      {!stageReadOnly && active === 6 && operation.stage === 6 && (
+        <ReleasePanel operation={operation} onChange={onChange} actor={actor} />
+      )}
+      {!stageLocked && stageReadOnly && active > 1 && (
+        <fieldset
+          disabled
+          aria-label={`Consulta histórica: ${activeStage.title}`}
+          style={{ border: 0, margin: 0, minWidth: 0, padding: 0 }}
+        >
+          {active === 2 && <RiskEligibilityPanel operation={operation} debtors={debtors} onChange={onChange} />}
+          {active === 3 && <LastroValidationPanel operation={operation} debtors={debtors} onChange={onChange} />}
+          {active === 4 && <PricingPanel operation={operation} onChange={onChange} showGuidance={showGuidance} />}
+          {active === 5 && <ApprovalPanel operation={operation} debtors={debtors} onChange={onChange} />}
+          {active === 6 && <ReleasePanel operation={operation} onChange={onChange} actor={actor} />}
+        </fieldset>
+      )}
       {!stageLocked &&
+        !stageReadOnly &&
         active !== 1 &&
         active !== 2 &&
         active !== 3 &&

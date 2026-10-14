@@ -3,7 +3,7 @@
  * pendências para concluir etapa, resumo financeiro e transformações da operação.
  */
 import { stages } from "@/src/domain/core/stages";
-import { type Cedent, type ManualEntryData, type Operation } from "@/src/domain/core/types";
+import { type Cedent, type Debtor, type ManualEntryData, type Operation } from "@/src/domain/core/types";
 import { eligibilityRouteFor, withEligibilityRoute } from "@/src/domain/eligibility/orchestration";
 import { type AutomationBreakdown, manualAutomation } from "@/src/domain/operations/automation";
 import { lastroAssessmentFor } from "@/src/domain/operations/lastro";
@@ -52,18 +52,32 @@ export function automationFor(operation: Operation): AutomationBreakdown {
 
 /** Etapa visível apenas para consulta (futura ou após cancelamento). */
 export function isStageLocked(operation: Operation, active: number) {
-  return active > 1 && (active > operation.stage || (operation.status === "Cancelada" && active >= operation.stage));
+  return active > operation.stage;
+}
+
+/** Etapa encerrada ou operação finalizada: conteúdo disponível apenas para consulta. */
+export function isStageReadOnly(operation: Operation, active: number) {
+  return active < operation.stage || operation.status === "Cancelada" || operation.status === "Liberada ao financeiro";
 }
 
 /** Pendência que impede concluir a etapa atual; `null` quando pode avançar. */
 export function stageAdvanceBlocker(
   operation: Operation,
   automation: AutomationBreakdown,
+  debtors: Debtor[] = [],
 ): { feedback: WorkspaceFeedback; requireCedent?: boolean } | null {
   if (operationNeedsCedent(operation)) {
     return {
       requireCedent: true,
       feedback: { tone: "warning", message: "Defina o cedente da operação antes de continuar." },
+    };
+  }
+  if (operation.stage === 1 && operation.titleCount <= 0) {
+    return {
+      feedback: {
+        tone: "warning",
+        message: "A operação precisa ter ao menos um título válido antes de concluir a entrada.",
+      },
     };
   }
   if (
@@ -132,7 +146,7 @@ export function stageAdvanceBlocker(
       feedback: { tone: "warning", message: "Existem bloqueios de risco que precisam de decisão antes do avanço." },
     };
   }
-  if (operation.stage === 3 && !lastroAssessmentFor(operation).ready) {
+  if (operation.stage === 3 && !lastroAssessmentFor(operation, debtors).ready) {
     return {
       feedback: {
         tone: "warning",

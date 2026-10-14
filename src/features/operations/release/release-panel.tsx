@@ -57,9 +57,11 @@ function newPayeeId() {
 export function ReleasePanel({
   operation,
   onChange,
+  actor,
 }: {
   operation: Operation;
   onChange: (operation: Operation) => void;
+  actor: { id: string; name: string };
 }) {
   const pricing = normalizedPricing(operation);
   const calculated = pricingCalculation(operation, pricing);
@@ -134,7 +136,7 @@ export function ReleasePanel({
     const next: ReleaseReview = {
       ...review,
       ...change,
-      audit: audit ? [...(review.audit ?? []), { at: releaseNow(), by: "Henrique", ...audit }] : review.audit,
+      audit: audit ? [...(review.audit ?? []), { at: releaseNow(), by: actor.name, ...audit }] : review.audit,
     };
     onChange({ ...operation, ...operationChange, releaseReview: next });
   }
@@ -203,7 +205,7 @@ export function ReleasePanel({
         status: "Enviada ao financeiro",
         payables: [...(review.payables ?? []).filter(item => item.status === "Cancelado"), ...payables],
         releasedAt: createdAt,
-        releasedBy: "Henrique",
+        releasedBy: actor.name,
         observation,
       },
       {
@@ -217,6 +219,28 @@ export function ReleasePanel({
       message: `${payables.length} lançamento(s) criado(s) no financeiro como pendente de pagamento.`,
     });
   }
+
+  function prepare() {
+    if (!readyToRelease) {
+      setFeedback({ tone: "warning", message: "Resolva os itens da conferência antes de concluir a preparação." });
+      return;
+    }
+    save(
+      {
+        status: "Em preparação",
+        preparedById: actor.id,
+        preparedBy: actor.name,
+        preparedAt: new Date().toISOString(),
+        observation,
+      },
+      { action: "Preparação concluída", detail: "Liberação pronta para conferência independente." },
+    );
+    setFeedback({ tone: "success", message: "Preparação salva. Outra pessoa do Financeiro deve aprovar a liberação." });
+  }
+
+  const demo = isDemoOperation(operation);
+  const preparedByCurrentUser = !demo && review.preparedById === actor.id;
+  const waitingForPreparation = !demo && !review.preparedById;
 
   return (
     <section className="approval-workbench release-workbench">
@@ -259,6 +283,17 @@ export function ReleasePanel({
         <div className={`release-feedback ${feedback.tone}`}>
           {feedback.tone === "success" ? <CheckIcon /> : <AlertIcon />}
           <span>{feedback.message}</span>
+        </div>
+      )}
+      {!released && !demo && review.preparedBy && (
+        <div className="release-feedback warning">
+          <AlertIcon />
+          <span>
+            Preparada por {review.preparedBy}.{" "}
+            {preparedByCurrentUser
+              ? "A aprovação exige outra pessoa."
+              : "Você pode realizar a conferência independente."}
+          </span>
         </div>
       )}
 
@@ -481,10 +516,15 @@ export function ReleasePanel({
             {!released ? (
               <button
                 className="primary-action action-confirm release-submit"
-                disabled={!readyToRelease}
-                onClick={release}
+                disabled={!readyToRelease || preparedByCurrentUser}
+                onClick={waitingForPreparation ? prepare : release}
               >
-                Liberar para o financeiro <ArrowIcon />
+                {waitingForPreparation
+                  ? "Concluir preparação"
+                  : preparedByCurrentUser
+                    ? "Aguardando segundo aprovador"
+                    : "Aprovar e liberar para o financeiro"}{" "}
+                <ArrowIcon />
               </button>
             ) : (
               <div className="release-done">

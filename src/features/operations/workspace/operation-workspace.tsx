@@ -19,6 +19,7 @@ import { WorkspaceHeader, WorkspaceNotices } from "./workspace-header";
 import {
   automationFor,
   isStageLocked,
+  isStageReadOnly,
   type SummaryDensity,
   type WorkspaceFeedback,
   type WorkspaceView,
@@ -37,6 +38,7 @@ export function OperationWorkspace({
   onBack,
   onUpdate,
   showGuidance,
+  actor,
 }: {
   operation: Operation;
   debtors: Debtor[];
@@ -44,6 +46,7 @@ export function OperationWorkspace({
   onBack: () => void;
   onUpdate: (operation: Operation) => void;
   showGuidance: boolean;
+  actor: { id: string; name: string };
 }) {
   const registryCedents = useCedents();
   const workspaceRegistry = useContext(RegistryContext);
@@ -79,6 +82,7 @@ export function OperationWorkspace({
   const advance = useStageAdvance({
     operation,
     automation,
+    debtors,
     commit,
     onActiveChange: setActive,
     onFeedback: setFeedback,
@@ -112,6 +116,7 @@ export function OperationWorkspace({
   }
 
   const stageLocked = isStageLocked(operation, active);
+  const stageReadOnly = isStageReadOnly(operation, active);
   const commercialRep =
     workspaceRegistry?.commercial.reps.find(rep => rep.id === operation.commercialRepId) ??
     workspaceRegistry?.repOf(operation.document);
@@ -153,12 +158,14 @@ export function OperationWorkspace({
                 active={active}
                 stageInsight={stageInsight}
                 stageLocked={stageLocked}
+                stageReadOnly={stageReadOnly}
                 debtors={debtors}
                 onRegisterDebtor={onRegisterDebtor}
                 onSaveManualEntry={saveManualEntry}
                 onChange={commit}
                 showGuidance={showGuidance}
                 onGoToCurrentStage={() => setActive(operation.stage)}
+                actor={actor}
               />
               {active !== 5 && (
                 <OperationSummaryAside
@@ -174,6 +181,7 @@ export function OperationWorkspace({
                   observation={financialObservation}
                   onObservationChange={setFinancialObservation}
                   onObservationCommit={() => commit({ ...operation, financialObservation })}
+                  readOnly={stageReadOnly}
                 />
               )}
             </div>

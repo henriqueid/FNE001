@@ -25,6 +25,7 @@ export function OperationSummaryAside({
   observation,
   onObservationChange,
   onObservationCommit,
+  readOnly = false,
 }: {
   operation: Operation;
   cedents: Cedent[];
@@ -38,6 +39,7 @@ export function OperationSummaryAside({
   observation: string;
   onObservationChange: (value: string) => void;
   onObservationCommit: () => void;
+  readOnly?: boolean;
 }) {
   const pace = paceFor(operation);
   const { pricing, calculation, offsets, face, net, availableLimit, limitAfterOperation, approvals, approvedCount } =
@@ -201,7 +203,8 @@ export function OperationSummaryAside({
             <textarea
               value={observation}
               onChange={event => onObservationChange(event.target.value)}
-              onBlur={onObservationCommit}
+              onBlur={readOnly ? undefined : onObservationCommit}
+              readOnly={readOnly}
               placeholder="Registre uma orientação, ressalva ou informação para as alçadas..."
             />
           </label>

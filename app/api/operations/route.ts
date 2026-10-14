@@ -1,10 +1,12 @@
 import type { Operation } from "@/src/domain/core/types";
 import type { Permission } from "@/src/domain/access/model";
 import { validatePersistedOperation } from "@/src/domain/operations/persistence";
+import { operationMutationPermissionError } from "@/src/domain/operations/mutation-permissions";
 import { sessionPrincipal } from "@/src/server/access/session";
 import { filterCompanyScope, operationCompany, operationWriteScopeError } from "@/src/server/access/scope";
 import { getDatabase } from "@/src/server/database/postgres";
 import {
+  assertOperationTransition,
   governReleaseTransition,
   OperationGovernanceError,
   releaseReviewChanged,
@@ -56,6 +58,9 @@ export async function PUT(request: Request) {
   try {
     if (releaseReviewChanged(current, command.operation) && !access.principal.permissions.includes("finance:release"))
       return json({ error: "Somente o Financeiro pode preparar ou aprovar uma liberação." }, 403);
+    const permissionError = operationMutationPermissionError(current, command.operation, access.principal.permissions);
+    if (permissionError) return json({ error: permissionError }, 403);
+    assertOperationTransition(current, command.operation);
     const governed = governReleaseTransition(current, command.operation, access.principal);
     const operation = await saveOperation(
       access.db,

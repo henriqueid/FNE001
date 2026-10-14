@@ -9,6 +9,7 @@ import {
   approvalPackageComplete,
   buildFinalDecisionSnapshot,
   withFormalizationCompleted,
+  withOperationReturnedToRisk,
 } from "@/src/features/operations/approval/approval-model";
 
 describe("Tela Final de Análise", () => {
@@ -87,5 +88,32 @@ describe("Tela Final de Análise", () => {
 
     expect(approvalPackageComplete(review)).toBe(false);
     expect(withFormalizationCompleted({ ...operation, stage: 5 }, review).stage).toBe(5);
+  });
+
+  it("invalida alçadas, documentos e assinaturas ao devolver para Risco", () => {
+    const review = {
+      status: "Em formalização" as const,
+      submittedAt: "04/10/2026, 11:00",
+      submittedBy: "Analista",
+      approvals: [{ id: "credito", role: "Crédito", approver: "Comitê", status: "Aprovado" as const }],
+      documents: [{ id: "cessao", name: "Termo", required: true, status: "Pronto" as const, source: "Modelo" }],
+      signatures: [{ id: "cedente", party: "Cedente", signer: "Representante", status: "Assinado" as const }],
+      audit: [],
+    };
+
+    const returned = withOperationReturnedToRisk(
+      { ...operation, stage: 5, approvalReview: review },
+      review,
+      "Reavaliar concentração do sacado",
+      "Analista",
+      "04/10/2026, 12:10",
+    );
+
+    expect(returned).toMatchObject({ stage: 2, status: "Em atenção" });
+    expect(returned.approvalReview?.approvals).toEqual([]);
+    expect(returned.approvalReview?.documents).toEqual([]);
+    expect(returned.approvalReview?.signatures).toEqual([]);
+    expect(returned.approvalReview?.submittedAt).toBeUndefined();
+    expect(returned.approvalReview?.audit?.at(-1)?.action).toBe("Pacote decisório invalidado");
   });
 });

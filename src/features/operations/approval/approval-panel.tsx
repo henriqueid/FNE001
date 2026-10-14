@@ -8,7 +8,7 @@
  */
 import { useCedents } from "@/src/app/registry-context";
 import { preciseMoney } from "@/src/domain/core/format";
-import { type Operation } from "@/src/domain/core/types";
+import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { localDateISO } from "@/src/domain/operations/dates";
 import { formatBrazilianDate } from "@/src/domain/operations/format";
 import { lastroAssessmentFor } from "@/src/domain/operations/lastro";
@@ -29,6 +29,7 @@ import {
   nowLabel,
   type ReportType,
   withFormalizationCompleted,
+  withOperationReturnedToRisk,
 } from "./approval-model";
 import { ApprovalReadiness } from "./approval-readiness";
 import { ApprovalReports } from "./approval-reports";
@@ -41,15 +42,17 @@ type CollapsibleSection = "financial" | "readiness" | "approvals" | "documents" 
 
 export function ApprovalPanel({
   operation,
+  debtors,
   onChange,
 }: {
   operation: Operation;
+  debtors: Debtor[];
   onChange: (operation: Operation) => void;
 }) {
   const registryCedents = useCedents();
   const figures = buildFinancialFigures(operation, registryCedents);
   const { finalNet } = figures;
-  const lastro = lastroAssessmentFor(operation);
+  const lastro = lastroAssessmentFor(operation, debtors);
   const checklist = buildReadinessChecklist(operation, lastro);
   const prerequisitesReady = checklist.every(item => item.ok);
   const defaultApprovals = buildDefaultApprovals(operation, prerequisitesReady, lastro.exceptions.length);
@@ -159,29 +162,7 @@ export function ApprovalPanel({
       setFeedback("Registre uma justificativa com pelo menos oito caracteres antes de devolver a operação.");
       return;
     }
-    const audit = [
-      ...(review.audit ?? []),
-      { at: nowLabel(), by: "Henrique", action: "Operação devolvida", detail: observation.trim() },
-    ];
-    onChange({
-      ...operation,
-      stage: 2,
-      status: "Em atenção",
-      blockers: Math.max(1, operation.blockers),
-      nextAction: "Revisar política, dados e exceções da operação devolvida",
-      approvalReview: {
-        ...review,
-        status: "Preparação",
-        observation,
-        finalDecision: {
-          outcome: "DEVOLVIDA",
-          decidedAt: nowLabel(),
-          decidedBy: "Henrique",
-          justification: observation.trim(),
-        },
-        audit,
-      },
-    });
+    onChange(withOperationReturnedToRisk(operation, review, observation));
   }
 
   function rejectOperation() {

@@ -35,7 +35,7 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 
 | Entrega                    | Situação atual                                                                             | Falta                                                                                        | Estimativa |
 | -------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ---------: |
-| Homologação multiusuário   | Operações homologadas com duas sessões; versão obsoleta recusada e gravação vencedora preservada | repetir em Financeiro, Carteira, Comercial, Políticas e Tarefas                          |   2–4 dias |
+| Homologação multiusuário   | Operações e Financeiro homologados com duas sessões; gravações vencedoras preservadas            | repetir em Carteira, Comercial, Políticas e Tarefas                                      |   2–3 dias |
 | Ataques cruzados           | duas sessões, dois tenants, escopo empresarial e requisições forjadas homologados          | nenhuma pendência funcional neste recorte; repetir no UAT de regressão antes do go-live      |  concluído |
 | Escopo residual de APIs    | concluído e homologado com sessões reais temporárias                                       | nenhuma pendência funcional neste recorte; repetir no UAT completo com usuários definitivos  |  concluído |
 | Maker-checker residual     | fluxos financeiros, bancários, políticas, privilégios, parâmetros e integrações protegidos | cobrir demais configurações materiais e executar UAT definitivo                              |   1–3 dias |
@@ -50,7 +50,7 @@ configuração/credenciais não atravessam a API. Ativação, suspensão, priori
 com retrato congelado, aprovador distinto e aplicação atômica. Ainda faltam cofre de credenciais, tentativas, retry,
 dead-letter e observabilidade; esses itens permanecem nas estimativas da Onda C.
 
-**Subtotal P0 imediato remanescente:** aproximadamente **19–33 dias úteis**. Parte pode ser executada em paralelo.
+**Subtotal P0 imediato remanescente:** aproximadamente **19–32 dias úteis**. Parte pode ser executada em paralelo.
 
 ## 4. Cunha comercial completa — Onda B
 

@@ -56,6 +56,7 @@ Progresso A3.1 — fundação do ledger:
 - [x] publicar o guia inicial do livro financeiro e contábil;
 - [x] conectar leitura e gravação autenticadas do Financeiro;
 - [x] homologar tecnicamente concorrência, idempotência, baixa, estorno e conciliação;
+- [x] homologar a recusa de versão obsoleta com dois usuários e duas sessões reais;
 - [ ] homologar visualmente o fluxo completo em duas sessões reais.
 
 Evidências A3.1:
@@ -67,9 +68,11 @@ Evidências A3.1:
 - testes descartáveis foram revertidos e deixaram zero registros de homologação;
 - Advisor sem chaves estrangeiras não indexadas após a correção;
 - repositório transacional confirmou criação, atualização, leitura, projeções normalizadas e recusa de versão obsoleta, com rollback integral;
+- duas sessões reais leram a versão 1; a primeira gravou a versão 2 e a segunda recebeu 409, preservando o estado vencedor;
 - API `/api/finance` conectada à sessão, permissões e escopo do tenant; modo de demonstração continua isolado no navegador;
 - TypeScript, lint, formatação e build aprovados; 212 testes automatizados aprovados em 37 arquivos;
 - guia publicado em `docs/user-guides/LIVRO_FINANCEIRO_E_CONTABIL.md`.
+- homologação concorrente publicada em `docs/testing/HOMOLOGACAO_A3_CONCORRENCIA_MULTIUSUARIO.md`, com limpeza integral dos dados temporários.
 
 Progresso A3.2 — comandos confiáveis e fechamento:
 

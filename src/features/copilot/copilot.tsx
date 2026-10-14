@@ -24,6 +24,7 @@ import { useCopilotDesk } from "./use-copilot-desk";
 import { can, type AccessUser } from "@/src/domain/access/model";
 import { type Debtor } from "@/src/domain/core/types";
 import { aiStatusLabel, type IntelligenceState } from "@/src/domain/intelligence/model";
+import type { Operation } from "@/src/domain/core/types";
 
 export type { CopilotSuggestion } from "./copilot-thread";
 
@@ -51,7 +52,8 @@ export function Copilot({
   onOpenLive?: () => void;
 }) {
   const cedents = useCedents();
-  const operations = useContext(ShellContext)?.operations;
+  const shell = useContext(ShellContext);
+  const operations = shell?.operations;
   const policies = useEligibilityPolicies();
   const knowledge = useMemo<SystemKnowledge>(
     () => ({
@@ -76,6 +78,8 @@ export function Copilot({
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState("");
+  const [generatedOperation, setGeneratedOperation] = useState<Operation>();
+  const [operationError, setOperationError] = useState("");
   const threadRef = useRef<HTMLDivElement>(null);
   const cedent = cedents.find(item => item.id === (desk.cedent || cedents[0]?.id));
   const hasResult = desk.scenarios.length > 0;
@@ -88,6 +92,51 @@ export function Copilot({
       ? "1 tarefa ainda pede atenção"
       : `${attentionItems.length} tarefas ainda pedem atenção`;
   const { clearUnread } = desk;
+
+  const operationFromCurrentRun =
+    generatedOperation?.copilotOrigin?.runId === desk.runId ? generatedOperation : undefined;
+  const currentGeneratedOperation =
+    operations?.find(operation => operation.id === operationFromCurrentRun?.id) ?? operationFromCurrentRun;
+  const operationActions = {
+    operation: currentGeneratedOperation,
+    error: operationError,
+    onGenerate: () => {
+      const scenario = desk.scenarios.at(-1);
+      if (!scenario || !shell) return;
+      const operation = shell.createCopilotOperation({
+        runId: desk.runId,
+        cedentId: desk.cedent || cedents[0]?.id || "",
+        scenario,
+        context: desk.context,
+        files: desk.files,
+        importedData: desk.importedData,
+        entryIntake: desk.entryIntake,
+      });
+      if (!operation) {
+        setOperationError("Não foi possível gerar a operação. Verifique sua permissão, o cedente e a empresa ativa.");
+        return;
+      }
+      setOperationError("");
+      setGeneratedOperation(operation);
+      desk.linkOperation(operation.id);
+    },
+    onApprove: (authorityApproved = false) => {
+      if (!currentGeneratedOperation || !shell) return;
+      const operation = shell.approveCopilotOperation(currentGeneratedOperation.id, authorityApproved);
+      if (!operation) {
+        setOperationError("Não foi possível encaminhar a operação para a próxima etapa.");
+        return;
+      }
+      setOperationError("");
+      setGeneratedOperation(operation);
+    },
+    onOpen: () => {
+      if (!currentGeneratedOperation || !shell) return;
+      shell.openOperation(currentGeneratedOperation);
+      setExpanded(false);
+      setOpen(false);
+    },
+  };
 
   useEffect(() => {
     if (open) clearUnread();
@@ -147,7 +196,12 @@ export function Copilot({
         ) : message.card === "progress" ? (
           <ProgressCard key={message.id} desk={desk} />
         ) : expanded ? null : (
-          <ResultCard key={message.id} desk={desk} onExpand={() => setExpanded(true)} />
+          <ResultCard
+            key={message.id}
+            desk={desk}
+            operationActions={operationActions}
+            onExpand={() => setExpanded(true)}
+          />
         ),
       )}
       {desk.asking && (
@@ -320,7 +374,7 @@ export function Copilot({
           </div>
           {expanded ? (
             <div className="cpl-split">
-              <CopilotAnalysis desk={desk} cedent={cedent} knowledge={knowledge} />
+              <CopilotAnalysis desk={desk} cedent={cedent} knowledge={knowledge} operationActions={operationActions} />
               <div className="cpl-chat">
                 {thread}
                 {composer}

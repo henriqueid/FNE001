@@ -1,5 +1,6 @@
 "use client";
 import { type Operation } from "@/src/domain/core/types";
+import type { CopilotOperationRequest } from "@/src/domain/copilot/operation-handoff";
 import { createContext } from "react";
 
 /* ---------------------------------------------------------------------------
@@ -26,6 +27,8 @@ export type ShellContextValue = {
   navigate: (view: AppView) => void;
   openOperation: (operation: Operation) => void;
   newOperation: () => void;
+  createCopilotOperation: (request: CopilotOperationRequest) => Operation | undefined;
+  approveCopilotOperation: (operationId: string, authorityApproved?: boolean) => Operation | undefined;
   openSettings: () => void;
   resetDemo?: () => void;
 };

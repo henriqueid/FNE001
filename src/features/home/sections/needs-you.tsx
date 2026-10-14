@@ -7,6 +7,7 @@ import type { HomeProfile } from "@/src/domain/home/settings";
 import { ArrowIcon } from "@/src/ui/icons";
 import { useState } from "react";
 import { compact, type Severity, severityLabel } from "@/src/features/home/widgets";
+import type { PortfolioFocus } from "@/src/features/portfolio/portfolio-navigation";
 
 export type NeedItem = {
   id: string;
@@ -19,7 +20,8 @@ export type NeedItem = {
   op?: Operation;
   kind: string;
   profiles: HomeProfile[];
-  go?: "finance";
+  go?: "finance" | "portfolio";
+  portfolioFocus?: PortfolioFocus;
 };
 
 export function NeedsYou({
@@ -27,12 +29,14 @@ export function NeedsYou({
   onOpen,
   onGoOperations,
   onGoFinance,
+  onGoPortfolio,
   limit = 5,
 }: {
   items: NeedItem[];
   onOpen: (op: Operation) => void;
   onGoOperations: () => void;
   onGoFinance: () => void;
+  onGoPortfolio: (focus: PortfolioFocus) => void;
   limit?: number;
 }) {
   const [showAll, setShowAll] = useState(false);
@@ -76,7 +80,15 @@ export function NeedsYou({
               {item.amount !== undefined && <b>{compact(item.amount)}</b>}
               <button
                 className={item.severity === "critical" ? "vg-btn primary" : "vg-btn"}
-                onClick={() => (item.op ? onOpen(item.op) : item.go === "finance" ? onGoFinance() : onGoOperations())}
+                onClick={() =>
+                  item.go === "portfolio" && item.portfolioFocus
+                    ? onGoPortfolio(item.portfolioFocus)
+                    : item.op
+                      ? onOpen(item.op)
+                      : item.go === "finance"
+                        ? onGoFinance()
+                        : onGoOperations()
+                }
               >
                 {item.action}
                 <ArrowIcon />

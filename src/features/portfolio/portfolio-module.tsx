@@ -32,24 +32,24 @@ import { portfolioIndicators } from "@/src/domain/indicators/portfolio";
 import { fmtDays, fmtPct, IndicatorGrid } from "@/src/features/indicators/indicator-grid";
 import { useQualityPolicy } from "@/src/features/risk/use-quality-policy";
 import { CollectionCenter } from "./collection-center";
+import type { PortfolioFocus, PortfolioSituation, PortfolioTab } from "./portfolio-navigation";
 
-type Tab = "cobranca" | "titulos" | "cedentes" | "comerciais" | "aging";
-type Situation = "todos" | "avencer" | "vencidos" | "d30";
 type Props = {
   portfolio: PortfolioState;
   onPortfolio: (state: PortfolioState) => void;
   companyScope: string;
   onNavigate: (view: AppView) => void;
+  focus?: PortfolioFocus;
 };
 
-export default function PortfolioModule({ portfolio, onPortfolio, companyScope, onNavigate }: Props) {
+export default function PortfolioModule({ portfolio, onPortfolio, companyScope, onNavigate, focus }: Props) {
   const { commercial, cedents } = useRegistry();
   const { policy } = useQualityPolicy();
   const today = todayIso();
-  const [tab, setTab] = useState<Tab>("cobranca");
-  const [situation, setSituation] = useState<Situation>("todos");
+  const [tab, setTab] = useState<PortfolioTab>(focus?.tab ?? "cobranca");
+  const [situation, setSituation] = useState<PortfolioSituation>(focus?.situation ?? "todos");
   const [repFilter, setRepFilter] = useState("");
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(focus?.query ?? "");
 
   const all = useMemo(
     () =>
@@ -334,7 +334,7 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
                     ["avencer", "A vencer"],
                     ["vencidos", "Vencidos"],
                     ["d30", "> 30 dias"],
-                  ] as [Situation, string][]
+                  ] as [PortfolioSituation, string][]
                 ).map(([id, label]) => (
                   <button key={id} className={situation === id ? "active" : ""} onClick={() => setSituation(id)}>
                     {label}

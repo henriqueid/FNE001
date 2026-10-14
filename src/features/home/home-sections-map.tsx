@@ -37,6 +37,7 @@ import {
   ManagementIntelligence,
   PortfolioEvolution,
 } from "@/src/features/home/sections/decision-intelligence";
+import type { PortfolioFocus } from "@/src/features/portfolio/portfolio-navigation";
 
 export type SectionId =
   | "needs"
@@ -108,6 +109,7 @@ export function HomeSections({
   onOpen,
   onGoOperations,
   onGoFinance,
+  onGoPortfolio,
   qualityPolicy,
 }: {
   metrics: HomeMetrics;
@@ -118,6 +120,7 @@ export function HomeSections({
   onOpen: (op: Operation) => void;
   onGoOperations: () => void;
   onGoFinance: () => void;
+  onGoPortfolio: (focus: PortfolioFocus) => void;
   qualityPolicy: ReturnType<typeof useQualityPolicy>;
 }) {
   const m = metrics;
@@ -144,6 +147,7 @@ export function HomeSections({
           onOpen={onOpen}
           onGoOperations={onGoOperations}
           onGoFinance={onGoFinance}
+          onGoPortfolio={onGoPortfolio}
         />
       </Card>
     ),
@@ -236,7 +240,7 @@ export function HomeSections({
     ),
     alerts: span => (
       <Card key="alerts" span={span} title="Alertas de risco" subtitle="Limite, atraso, concentração e score">
-        <Alerts list={m.profileAlerts} onOpen={onOpen} onGoOperations={onGoOperations} />
+        <Alerts list={m.profileAlerts} onOpen={onOpen} onGoOperations={onGoOperations} onGoPortfolio={onGoPortfolio} />
       </Card>
     ),
     team: span => (

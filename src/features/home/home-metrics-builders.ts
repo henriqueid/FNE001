@@ -69,8 +69,8 @@ export function buildRiskAlerts({
         title: `${c.name}: ${compact(late30.reduce((s, t) => s + t.amount, 0))} vencidos há mais de 30 dias`,
         detail: `${late30.length} título(s), o mais antigo vencido em ${brDate(late30.map(t => t.dueDate).sort()[0])}. Avaliar recompra ou jurídico.`,
         profiles: ["gestao", "risco"],
-        action: activeOpOf(c.document) ? "Abrir operação" : "Ver carteira",
-        op: activeOpOf(c.document),
+        action: "Ver carteira",
+        portfolioFocus: { tab: "titulos", situation: "d30", query: c.document },
       });
     if (c.incidents > 0)
       alerts.push({
@@ -92,6 +92,7 @@ export function buildRiskAlerts({
         detail: `Acima do teto de ${homeSettings.debtorConcentrationCap}% da política.`,
         profiles: ["gestao", "risco"],
         action: "Ver enquadramento",
+        portfolioFocus: { tab: "titulos", situation: "todos", query: d.document },
       });
     if (d.score !== undefined && scoreBand(d.score) === "Crítico")
       alerts.push({
@@ -101,6 +102,7 @@ export function buildRiskAlerts({
         detail: `Exposição de ${compact(d.exposure)}${d.overdue ? `, ${compact(d.overdue)} vencidos` : ""}.`,
         profiles: ["risco", "operacao"],
         action: "Ver sacado",
+        portfolioFocus: { tab: "titulos", situation: "todos", query: d.document },
       });
   });
   alerts.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
@@ -242,6 +244,8 @@ export function buildNeeds({
             amount: overdueTotal,
             due: "Hoje",
             action: "Ver carteira",
+            go: "portfolio" as const,
+            portfolioFocus: { tab: "titulos" as const, situation: "vencidos" as const },
             profiles: ["risco", "gestao"] as HomeProfile[],
           },
         ]
@@ -260,6 +264,8 @@ export function buildNeeds({
             amount: dueToday.amount,
             due: "Até 17h",
             action: "Acompanhar",
+            go: "portfolio" as const,
+            portfolioFocus: { tab: "titulos" as const, situation: "avencer" as const },
             profiles: ["risco", "operacao"] as HomeProfile[],
           },
         ]

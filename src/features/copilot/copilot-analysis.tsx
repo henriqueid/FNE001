@@ -9,7 +9,7 @@ import { buildDeskSummary } from "@/src/domain/copilot/desk-summary";
 import { type SystemKnowledge } from "@/src/domain/copilot/system-query";
 import { type Cedent } from "@/src/domain/core/types";
 import { OperationSummary } from "./copilot-summary";
-import { DecisionBar } from "./copilot-decision-bar";
+import { DecisionBar, type CopilotOperationActions } from "./copilot-decision-bar";
 import { type CopilotDesk } from "./use-copilot-desk";
 
 const severityLabel = { impedimento: "Impedimento", alcada: "Exige alçada", info: "Informação" } as const;
@@ -75,10 +75,12 @@ export function CopilotAnalysis({
   desk,
   cedent,
   knowledge,
+  operationActions,
 }: {
   desk: CopilotDesk;
   cedent?: Cedent;
   knowledge: SystemKnowledge;
+  operationActions: CopilotOperationActions;
 }) {
   const scenario = desk.scenarios[desk.scenarios.length - 1];
   if (!scenario) return null;
@@ -102,7 +104,7 @@ export function CopilotAnalysis({
         </div>
       </header>
       <DeskGate scenario={scenario} />
-      <DecisionBar desk={desk} />
+      <DecisionBar desk={desk} operationActions={operationActions} />
       <dl className="cpl-kpis">
         <div>
           <dt>Valor de face</dt>

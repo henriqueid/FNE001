@@ -23,7 +23,7 @@ import { emptyDecisionLedger, type DecisionEventDraft } from "@/src/domain/decis
 import { canUseGenerativeAI, type IntelligenceState } from "@/src/domain/intelligence/model";
 import { loadDecisionLedger, persistDecisionEvent } from "./decision-ledger-client";
 import { askConfiguredCopilot } from "@/src/app/intelligence-client";
-import { type Debtor, type EntryIntakeIssue } from "@/src/domain/core/types";
+import { type Debtor, type EntryIntake, type EntryIntakeIssue, type ManualEntryData } from "@/src/domain/core/types";
 import { buildOfflineDeskContext } from "@/src/domain/copilot/offline-analysis";
 
 export type DeskStage = "idle" | "recebida" | "validando" | "extraindo" | "calculando" | "concluida";
@@ -74,6 +74,9 @@ export function useCopilotDesk(
   const [analysisContext, setAnalysisContext] = useState<DeskContext | null>(null);
   const [intakeIssues, setIntakeIssues] = useState<EntryIntakeIssue[]>([]);
   const [fileErrors, setFileErrors] = useState<string[]>([]);
+  const [importedData, setImportedData] = useState<ManualEntryData>();
+  const [entryIntake, setEntryIntake] = useState<EntryIntake>();
+  const [linkedOperationId, setLinkedOperationId] = useState<string>();
   const alive = useRef(true);
   /** Identifica a tarefa em curso; limpar a conversa invalida a anterior. */
   const run = useRef(0);
@@ -81,6 +84,7 @@ export function useCopilotDesk(
   const correlationId = useRef(uniqueId("copilot-run"));
   const latestPersistedEventId = useRef<string | undefined>(undefined);
   const persistenceQueue = useRef<Promise<void>>(Promise.resolve());
+  const linkedSnapshotRecorded = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     alive.current = true;
@@ -105,7 +109,7 @@ export function useCopilotDesk(
   const contextRef = useRef<DeskContext>(context);
   contextRef.current = context;
   const aiAvailable = canUseGenerativeAI(intelligence);
-  const operationId = `copilot-${cedent || "unassigned"}`;
+  const operationId = linkedOperationId ?? `copilot-${cedent || "unassigned"}`;
   const decisionId = `decision-${operationId}`;
   const isDraftOperation = operationId.startsWith("copilot-");
 
@@ -197,6 +201,29 @@ export function useCopilotDesk(
     [cedent, decisionId, files, intelligence.tenantId, isDraftOperation, operationId, scenarios],
   );
 
+  useEffect(() => {
+    const scenario = scenarios.at(-1);
+    if (demoMode || isDraftOperation || !linkedOperationId || !scenario) return;
+    const snapshotKey = `${linkedOperationId}:${scenario.version}`;
+    if (linkedSnapshotRecorded.current === snapshotKey) return;
+    linkedSnapshotRecorded.current = snapshotKey;
+    recordEvent(
+      "ANALYSIS_COMPLETED",
+      scenario.result.fastTrack ? "WITHIN_POLICY" : "BLOCKED",
+      [...scenario.result.blockers.map(item => item.id), ...scenario.result.exceptions.map(item => item.id)],
+      undefined,
+      {
+        version: scenario.version,
+        metrics: {
+          faceCents: scenario.result.faceCents,
+          netCents: scenario.result.netCents,
+          blockerCount: scenario.result.blockers.length,
+          exceptionCount: scenario.result.exceptions.length,
+        },
+      },
+    );
+  }, [demoMode, isDraftOperation, linkedOperationId, recordEvent, scenarios]);
+
   const loadExamples = () => {
     if (!demoMode) return;
     setFiles(deskDemoFiles);
@@ -204,6 +231,10 @@ export function useCopilotDesk(
     setAnalysisContext(null);
     setIntakeIssues([]);
     setFileErrors([]);
+    setImportedData(undefined);
+    setEntryIntake(undefined);
+    setLinkedOperationId(undefined);
+    linkedSnapshotRecorded.current = undefined;
   };
 
   const addFiles = async (list: FileList | File[]) => {
@@ -233,6 +264,10 @@ export function useCopilotDesk(
     setDecisionError("");
     setIntakeIssues([]);
     setFileErrors([]);
+    setImportedData(undefined);
+    setEntryIntake(undefined);
+    setLinkedOperationId(undefined);
+    linkedSnapshotRecorded.current = undefined;
     push({ role: "me", text: `Analisar ${files.length} arquivo(s)` });
     push({ role: "card", card: "progress" });
     log("recebida", `${files.length} arquivo(s) identificado(s) e preservado(s) para análise.`);
@@ -249,6 +284,8 @@ export function useCopilotDesk(
         : buildOfflineDeskContext({ files, knowledge, debtors, cedentId: cedent });
     setIntakeIssues(offline.issues);
     setFileErrors(offline.fileErrors);
+    setImportedData(offline.importedData);
+    setEntryIntake(offline.entryIntake);
     log(
       "validando",
       `${files.length - offline.fileErrors.length} arquivo(s) lido(s)${offline.issues.length ? ` · ${offline.issues.length} apontamento(s) de entrada` : " · estrutura válida"}.`,
@@ -355,7 +392,7 @@ export function useCopilotDesk(
     await completeAnalysis(allowed, context, token);
   };
 
-  const locked = decision !== null;
+  const locked = decision !== null || Boolean(linkedOperationId);
 
   /** Pergunta livre: primeiro sobre o cenário em análise (se houver); senão, consulta a base e a política. */
   const ask = async (text: string) => {
@@ -477,7 +514,7 @@ export function useCopilotDesk(
           actor: { id: actor.id, role: actor.role, authorityIds: ["credit-director"] },
           authorityId: "credit-director",
           operationId,
-          cedentDocument: cedent || "nao-informado",
+          cedentDocument: (knowledge.cedents.find(item => item.id === cedent)?.document ?? cedent) || "nao-informado",
           policyId: context.policy.name,
           policyVersion: context.policy.version,
           additionalExposureCents: current.result.faceCents,
@@ -505,7 +542,7 @@ export function useCopilotDesk(
       reply: {
         paragraphs: [
           approved
-            ? "A Diretoria de crédito aprovou. A operação entrou na fila de formalização manual."
+            ? "A Diretoria de crédito aprovou. A operação avançou até o próximo controle obrigatório da esteira."
             : "A alçada reprovou. O motivo fica registrado na trilha de auditoria.",
         ],
       },
@@ -528,6 +565,10 @@ export function useCopilotDesk(
     setAnalysisContext(null);
     setIntakeIssues([]);
     setFileErrors([]);
+    setImportedData(undefined);
+    setEntryIntake(undefined);
+    setLinkedOperationId(undefined);
+    linkedSnapshotRecorded.current = undefined;
     setBureauChecked(false);
   };
 
@@ -556,6 +597,11 @@ export function useCopilotDesk(
     busy: stage !== "idle" && stage !== "concluida" && !waitingAuth,
     asking,
     context,
+    runId: correlationId.current,
+    importedData,
+    entryIntake,
+    linkedOperationId,
+    linkOperation: setLinkedOperationId,
     start,
     authorize,
     ask,

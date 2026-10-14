@@ -91,6 +91,12 @@ import {
 } from "./commercial-client";
 import { loadOperationalParameters as loadServerOperationalParameters } from "./operational-parameters-client";
 import { loadIntegrationState as loadServerIntegrations } from "./integrations-client";
+import type { PortfolioFocus } from "@/src/features/portfolio/portfolio-navigation";
+import {
+  approveCopilotOperation as approveCopilotOperationFlow,
+  buildCopilotOperation,
+  type CopilotOperationRequest,
+} from "@/src/domain/copilot/operation-handoff";
 
 const CommercialModule = lazy(() => import("@/src/features/commercial/commercial-module"));
 const ControlleriaModule = lazy(() => import("@/src/features/controlleria/controlleria-module"));
@@ -152,10 +158,18 @@ export default function StratoApp() {
   const currentUser = useMemo(() => activeUser(access), [access]);
   const sessionUser = useMemo(() => authenticatedUser(access), [access]);
   const [view, setView] = useState<AppView>("home");
+  const [portfolioFocus, setPortfolioFocus] = useState<PortfolioFocus>();
   const navigate = (target: AppView) => {
     if (!canAccessView(currentUser, target)) return;
     setSelected(null);
+    if (target === "portfolio") setPortfolioFocus(undefined);
     setView(target);
+  };
+  const openPortfolio = (focus: PortfolioFocus) => {
+    if (!canAccessView(currentUser, "portfolio")) return;
+    setSelected(null);
+    setPortfolioFocus({ ...focus });
+    setView("portfolio");
   };
   const [finance, setFinance] = useState<FinanceState>(() => (isDemo ? seedFinance() : emptyFinance()));
   const [financeServerReady, setFinanceServerReady] = useState(isDemo);
@@ -975,6 +989,55 @@ export default function StratoApp() {
       .map(partyToCedent);
     return effectiveCedents(commercial, [...baseline, ...created]);
   }, [commercial, savedParties, isDemo]);
+  function createCopilotOperation(request: CopilotOperationRequest) {
+    if (!can(currentUser, "operations:edit")) return undefined;
+    const existing = operations.find(
+      operation =>
+        operation.copilotOrigin?.runId === request.runId &&
+        operation.copilotOrigin.scenarioVersion === request.scenario.version,
+    );
+    if (existing) return existing;
+    const cedent = registryCedents.find(item => item.id === request.cedentId);
+    const destination = destinations.find(item => item.name === companyScope) ?? destinations[0];
+    if (!cedent || !destination) return undefined;
+    const at = new Date().toISOString();
+    const next = buildCopilotOperation({
+      request,
+      destination,
+      cedent,
+      operations,
+      commercial,
+      debtors,
+      actor: { name: currentUser.name },
+      today: at.slice(0, 10),
+      at,
+    });
+    const importedDebtors = next.entryIntake?.newDebtors ?? [];
+    if (importedDebtors.length)
+      setDebtors(current => {
+        const known = new Set(current.map(debtor => debtor.document.replace(/\D/g, "")));
+        const fresh = importedDebtors.filter(debtor => !known.has(debtor.document.replace(/\D/g, "")));
+        return fresh.length ? [...fresh, ...current] : current;
+      });
+    setOperations(current => [next, ...current]);
+    persistRealOperation(next);
+    return next;
+  }
+  function approveCopilotOperation(operationId: string, authorityApproved = false) {
+    if (!can(currentUser, "operations:edit") && !can(currentUser, "risk:decide")) return undefined;
+    const current = operations.find(operation => operation.id === operationId);
+    if (!current) return undefined;
+    const next = approveCopilotOperationFlow(current, {
+      actor: currentUser.name,
+      at: new Date().toISOString(),
+      debtors,
+      authorityApproved,
+    });
+    if (next === current) return current;
+    setOperations(items => items.map(operation => (operation.id === operationId ? next : operation)));
+    persistRealOperation(next);
+    return next;
+  }
   // Score de qualidade único (0–1000): calculado pela política sobre o histórico de cada cliente e usado
   // igual no cadastro, na operação, no painel de Risco e no panorama. O score de bureau fica em `bureauScore`.
   const qualityState = useQualityPolicyState(isDemo);
@@ -1241,6 +1304,8 @@ export default function StratoApp() {
     newOperation: () => {
       if (can(currentUser, "operations:edit")) setShowNew(true);
     },
+    createCopilotOperation,
+    approveCopilotOperation,
     openSettings,
     resetDemo: isDemo ? resetDemo : undefined,
   };
@@ -1318,6 +1383,7 @@ export default function StratoApp() {
         companyScope={companyScope}
         onOpen={setSelected}
         onGoOperations={() => navigate("operations")}
+        onGoPortfolio={openPortfolio}
         onGoLive={can(currentUser, "users:manage") ? () => navigate("live") : undefined}
         onNew={can(currentUser, "operations:edit") ? () => setShowNew(true) : undefined}
         revenueGoals={operationalDefaults.revenueGoals}
@@ -1348,10 +1414,12 @@ export default function StratoApp() {
   else if (view === "portfolio")
     page = (
       <PortfolioModule
+        key={portfolioFocus ? JSON.stringify(portfolioFocus) : "portfolio-default"}
         portfolio={portfolio}
         onPortfolio={applyPortfolioState}
         companyScope={companyScope}
         onNavigate={navigate}
+        focus={portfolioFocus}
       />
     );
   else if (view === "controlleria")

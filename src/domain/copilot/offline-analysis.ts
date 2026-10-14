@@ -2,7 +2,14 @@
  * Ponte entre a entrada real de arquivos e o motor determinístico do Copiloto.
  * Não usa IA: normaliza XML/CNAB/CSV, resolve a política vigente e monta o cenário.
  */
-import { type Cedent, type Debtor, type EntryIntakeIssue, type OperationSource } from "@/src/domain/core/types";
+import {
+  type Cedent,
+  type Debtor,
+  type EntryIntake,
+  type EntryIntakeIssue,
+  type ManualEntryData,
+  type OperationSource,
+} from "@/src/domain/core/types";
 import { termDays } from "@/src/domain/eligibility/operational-parameters";
 import { normalizeOperationIntake } from "@/src/domain/operations/intake";
 import { type SystemKnowledge } from "./system-query";
@@ -61,10 +68,19 @@ export function buildOfflineDeskContext({
   knowledge: SystemKnowledge;
   debtors: Debtor[];
   cedentId: string;
-}): { context?: DeskContext; issues: EntryIntakeIssue[]; fileErrors: string[]; acceptedRows: number } {
+}): {
+  context?: DeskContext;
+  issues: EntryIntakeIssue[];
+  fileErrors: string[];
+  acceptedRows: number;
+  importedData?: ManualEntryData;
+  entryIntake?: EntryIntake;
+} {
   const issues: EntryIntakeIssue[] = [];
   const fileErrors: string[] = [];
   const titles: DeskTitle[] = [];
+  const entries: ManualEntryData["entries"] = [];
+  const intakes: EntryIntake[] = [];
   const knownTitles = knowledge.operations.flatMap(operation => operation.manualEntry?.entries ?? []);
   const cedent = knowledge.cedents.find(item => item.id === cedentId);
 
@@ -81,12 +97,15 @@ export function buildOfflineDeskContext({
       knownTitles,
       importedAt: `${knowledge.today}T12:00:00Z`,
     });
+    intakes.push(normalized.intake);
     issues.push(...normalized.intake.issues.map(item => ({ ...item, id: `${file.name}:${item.id}` })));
     const newDocuments = new Set((normalized.intake.newDebtors ?? []).map(item => item.document.replace(/\D/g, "")));
     normalized.data.entries.forEach(entry => {
+      const id = `${file.name}:${entry.id}`;
       const days = termDays(entry.dueDate, knowledge.today);
+      entries.push({ ...entry, id });
       titles.push({
-        id: `${file.name}:${entry.id}`,
+        id,
         document: entry.documentNumber,
         debtor: entry.debtorName,
         amountCents: Math.round(entry.amount * 100),
@@ -99,10 +118,35 @@ export function buildOfflineDeskContext({
 
   if (!titles.length) return { issues, fileErrors, acceptedRows: 0 };
   const policy = policyFor(knowledge, cedent);
+  const firstIntake = intakes[0];
+  const newDebtors = [
+    ...new Map(intakes.flatMap(intake => intake.newDebtors ?? []).map(debtor => [debtor.document, debtor])).values(),
+  ];
+  const entryIntake: EntryIntake = {
+    id: `copilot-intake-${knowledge.today}-${intakes.map(intake => intake.id).join("-")}`,
+    source: firstIntake?.source ?? "Planilha",
+    fileName: intakes.map(intake => intake.fileName).join(", "),
+    fileHash: intakes.map(intake => intake.fileHash).join(":"),
+    importedAt: firstIntake?.importedAt ?? `${knowledge.today}T12:00:00Z`,
+    format: intakes.length === 1 ? firstIntake.format : "XLSX",
+    status: intakes.some(intake => intake.status === "BLOQUEADO")
+      ? "BLOQUEADO"
+      : intakes.some(intake => intake.status === "ATENCAO")
+        ? "ATENCAO"
+        : "PRONTO",
+    originalRows: intakes.reduce((sum, intake) => sum + intake.originalRows, 0),
+    acceptedRows: entries.length,
+    rejectedRows: intakes.reduce((sum, intake) => sum + intake.rejectedRows, 0),
+    matchedDebtors: intakes.reduce((sum, intake) => sum + intake.matchedDebtors, 0),
+    newDebtors,
+    issues,
+  };
   return {
     issues,
     fileErrors,
     acceptedRows: titles.length,
+    importedData: { receivableType: "Duplicata", mode: entries.length > 1 ? "parcelado" : "individual", entries },
+    entryIntake,
     context: {
       titles,
       policy,

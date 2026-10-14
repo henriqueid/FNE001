@@ -9,7 +9,7 @@ import { type Cedent } from "@/src/domain/core/types";
 import { AlertIcon, ArrowIcon, CheckIcon, ExpandIcon, FolderIcon, SparkIcon } from "@/src/ui/icons";
 import { type DragEvent, useState } from "react";
 import { DeskGate, DeskMoney } from "./copilot-analysis";
-import { DecisionBar } from "./copilot-decision-bar";
+import { DecisionBar, type CopilotOperationActions } from "./copilot-decision-bar";
 import { type CopilotDesk, DESK_STAGES } from "./use-copilot-desk";
 
 export type CopilotSuggestion = { title: string; body: string; action: string; onAction: () => void };
@@ -233,7 +233,15 @@ export function ProgressCard({ desk }: { desk: CopilotDesk }) {
   );
 }
 
-export function ResultCard({ desk, onExpand }: { desk: CopilotDesk; onExpand: () => void }) {
+export function ResultCard({
+  desk,
+  onExpand,
+  operationActions,
+}: {
+  desk: CopilotDesk;
+  onExpand: () => void;
+  operationActions: CopilotOperationActions;
+}) {
   const scenario = desk.scenarios[desk.scenarios.length - 1];
   if (!scenario) return null;
   return (
@@ -252,7 +260,7 @@ export function ResultCard({ desk, onExpand }: { desk: CopilotDesk; onExpand: ()
           apontamentos da entrada antes da decisão.
         </p>
       )}
-      <DecisionBar desk={desk} />
+      <DecisionBar desk={desk} operationActions={operationActions} />
       <div className="cpl-result-actions">
         <button type="button" className="cpl-ghost" onClick={onExpand}>
           <ExpandIcon /> Ver análise completa

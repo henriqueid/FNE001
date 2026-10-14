@@ -10,12 +10,14 @@ import { NeedsYou, type NeedItem } from "./sections/needs-you";
 import { Pipeline } from "./sections/pipeline";
 import type { HomeMetrics } from "./use-home-metrics";
 import { compact, pct } from "./widgets";
+import type { PortfolioFocus } from "@/src/features/portfolio/portfolio-navigation";
 
 type FocusProps = {
   metrics: HomeMetrics;
   onOpen: (op: Operation) => void;
   onGoOperations: () => void;
   onGoFinance: () => void;
+  onGoPortfolio: (focus: PortfolioFocus) => void;
 };
 
 function actOnNeed(
@@ -23,8 +25,10 @@ function actOnNeed(
   onOpen: (op: Operation) => void,
   onGoOperations: () => void,
   onGoFinance: () => void,
+  onGoPortfolio: (focus: PortfolioFocus) => void,
 ) {
-  if (item.op) onOpen(item.op);
+  if (item.go === "portfolio" && item.portfolioFocus) onGoPortfolio(item.portfolioFocus);
+  else if (item.op) onOpen(item.op);
   else if (item.go === "finance") onGoFinance();
   else onGoOperations();
 }
@@ -84,6 +88,7 @@ function PriorityCard({
   onOpen,
   onGoOperations,
   onGoFinance,
+  onGoPortfolio,
 }: FocusProps & { title: string; subtitle: string }) {
   return (
     <section className="vg-focus-card vg-priority-card">
@@ -97,7 +102,14 @@ function PriorityCard({
           Ver central <ArrowIcon />
         </button>
       </header>
-      <NeedsYou items={m.needs} limit={4} onOpen={onOpen} onGoOperations={onGoOperations} onGoFinance={onGoFinance} />
+      <NeedsYou
+        items={m.needs}
+        limit={4}
+        onOpen={onOpen}
+        onGoOperations={onGoOperations}
+        onGoFinance={onGoFinance}
+        onGoPortfolio={onGoPortfolio}
+      />
     </section>
   );
 }
@@ -226,7 +238,7 @@ function Detail({ title, subtitle, children }: { title: string; subtitle: string
 }
 
 function ManagementFocus(props: FocusProps) {
-  const { metrics: m, onOpen, onGoOperations, onGoFinance } = props;
+  const { metrics: m, onOpen, onGoOperations, onGoFinance, onGoPortfolio } = props;
   const topNeed = m.needs[0];
   const resultAfterPdd = m.economics.result - m.market.provision;
   return (
@@ -236,7 +248,7 @@ function ManagementFocus(props: FocusProps) {
         headline={resultAfterPdd >= 0 ? "Resultado e caixa sustentam a operação" : "Resultado após risco exige revisão"}
         detail={`${compact(m.cur.volume)} originados ${m.labels.range} · ${compact(m.freeCash)} de caixa livre · ${pct(m.overdueRatio)} de inadimplência`}
         tone={resultAfterPdd < 0 ? "critical" : m.health.tone}
-        action={topNeed ? () => actOnNeed(topNeed, onOpen, onGoOperations, onGoFinance) : onGoFinance}
+        action={topNeed ? () => actOnNeed(topNeed, onOpen, onGoOperations, onGoFinance, onGoPortfolio) : onGoFinance}
         actionLabel={topNeed?.action ?? "Ver caixa"}
       />
       <div className="vg-focus-grid">
@@ -344,7 +356,7 @@ function ManagementFocus(props: FocusProps) {
 }
 
 function OperationFocus(props: FocusProps) {
-  const { metrics: m, onOpen, onGoOperations, onGoFinance } = props;
+  const { metrics: m, onOpen, onGoOperations, onGoFinance, onGoPortfolio } = props;
   const topNeed = m.needs[0];
   const period = m.labels.tab === "Dia" ? "dia" : m.labels.tab === "Semana" ? "semana" : "mes";
   const headline = m.blockedOps.length
@@ -360,7 +372,7 @@ function OperationFocus(props: FocusProps) {
         headline={headline}
         detail={`${m.active.length} em andamento · ${m.interventions.length} intervenções · priorize os cortes do dia`}
         tone={m.blockedOps.length ? "critical" : m.interventions.length ? "watch" : "ok"}
-        action={topNeed ? () => actOnNeed(topNeed, onOpen, onGoOperations, onGoFinance) : onGoOperations}
+        action={topNeed ? () => actOnNeed(topNeed, onOpen, onGoOperations, onGoFinance, onGoPortfolio) : onGoOperations}
         actionLabel={topNeed?.action ?? "Abrir esteira"}
       />
       <div className="vg-focus-grid">
@@ -438,7 +450,7 @@ function OperationFocus(props: FocusProps) {
 }
 
 function RiskFocus(props: FocusProps) {
-  const { metrics: m, onOpen, onGoOperations, onGoFinance } = props;
+  const { metrics: m, onOpen, onGoOperations, onGoFinance, onGoPortfolio } = props;
   const topNeed = m.needs[0];
   const worsening = m.risk.cedentQuality.worsening.length;
   const headline =
@@ -454,7 +466,11 @@ function RiskFocus(props: FocusProps) {
         headline={headline}
         detail={`${compact(m.overdueTotal)} vencidos · ${compact(m.market.provision)} de PDD · ${worsening} cedentes piorando`}
         tone={m.market.overdue90 > 0 ? "critical" : m.overdueTotal || worsening ? "watch" : "ok"}
-        action={topNeed ? () => actOnNeed(topNeed, onOpen, onGoOperations, onGoFinance) : onGoOperations}
+        action={
+          topNeed
+            ? () => actOnNeed(topNeed, onOpen, onGoOperations, onGoFinance, onGoPortfolio)
+            : () => onGoPortfolio({ tab: "titulos", situation: "vencidos" })
+        }
         actionLabel={topNeed?.action ?? "Ver carteira"}
       />
       <div className="vg-focus-grid">
@@ -489,7 +505,10 @@ function RiskFocus(props: FocusProps) {
             />
             <MetricRow label="Cedentes piorando" value={String(worsening)} />
           </MetricRows>
-          <button className="vg-btn action-primary vg-capacity-action" onClick={onGoOperations}>
+          <button
+            className="vg-btn action-primary vg-capacity-action"
+            onClick={() => onGoPortfolio({ tab: "titulos", situation: "vencidos" })}
+          >
             Abrir tratamento <ArrowIcon />
           </button>
         </section>
@@ -524,7 +543,12 @@ function RiskFocus(props: FocusProps) {
         </Detail>
         <Detail title="Alertas e deterioração" subtitle="Limite, concentração, atraso e score">
           <div className="vg-deep-content">
-            <Alerts list={m.profileAlerts} onOpen={onOpen} onGoOperations={onGoOperations} />
+            <Alerts
+              list={m.profileAlerts}
+              onOpen={onOpen}
+              onGoOperations={onGoOperations}
+              onGoPortfolio={onGoPortfolio}
+            />
           </div>
         </Detail>
       </DeepDive>

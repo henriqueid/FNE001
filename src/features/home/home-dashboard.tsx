@@ -19,6 +19,7 @@ import { type CarteiraFlow } from "@/src/domain/finance/reports";
 import type { FinanceState } from "@/src/domain/finance/model";
 import type { OpFinancial, PortfolioTitle } from "@/src/domain/home/metrics";
 import type { OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
+import type { PortfolioFocus } from "@/src/features/portfolio/portfolio-navigation";
 
 export { layouts, type SectionId } from "./home-sections-map";
 
@@ -32,6 +33,7 @@ export default function HomeDashboard({
   companyScope,
   onOpen,
   onGoOperations,
+  onGoPortfolio,
   onGoLive,
   onNew,
   revenueGoals,
@@ -48,6 +50,7 @@ export default function HomeDashboard({
   companyScope: string;
   onOpen: (op: Operation) => void;
   onGoOperations: () => void;
+  onGoPortfolio: (focus: PortfolioFocus) => void;
   onGoLive?: () => void;
   onNew?: () => void;
   revenueGoals: OperationalDefaultsState["revenueGoals"];
@@ -98,6 +101,7 @@ export default function HomeDashboard({
         onOpen={onOpen}
         onGoOperations={onGoOperations}
         onGoFinance={onGoFinance}
+        onGoPortfolio={onGoPortfolio}
       />
 
       <p className="vg-footnote">

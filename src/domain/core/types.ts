@@ -305,7 +305,22 @@ export type Operation = {
     stageId: number;
     completedBy: string;
     completedAt: string;
+    source?: "COPILOT" | "ENGINE" | "HUMAN";
+    scenarioVersion?: number;
+    policyVersion?: string;
+    snapshotId?: string;
+    reason?: string;
   }[];
+  /** Rastreabilidade da análise do Copiloto que originou a operação. */
+  copilotOrigin?: {
+    runId: string;
+    scenarioVersion: number;
+    policyName: string;
+    policyVersion: string;
+    generatedAt: string;
+    generatedBy: string;
+    fileNames: string[];
+  };
   cancellation?: CancellationMemory;
   manualEntry?: ManualEntryData;
   /** Lote que originou os títulos importados, com hash, contagens e inconsistências. */

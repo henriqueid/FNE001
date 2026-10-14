@@ -31,7 +31,7 @@ de recebíveis e onde o STRATO entra. Duas composições com o mesmo conteúdo: 
 - Áudio em `public/missao/`: narração por trecho, trilha e efeitos. A trilha abaixa sozinha durante a fala.
 
 ```bash
-npm run render:missao          # gera out/missao-strato-16x9.mp4 e out/missao-strato-9x16.mp4
+npm run render:missao          # gera os dois MP4 em out/ e normaliza o áudio para -14 LUFS
 ```
 
 Para regravar a narração (por exemplo, ao mudar o texto ou a voz) e recompor a trilha no novo tempo:

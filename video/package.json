@@ -8,7 +8,8 @@
     "studio": "remotion studio",
     "render": "remotion render CopilotoExplainer out/copiloto.mp4",
     "still": "remotion still CopilotoExplainer out/still.png",
-    "render:missao": "remotion render MissaoStrato16x9 out/missao-strato-16x9.mp4 && remotion render MissaoStrato9x16 out/missao-strato-9x16.mp4"
+    "render:missao": "remotion render MissaoStrato16x9 out/missao-strato-16x9.mp4 && remotion render MissaoStrato9x16 out/missao-strato-9x16.mp4 && npm run masterizar:missao",
+    "masterizar:missao": "for f in out/missao-strato-16x9 out/missao-strato-9x16; do ffmpeg -y -loglevel error -i $f.mp4 -c:v copy -af loudnorm=I=-14:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k $f.tmp.mp4 && mv $f.tmp.mp4 $f.mp4; done"
   },
   "devDependencies": {
     "@types/react": "19.2.2",

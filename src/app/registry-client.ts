@@ -1,6 +1,7 @@
 import { getStratoTenantId } from "./tenant";
-import type { Party } from "@/src/domain/registry/parties";
+import type { Party, PartyBankAccount } from "@/src/domain/registry/parties";
 import type { RegistryPartySearchItem, RegistryPartyStats } from "@/src/server/registry/repository";
+import type { BankAccountChange } from "@/src/server/registry/bank-account-changes";
 
 const headers = () => ({ "x-strato-tenant-id": getStratoTenantId() });
 export async function loadRegistryParties(): Promise<Party[]> {
@@ -38,4 +39,39 @@ export async function persistRegistryParty(party: Party) {
   });
   const body = (await response.json().catch(() => ({}))) as { error?: string };
   if (!response.ok) throw new Error(body.error ?? "Não foi possível salvar o cadastro no banco.");
+}
+
+async function bankChangeRequest(path = "", init?: RequestInit) {
+  const response = await fetch(`/api/registry/bank-account-changes${path}`, {
+    cache: "no-store",
+    ...init,
+    headers: { ...headers(), ...(init?.body ? { "content-type": "application/json" } : {}), ...init?.headers },
+  });
+  const body = (await response.json().catch(() => ({}))) as { error?: string };
+  if (!response.ok) throw new Error(body.error ?? "Não foi possível processar a alteração bancária.");
+  return body;
+}
+
+export async function loadBankAccountChanges(status: "PENDING" | "APPROVED" | "REJECTED" = "PENDING") {
+  const body = (await bankChangeRequest(`?status=${status}`)) as { changes: BankAccountChange[] };
+  return body.changes;
+}
+
+export async function requestRegistryBankAccountChange(
+  partyId: string,
+  proposedAccounts: PartyBankAccount[],
+  reason: string,
+) {
+  return bankChangeRequest("", {
+    method: "POST",
+    body: JSON.stringify({ partyId, proposedAccounts, reason }),
+  }) as Promise<{ changeId: string; status: "PENDING" }>;
+}
+
+export async function decideRegistryBankAccountChange(
+  changeId: string,
+  decision: "APPROVED" | "REJECTED",
+  reason: string,
+) {
+  return bankChangeRequest("", { method: "PUT", body: JSON.stringify({ changeId, decision, reason }) });
 }

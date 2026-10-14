@@ -28,6 +28,7 @@ import { DebtorsTab } from "./debtors-tab";
 import { PartiesTab } from "./parties-tab";
 import { PartyFormModal } from "./party-form-modal";
 import { RegistryIndicatorsCard } from "./registry-indicators-card";
+import { BankAccountApprovalPanel } from "./bank-account-approval-panel";
 
 type Tab = "todos" | PartyRole;
 type Toast = { tone: "success" | "error"; text: string } | null;
@@ -40,7 +41,7 @@ type Props = {
 };
 
 export default function RegistryModule({ debtors, operations, onOpenOperation, onNavigate, portfolioTitles }: Props) {
-  const { parties, commercial, onCommercial } = useRegistry();
+  const { parties, commercial, onCommercial, isDemo, refreshParties } = useRegistry();
   const [tab, setTab] = useState<Tab>("cedente");
   const [repFilter, setRepFilter] = useState("");
   const [toast, setToast] = useState<Toast>(null);
@@ -117,6 +118,12 @@ export default function RegistryModule({ debtors, operations, onOpenOperation, o
         </div>
       </div>
       <RegistryIndicatorsCard operations={operations} />
+      {!isDemo && (
+        <BankAccountApprovalPanel
+          onFeedback={(ok, text) => setToast({ tone: ok ? "success" : "error", text })}
+          onApplied={refreshParties}
+        />
+      )}
       <ModuleTabs
         label="Papéis do cadastro"
         className="rg-tabs"

@@ -6,6 +6,7 @@
  * usuário digita; erros bloqueiam a gravação, avisos só orientam.
  */
 import { useRegistry } from "@/src/app/registry-context";
+import { requestRegistryBankAccountChange } from "@/src/app/registry-client";
 import { consultCnpj, consultLeadCnpj } from "@/src/app/cnpj-enrichment-client";
 import { consultCep, listPublicBanks } from "@/src/app/public-enrichment-client";
 import { cnpjEvidenceChanges, type CnpjEvidence } from "@/src/domain/integrations/cnpj";
@@ -91,7 +92,7 @@ const auditFieldLabel = (field: string) =>
     .replaceAll(".", " · ");
 
 export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Props) {
-  const { parties, saveParty, operationalDefaults } = useRegistry();
+  const { parties, saveParty, operationalDefaults, isDemo } = useRegistry();
   const [draft, setDraft] = useState<Party>(party);
   const [error, setError] = useState("");
   const [changeReason, setChangeReason] = useState("");
@@ -102,6 +103,7 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
   const [cnpjError, setCnpjError] = useState("");
   const [cepLoading, setCepLoading] = useState(false);
   const [publicDataError, setPublicDataError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [banks, setBanks] = useState<BankEvidence[]>([]);
   const set = (patch: Partial<Party>) => setDraft(current => ({ ...current, ...patch }));
   const setAddress = (patch: Partial<Party["address"]>) =>
@@ -221,19 +223,38 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
       ),
     });
 
-  function submit() {
+  async function submit() {
     setAttempted(true);
     if (!isNew && !changeReason.trim()) {
       setError("Informe o motivo da alteração para manter a auditoria.");
       return;
     }
     if (issues.some(i => i.blocking)) return;
-    const result = saveParty(draft, changeReason);
-    if (result.error) {
-      setError(result.error);
+    const bankAccountsChanged = JSON.stringify(party.bankAccounts) !== JSON.stringify(draft.bankAccounts);
+    if (!isDemo && isNew && draft.bankAccounts.length) {
+      setError("Cadastre primeiro a pessoa sem conta bancária. Depois reabra a ficha e envie a conta para aprovação.");
       return;
     }
-    onSaved(result.message ?? "Cadastro salvo.");
+    setSaving(true);
+    const safeDraft = !isDemo && bankAccountsChanged ? { ...draft, bankAccounts: party.bankAccounts } : draft;
+    const result = saveParty(safeDraft, changeReason);
+    if (result.error) {
+      setError(result.error);
+      setSaving(false);
+      return;
+    }
+    try {
+      if (!isDemo && bankAccountsChanged) {
+        await requestRegistryBankAccountChange(draft.id, draft.bankAccounts, changeReason);
+        onSaved("Dados cadastrais salvos. A alteração bancária aguarda aprovação de outra pessoa.");
+      } else {
+        onSaved(result.message ?? "Cadastro salvo.");
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível solicitar a alteração bancária.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const blocking = issues.filter(i => i.blocking);
@@ -254,8 +275,8 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
           <button className="fn-btn ghost" onClick={onClose}>
             Cancelar
           </button>
-          <button className="fn-btn primary" onClick={submit}>
-            {isNew ? "Cadastrar" : "Salvar alterações"}
+          <button className="fn-btn primary" disabled={saving} onClick={() => void submit()}>
+            {saving ? "Salvando..." : isNew ? "Cadastrar" : "Salvar alterações"}
           </button>
         </>
       }

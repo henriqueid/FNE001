@@ -12,6 +12,7 @@ import { type OperationalDefaultsState } from "@/src/domain/registry/operational
 import { createContext, useContext } from "react";
 
 export type RegistryValue = {
+  isDemo: boolean;
   commercial: CommercialState;
   cedents: Cedent[];
   records: ClientRecord[];
@@ -21,6 +22,8 @@ export type RegistryValue = {
   onCommercial: (next: CommercialState) => void;
   /** Pessoas do Cadastro (salvas + derivadas dos módulos), uma por documento. */
   parties: Party[];
+  /** Recarrega do backend após comandos aprovados fora do formulário principal. */
+  refreshParties: () => Promise<void>;
   /** Valida, grava e propaga para Operação, Comercial e sacados. */
   saveParty: (party: Party, reason?: string) => { error?: string; message?: string };
 };

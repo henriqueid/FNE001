@@ -980,6 +980,7 @@ export default function StratoApp() {
   );
   const registryValue = useMemo<RegistryValue>(
     () => ({
+      isDemo,
       commercial: commercialLive,
       cedents: scoredCedents,
       records: buildRegistry(commercialLive, scoredCedents),
@@ -993,6 +994,9 @@ export default function StratoApp() {
       },
       operationalDefaults,
       parties,
+      refreshParties: async () => {
+        if (!isDemo) setSavedParties(await loadRegistryParties());
+      },
       saveParty: (party, reason) => {
         if (!can(currentUser, "registry:edit")) return { error: "Seu perfil não permite editar cadastros." };
         const result = savePartyRecord({

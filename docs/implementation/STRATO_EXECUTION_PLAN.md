@@ -272,7 +272,7 @@ Progresso A5.6 — maker-checker residual:
 - [x] impedir alteração bancária pela API comum e invalidar aprovação sobre cadastro concorrente;
 - [x] proteger a fila no banco com RLS forçada, privilégios revogados, decisão terminal e uma pendência por cadastro;
 - [x] publicar o procedimento de conferência, rejeição e reapresentação de contas bancárias;
-- [ ] disponibilizar a fila de solicitações bancárias na interface do Cadastro;
+- [x] disponibilizar no Cadastro a solicitação, comparação antes/depois, fila pendente, aprovação e rejeição;
 - [ ] aplicar dupla aprovação à publicação de configurações críticas;
 - [ ] proteger elevação de privilégios e alterações administrativas de credenciais;
 - [ ] homologar o fluxo residual com duas sessões reais e usuários distintos.

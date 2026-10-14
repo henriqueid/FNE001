@@ -14,6 +14,10 @@ Uma alteração de banco, agência, conta, chave PIX, titular ou conta principal
 4. Na aprovação, o STRATO verifica novamente se a conta vigente ainda é a mesma observada na solicitação.
 5. Somente após essa conferência a nova lista de contas substitui a anterior.
 
+No ambiente real, as solicitações pendentes aparecem no topo do módulo Cadastro. Cada cartão mostra as contas anteriores e a proposta lado a lado, o solicitante, o motivo e o campo obrigatório para justificar a decisão. Após uma aprovação, a ficha é recarregada automaticamente com a conta vigente.
+
+Para um cadastro novo, conclua primeiro a identificação sem dados bancários. Em seguida, reabra a ficha e envie a conta pelo fluxo de aprovação; isso garante que a solicitação esteja ligada a uma pessoa já persistida e auditável.
+
 ## Controles automáticos
 
 - o solicitante não pode decidir a própria solicitação;

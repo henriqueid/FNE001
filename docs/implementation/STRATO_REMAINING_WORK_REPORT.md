@@ -36,7 +36,7 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 | Homologação multiusuário   | Backend recusa versão obsoleta                       | testar duas sessões reais em Operações, Financeiro, Carteira, Comercial, Políticas e Tarefas |   3–5 dias |
 | Ataques cruzados           | testes unitários cobrem escopo                       | ensaio com dois tenants, duas empresas e requisições deliberadamente cruzadas                |   2–3 dias |
 | Escopo residual de APIs    | concluído e homologado com sessões reais temporárias | nenhuma pendência funcional neste recorte; repetir no UAT completo com usuários definitivos  |  concluído |
-| Maker-checker residual     | exceção e favorecido protegidos; aprovação bancária disponível em banco/API | interface da fila bancária, configurações críticas, elevação de privilégio/credenciais e UAT |   2–3 dias |
+| Maker-checker residual     | exceção, favorecido e conta bancária protegidos de ponta a ponta | configurações críticas, elevação de privilégio/credenciais e UAT |   1–3 dias |
 | Contrato comum de comandos | cada agregado possui implementação confiável         | unificar recibo idempotente, event ledger, outbox, correlação e respostas de conflito        |   5–8 dias |
 | Segurança de conta         | sessão e bloqueio existem                            | MFA para perfis críticos, política de senha comprometida, recuperação e revisão de sessão    |   4–7 dias |
 | Operação de plataforma     | build e banco existem                                | backup/restore ensaiado, métricas, logs, alertas, retenção, runbook e deploy produtivo       |   5–8 dias |

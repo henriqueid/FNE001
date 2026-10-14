@@ -15,7 +15,7 @@ Cada tarefa só é concluída quando entrega, no mesmo recorte:
 
 ## Onda A — substrato produtivo
 
-### A1. Operação persistente e versionada — IMPLEMENTADA / HOMOLOGAÇÃO MULTIUSUÁRIO PENDENTE
+### A1. Operação persistente e versionada — IMPLEMENTADA / CONCORRÊNCIA REAL HOMOLOGADA
 
 - [x] modelar tabela do agregado `Operation` por tenant;
 - [x] adicionar versão otimista para impedir sobrescrita silenciosa;
@@ -25,6 +25,7 @@ Cada tarefa só é concluída quando entrega, no mesmo recorte:
 - [x] manter a demonstração isolada em `localStorage`;
 - [x] criar guia operacional;
 - [x] aplicar a migração no ambiente alvo;
+- [x] validar leitura concorrente e recusa de versão obsoleta com dois usuários e duas sessões reais;
 - [ ] validar o fluxo com dois usuários e dois navegadores;
 - [x] executar e corrigir toda a suíte de qualidade.
 
@@ -338,8 +339,11 @@ Laboratório de políticas, safras, roll rates, liquidez, shadow mode, anomalias
 - build de produção aprovado com a rota `/api/operations`;
 - 203 testes automatizados aprovados em 34 arquivos;
 - guia operacional publicado em `docs/user-guides/OPERACOES_PERSISTENTES.md`.
+- duas sessões reais leram a versão 1; a primeira gravou a versão 2 e a segunda recebeu 409 sem sobrescrever o conteúdo;
+- o ensaio identificou e corrigiu o cast de `operationId` no payload PostgreSQL da outbox;
+- homologação publicada em `docs/testing/HOMOLOGACAO_A1_CONCORRENCIA_MULTIUSUARIO.md`, com limpeza integral dos registros temporários.
 
-Pendência controlada: homologação visual concorrente com duas sessões reais. O backend e o banco já recusam a atualização obsoleta; falta validar a comunicação completa dessa ocorrência na experiência dos dois usuários.
+Pendência controlada: repetir a experiência em dois navegadores para avaliar o comportamento visual. Backend, banco e mensagem HTTP de conflito já foram homologados com duas sessões reais.
 
 ## Evidências da execução A2
 

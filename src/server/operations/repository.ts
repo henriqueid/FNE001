@@ -89,7 +89,7 @@ async function saveOperationRecord(
            jsonb_build_object(
              'eventId', recorded.event_id,
              'eventType', recorded.event_type,
-             'operationId', ?,
+             'operationId', ?::text,
              'aggregateVersion', recorded.aggregate_version
            )
          from recorded

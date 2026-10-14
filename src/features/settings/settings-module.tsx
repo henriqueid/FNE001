@@ -4,9 +4,13 @@ import { useCompanyDestinations } from "@/src/app/company-context";
 import { masterRuleCatalog } from "@/src/domain/eligibility/master-rule-catalog";
 import { type EligibilityPolicyState } from "@/src/domain/eligibility/policy-library";
 import PoliciesModule from "@/src/features/policies/policies-module";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { type IntegrationState, updateIntegrationMode } from "@/src/domain/integrations/model";
-import type { OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
+import {
+  operationalDefaultsSnapshot,
+  type OperationalDefaultsState,
+  type OperationalParameterChangeRequest,
+} from "@/src/domain/registry/operational-profile";
 import { OperationalParametersEditor } from "@/src/features/registry/operational-parameters-editor";
 import { type HomePeriod } from "@/src/domain/home/settings";
 import { type AccessState } from "@/src/domain/access/model";
@@ -14,6 +18,11 @@ import { UsersAccessPanel } from "./users-access-panel";
 import { aiStatusLabel, effectiveAIStatus, type IntelligenceState } from "@/src/domain/intelligence/model";
 import { OutboxHealthPanel } from "./outbox-health-panel";
 import { AIConfigurationPanel } from "./ai-configuration-panel";
+import {
+  decideOperationalParameters,
+  loadOperationalParameters,
+  proposeOperationalParameters,
+} from "@/src/app/operational-parameters-client";
 
 const goalPeriods: Array<{ id: HomePeriod; label: string }> = [
   { id: "dia", label: "Dia" },
@@ -170,6 +179,100 @@ export default function SettingsModule({
   const currentSection = menuGroups.flatMap(group => group.items).find(item => item.id === section);
   const activeIntegrations = integrations.providers.filter(provider => provider.mode === "ATIVA").length;
   const demoIntegrations = integrations.providers.filter(provider => provider.mode === "DEMONSTRACAO").length;
+  const [operationalDraft, setOperationalDraft] = useState(operationalDefaults);
+  const [operationalRequests, setOperationalRequests] = useState<OperationalParameterChangeRequest[]>([]);
+  const [operationalReason, setOperationalReason] = useState("");
+  const [operationalDecisionReason, setOperationalDecisionReason] = useState("");
+  const [operationalSubmitting, setOperationalSubmitting] = useState(false);
+  const [operationalFeedback, setOperationalFeedback] = useState<{ tone: "success" | "error"; message: string }>();
+  const pendingOperationalRequest = operationalRequests.find(request => request.status === "PENDING");
+  const operationalHistory = operationalRequests.filter(request => request.status !== "PENDING").slice(0, 5);
+  const editableOperationalDefaults = demoMode ? operationalDefaults : operationalDraft;
+  const operationalChanged =
+    JSON.stringify(operationalDefaultsSnapshot(operationalDraft)) !==
+    JSON.stringify(operationalDefaultsSnapshot(operationalDefaults));
+
+  useEffect(() => {
+    if (demoMode) return;
+    let cancelled = false;
+    loadOperationalParameters()
+      .then(result => {
+        if (cancelled) return;
+        setOperationalRequests(result.requests);
+        setOperationalDraft(result.state);
+      })
+      .catch(error => {
+        if (!cancelled)
+          setOperationalFeedback({
+            tone: "error",
+            message: error instanceof Error ? error.message : "Não foi possível carregar as aprovações.",
+          });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [demoMode]);
+
+  const editOperationalDefaults = (candidate: OperationalDefaultsState) => {
+    if (demoMode) onOperationalDefaults(candidate);
+    else setOperationalDraft(candidate);
+  };
+
+  const submitOperationalProposal = async () => {
+    setOperationalSubmitting(true);
+    setOperationalFeedback(undefined);
+    try {
+      const requests = await proposeOperationalParameters(
+        operationalDraft,
+        operationalDefaults.persistenceVersion ?? 0,
+        operationalReason,
+      );
+      setOperationalRequests(requests);
+      setOperationalReason("");
+      setOperationalFeedback({
+        tone: "success",
+        message: "Proposta enviada. Os valores efetivos permanecem inalterados até outra pessoa aprovar.",
+      });
+    } catch (error) {
+      setOperationalFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Não foi possível enviar a proposta.",
+      });
+    } finally {
+      setOperationalSubmitting(false);
+    }
+  };
+
+  const decideOperationalProposal = async (decision: "APPROVED" | "REJECTED") => {
+    if (!pendingOperationalRequest) return;
+    setOperationalSubmitting(true);
+    setOperationalFeedback(undefined);
+    try {
+      const result = await decideOperationalParameters(
+        pendingOperationalRequest.id,
+        decision,
+        operationalDecisionReason,
+      );
+      setOperationalRequests(result.requests);
+      onOperationalDefaults(result.state);
+      setOperationalDraft(result.state);
+      setOperationalDecisionReason("");
+      setOperationalFeedback({
+        tone: "success",
+        message:
+          decision === "APPROVED"
+            ? "Nova versão aprovada e aplicada."
+            : "Proposta rejeitada sem alterar a versão efetiva.",
+      });
+    } catch (error) {
+      setOperationalFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Não foi possível registrar a decisão.",
+      });
+    } finally {
+      setOperationalSubmitting(false);
+    }
+  };
 
   return (
     <main className="settings-page">
@@ -445,64 +548,127 @@ export default function SettingsModule({
                   padrão; zero continua sendo um valor válido.
                 </p>
               </header>
-              <OperationalParametersEditor
-                defaults={operationalDefaults}
-                overrides={operationalDefaults.general}
-                allowInheritance={false}
-                onChange={general =>
-                  onOperationalDefaults({
-                    ...operationalDefaults,
-                    general: { ...operationalDefaults.general, ...general },
-                  })
-                }
-              />
-              <section className="settings-revenue-goals">
-                <header>
-                  <span>META DE ORIGINAÇÃO</span>
-                  <h3>Volume por período e veículo</h3>
-                  <p>Começa zerado no ambiente real e só passa a orientar os painéis depois de configurado.</p>
-                </header>
-                <div className="settings-goal-row heading">
-                  <b>Escopo</b>
-                  {goalPeriods.map(period => (
-                    <b key={period.id}>{period.label}</b>
-                  ))}
-                </div>
-                <div className="settings-goal-row">
-                  <span>
-                    <strong>Consolidado</strong>
-                    <small>Meta geral de volume</small>
-                  </span>
-                  {goalPeriods.map(period => (
-                    <label key={period.id}>
-                      <small>R$</small>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1000"
-                        aria-label={`Meta consolidada de originação por ${period.label.toLowerCase()}`}
-                        value={operationalDefaults.originationGoals.consolidated[period.id]}
-                        onChange={event =>
-                          onOperationalDefaults({
-                            ...operationalDefaults,
-                            originationGoals: {
-                              ...operationalDefaults.originationGoals,
-                              consolidated: {
-                                ...operationalDefaults.originationGoals.consolidated,
-                                [period.id]: Number(event.target.value),
-                              },
-                            },
-                          })
-                        }
-                      />
-                    </label>
-                  ))}
-                </div>
-                {destinations.map(destination => (
-                  <div className="settings-goal-row" key={destination.name}>
+              {!demoMode && (
+                <section className="settings-operational-governance" aria-label="Governança dos parâmetros">
+                  <div>
+                    <strong>Versão efetiva {operationalDefaults.persistenceVersion ?? 0}</strong>
                     <span>
-                      <strong>{destination.name}</strong>
-                      <small>{destination.institution}</small>
+                      {pendingOperationalRequest
+                        ? `Proposta de ${pendingOperationalRequest.requestedBy} aguardando outra pessoa.`
+                        : operationalChanged
+                          ? "Alterações preparadas, ainda sem efeito operacional."
+                          : "Nenhuma alteração pendente."}
+                    </span>
+                  </div>
+                  {pendingOperationalRequest ? (
+                    <div className="settings-operational-approval">
+                      <p>
+                        <b>Motivo da proposta:</b> {pendingOperationalRequest.reason}
+                      </p>
+                      <label>
+                        Justificativa da decisão
+                        <textarea
+                          value={operationalDecisionReason}
+                          onChange={event => setOperationalDecisionReason(event.target.value)}
+                          placeholder="Registre a análise realizada"
+                        />
+                      </label>
+                      <div>
+                        <button
+                          type="button"
+                          disabled={
+                            operationalSubmitting || pendingOperationalRequest.requestedById === policyApprovalActor.id
+                          }
+                          onClick={() => void decideOperationalProposal("REJECTED")}
+                        >
+                          Rejeitar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={
+                            operationalSubmitting || pendingOperationalRequest.requestedById === policyApprovalActor.id
+                          }
+                          onClick={() => void decideOperationalProposal("APPROVED")}
+                        >
+                          Aprovar e aplicar
+                        </button>
+                      </div>
+                      {pendingOperationalRequest.requestedById === policyApprovalActor.id && (
+                        <small>Entre com outra pessoa autorizada para decidir esta proposta.</small>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="settings-operational-proposal">
+                      <label>
+                        Motivo da alteração
+                        <textarea
+                          value={operationalReason}
+                          onChange={event => setOperationalReason(event.target.value)}
+                          placeholder="Explique o objetivo e o impacto esperado"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        disabled={!operationalChanged || operationalSubmitting}
+                        onClick={() => void submitOperationalProposal()}
+                      >
+                        Enviar para aprovação
+                      </button>
+                    </div>
+                  )}
+                  {operationalFeedback && (
+                    <p className={`settings-operational-feedback ${operationalFeedback.tone}`}>
+                      {operationalFeedback.message}
+                    </p>
+                  )}
+                  {!!operationalHistory.length && (
+                    <div className="settings-operational-history">
+                      <strong>Histórico recente</strong>
+                      {operationalHistory.map(request => (
+                        <article key={request.id}>
+                          <span>
+                            {request.status === "APPROVED" ? "Aprovada" : "Rejeitada"} · versão de origem{" "}
+                            {request.expectedVersion}
+                            {request.appliedVersion ? ` → ${request.appliedVersion}` : ""}
+                          </span>
+                          <small>
+                            {request.requestedBy} solicitou · {request.decidedBy} decidiu
+                          </small>
+                          <small>{request.decisionReason}</small>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
+              <fieldset className="settings-operational-fields" disabled={!demoMode && !!pendingOperationalRequest}>
+                <OperationalParametersEditor
+                  defaults={editableOperationalDefaults}
+                  overrides={editableOperationalDefaults.general}
+                  allowInheritance={false}
+                  onChange={general =>
+                    editOperationalDefaults({
+                      ...editableOperationalDefaults,
+                      general: { ...editableOperationalDefaults.general, ...general },
+                    })
+                  }
+                />
+                <section className="settings-revenue-goals">
+                  <header>
+                    <span>META DE ORIGINAÇÃO</span>
+                    <h3>Volume por período e veículo</h3>
+                    <p>Começa zerado no ambiente real e só passa a orientar os painéis depois de configurado.</p>
+                  </header>
+                  <div className="settings-goal-row heading">
+                    <b>Escopo</b>
+                    {goalPeriods.map(period => (
+                      <b key={period.id}>{period.label}</b>
+                    ))}
+                  </div>
+                  <div className="settings-goal-row">
+                    <span>
+                      <strong>Consolidado</strong>
+                      <small>Meta geral de volume</small>
                     </span>
                     {goalPeriods.map(period => (
                       <label key={period.id}>
@@ -511,19 +677,16 @@ export default function SettingsModule({
                           type="number"
                           min="0"
                           step="1000"
-                          aria-label={`Meta de originação de ${destination.name} por ${period.label.toLowerCase()}`}
-                          value={operationalDefaults.originationGoals.byVehicle[destination.name]?.[period.id] ?? 0}
+                          aria-label={`Meta consolidada de originação por ${period.label.toLowerCase()}`}
+                          value={editableOperationalDefaults.originationGoals.consolidated[period.id]}
                           onChange={event =>
-                            onOperationalDefaults({
-                              ...operationalDefaults,
+                            editOperationalDefaults({
+                              ...editableOperationalDefaults,
                               originationGoals: {
-                                ...operationalDefaults.originationGoals,
-                                byVehicle: {
-                                  ...operationalDefaults.originationGoals.byVehicle,
-                                  [destination.name]: {
-                                    ...operationalDefaults.originationGoals.byVehicle[destination.name],
-                                    [period.id]: Number(event.target.value),
-                                  },
+                                ...editableOperationalDefaults.originationGoals,
+                                consolidated: {
+                                  ...editableOperationalDefaults.originationGoals.consolidated,
+                                  [period.id]: Number(event.target.value),
                                 },
                               },
                             })
@@ -532,77 +695,32 @@ export default function SettingsModule({
                       </label>
                     ))}
                   </div>
-                ))}
-              </section>
-              <section className="settings-revenue-goals">
-                <header>
-                  <span>META DE RECEITA</span>
-                  <h3>Metas por período e veículo</h3>
-                  <p>
-                    A meta consolidada é distribuída pelos dias úteis. Valores específicos por veículo têm prioridade.
-                  </p>
-                </header>
-                <div className="settings-goal-row heading">
-                  <b>Escopo</b>
-                  {goalPeriods.map(period => (
-                    <b key={period.id}>{period.label}</b>
-                  ))}
-                </div>
-                <div className="settings-goal-row">
-                  <span>
-                    <strong>Consolidado</strong>
-                    <small>Meta geral do grupo</small>
-                  </span>
-                  {goalPeriods.map(period => (
-                    <label key={period.id}>
-                      <small>R$</small>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1000"
-                        aria-label={`Meta consolidada de receita por ${period.label.toLowerCase()}`}
-                        value={operationalDefaults.revenueGoals.consolidated[period.id]}
-                        onChange={event =>
-                          onOperationalDefaults({
-                            ...operationalDefaults,
-                            revenueGoals: {
-                              ...operationalDefaults.revenueGoals,
-                              consolidated: {
-                                ...operationalDefaults.revenueGoals.consolidated,
-                                [period.id]: Number(event.target.value),
-                              },
-                            },
-                          })
-                        }
-                      />
-                    </label>
-                  ))}
-                </div>
-                {destinations.map(destination => (
-                  <div className="settings-goal-row" key={destination.name}>
-                    <span>
-                      <strong>{destination.name}</strong>
-                      <small>{destination.institution}</small>
-                    </span>
-                    {goalPeriods.map(period => {
-                      return (
+                  {destinations.map(destination => (
+                    <div className="settings-goal-row" key={destination.name}>
+                      <span>
+                        <strong>{destination.name}</strong>
+                        <small>{destination.institution}</small>
+                      </span>
+                      {goalPeriods.map(period => (
                         <label key={period.id}>
                           <small>R$</small>
                           <input
                             type="number"
                             min="0"
                             step="1000"
-                            aria-label={`Meta de ${destination.name} por ${period.label.toLowerCase()}`}
-                            value={operationalDefaults.revenueGoals.byVehicle[destination.name]?.[period.id] ?? 0}
+                            aria-label={`Meta de originação de ${destination.name} por ${period.label.toLowerCase()}`}
+                            value={
+                              editableOperationalDefaults.originationGoals.byVehicle[destination.name]?.[period.id] ?? 0
+                            }
                             onChange={event =>
-                              onOperationalDefaults({
-                                ...operationalDefaults,
-                                revenueGoals: {
-                                  ...operationalDefaults.revenueGoals,
+                              editOperationalDefaults({
+                                ...editableOperationalDefaults,
+                                originationGoals: {
+                                  ...editableOperationalDefaults.originationGoals,
                                   byVehicle: {
-                                    ...operationalDefaults.revenueGoals.byVehicle,
+                                    ...editableOperationalDefaults.originationGoals.byVehicle,
                                     [destination.name]: {
-                                      ...operationalDefaults.revenueGoals.byVehicle[destination.name],
+                                      ...editableOperationalDefaults.originationGoals.byVehicle[destination.name],
                                       [period.id]: Number(event.target.value),
                                     },
                                   },
@@ -611,11 +729,95 @@ export default function SettingsModule({
                             }
                           />
                         </label>
-                      );
-                    })}
+                      ))}
+                    </div>
+                  ))}
+                </section>
+                <section className="settings-revenue-goals">
+                  <header>
+                    <span>META DE RECEITA</span>
+                    <h3>Metas por período e veículo</h3>
+                    <p>
+                      A meta consolidada é distribuída pelos dias úteis. Valores específicos por veículo têm prioridade.
+                    </p>
+                  </header>
+                  <div className="settings-goal-row heading">
+                    <b>Escopo</b>
+                    {goalPeriods.map(period => (
+                      <b key={period.id}>{period.label}</b>
+                    ))}
                   </div>
-                ))}
-              </section>
+                  <div className="settings-goal-row">
+                    <span>
+                      <strong>Consolidado</strong>
+                      <small>Meta geral do grupo</small>
+                    </span>
+                    {goalPeriods.map(period => (
+                      <label key={period.id}>
+                        <small>R$</small>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1000"
+                          aria-label={`Meta consolidada de receita por ${period.label.toLowerCase()}`}
+                          value={editableOperationalDefaults.revenueGoals.consolidated[period.id]}
+                          onChange={event =>
+                            editOperationalDefaults({
+                              ...editableOperationalDefaults,
+                              revenueGoals: {
+                                ...editableOperationalDefaults.revenueGoals,
+                                consolidated: {
+                                  ...editableOperationalDefaults.revenueGoals.consolidated,
+                                  [period.id]: Number(event.target.value),
+                                },
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  {destinations.map(destination => (
+                    <div className="settings-goal-row" key={destination.name}>
+                      <span>
+                        <strong>{destination.name}</strong>
+                        <small>{destination.institution}</small>
+                      </span>
+                      {goalPeriods.map(period => {
+                        return (
+                          <label key={period.id}>
+                            <small>R$</small>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1000"
+                              aria-label={`Meta de ${destination.name} por ${period.label.toLowerCase()}`}
+                              value={
+                                editableOperationalDefaults.revenueGoals.byVehicle[destination.name]?.[period.id] ?? 0
+                              }
+                              onChange={event =>
+                                editOperationalDefaults({
+                                  ...editableOperationalDefaults,
+                                  revenueGoals: {
+                                    ...editableOperationalDefaults.revenueGoals,
+                                    byVehicle: {
+                                      ...editableOperationalDefaults.revenueGoals.byVehicle,
+                                      [destination.name]: {
+                                        ...editableOperationalDefaults.revenueGoals.byVehicle[destination.name],
+                                        [period.id]: Number(event.target.value),
+                                      },
+                                    },
+                                  },
+                                })
+                              }
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </section>
+              </fieldset>
             </div>
           )}
 

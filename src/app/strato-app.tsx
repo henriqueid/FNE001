@@ -89,6 +89,7 @@ import {
   loadCommercialState as loadServerCommercial,
   persistCommercialState as persistServerCommercial,
 } from "./commercial-client";
+import { loadOperationalParameters as loadServerOperationalParameters } from "./operational-parameters-client";
 
 const CommercialModule = lazy(() => import("@/src/features/commercial/commercial-module"));
 const ControlleriaModule = lazy(() => import("@/src/features/controlleria/controlleria-module"));
@@ -183,6 +184,7 @@ export default function StratoApp() {
   const [operationalDefaults, setOperationalDefaults] = useState(() =>
     isDemo ? seedOperationalDefaults() : emptyOperationalDefaults(),
   );
+  const [operationalDefaultsServerReady, setOperationalDefaultsServerReady] = useState(isDemo);
   const [tasks, setTasks] = useState(() => seedTaskState());
   const [tasksServerReady, setTasksServerReady] = useState(isDemo);
   const [taskPersistenceError, setTaskPersistenceError] = useState<string>();
@@ -759,6 +761,24 @@ export default function StratoApp() {
       cancelled = true;
     };
   }, [isDemo, policiesServerReady, storageReady]);
+
+  useEffect(() => {
+    if (!storageReady || isDemo || operationalDefaultsServerReady) return;
+    let cancelled = false;
+    loadServerOperationalParameters()
+      .then(result => {
+        if (!cancelled) setOperationalDefaults(result.state);
+      })
+      .catch(() => {
+        /* mantém padrões seguros enquanto o serviço estiver indisponível */
+      })
+      .finally(() => {
+        if (!cancelled) setOperationalDefaultsServerReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemo, operationalDefaultsServerReady, storageReady]);
 
   useEffect(() => {
     if (!storageReady || isDemo || portfolioServerReady) return;

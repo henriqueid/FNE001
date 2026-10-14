@@ -6039,6 +6039,79 @@ a.fn-btn:not([href]) {
 .settings-operational-defaults .rg-parameter-groups {
   padding: 18px;
 }
+.settings-operational-fields {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.settings-operational-fields:disabled {
+  opacity: 0.68;
+}
+.settings-operational-governance {
+  display: grid;
+  gap: 12px;
+  margin: 18px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--ds-accent) 35%, var(--ds-border));
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--ds-accent) 5%, var(--ds-surface));
+}
+.settings-operational-governance > div:first-child,
+.settings-operational-proposal,
+.settings-operational-approval {
+  display: grid;
+  gap: 8px;
+}
+.settings-operational-governance span,
+.settings-operational-governance small,
+.settings-operational-governance p {
+  margin: 0;
+  color: var(--ds-text-2);
+  font-size: 11px;
+}
+.settings-operational-governance label {
+  display: grid;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.settings-operational-governance textarea {
+  min-height: 66px;
+  resize: vertical;
+}
+.settings-operational-governance button {
+  justify-self: start;
+}
+.settings-operational-approval > div {
+  display: flex;
+  gap: 8px;
+}
+.settings-operational-feedback {
+  padding: 9px 11px;
+  border-radius: 8px;
+}
+.settings-operational-feedback.success {
+  color: var(--ds-success);
+  background: color-mix(in srgb, var(--ds-success) 10%, transparent);
+}
+.settings-operational-feedback.error {
+  color: var(--ds-danger);
+  background: color-mix(in srgb, var(--ds-danger) 10%, transparent);
+}
+.settings-operational-history {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ds-border);
+}
+.settings-operational-history article {
+  display: grid;
+  gap: 2px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: var(--ds-surface);
+}
 .settings-integration-requirements {
   display: block;
   padding-top: 6px;

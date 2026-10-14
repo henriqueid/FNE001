@@ -86,6 +86,7 @@ export type ClientComplianceProfile = {
 
 export type OperationalDefaultsState = {
   version: 1;
+  persistenceVersion?: number;
   general: OperationalParameters;
   originationGoals: {
     consolidated: Record<HomePeriod, number>;
@@ -95,6 +96,23 @@ export type OperationalDefaultsState = {
     consolidated: Record<HomePeriod, number>;
     byVehicle: Record<string, Partial<Record<HomePeriod, number>>>;
   };
+};
+
+export type OperationalParameterChangeRequest = {
+  id: string;
+  expectedVersion: number;
+  previous: OperationalDefaultsState;
+  proposed: OperationalDefaultsState;
+  reason: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  requestedById: string;
+  requestedBy: string;
+  requestedAt: string;
+  decidedById?: string;
+  decidedBy?: string;
+  decidedAt?: string;
+  decisionReason?: string;
+  appliedVersion?: number;
 };
 
 export const defaultOperationalParameters: OperationalParameters = {
@@ -168,6 +186,10 @@ export function migrateOperationalDefaults(value: unknown): OperationalDefaultsS
   const stored = value as Partial<OperationalDefaultsState>;
   return {
     version: 1,
+    persistenceVersion:
+      Number.isInteger(stored.persistenceVersion) && Number(stored.persistenceVersion) >= 0
+        ? Number(stored.persistenceVersion)
+        : undefined,
     general: { ...defaultOperationalParameters, ...(stored.general ?? {}) },
     originationGoals: {
       consolidated: {
@@ -184,6 +206,87 @@ export function migrateOperationalDefaults(value: unknown): OperationalDefaultsS
       byVehicle: stored.revenueGoals?.byVehicle ?? {},
     },
   };
+}
+
+const finiteWithin = (value: number, minimum: number, maximum: number) =>
+  Number.isFinite(value) && value >= minimum && value <= maximum;
+
+const percentFields: Array<keyof OperationalParameters> = [
+  "minimumConfirmationCountPercent",
+  "minimumConfirmationAmountPercent",
+  "firstOperationsConfirmationPercent",
+  "samplePercent",
+  "maximumDebtorConcentrationPercent",
+  "maximumTopFiveConcentrationPercent",
+  "maximumGroupConcentrationPercent",
+  "maximumSectorConcentrationPercent",
+  "reservePercent",
+  "lateFinePercent",
+  "lateInterestPercent",
+];
+
+const nonNegativeFields: Array<keyof OperationalParameters> = [
+  "monthlyRate",
+  "minimumMonthlyRate",
+  "maximumMonthlyRate",
+  "minimumTermDays",
+  "maximumTermDays",
+  "maximumAverageTermDays",
+  "minimumTitleAmount",
+  "maximumTitleAmount",
+  "maximumOperationAmount",
+  "maximumTitlesPerOperation",
+  "minimumConfirmedTitles",
+  "confirmationValidityDays",
+  "firstOperationsCount",
+  "operationFee",
+  "titleFee",
+  "analysisFee",
+  "registrationFee",
+  "checkingFee",
+  "bankFee",
+  "repurchaseTermDays",
+];
+
+/** Validação de fronteira usada tanto pela API quanto pelos fluxos de aprovação. */
+export function validateOperationalDefaults(state: OperationalDefaultsState): string | null {
+  if (state.version !== 1 || !state.general || !state.originationGoals || !state.revenueGoals)
+    return "Versão dos parâmetros operacionais não suportada.";
+  const general = state.general;
+  if (!["Nominal", "Efetiva", "Mista", "Composta Mista"].includes(general.calculationMethod))
+    return "Método de cálculo inválido.";
+  if (![30, 360, 365].includes(general.dayBasis)) return "Base de dias inválida.";
+  if (
+    !["Bloquear", "Enviar para alçada", "Solicitar nova amostra", "Alertar"].includes(general.confirmationFailureAction)
+  )
+    return "Ação de falha de confirmação inválida.";
+  if (percentFields.some(field => !finiteWithin(general[field] as number, 0, 100)))
+    return "Percentuais operacionais devem estar entre 0 e 100.";
+  if (nonNegativeFields.some(field => !finiteWithin(general[field] as number, 0, 1_000_000_000_000)))
+    return "Valores e limites operacionais devem ser números não negativos.";
+  if (general.minimumMonthlyRate > general.monthlyRate || general.monthlyRate > general.maximumMonthlyRate)
+    return "A taxa mensal deve ficar entre a taxa mínima e a máxima.";
+  if (general.minimumTermDays > general.maximumTermDays) return "O prazo mínimo não pode superar o prazo máximo.";
+  if (general.maximumAverageTermDays > general.maximumTermDays)
+    return "O prazo médio máximo não pode superar o prazo máximo.";
+  if (general.minimumTitleAmount > general.maximumTitleAmount)
+    return "O valor mínimo do título não pode superar o máximo.";
+  if (general.maximumTitleAmount > general.maximumOperationAmount)
+    return "O valor máximo do título não pode superar o limite por operação.";
+  for (const goals of [state.originationGoals, state.revenueGoals]) {
+    const values = [
+      ...Object.values(goals.consolidated),
+      ...Object.values(goals.byVehicle).flatMap(periods => Object.values(periods)),
+    ];
+    if (values.some(value => !finiteWithin(value ?? 0, 0, 1_000_000_000_000)))
+      return "Metas devem ser números não negativos.";
+  }
+  return null;
+}
+
+export function operationalDefaultsSnapshot(state: OperationalDefaultsState): OperationalDefaultsState {
+  const { persistenceVersion: _persistenceVersion, ...snapshot } = state;
+  return snapshot;
 }
 
 /** `undefined` herda o geral; zero é preservado como escolha explícita do cliente. */

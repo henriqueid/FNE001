@@ -24,25 +24,25 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 - sessões, usuários, permissões, alçadas e escopo por empresa/veículo;
 - decisões versionadas, idempotência, eventos imutáveis, outbox e notificações;
 - escopo de empresa em Operações, Decisões, Carteira, Recebíveis, Financeiro, Tarefas, notificações e reprocessamento da outbox;
-- maker-checker para exceção de risco, liberação financeira, favorecidos, contas bancárias, políticas e privilégios;
+- maker-checker para exceção de risco, liberação financeira, favorecidos, contas bancárias, políticas, privilégios e parâmetros operacionais globais;
 - leitura cadastral separada da edição e Copiloto alimentado por fontes lidas e filtradas integralmente no backend;
 - funil comercial, comitê, onboarding, carteira/cobrança inicial e Central do Dia;
 - guias operacionais por domínio e por perfil.
 
 ## 3. Pendências para produção controlada — P0 imediato
 
-| Entrega                    | Situação atual                                                    | Falta                                                                                        | Estimativa |
-| -------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------: |
-| Homologação multiusuário   | Backend recusa versão obsoleta                                    | testar duas sessões reais em Operações, Financeiro, Carteira, Comercial, Políticas e Tarefas |   3–5 dias |
-| Ataques cruzados           | testes unitários cobrem escopo                                    | ensaio com dois tenants, duas empresas e requisições deliberadamente cruzadas                |   2–3 dias |
-| Escopo residual de APIs    | concluído e homologado com sessões reais temporárias              | nenhuma pendência funcional neste recorte; repetir no UAT completo com usuários definitivos  |  concluído |
-| Maker-checker residual     | fluxos financeiros, bancários, políticas e privilégios protegidos | persistir/aprovar parâmetros operacionais, demais configurações materiais e UAT definitivo   |   4–7 dias |
-| Contrato comum de comandos | cada agregado possui implementação confiável                      | unificar recibo idempotente, event ledger, outbox, correlação e respostas de conflito        |   5–8 dias |
-| Segurança de conta         | sessão e bloqueio existem                                         | MFA para perfis críticos, política de senha comprometida, recuperação e revisão de sessão    |   4–7 dias |
-| Operação de plataforma     | build e banco existem                                             | backup/restore ensaiado, métricas, logs, alertas, retenção, runbook e deploy produtivo       |   5–8 dias |
-| Estado real vazio          | separação demo/real implementada                                  | executar checklist integral sem seeds e confirmar zero vazamento de demonstração             |   2–3 dias |
+| Entrega                    | Situação atual                                                                             | Falta                                                                                        | Estimativa |
+| -------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ---------: |
+| Homologação multiusuário   | Backend recusa versão obsoleta                                                             | testar duas sessões reais em Operações, Financeiro, Carteira, Comercial, Políticas e Tarefas |   3–5 dias |
+| Ataques cruzados           | testes unitários cobrem escopo                                                             | ensaio com dois tenants, duas empresas e requisições deliberadamente cruzadas                |   2–3 dias |
+| Escopo residual de APIs    | concluído e homologado com sessões reais temporárias                                       | nenhuma pendência funcional neste recorte; repetir no UAT completo com usuários definitivos  |  concluído |
+| Maker-checker residual     | fluxos financeiros, bancários, políticas, privilégios e parâmetros operacionais protegidos | cobrir integrações/demais configurações materiais e executar UAT definitivo                  |   2–4 dias |
+| Contrato comum de comandos | cada agregado possui implementação confiável                                               | unificar recibo idempotente, event ledger, outbox, correlação e respostas de conflito        |   5–8 dias |
+| Segurança de conta         | sessão e bloqueio existem                                                                  | MFA para perfis críticos, política de senha comprometida, recuperação e revisão de sessão    |   4–7 dias |
+| Operação de plataforma     | build e banco existem                                                                      | backup/restore ensaiado, métricas, logs, alertas, retenção, runbook e deploy produtivo       |   5–8 dias |
+| Estado real vazio          | separação demo/real implementada                                                           | executar checklist integral sem seeds e confirmar zero vazamento de demonstração             |   2–3 dias |
 
-**Subtotal P0 imediato remanescente:** aproximadamente **25–41 dias úteis**. Parte pode ser executada em paralelo.
+**Subtotal P0 imediato remanescente:** aproximadamente **23–38 dias úteis**. Parte pode ser executada em paralelo.
 
 ## 4. Cunha comercial completa — Onda B
 
@@ -107,6 +107,8 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 - roteiro de implantação do cliente e migração inicial de dados;
 - trilhas curtas por perfil e ambiente de treinamento;
 - notas de versão e matriz de mudanças que exigem retreinamento.
+
+Já existe procedimento específico para propor, aprovar, rejeitar e auditar padrões globais em `docs/user-guides/APROVACAO_DE_PARAMETROS_OPERACIONAIS.md`.
 
 ## 9. O que não deve entrar no núcleo agora
 

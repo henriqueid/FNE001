@@ -43,5 +43,13 @@ python scripts/gerar_narracao.py <pasta_do_modelo> [pf_dora|pm_alex|pm_santa]
 python scripts/gerar_trilha.py
 ```
 
-A narração usa o Kokoro (modelo aberto, licença Apache 2.0) e a trilha é composta pelo próprio script, sem samples
+Com uma conta ElevenLabs (voz mais natural; requer `api.elevenlabs.io` liberado na rede e `ELEVENLABS_API_KEY`):
+
+```bash
+python scripts/gerar_narracao_elevenlabs.py            # lista as vozes da conta
+python scripts/gerar_narracao_elevenlabs.py <voice_id> # gera a narração
+python scripts/gerar_trilha.py && npm run render:missao
+```
+
+A narração padrão usa o Kokoro (modelo aberto, licença Apache 2.0) e a trilha é composta pelo próprio script, sem samples
 de terceiros. Números e nomes de clientes nas telas são fictícios.

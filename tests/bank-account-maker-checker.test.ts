@@ -68,7 +68,7 @@ class FakeDatabase implements DecisionDatabase {
     return [];
   }
   async exec(_query: string) {}
-  async transaction<T>(work: (database: DecisionDatabase) => Promise<T>) {
+  async transaction<T>(work: (database: DecisionDatabase) => Promise<T>): Promise<T> {
     return work(this);
   }
 }
@@ -111,7 +111,14 @@ describe("maker-checker de contas bancárias cadastrais", () => {
     const db = new FakeDatabase();
     db.request = { ...db.request, payload: { ...db.party, bankAccounts: [{ ...currentAccount, account: "outra" }] } };
     await expect(
-      decideBankAccountChange(db, "tenant-1", { id: "checker", name: "Aprovador" }, "change-1", "APPROVED", "Conferido"),
+      decideBankAccountChange(
+        db,
+        "tenant-1",
+        { id: "checker", name: "Aprovador" },
+        "change-1",
+        "APPROVED",
+        "Conferido",
+      ),
     ).rejects.toThrow("mudou depois");
   });
 

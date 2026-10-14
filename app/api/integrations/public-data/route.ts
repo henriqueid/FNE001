@@ -7,6 +7,10 @@ import {
   fetchBrasilApiHolidays,
   fetchBrasilApiPixParticipants,
 } from "@/src/server/integrations/cnpj-provider";
+import {
+  activeIntegrationProvider,
+  type IntegrationCapability,
+} from "@/src/server/integrations/configuration-repository";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 const allowed: Permission[] = [
@@ -19,6 +23,13 @@ const allowed: Permission[] = [
   "settings:manage",
 ];
 
+const capabilityByKind: Record<string, IntegrationCapability> = {
+  cep: "CEP_LOOKUP",
+  banks: "BANK_DIRECTORY",
+  holidays: "HOLIDAY_CALENDAR",
+  "pix-participants": "PIX_DIRECTORY",
+};
+
 export async function GET(request: Request) {
   const tenantId = request.headers.get("x-strato-tenant-id")?.trim();
   if (!tenantId) return json({ error: "Empresa não informada." }, 400);
@@ -30,6 +41,14 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const kind = url.searchParams.get("kind")?.trim();
+  const capability = kind ? capabilityByKind[kind] : undefined;
+  if (!capability) return json({ error: "Consulta pública não reconhecida." }, 400);
+
+  const provider = await activeIntegrationProvider(db, tenantId, capability);
+  if (!provider) return json({ error: "Esta fonte de dados não está habilitada para a empresa." }, 503);
+  if (provider.providerId !== "BRASIL_API")
+    return json({ error: "O provedor ativo ainda não possui conector executável no STRATO." }, 503);
+
   try {
     if (kind === "cep") return json({ evidence: await fetchBrasilApiCep(url.searchParams.get("value") ?? "") });
     if (kind === "banks") return json({ banks: await fetchBrasilApiBanks() });
@@ -38,7 +57,6 @@ export async function GET(request: Request) {
       return json({ holidays: await fetchBrasilApiHolidays(year, url.searchParams.get("state") ?? undefined) });
     }
     if (kind === "pix-participants") return json({ participants: await fetchBrasilApiPixParticipants() });
-    return json({ error: "Consulta pública não reconhecida." }, 400);
   } catch (reason) {
     console.error("public_data_lookup_failed", { kind, reason });
     return json(

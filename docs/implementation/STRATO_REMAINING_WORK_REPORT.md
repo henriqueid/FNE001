@@ -27,6 +27,8 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 - maker-checker para exceção de risco, liberação financeira, favorecidos, contas bancárias, políticas, privilégios e parâmetros operacionais globais;
 - leitura cadastral separada da edição e Copiloto alimentado por fontes lidas e filtradas integralmente no backend;
 - funil comercial, comitê, onboarding, carteira/cobrança inicial e Central do Dia;
+- catálogo de integrações reais ligado à configuração persistida, com bloqueio de chamadas sem provedor ativo e
+  separação explícita entre fonte pública e integração institucional;
 - guias operacionais por domínio e por perfil.
 
 ## 3. Pendências para produção controlada — P0 imediato
@@ -41,6 +43,11 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 | Segurança de conta         | sessão e bloqueio existem                                                                  | MFA para perfis críticos, política de senha comprometida, recuperação e revisão de sessão    |   4–7 dias |
 | Operação de plataforma     | build e banco existem                                                                      | backup/restore ensaiado, métricas, logs, alertas, retenção, runbook e deploy produtivo       |   5–8 dias |
 | Estado real vazio          | separação demo/real implementada                                                           | executar checklist integral sem seeds e confirmar zero vazamento de demonstração             |   2–3 dias |
+
+Checkpoint de integrações concluído em 14/10/2026: CNPJ, CEP, diretório bancário, feriados e participantes Pix agora
+consultam a configuração do servidor antes da chamada externa. A BrasilAPI está identificada como fonte pública, e
+configuração/credenciais não atravessam a API. Ainda faltam governança maker-checker para ativação/troca, cofre de
+credenciais, tentativas, retry, dead-letter e observabilidade; esses itens permanecem nas estimativas acima e da Onda C.
 
 **Subtotal P0 imediato remanescente:** aproximadamente **23–38 dias úteis**. Parte pode ser executada em paralelo.
 
@@ -109,6 +116,7 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 - notas de versão e matriz de mudanças que exigem retreinamento.
 
 Já existe procedimento específico para propor, aprovar, rejeitar e auditar padrões globais em `docs/user-guides/APROVACAO_DE_PARAMETROS_OPERACIONAIS.md`.
+O comportamento atual das fontes externas está documentado em `docs/user-guides/DISPONIBILIDADE_DE_INTEGRACOES.md`.
 
 ## 9. O que não deve entrar no núcleo agora
 

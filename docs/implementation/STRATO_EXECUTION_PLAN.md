@@ -280,6 +280,17 @@ Progresso A5.6 — maker-checker residual:
 - [ ] concluir MFA, recuperação de senha e revisão centralizada de sessões no pacote de segurança de conta;
 - [ ] homologar o fluxo residual com duas sessões reais e usuários distintos.
 
+Progresso A5.7 — disponibilidade real das integrações:
+
+- [x] carregar no ambiente real o catálogo de integrações a partir da configuração persistida do tenant;
+- [x] bloquear CNPJ, CEP, bancos, feriados e participantes Pix quando não houver provedor ativo;
+- [x] recusar provedor ativo cujo conector ainda não esteja implementado, sem fallback silencioso;
+- [x] expor ao navegador somente disponibilidade sanitizada, sem `config` ou credenciais;
+- [x] distinguir fonte pública ativa de integração institucional/oficial;
+- [x] registrar as capacidades públicas atuais e publicar o guia de disponibilidade;
+- [ ] submeter ativação, suspensão, prioridade e troca de provedor a maker-checker;
+- [ ] implementar runtime completo com cofre, tentativas, retry, dead-letter e observabilidade.
+
 Relatório consolidado de pendências e estimativas: `docs/implementation/STRATO_REMAINING_WORK_REPORT.md`.
 
 ## Ondas seguintes

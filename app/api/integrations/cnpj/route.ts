@@ -1,6 +1,7 @@
 import { sessionPrincipal } from "@/src/server/access/session";
 import { getDatabase } from "@/src/server/database/postgres";
 import { fetchBrasilApiCnpj } from "@/src/server/integrations/cnpj-provider";
+import { activeIntegrationProvider } from "@/src/server/integrations/configuration-repository";
 import {
   cnpjParty,
   completeCnpjJob,
@@ -23,6 +24,14 @@ async function context(request: Request) {
   const principal = await sessionPrincipal(db, request.headers, tenantId);
   if (!principal) return { error: json({ error: "Sessão ausente ou expirada." }, 401) } as const;
   return { db, tenantId, principal } as const;
+}
+
+async function executableCnpjProvider(db: Parameters<typeof activeIntegrationProvider>[0], tenantId: string) {
+  const provider = await activeIntegrationProvider(db, tenantId, "CNPJ_LOOKUP");
+  if (!provider) return { error: "A consulta CNPJ não está habilitada para a empresa." } as const;
+  if (provider.providerId !== "BRASIL_API")
+    return { error: "O provedor CNPJ ativo ainda não possui conector executável no STRATO." } as const;
+  return { provider } as const;
 }
 
 export async function GET(request: Request) {
@@ -66,6 +75,8 @@ export async function POST(request: Request) {
       return json({ error: "Sem permissão para consultar dados cadastrais externos." }, 403);
     const document = body.document.replace(/\D/g, "");
     if (!/^\d{14}$/.test(document)) return json({ error: "Informe um CNPJ válido." }, 400);
+    const configured = await executableCnpjProvider(access.db, access.tenantId);
+    if ("error" in configured) return json({ error: configured.error }, 503);
     try {
       const result = await fetchBrasilApiCnpj(document);
       return json({ evidence: result.evidence, cached: false });
@@ -82,16 +93,24 @@ export async function POST(request: Request) {
   const cached = await latestCnpjEvidence(access.db, access.tenantId, party.party_id);
   if (!body.force && cached && cached.expiresAt > new Date().toISOString())
     return json({ evidence: cached, cached: true });
+  const configured = await executableCnpjProvider(access.db, access.tenantId);
+  if ("error" in configured) return json({ error: configured.error }, 503);
   let jobId: string | undefined;
   try {
-    jobId = await startCnpjJob(access.db, access.tenantId, party.party_id, access.principal.id, "BRASIL_API");
+    jobId = await startCnpjJob(
+      access.db,
+      access.tenantId,
+      party.party_id,
+      access.principal.id,
+      configured.provider.providerId,
+    );
     const result = await fetchBrasilApiCnpj(party.document_digits);
     await completeCnpjJob(access.db, {
       tenantId: access.tenantId,
       jobId,
       partyId: party.party_id,
       actorId: access.principal.id,
-      providerId: "BRASIL_API",
+      providerId: configured.provider.providerId,
       registrationNumber: party.document_digits,
       evidence: result.evidence,
       raw: result.raw,

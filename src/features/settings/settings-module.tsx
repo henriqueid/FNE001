@@ -862,7 +862,7 @@ export default function SettingsModule({
               </header>
               <div className="settings-integration-legend">
                 <span>
-                  <b>{activeIntegrations}</b> oficiais ativas
+                  <b>{activeIntegrations}</b> fontes ativas
                 </span>
                 <span>
                   <b>{demoIntegrations}</b> em demonstração
@@ -882,7 +882,9 @@ export default function SettingsModule({
                     </div>
                     <span>
                       {provider.mode === "ATIVA"
-                        ? "Oficial ativa"
+                        ? provider.connection?.sourceType === "PUBLIC"
+                          ? "Fonte pública ativa"
+                          : "Integração institucional ativa"
                         : provider.mode === "DEMONSTRACAO"
                           ? "Demonstração"
                           : provider.mode === "INDISPONIVEL"
@@ -893,7 +895,9 @@ export default function SettingsModule({
                       {provider.mode === "DEMONSTRACAO"
                         ? "Usa dados fictícios claramente identificados."
                         : provider.mode === "ATIVA"
-                          ? "Credenciais institucionais configuradas."
+                          ? provider.connection?.sourceType === "PUBLIC"
+                            ? `${provider.connection.label}; disponibilidade governada pelo servidor.`
+                            : "Credenciais institucionais configuradas no servidor."
                           : "Credenciais e homologação necessárias."}
                     </small>
                     <small className="settings-integration-requirements">
@@ -918,7 +922,11 @@ export default function SettingsModule({
                         Usar dados de demonstração
                       </button>
                     ) : (
-                      <em>Conexão institucional futura</em>
+                      <em>
+                        {provider.mode === "ATIVA" && provider.connection?.sourceType === "PUBLIC"
+                          ? "Operação pública ativa"
+                          : "Conexão institucional futura"}
+                      </em>
                     )}
                   </article>
                 ))}

@@ -90,6 +90,7 @@ import {
   persistCommercialState as persistServerCommercial,
 } from "./commercial-client";
 import { loadOperationalParameters as loadServerOperationalParameters } from "./operational-parameters-client";
+import { loadIntegrationState as loadServerIntegrations } from "./integrations-client";
 
 const CommercialModule = lazy(() => import("@/src/features/commercial/commercial-module"));
 const ControlleriaModule = lazy(() => import("@/src/features/controlleria/controlleria-module"));
@@ -181,6 +182,7 @@ export default function StratoApp() {
   const [policyPersistenceError, setPolicyPersistenceError] = useState<string>();
   const policySaveQueue = useRef<Promise<typeof policies> | null>(null);
   const [integrations, setIntegrations] = useState(() => (isDemo ? seedIntegrationState() : emptyIntegrationState()));
+  const [integrationsServerReady, setIntegrationsServerReady] = useState(isDemo);
   const [operationalDefaults, setOperationalDefaults] = useState(() =>
     isDemo ? seedOperationalDefaults() : emptyOperationalDefaults(),
   );
@@ -779,6 +781,24 @@ export default function StratoApp() {
       cancelled = true;
     };
   }, [isDemo, operationalDefaultsServerReady, storageReady]);
+
+  useEffect(() => {
+    if (!storageReady || isDemo || integrationsServerReady) return;
+    let cancelled = false;
+    loadServerIntegrations()
+      .then(serverState => {
+        if (!cancelled) setIntegrations(serverState);
+      })
+      .catch(() => {
+        /* mantém o catálogo seguro como não configurado quando o servidor está indisponível */
+      })
+      .finally(() => {
+        if (!cancelled) setIntegrationsServerReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [integrationsServerReady, isDemo, storageReady]);
 
   useEffect(() => {
     if (!storageReady || isDemo || portfolioServerReady) return;

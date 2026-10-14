@@ -15,6 +15,15 @@ export type IntegrationProviderId =
 
 export type IntegrationMode = "DEMONSTRACAO" | "NAO_CONFIGURADA" | "ATIVA" | "INDISPONIVEL";
 
+export type IntegrationConnection = {
+  providerId: string;
+  capability: string;
+  status: "ACTIVE" | "DEGRADED" | "PLANNED" | "SUSPENDED";
+  sourceType: "PUBLIC" | "INSTITUTIONAL";
+  label: string;
+  updatedAt: string;
+};
+
 export type IntegrationProvider = {
   id: IntegrationProviderId;
   name: string;
@@ -23,6 +32,7 @@ export type IntegrationProvider = {
   requirements: string;
   mode: IntegrationMode;
   updatedAt?: string;
+  connection?: IntegrationConnection;
 };
 
 export type IntegrationState = { version: 1; providers: IntegrationProvider[] };
@@ -152,7 +162,7 @@ export function migrateIntegrationState(value: unknown): IntegrationState {
     providers: seed.providers.map(provider => {
       const existing = byId.get(provider.id);
       return existing && ["DEMONSTRACAO", "NAO_CONFIGURADA", "ATIVA", "INDISPONIVEL"].includes(existing.mode)
-        ? { ...provider, mode: existing.mode, updatedAt: existing.updatedAt }
+        ? { ...provider, mode: existing.mode, updatedAt: existing.updatedAt, connection: existing.connection }
         : provider;
     }),
   };

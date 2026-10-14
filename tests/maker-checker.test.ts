@@ -32,7 +32,28 @@ describe("maker-checker de decisões materiais", () => {
   });
 
   it("registra o preparador no servidor e exige outro usuário para aprovar a liberação", () => {
-    const base = { ...initialOperations[0], releaseReview: { status: "Em preparação" as const } };
+    const base = {
+      ...initialOperations[0],
+      stage: 6,
+      netAmount: 100,
+      pricingReview: undefined,
+      releaseReview: {
+        status: "Em preparação" as const,
+        preparedById: "sinal-do-navegador",
+        paymentDate: "2026-10-14",
+        payees: [
+          {
+            id: "favorecido-1",
+            relation: "Cedente" as const,
+            name: "Cedente Exemplo",
+            document: "52.927.676/0001-29",
+            method: "PIX" as const,
+            pixKey: "financeiro@cedente.test",
+            amount: 100,
+          },
+        ],
+      },
+    };
     const prepared = governReleaseTransition(null, base, { id: "maker", name: "Preparador" }, "2026-10-13T10:00:00Z");
     expect(prepared.releaseReview).toMatchObject({ preparedById: "maker", preparedBy: "Preparador" });
 

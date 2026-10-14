@@ -1,6 +1,6 @@
 # Matriz de acesso e escopo do STRATO
 
-Atualizada em 13/10/2026. Esta matriz descreve os controles efetivamente aplicados pelo backend; a visibilidade do menu não substitui autorização da API.
+Atualizada em 14/10/2026. Esta matriz descreve os controles efetivamente aplicados pelo backend; a visibilidade do menu não substitui autorização da API.
 
 ## Camadas obrigatórias
 
@@ -60,6 +60,7 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 - Publicação, contadores de saúde e reprocessamento manual da outbox usam a empresa da operação do evento como filtro no banco.
 - Exceções de risco exigem solicitante e decisor distintos; a mesma solicitação aceita uma única decisão terminal.
 - Liberações financeiras exigem um preparador e um aprovador distintos, ambos derivados de sessões autenticadas.
+- O pacote de favorecidos fica congelado entre preparação e aprovação; lançamentos a pagar e auditoria são reconstruídos no backend, sem confiar no navegador.
 - O Cadastro separa leitura (`registry:view`) de manutenção (`registry:edit`), inclusive nas evidências cadastrais.
 - O Copiloto recebe do navegador somente a pergunta; o backend lê as fontes no banco, reduz o contexto às empresas da sessão, remove campos não previstos e só mantém cedentes alcançáveis por operações ou títulos visíveis.
 - O Comercial filtra executivo e gerente vinculados na identidade do servidor; uma gravação segmentada recompõe o agregado completo e não apaga carteiras ocultas.
@@ -72,6 +73,6 @@ Em 13/10/2026, sessões reais temporárias validaram no backend: leitura institu
 ## Próximos endurecimentos
 
 1. Separar permissões de leitura e manutenção onde hoje uma permissão ampla atende aos dois usos.
-2. Aplicar maker-checker às alterações críticas de configuração e dados bancários; liberação e exceção já estão protegidas.
+2. Aplicar maker-checker às alterações críticas de configuração, dados bancários cadastrais e elevação de privilégios; liberação, favorecidos e exceção já estão protegidos.
 3. Centralizar recibos idempotentes, event ledger e outbox em um contrato comum.
 4. Executar homologação com duas sessões e dois tenants, incluindo tentativas deliberadas de acesso cruzado.

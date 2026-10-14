@@ -1,6 +1,6 @@
 # STRATO — plano de ação executável
 
-Atualizado em 13/10/2026. Este plano transforma o blueprint de capacidades em entregas pequenas, verificáveis e acompanhadas por material de apoio ao usuário.
+Atualizado em 14/10/2026. Este plano transforma o blueprint de capacidades em entregas pequenas, verificáveis e acompanhadas por material de apoio ao usuário.
 
 ## Regra de execução
 
@@ -261,6 +261,17 @@ Progresso A5.5 — escopos residuais de APIs:
 - [x] separar consulta de empresa/políticas (`settings:view`) da manutenção administrativa (`settings:manage`);
 - [x] substituir o contexto do Copiloto montado no cliente por projeções lidas integralmente no servidor;
 - [x] homologar Cadastro, Comercial, Integrações e Configurações com sessões reais de administrador e executivo segmentado; o Copiloto permanece coberto por testes automatizados sem consumir o provedor externo.
+
+Progresso A5.6 — maker-checker residual:
+
+- [x] congelar favorecidos, contas, chaves, valores, data e observação entre preparação e aprovação;
+- [x] validar no backend favorecidos e distribuição integral antes de concluir a preparação;
+- [x] recriar no backend os lançamentos a pagar, descartando lançamentos e auditoria forjados pelo navegador;
+- [x] publicar o guia de aprovação de favorecidos e tratamento de divergências;
+- [ ] aplicar solicitação e dupla aprovação a alterações de contas bancárias no Cadastro;
+- [ ] aplicar dupla aprovação à publicação de configurações críticas;
+- [ ] proteger elevação de privilégios e alterações administrativas de credenciais;
+- [ ] homologar o fluxo residual com duas sessões reais e usuários distintos.
 
 Relatório consolidado de pendências e estimativas: `docs/implementation/STRATO_REMAINING_WORK_REPORT.md`.
 

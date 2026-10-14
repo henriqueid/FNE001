@@ -1,0 +1,61 @@
+{
+  "voice": "pm_alex",
+  "speed": 1.0,
+  "segments": [
+    {
+      "id": "abertura",
+      "caption": "Recebíveis movem a economia real.",
+      "text": "Todos os dias, factorings, securitizadoras e fundos de recebíveis antecipam o dinheiro que mantém milhares de empresas brasileiras funcionando."
+    },
+    {
+      "id": "problema",
+      "caption": "Mas a operação ainda roda no improviso.",
+      "text": "Mas, por trás de cada operação, ainda existem planilhas, e-mails, sistemas que não conversam e a mesma informação digitada várias vezes. Cada exceção vira uma corrida. E cada decisão é difícil de explicar depois."
+    },
+    {
+      "id": "mercado",
+      "caption": "E o mercado está mudando.",
+      "text": "E o mercado está mudando. A duplicata escritural e as novas regras dos fundos exigem processos eletrônicos, rastreáveis e auditáveis. Quem continuar no improviso vai ficar para trás."
+    },
+    {
+      "id": "missao",
+      "caption": "Nossa missão: reinventar a operação de recebíveis.",
+      "text": "É por isso que estamos nessa missão. Não para criar mais um sistema cheio de telas, mas uma plataforma que trabalha junto com você. Do recebível ao caixa, com o mínimo de intervenção, e cada decisão explicável."
+    },
+    {
+      "id": "entrada",
+      "caption": "Envie o lote. O Strato faz o resto.",
+      "text": "Você envia o lote: nota fiscal, arquivo bancário ou planilha. O Strato extrai os títulos, valida cada documento e mostra, na hora, o que está pronto e o que falta."
+    },
+    {
+      "id": "esteira",
+      "caption": "Uma operação. Uma área de trabalho.",
+      "text": "A operação segue numa única área de trabalho, em seis etapas: entrada, risco, lastro, preço, aprovação e liberação. Sem pular de módulo em módulo."
+    },
+    {
+      "id": "excecao",
+      "caption": "Só as exceções chegam até você.",
+      "text": "O que está dentro da política anda sozinho. Só as exceções chegam até você, com a regra, o valor observado e uma recomendação. Um clique, e o sistema recalcula tudo."
+    },
+    {
+      "id": "copiloto",
+      "caption": "Um copiloto para o seu dia.",
+      "text": "E o Copiloto organiza o seu dia, responde perguntas sobre a carteira e explica cada apontamento, em português claro."
+    },
+    {
+      "id": "carteira",
+      "caption": "Carteira, caixa e cobrança conectados.",
+      "text": "Da liberação à cobrança, carteira, caixa e conciliação ficam conectados e atualizados em tempo real."
+    },
+    {
+      "id": "trilha",
+      "caption": "Cada decisão, registrada.",
+      "text": "Cada decisão fica registrada: quem decidiu, quando e com qual política. Pronto para qualquer auditoria."
+    },
+    {
+      "id": "fechamento",
+      "caption": "Strato. A plataforma operacional de recebíveis.",
+      "text": "Quem move a economia real merece tecnologia à altura. Strato. A plataforma operacional de recebíveis."
+    }
+  ]
+}

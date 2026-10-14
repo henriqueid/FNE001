@@ -195,8 +195,8 @@ Evidências A4.4:
 - [ ] unificar idempotência, event ledger e outbox;
 - [ ] aplicar escopo por empresa/veículo em todas as APIs;
 - [ ] implementar maker-checker nos comandos críticos;
-- [ ] testar acesso cruzado entre tenants e empresas;
-- [ ] publicar matriz de perfis, permissões e alçadas.
+- [x] testar acesso cruzado entre tenants e empresas com duas sessões reais e tentativas deliberadamente forjadas;
+- [x] publicar matriz de perfis, permissões e alçadas.
 
 Progresso A5.1 — isolamento de Operações e Decisões:
 
@@ -208,7 +208,7 @@ Progresso A5.1 — isolamento de Operações e Decisões:
 - [x] testar escopo vazio, curinga explícito, filtragem, vínculo ao tenant e tentativa de mover operação alheia;
 - [x] propagar o escopo de empresa para Carteira, Recebíveis e notificações operacionais;
 - [x] propagar o escopo de empresa para Financeiro, tarefas e reprocessamento da outbox;
-- [ ] homologar ataques cruzados com duas sessões reais e dois tenants.
+- [x] homologar ataques cruzados com duas sessões reais e dois tenants, incluindo leitura e alteração fora do escopo empresarial.
 
 Evidências A5.1:
 
@@ -217,6 +217,7 @@ Evidências A5.1:
 - atualização recusa tanto origem fora do escopo quanto destino fora do escopo;
 - Decisões validam o veículo da operação antes de ler ou registrar eventos;
 - matriz publicada em `docs/security/MATRIZ_DE_ACESSO_E_ESCOPO.md`.
+- ensaio real publicado em `docs/testing/HOMOLOGACAO_A5_1_ISOLAMENTO_CRUZADO.md`, com limpeza integral dos dados temporários.
 
 Progresso A5.2 — escopo em Carteira, Recebíveis e notificações:
 

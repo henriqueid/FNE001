@@ -78,9 +78,13 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 
 Em 13/10/2026, sessões reais temporárias validaram no backend: leitura institucional/políticas por `settings:view`, bloqueio do Cadastro sem `registry:view`, escopo empresarial vazio retornando zero operações e segmentação do Comercial entre visão consolidada e executivo `rep-1`. Usuário, sessões e estado comercial temporários foram removidos, sem resíduos no banco.
 
+## Homologação A5.1
+
+Em 14/10/2026, duas sessões e dois tenants temporários confirmaram vínculo estrito da sessão ao tenant, isolamento de leitura e bloqueio de origem e destino fora do escopo empresarial em Operações. O ensaio e a limpeza estão em `docs/testing/HOMOLOGACAO_A5_1_ISOLAMENTO_CRUZADO.md`.
+
 ## Próximos endurecimentos
 
 1. Separar permissões de leitura e manutenção onde hoje uma permissão ampla atende aos dois usos.
 2. Estender o maker-checker às demais configurações materiais; integrações, privilégios, parâmetros operacionais, políticas, contas bancárias, liberação, favorecidos e exceções já estão protegidos.
 3. Centralizar recibos idempotentes, event ledger e outbox em um contrato comum.
-4. Executar homologação com duas sessões e dois tenants, incluindo tentativas deliberadas de acesso cruzado.
+4. Repetir a matriz de isolamento no UAT integral anterior ao go-live e após mudanças de identidade, sessão ou escopo.

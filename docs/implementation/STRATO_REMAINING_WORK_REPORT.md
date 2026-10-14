@@ -36,7 +36,7 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 | Entrega                    | Situação atual                                                                             | Falta                                                                                        | Estimativa |
 | -------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ---------: |
 | Homologação multiusuário   | Backend recusa versão obsoleta                                                             | testar duas sessões reais em Operações, Financeiro, Carteira, Comercial, Políticas e Tarefas |   3–5 dias |
-| Ataques cruzados           | testes unitários cobrem escopo                                                             | ensaio com dois tenants, duas empresas e requisições deliberadamente cruzadas                |   2–3 dias |
+| Ataques cruzados           | duas sessões, dois tenants, escopo empresarial e requisições forjadas homologados          | nenhuma pendência funcional neste recorte; repetir no UAT de regressão antes do go-live      |  concluído |
 | Escopo residual de APIs    | concluído e homologado com sessões reais temporárias                                       | nenhuma pendência funcional neste recorte; repetir no UAT completo com usuários definitivos  |  concluído |
 | Maker-checker residual     | fluxos financeiros, bancários, políticas, privilégios, parâmetros e integrações protegidos | cobrir demais configurações materiais e executar UAT definitivo                              |   1–3 dias |
 | Contrato comum de comandos | cada agregado possui implementação confiável                                               | unificar recibo idempotente, event ledger, outbox, correlação e respostas de conflito        |   5–8 dias |
@@ -50,7 +50,7 @@ configuração/credenciais não atravessam a API. Ativação, suspensão, priori
 com retrato congelado, aprovador distinto e aplicação atômica. Ainda faltam cofre de credenciais, tentativas, retry,
 dead-letter e observabilidade; esses itens permanecem nas estimativas da Onda C.
 
-**Subtotal P0 imediato remanescente:** aproximadamente **22–37 dias úteis**. Parte pode ser executada em paralelo.
+**Subtotal P0 imediato remanescente:** aproximadamente **20–34 dias úteis**. Parte pode ser executada em paralelo.
 
 ## 4. Cunha comercial completa — Onda B
 

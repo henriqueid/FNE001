@@ -32,6 +32,7 @@ export default function HomeDashboard({
   companyScope,
   onOpen,
   onGoOperations,
+  onGoLive,
   onNew,
   revenueGoals,
   originationGoals,
@@ -47,6 +48,7 @@ export default function HomeDashboard({
   companyScope: string;
   onOpen: (op: Operation) => void;
   onGoOperations: () => void;
+  onGoLive?: () => void;
   onNew?: () => void;
   revenueGoals: OperationalDefaultsState["revenueGoals"];
   originationGoals: OperationalDefaultsState["originationGoals"];
@@ -84,6 +86,7 @@ export default function HomeDashboard({
         profile={profile}
         onProfileChange={chooseProfile}
         companyScope={companyScope}
+        onGoLive={onGoLive}
         onNew={onNew}
       />
 

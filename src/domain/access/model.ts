@@ -44,6 +44,7 @@ export type AccessView =
   | "controlleria"
   | "portfolio"
   | "commercial"
+  | "live"
   | "finance"
   | "registry"
   | "policies"
@@ -205,6 +206,7 @@ const viewPermissions: Record<AccessView, Permission[]> = {
   controlleria: ["controlleria:formalize"],
   portfolio: ["portfolio:manage"],
   commercial: ["portfolio:manage"],
+  live: ["users:manage"],
   finance: ["finance:view"],
   registry: ["registry:view", "registry:edit"],
   policies: ["settings:manage"],

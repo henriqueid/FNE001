@@ -14,6 +14,7 @@ export type AppView =
   | "controlleria"
   | "portfolio"
   | "commercial"
+  | "live"
   | "finance"
   | "registry"
   | "policies"

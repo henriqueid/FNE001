@@ -5,7 +5,7 @@
  */
 import { useCompanyDestinations } from "@/src/app/company-context";
 import { periodLabels, profileLabels, type HomePeriod, type HomeProfile } from "@/src/domain/home/settings";
-import { ArrowIcon, ClockIcon, FolderIcon, GridIcon, PlusIcon } from "@/src/ui/icons";
+import { ArrowIcon, ClockIcon, FolderIcon, GridIcon, PlusIcon, UsersIcon } from "@/src/ui/icons";
 import type { HomeMetrics } from "./use-home-metrics";
 
 export function HomeHeader({
@@ -17,6 +17,7 @@ export function HomeHeader({
   profile,
   onProfileChange,
   companyScope,
+  onGoLive,
   onNew,
 }: {
   metrics: HomeMetrics;
@@ -27,6 +28,7 @@ export function HomeHeader({
   profile: HomeProfile;
   onProfileChange: (profile: HomeProfile) => void;
   companyScope: string;
+  onGoLive?: () => void;
   onNew?: () => void;
 }) {
   const destinations = useCompanyDestinations();
@@ -65,11 +67,19 @@ export function HomeHeader({
           </div>
           <p>{perspectiveIntro[profile]}</p>
         </div>
-        {onNew && (
+        {(onGoLive || onNew) && (
           <div className="vg-controls">
-            <button className="primary-action" onClick={onNew}>
-              <PlusIcon /> Nova operação
-            </button>
+            {onGoLive && (
+              <button type="button" className="secondary-action vg-live-button" onClick={onGoLive}>
+                <span className="vg-live-dot" />
+                <UsersIcon /> Operação ao vivo
+              </button>
+            )}
+            {onNew && (
+              <button className="primary-action" onClick={onNew}>
+                <PlusIcon /> Nova operação
+              </button>
+            )}
           </div>
         )}
       </header>

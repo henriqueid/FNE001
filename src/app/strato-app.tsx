@@ -93,6 +93,7 @@ const CommercialModule = lazy(() => import("@/src/features/commercial/commercial
 const ControlleriaModule = lazy(() => import("@/src/features/controlleria/controlleria-module"));
 const FinanceModule = lazy(() => import("@/src/features/finance/finance-module"));
 const HomeDashboard = lazy(() => import("@/src/features/home/home-dashboard"));
+const LiveOperations = lazy(() => import("@/src/features/live-operations/live-operations"));
 const PortfolioModule = lazy(() => import("@/src/features/portfolio/portfolio-module"));
 const RegistryModule = lazy(() => import("@/src/features/registry/registry-module"));
 const SettingsModule = lazy(() => import("@/src/features/settings/settings-module"));
@@ -844,6 +845,7 @@ export default function StratoApp() {
       "controlleria",
       "portfolio",
       "commercial",
+      "live",
       "finance",
       "registry",
       "policies",
@@ -1202,17 +1204,19 @@ export default function StratoApp() {
         ? "Financeiro"
         : view === "commercial"
           ? "Comercial"
-          : view === "registry"
-            ? "Cadastros"
-            : view === "controlleria"
-              ? "Controladoria"
-              : view === "portfolio"
-                ? "Carteira"
-                : view === "settings" || view === "policies"
-                  ? "Configurações"
-                  : view in roadmapViews
-                    ? roadmapViews[view as keyof typeof roadmapViews]
-                    : "Operações";
+          : view === "live"
+            ? "Operação ao vivo"
+            : view === "registry"
+              ? "Cadastros"
+              : view === "controlleria"
+                ? "Controladoria"
+                : view === "portfolio"
+                  ? "Carteira"
+                  : view === "settings" || view === "policies"
+                    ? "Configurações"
+                    : view in roadmapViews
+                      ? roadmapViews[view as keyof typeof roadmapViews]
+                      : "Operações";
   let page: React.ReactNode;
   if (selected)
     page = (
@@ -1264,11 +1268,21 @@ export default function StratoApp() {
         companyScope={companyScope}
         onOpen={setSelected}
         onGoOperations={() => navigate("operations")}
+        onGoLive={can(currentUser, "users:manage") ? () => navigate("live") : undefined}
         onNew={can(currentUser, "operations:edit") ? () => setShowNew(true) : undefined}
         revenueGoals={operationalDefaults.revenueGoals}
         originationGoals={operationalDefaults.originationGoals}
         includeDemoPortfolio={isDemo}
         portfolioTitlesOverride={livePortfolioTitles}
+      />
+    );
+  else if (view === "live")
+    page = (
+      <LiveOperations
+        users={access.users}
+        currentUser={currentUser}
+        operations={scopedOperations}
+        onOpenOperation={setSelected}
       />
     );
   else if (view === "registry")

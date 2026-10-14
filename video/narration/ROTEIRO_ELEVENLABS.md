@@ -7,7 +7,7 @@ Tom: institucional, confiante e próximo — um fundador explicando a missão, s
 
 Gere um arquivo por trecho com o nome indicado e coloque em `public/missao/` (ou envie na conversa).
 Se mudar o texto, atualize também `narration/missao.json` (as legendas vêm de lá).
-Depois: `python scripts/gerar_trilha.py` (recalcula o tempo pelos MP3 com `--from-audio`) e `npm run render:missao`.
+Depois: `python scripts/medir_narracao.py` (mede os MP3), `python scripts/gerar_trilha.py` e `npm run render:missao`.
 
 ## 1. narr_abertura.mp3
 

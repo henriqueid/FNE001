@@ -472,31 +472,33 @@ export default function SettingsModule({
                   estiver desativada ou indisponível.
                 </p>
               </header>
-              <div className="settings-integration-legend" role="status">
-                <span>
-                  <b>{effectiveAIStatus(intelligence).replace("AI_", "")}</b> estado efetivo
-                </span>
-                <span>
-                  <b>{intelligence.usedTokens.toLocaleString("pt-BR")}</b> tokens utilizados
-                </span>
-                <span>
-                  <b>{intelligence.monthlyTokenBudget.toLocaleString("pt-BR")}</b> orçamento mensal
-                </span>
+              <div
+                className="settings-ai-readiness"
+                data-ready={effectiveAIStatus(intelligence) === "AI_AVAILABLE" || undefined}
+                role="status"
+              >
+                <div>
+                  <span>ESTADO DO COPILOTO</span>
+                  <strong>{aiStatusLabel(intelligence)}</strong>
+                  <small>
+                    {effectiveAIStatus(intelligence) === "AI_AVAILABLE"
+                      ? "Licença, ativação e conexão estão prontas para perguntas livres."
+                      : "Conclua as etapas abaixo. Cada item mostra exatamente o que ainda falta."}
+                  </small>
+                </div>
+                <div>
+                  <span>
+                    <b>{intelligence.usedTokens.toLocaleString("pt-BR")}</b>
+                    <small>tokens usados</small>
+                  </span>
+                  <span>
+                    <b>{intelligence.monthlyTokenBudget.toLocaleString("pt-BR")}</b>
+                    <small>limite mensal</small>
+                  </span>
+                </div>
               </div>
-              <AIConfigurationPanel
-                active={intelligence.contracted && intelligence.enabled}
-                onAvailabilityChange={available =>
-                  onIntelligence({
-                    ...intelligence,
-                    status: available ? "AI_AVAILABLE" : "AI_UNAVAILABLE",
-                    monthlyTokenBudget:
-                      intelligence.monthlyTokenBudget > 0 ? intelligence.monthlyTokenBudget : 1_000_000,
-                    updatedAt: new Date().toISOString(),
-                  })
-                }
-              />
               <div className="settings-interface-grid">
-                <label>
+                <label data-complete={intelligence.contracted || undefined}>
                   <input
                     type="checkbox"
                     checked={intelligence.contracted}
@@ -512,12 +514,13 @@ export default function SettingsModule({
                     }}
                   />
                   <span>
-                    <strong>IA contratada</strong>
-                    <small>Habilita o recurso para esta organização.</small>
+                    <small>ETAPA 1</small>
+                    <strong>Licença de IA</strong>
+                    <small>Confirma que esta organização pode usar o serviço.</small>
                   </span>
-                  <b>{intelligence.contracted ? "Contratada" : "Não contratada"}</b>
+                  <b>{intelligence.contracted ? "Concluída" : "Pendente"}</b>
                 </label>
-                <label>
+                <label data-complete={intelligence.enabled || undefined}>
                   <input
                     type="checkbox"
                     checked={intelligence.enabled}
@@ -535,12 +538,25 @@ export default function SettingsModule({
                     }}
                   />
                   <span>
-                    <strong>Copiloto habilitado</strong>
-                    <small>Controla conversa e sínteses; não controla o motor financeiro.</small>
+                    <small>ETAPA 2</small>
+                    <strong>Uso do Copiloto</strong>
+                    <small>Libera perguntas e sínteses para os usuários autorizados.</small>
                   </span>
-                  <b>{intelligence.enabled && intelligence.contracted ? "Ativo" : "Inativo"}</b>
+                  <b>{intelligence.enabled && intelligence.contracted ? "Concluída" : "Pendente"}</b>
                 </label>
               </div>
+              <AIConfigurationPanel
+                active={intelligence.contracted && intelligence.enabled}
+                onAvailabilityChange={available =>
+                  onIntelligence({
+                    ...intelligence,
+                    status: available ? "AI_AVAILABLE" : "AI_UNAVAILABLE",
+                    monthlyTokenBudget:
+                      intelligence.monthlyTokenBudget > 0 ? intelligence.monthlyTokenBudget : 1_000_000,
+                    updatedAt: new Date().toISOString(),
+                  })
+                }
+              />
               <div className="settings-goal-row">
                 <span>
                   <strong>Orçamento mensal de tokens</strong>

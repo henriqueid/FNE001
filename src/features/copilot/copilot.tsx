@@ -96,7 +96,7 @@ export function Copilot({
   useEffect(() => {
     const thread = threadRef.current;
     if (thread && desk.messages.length) thread.scrollTop = thread.scrollHeight;
-  }, [desk.messages.length, desk.stage, desk.waitingAuth, open, expanded]);
+  }, [desk.messages.length, desk.stage, desk.waitingAuth, desk.asking, open, expanded]);
 
   useEffect(() => {
     if (!open) return;
@@ -118,11 +118,13 @@ export function Copilot({
 
   const status = desk.waitingAuth
     ? "Aguardando sua autorização"
-    : desk.busy
-      ? "Analisando em segundo plano"
-      : hasResult
-        ? `${cedent?.name ?? "Análise"}, cenário v${desk.scenarios[desk.scenarios.length - 1].version}`
-        : "Pronto para ajudar";
+    : desk.asking
+      ? "Preparando uma resposta"
+      : desk.busy
+        ? "Analisando em segundo plano"
+        : hasResult
+          ? `${cedent?.name ?? "Análise"}, cenário v${desk.scenarios[desk.scenarios.length - 1].version}`
+          : "Pronto para ajudar";
 
   const thread = (
     <div className="cpl-thread" ref={threadRef} aria-live="polite">
@@ -147,6 +149,19 @@ export function Copilot({
         ) : expanded ? null : (
           <ResultCard key={message.id} desk={desk} onExpand={() => setExpanded(true)} />
         ),
+      )}
+      {desk.asking && (
+        <div className="cpl-thinking" role="status" aria-label="Copiloto preparando a resposta">
+          <span aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+          <div>
+            <b>Consultando o contexto autorizado</b>
+            <small>Isso pode levar alguns segundos.</small>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -217,14 +232,17 @@ export function Copilot({
         >
           <header className="cpl-head">
             <div className="cpl-brand">
-              <span className="cpl-avatar" data-busy={desk.busy || undefined}>
+              <span className="cpl-avatar" data-busy={desk.busy || desk.asking || undefined}>
                 <SparkIcon />
               </span>
               <div>
                 <span className="cpl-brand-kicker">STRATO INTELLIGENCE</span>
                 <b>Copiloto operacional</b>
                 <small>
-                  <i className="cpl-status-dot" data-state={desk.waitingAuth ? "wait" : desk.busy ? "busy" : "on"} />
+                  <i
+                    className="cpl-status-dot"
+                    data-state={desk.waitingAuth ? "wait" : desk.busy || desk.asking ? "busy" : "on"}
+                  />
                   {status}
                 </small>
               </div>

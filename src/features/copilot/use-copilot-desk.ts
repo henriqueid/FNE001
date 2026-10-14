@@ -394,10 +394,12 @@ export function useCopilotDesk(
       push({
         role: "ai",
         reply: {
+          tool: "copilot_error()",
           paragraphs: [
             error instanceof Error
               ? error.message
               : "A IA não conseguiu responder agora. As consultas estruturadas continuam disponíveis.",
+            "Sua pergunta continua na conversa. Você pode tentar enviá-la novamente sem perder o contexto.",
           ],
         },
       });

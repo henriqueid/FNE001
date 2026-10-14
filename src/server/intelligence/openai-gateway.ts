@@ -80,14 +80,15 @@ function safeProviderError(status: number, body: OpenAIResponse) {
 export async function createOpenAIResponse(
   input: string,
   instructions: string,
-  options: { maxOutputTokens?: number; fetcher?: typeof fetch } = {},
+  options: { maxOutputTokens?: number; timeoutMs?: number; fetcher?: typeof fetch } = {},
 ): Promise<AICompletion> {
   const configuration = openAIConfiguration();
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) throw new Error("OPENAI_API_KEY não foi configurada no servidor.");
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
+  const timeoutMs = options.timeoutMs ?? 75_000;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await (options.fetcher ?? fetch)(`${configuration.endpoint}/responses`, {
       method: "POST",
@@ -120,7 +121,7 @@ export async function createOpenAIResponse(
     };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError")
-      throw new Error("A OpenAI não respondeu dentro de 30 segundos.");
+      throw new Error(`A OpenAI não respondeu dentro de ${Math.round(timeoutMs / 1_000)} segundos.`);
     throw error;
   } finally {
     clearTimeout(timeout);
@@ -131,7 +132,7 @@ export async function testOpenAIConnection(fetcher?: typeof fetch) {
   const result = await createOpenAIResponse(
     "Responda somente com a palavra OK.",
     "Você está executando um teste de conectividade. Não inclua explicações.",
-    { maxOutputTokens: 16, fetcher },
+    { maxOutputTokens: 16, timeoutMs: 30_000, fetcher },
   );
   return { ...result, ok: result.text.trim().toLocaleUpperCase().includes("OK") };
 }

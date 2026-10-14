@@ -5,6 +5,13 @@ import { createOpenAIResponse } from "@/src/server/intelligence/openai-gateway";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
+function answerParagraphs(value: string) {
+  return value
+    .split(/\n\s*\n/g)
+    .map(paragraph => paragraph.trim())
+    .filter(Boolean);
+}
+
 const COPILOT_INSTRUCTIONS = `Você é o Copiloto operacional do STRATO, uma plataforma brasileira de recebíveis.
 Responda em português brasileiro, de forma objetiva, usando somente os fatos fornecidos no contexto autorizado.
 Se o contexto não contiver a resposta, diga claramente que a informação não está disponível.
@@ -34,7 +41,7 @@ export async function POST(request: Request) {
       COPILOT_INSTRUCTIONS,
     );
     return json({
-      reply: { tool: `openai_responses(model=${result.model})`, paragraphs: [result.text] },
+      reply: { tool: `openai_responses(model=${result.model})`, paragraphs: answerParagraphs(result.text) },
       usage: result.usage,
       requestId: result.requestId,
     });

@@ -275,12 +275,14 @@ const SOURCE: Record<string, string> = {
   comparar_cenarios: "Comparação de cenários",
   solicitar_excecao: "Pedido de alçada",
   encaminhar_formalizacao: "Formalização",
+  openai_responses: "IA + contexto autorizado",
+  copilot_error: "Falha na consulta",
 };
 
 export function ReplyBubble({ reply }: { reply: DeskReply }) {
   const source = reply.tool ? SOURCE[reply.tool.split("(")[0]] : undefined;
   return (
-    <div className="cpl-bubble is-ai">
+    <div className={`cpl-bubble is-ai${reply.tool?.startsWith("copilot_error") ? " is-error" : ""}`}>
       <span className="cpl-reply-author">
         <i>
           <SparkIcon />

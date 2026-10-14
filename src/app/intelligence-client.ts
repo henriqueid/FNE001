@@ -35,13 +35,25 @@ export async function testAIConfiguration() {
 }
 
 export async function askConfiguredCopilot(question: string, _knowledge: SystemKnowledge) {
-  const response = await fetch("/api/copilot/chat", {
-    method: "POST",
-    headers: headers(),
-    body: JSON.stringify({ question }),
-  });
-  return bodyOf<{
-    reply: DeskReply;
-    usage: { inputTokens: number; outputTokens: number; totalTokens: number };
-  }>(response);
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 80_000);
+  try {
+    const response = await fetch("/api/copilot/chat", {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ question }),
+      signal: controller.signal,
+    });
+    return await bodyOf<{
+      reply: DeskReply;
+      requestId?: string;
+      usage: { inputTokens: number; outputTokens: number; totalTokens: number };
+    }>(response);
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError")
+      throw new Error("A resposta demorou mais que o esperado. Tente novamente em instantes.");
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }

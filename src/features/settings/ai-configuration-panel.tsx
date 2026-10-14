@@ -84,25 +84,27 @@ export function AIConfigurationPanel({
     <section className="settings-ai-provider" aria-labelledby="settings-ai-provider-title">
       <header>
         <div>
-          <span>PROVEDOR DO COPILOTO</span>
-          <h3 id="settings-ai-provider-title">OpenAI Responses API</h3>
-          <p>A credencial fica exclusivamente no servidor e nunca é enviada ao navegador.</p>
+          <span>ETAPA 3 · CONEXÃO TÉCNICA</span>
+          <h3 id="settings-ai-provider-title">Conexão com a OpenAI</h3>
+          <p>Valide aqui se o servidor consegue receber uma resposta real do modelo.</p>
         </div>
         <b data-state={state === "error" ? "missing" : configuration?.configured ? "configured" : "missing"}>
           {state === "loading"
             ? "Verificando…"
             : state === "error" && configuration?.configured
               ? "Provedor indisponível"
-            : configuration?.configured
-              ? "Credencial configurada"
-              : "Credencial ausente"}
+              : state === "success"
+                ? "Conexão validada"
+                : configuration?.configured
+                  ? "Teste pendente"
+                  : "Credencial ausente"}
         </b>
       </header>
 
       <div className="settings-ai-details">
         <span>
           <small>Provedor</small>
-          <strong>OpenAI</strong>
+          <strong>Responses API</strong>
         </span>
         <span>
           <small>Modelo</small>
@@ -133,10 +135,10 @@ export function AIConfigurationPanel({
 
       <div className="settings-ai-actions">
         <button type="button" onClick={test} disabled={state === "loading" || !configuration?.configured}>
-          {state === "loading" ? "Verificando conexão…" : "Testar conexão"}
+          {state === "loading" ? "Enviando pergunta de teste…" : "Testar resposta da IA"}
         </button>
         <button type="button" className="secondary" onClick={() => void refresh()} disabled={state === "loading"}>
-          Atualizar estado
+          Recarregar configuração
         </button>
       </div>
       {message && (

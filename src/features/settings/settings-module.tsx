@@ -341,19 +341,33 @@ export default function SettingsModule({
                   <b>{intelligence.monthlyTokenBudget.toLocaleString("pt-BR")}</b> orçamento mensal
                 </span>
               </div>
-              <AIConfigurationPanel />
+              <AIConfigurationPanel
+                active={intelligence.contracted && intelligence.enabled}
+                onAvailabilityChange={available =>
+                  onIntelligence({
+                    ...intelligence,
+                    status: available ? "AI_AVAILABLE" : "AI_UNAVAILABLE",
+                    monthlyTokenBudget:
+                      intelligence.monthlyTokenBudget > 0 ? intelligence.monthlyTokenBudget : 1_000_000,
+                    updatedAt: new Date().toISOString(),
+                  })
+                }
+              />
               <div className="settings-interface-grid">
                 <label>
                   <input
                     type="checkbox"
                     checked={intelligence.contracted}
-                    onChange={event =>
+                    onChange={event => {
+                      const contracted = event.target.checked;
                       onIntelligence({
                         ...intelligence,
-                        contracted: event.target.checked,
+                        contracted,
+                        enabled: contracted ? intelligence.enabled : false,
+                        status: contracted ? intelligence.status : "AI_DISABLED",
                         updatedAt: new Date().toISOString(),
-                      })
-                    }
+                      });
+                    }}
                   />
                   <span>
                     <strong>IA contratada</strong>
@@ -366,13 +380,17 @@ export default function SettingsModule({
                     type="checkbox"
                     checked={intelligence.enabled}
                     disabled={!intelligence.contracted}
-                    onChange={event =>
+                    onChange={event => {
+                      const enabled = event.target.checked;
                       onIntelligence({
                         ...intelligence,
-                        enabled: event.target.checked,
+                        enabled,
+                        status: enabled ? "AI_PROCESSING" : "AI_DISABLED",
+                        monthlyTokenBudget:
+                          enabled && intelligence.monthlyTokenBudget <= 0 ? 1_000_000 : intelligence.monthlyTokenBudget,
                         updatedAt: new Date().toISOString(),
-                      })
-                    }
+                      });
+                    }}
                   />
                   <span>
                     <strong>Copiloto habilitado</strong>

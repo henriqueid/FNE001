@@ -229,6 +229,95 @@ function xmlRows(text: string): { rows: RawTitle[]; issues: EntryIntakeIssue[] }
   };
 }
 
+function cnabDate(value: string) {
+  const raw = digits(value);
+  if (raw.length === 8) return `${raw.slice(4, 8)}-${raw.slice(2, 4)}-${raw.slice(0, 2)}`;
+  if (raw.length !== 6) return "";
+  const year = Number(raw.slice(4, 6));
+  return `${year >= 70 ? "19" : "20"}${raw.slice(4, 6)}-${raw.slice(2, 4)}-${raw.slice(0, 2)}`;
+}
+
+function cnabAmount(value: string) {
+  const raw = digits(value);
+  return raw ? String(Number(raw) / 100) : "";
+}
+
+/**
+ * Leitura determinística dos campos comuns FEBRABAN dos leiautes CNAB 240 e 400.
+ * Campos específicos do banco continuam sendo tratados pelo leiaute configurado; aqui são
+ * extraídos apenas título, vencimento, valor e sacado, suficientes para modelar a operação.
+ */
+function cnabRows(text: string): { rows: RawTitle[]; issues: EntryIntakeIssue[] } {
+  const lines = text.split(/\r?\n/).filter(line => line.trim());
+  const width = lines.find(line => line.length >= 240)?.length ?? 0;
+  const rows: RawTitle[] = [];
+
+  if (width >= 390) {
+    lines.forEach((line, index) => {
+      if (line.length < 390 || line[0] !== "1") return;
+      rows.push({
+        row: index + 1,
+        documentNumber: clean(line.slice(110, 120)) || clean(line.slice(62, 70)),
+        amount: cnabAmount(line.slice(126, 139)),
+        dueDate: cnabDate(line.slice(120, 126)),
+        issueDate: cnabDate(line.slice(150, 156)),
+        debtorDocument: digits(line.slice(220, 234)),
+        debtorName: clean(line.slice(234, 274)),
+        nfeKey: "",
+        cfop: "",
+        state: clean(line.slice(349, 351)),
+        city: clean(line.slice(314, 334)),
+        observation: `CNAB 400 · linha ${index + 1}`,
+      });
+    });
+  } else if (width >= 240) {
+    let pending: RawTitle | null = null;
+    lines.forEach((line, index) => {
+      if (line.length < 240) return;
+      const segment = line[13];
+      if (segment === "P") {
+        if (pending) rows.push(pending);
+        pending = {
+          row: index + 1,
+          documentNumber: clean(line.slice(62, 77)) || clean(line.slice(37, 57)),
+          amount: cnabAmount(line.slice(85, 100)),
+          dueDate: cnabDate(line.slice(77, 85)),
+          issueDate: cnabDate(line.slice(109, 117)),
+          debtorDocument: "",
+          debtorName: "",
+          nfeKey: "",
+          cfop: "",
+          state: "",
+          city: "",
+          observation: `CNAB 240 · linha ${index + 1}`,
+        };
+      } else if (segment === "Q" && pending) {
+        pending.debtorDocument = digits(line.slice(18, 33));
+        pending.debtorName = clean(line.slice(33, 73));
+        pending.city = clean(line.slice(113, 128));
+        pending.state = clean(line.slice(128, 130));
+        rows.push(pending);
+        pending = null;
+      }
+    });
+    if (pending) rows.push(pending);
+  }
+
+  return {
+    rows,
+    issues: rows.length
+      ? []
+      : [
+          {
+            id: "cnab:layout",
+            severity: "BLOQUEIO",
+            code: "CNAB_SEM_TITULOS",
+            message: "Nenhum detalhe de título CNAB 240/400 reconhecido. Confirme o leiaute do banco.",
+          },
+        ],
+  };
+}
+
 function issue(id: string, code: string, message: string, row: number, field?: string): EntryIntakeIssue {
   return { id, severity: "BLOQUEIO", code, message, row, field };
 }
@@ -265,18 +354,7 @@ export function normalizeOperationIntake({
         },
       ],
     };
-  else if (format === "CNAB" && !/[;\t,]/.test(text.split(/\r?\n/)[0] ?? ""))
-    parsed = {
-      rows: [],
-      issues: [
-        {
-          id: "cnab:layout",
-          severity: "BLOQUEIO",
-          code: "CNAB_SEM_LAYOUT",
-          message: "O leiaute CNAB deste banco ainda não foi configurado para a empresa.",
-        },
-      ],
-    };
+  else if (format === "CNAB" && !/[;\t,]/.test(text.split(/\r?\n/)[0] ?? "")) parsed = cnabRows(text);
   else parsed = csvRows(text);
 
   const issues = [...parsed.issues];

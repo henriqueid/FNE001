@@ -32,7 +32,7 @@ type OpenAIResponse = {
     output_tokens?: number;
     total_tokens?: number;
   };
-  error?: { message?: string };
+  error?: { message?: string; code?: string; type?: string };
 };
 
 const DEFAULT_ENDPOINT = "https://api.openai.com/v1";
@@ -66,6 +66,12 @@ function responseText(body: OpenAIResponse) {
 function safeProviderError(status: number, body: OpenAIResponse) {
   if (status === 401 || status === 403) return "A credencial da OpenAI foi recusada.";
   if (status === 404) return "O modelo configurado não está disponível para este projeto.";
+  if (status === 429 && body.error?.code === "credit_balance_exhausted")
+    return "A chave está autorizada, mas a organização da OpenAI vinculada a ela está sem créditos de API.";
+  if (status === 429 && body.error?.code === "project_spend_limit_exceeded")
+    return "O limite mensal de gastos do projeto da OpenAI foi atingido.";
+  if (status === 429 && body.error?.code === "organization_spend_limit_exceeded")
+    return "O limite mensal de gastos da organização da OpenAI foi atingido.";
   if (status === 429) return "O limite de uso da OpenAI foi atingido. Tente novamente mais tarde.";
   if (status >= 500) return "A OpenAI está temporariamente indisponível.";
   return body.error?.message?.slice(0, 240) || "A OpenAI não conseguiu concluir a solicitação.";

@@ -6,7 +6,7 @@
 import { pricingAdjustment } from "@/src/domain/operations/pricing";
 
 export type DeskFileFormat = "XML" | "CNAB" | "XLS" | "OUTRO";
-export type DeskFile = { name: string; format: DeskFileFormat; detail: string };
+export type DeskFile = { name: string; format: DeskFileFormat; detail: string; content?: string; readError?: string };
 
 export type DeskTitle = {
   id: string;
@@ -33,6 +33,8 @@ export type DeskPolicy = {
   operationFeeCents: number;
   perTitleFeeCents: number;
   defaultRate: number;
+  scoreAttention?: number;
+  scorePositive?: number;
 };
 
 export type DeskSeverity = "impedimento" | "alcada" | "info";
@@ -79,6 +81,7 @@ export type DeskContext = {
   policy: DeskPolicy;
   /** A consulta ao birô do sacado novo foi autorizada e feita. */
   bureauChecked: boolean;
+  cedent?: { name: string; score: number; creditLimitCents: number; usedLimitCents: number };
 };
 
 /** Alíquotas de IOF apenas para a demonstração (diária + adicional); a versão real vem de tabela versionada. */
@@ -120,6 +123,47 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
   });
 
   const findings: DeskFinding[] = [];
+  if (context.cedent) {
+    const { cedent } = context;
+    const attention = policy.scoreAttention ?? 600;
+    const positive = policy.scorePositive ?? 700;
+    if (cedent.score <= 0)
+      findings.push({
+        id: "cedent-score",
+        severity: "impedimento",
+        evidence: "Sem dados",
+        kind: "REGRA",
+        title: `${cedent.name} ainda não possui score interno`,
+        detail: "O score precisa ser calculado ou decidido pela alçada antes da aprovação.",
+        question: "Como está o score do cedente?",
+      });
+    else
+      findings.push({
+        id: "cedent-score",
+        severity: cedent.score < attention ? "alcada" : "info",
+        evidence: "Fato",
+        kind: "REGRA",
+        title: `Score do cedente: ${cedent.score}`,
+        detail:
+          cedent.score >= positive
+            ? `Faixa positiva da política (a partir de ${positive}).`
+            : cedent.score >= attention
+              ? `Faixa de atenção da política (${attention} a ${positive - 1}).`
+              : `Abaixo do corte de ${attention}; exige revisão de risco.`,
+        question: "Como está o score do cedente?",
+      });
+    const available = Math.max(0, cedent.creditLimitCents - cedent.usedLimitCents);
+    if (faceCents > available)
+      findings.push({
+        id: "cedent-limit",
+        severity: "alcada",
+        evidence: "Fato",
+        kind: "REGRA",
+        title: "Valor acima do limite disponível do cedente",
+        detail: `Disponível ${centsToBRL(available)}; face modelada ${centsToBRL(faceCents)}. Exige alçada de crédito.`,
+        question: "A operação cabe no limite do cedente?",
+      });
+  }
   rows
     .filter(title => title.duplicate)
     .forEach(title =>

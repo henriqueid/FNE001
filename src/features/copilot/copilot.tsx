@@ -21,7 +21,8 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { CopilotAnalysis } from "./copilot-analysis";
 import { type CopilotSuggestion, ProgressCard, ReplyBubble, ResultCard, StartCard } from "./copilot-thread";
 import { useCopilotDesk } from "./use-copilot-desk";
-import { type AccessUser } from "@/src/domain/access/model";
+import { can, type AccessUser } from "@/src/domain/access/model";
+import { type Debtor } from "@/src/domain/core/types";
 import { aiStatusLabel, type IntelligenceState } from "@/src/domain/intelligence/model";
 
 export type { CopilotSuggestion } from "./copilot-thread";
@@ -34,7 +35,9 @@ export function Copilot({
   currentUser,
   intelligence,
   onIntelligence,
+  debtors = [],
   demoMode = false,
+  onOpenLive,
 }: {
   suggestion?: CopilotSuggestion;
   dailyBriefing: DailyBriefingData;
@@ -43,7 +46,9 @@ export function Copilot({
   currentUser: AccessUser;
   intelligence: IntelligenceState;
   onIntelligence?: (state: IntelligenceState) => void;
+  debtors?: Debtor[];
   demoMode?: boolean;
+  onOpenLive?: () => void;
 }) {
   const cedents = useCedents();
   const operations = useContext(ShellContext)?.operations;
@@ -60,7 +65,7 @@ export function Copilot({
     }),
     [operations, cedents, policies],
   );
-  const desk = useCopilotDesk(knowledge, currentUser, intelligence, cedents[0]?.id ?? "", demoMode, tokens =>
+  const desk = useCopilotDesk(knowledge, currentUser, intelligence, cedents[0]?.id ?? "", demoMode, debtors, tokens =>
     onIntelligence?.({
       ...intelligence,
       usedTokens: intelligence.usedTokens + tokens,
@@ -127,7 +132,7 @@ export function Copilot({
           cedents={cedents}
           suggestion={suggestion}
           onAsk={send}
-          showPrompts={!desk.messages.length && desk.aiAvailable}
+          showPrompts={!desk.messages.length}
         />
       )}
       {desk.messages.map(message =>
@@ -152,7 +157,7 @@ export function Copilot({
       {(hasResult || desk.messages.length > 0) && (
         <div className="cpl-chips">
           {chips.map(item => (
-            <button type="button" key={item} onClick={() => send(item)} disabled={!desk.aiAvailable || desk.asking}>
+            <button type="button" key={item} onClick={() => send(item)} disabled={desk.asking}>
               {item}
             </button>
           ))}
@@ -179,16 +184,22 @@ export function Copilot({
             }
           }}
           placeholder={
-            desk.aiAvailable ? "Pergunte, investigue ou simule um cenário…" : "IA indisponível nesta organização"
+            desk.aiAvailable
+              ? "Pergunte, investigue ou simule um cenário…"
+              : "Modo offline: consulte, modele e simule pela política…"
           }
           aria-label="Mensagem para o Copiloto"
-          disabled={!desk.aiAvailable || desk.asking}
+          disabled={desk.asking}
         />
-        <button type="submit" aria-label="Enviar" disabled={!draft.trim() || !desk.aiAvailable || desk.asking}>
+        <button type="submit" aria-label="Enviar" disabled={!draft.trim() || desk.asking}>
           <SendIcon />
         </button>
         <small className="cpl-input-hint">
-          {desk.asking ? "Consultando o provedor de IA…" : "Enter envia · Shift + Enter quebra a linha"}
+          {desk.asking
+            ? "Consultando o provedor de IA…"
+            : desk.aiAvailable
+              ? "Enter envia · Shift + Enter quebra a linha"
+              : "Motor determinístico offline · sem consumo de IA"}
         </small>
       </form>
     </div>
@@ -266,6 +277,25 @@ export function Copilot({
             </span>
             <ArrowIcon />
           </button>
+          {can(currentUser, "users:manage") && onOpenLive && (
+            <button
+              type="button"
+              className="cpl-live-vision"
+              onClick={() => {
+                onOpenLive();
+                setOpen(false);
+              }}
+            >
+              <span>
+                <span className="lv-pulse" />
+              </span>
+              <span>
+                <small>EQUIPE · AO VIVO</small>
+                <b>Ver quem está online e no que está trabalhando</b>
+              </span>
+              <ArrowIcon />
+            </button>
+          )}
           <div className="cpl-ai-state" data-enabled={desk.aiAvailable || undefined} role="status">
             <b>{desk.aiAvailable ? "Insight com apoio de IA" : "Análise do motor de políticas · sem IA"}</b>
             <span>{aiStatusLabel(intelligence)} · cálculos e alçadas permanecem determinísticos.</span>

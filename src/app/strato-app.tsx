@@ -17,6 +17,7 @@ import {
   savePersistedState,
 } from "./persistence";
 import { buildNewOperation } from "@/src/domain/operations/create-operation";
+import { operationMutationPermissionError } from "@/src/domain/operations/mutation-permissions";
 
 import { managerOf, repAt } from "@/src/domain/commercial/rules";
 import { emptyCommercial, seedCommercial } from "@/src/domain/commercial/seed";
@@ -863,6 +864,8 @@ export default function StratoApp() {
       !can(currentUser, "finance:release")
     )
       return;
+    const persisted = operations.find(operation => operation.id === updated.id) ?? null;
+    if (operationMutationPermissionError(persisted, updated, currentUser.permissions)) return;
     setOperations(current => current.map(operation => (operation.id === updated.id ? updated : operation)));
     setSelected(updated);
     persistRealOperation(updated);
@@ -1227,6 +1230,7 @@ export default function StratoApp() {
         onBack={() => setSelected(null)}
         onUpdate={updateOperation}
         showGuidance={showGuidance}
+        actor={{ id: sessionUser.id, name: sessionUser.name }}
       />
     );
   else if (view === "finance")
@@ -1384,6 +1388,7 @@ export default function StratoApp() {
                   setAccess(current => stopUserPreview(current));
                   setCompanyScope("Consolidado");
                 }}
+                debtors={scoredDebtors}
                 demoMode={isDemo}
               >
                 {operationPersistenceError && (

@@ -40,7 +40,7 @@ export function StartCard({
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setOver(false);
-    desk.addFiles(event.dataTransfer.files);
+    void desk.addFiles(event.dataTransfer.files);
   };
   return (
     <div className="cpl-start">
@@ -71,15 +71,7 @@ export function StartCard({
           ))}
         </div>
       )}
-      {!desk.demoMode ? (
-        <div className="cpl-card">
-          <b className="cpl-card-title">Análise de arquivos ainda não conectada</b>
-          <p className="cpl-note">
-            O ambiente real não usa títulos de exemplo. A importação será liberada somente quando o processamento e a
-            política institucional estiverem conectados.
-          </p>
-        </div>
-      ) : !showForm ? (
+      {!showForm ? (
         <button type="button" className="cpl-start-action" onClick={() => setShowForm(true)}>
           <FolderIcon />
           <span>
@@ -120,12 +112,14 @@ export function StartCard({
                   multiple
                   className="cpl-sr"
                   accept=".xml,.rem,.ret,.txt,.cnab,.xls,.xlsx,.csv"
-                  onChange={event => event.target.files && desk.addFiles(event.target.files)}
+                  onChange={event => event.target.files && void desk.addFiles(event.target.files)}
                 />
               </label>
-              <button type="button" className="cpl-ghost" onClick={desk.loadExamples}>
-                Usar exemplos
-              </button>
+              {desk.demoMode && (
+                <button type="button" className="cpl-ghost" onClick={desk.loadExamples}>
+                  Usar exemplos
+                </button>
+              )}
             </div>
           </div>
           {desk.files.length > 0 && (
@@ -139,15 +133,26 @@ export function StartCard({
               ))}
             </ul>
           )}
-          {desk.userFiles && (
+          {desk.fileErrors.map(error => (
+            <p className="cpl-note" key={error} role="alert">
+              {error}
+            </p>
+          ))}
+          {desk.intakeIssues.slice(0, 4).map(issue => (
+            <p className="cpl-note" key={issue.id} role="alert">
+              {issue.row ? `Linha ${issue.row} · ` : ""}
+              {issue.message}
+            </p>
+          ))}
+          {desk.userFiles && !desk.intakeIssues.length && !desk.fileErrors.length && (
             <p className="cpl-note">
-              Nesta demonstração o conteúdo dos arquivos não é lido: a análise usa títulos de exemplo.
+              O conteúdo será lido localmente e avaliado pelo motor de políticas, mesmo sem IA.
             </p>
           )}
           <button
             type="button"
             className="cpl-primary"
-            disabled={!desk.files.length}
+            disabled={!desk.files.length || !cedent}
             onClick={() => {
               if (!desk.cedent) desk.setCedent(cedent);
               void desk.start();
@@ -155,6 +160,7 @@ export function StartCard({
           >
             Analisar
           </button>
+          {!cedent && <p className="cpl-note">Selecione um cedente para aplicar score, limite e política.</p>}
           <p className="cpl-note">Roda em segundo plano: pode fechar a caixa e continuar trabalhando.</p>
         </div>
       )}
@@ -240,6 +246,12 @@ export function ResultCard({ desk, onExpand }: { desk: CopilotDesk; onExpand: ()
       </div>
       <DeskMoney scenario={scenario} compact />
       <DeskGate scenario={scenario} />
+      {desk.intakeIssues.length > 0 && (
+        <p className="cpl-note">
+          {desk.intakeIssues.length} linha(s) ficaram fora do cenário por inconsistência ou duplicidade. Consulte os
+          apontamentos da entrada antes da decisão.
+        </p>
+      )}
       <DecisionBar desk={desk} />
       <div className="cpl-result-actions">
         <button type="button" className="cpl-ghost" onClick={onExpand}>

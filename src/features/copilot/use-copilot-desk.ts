@@ -23,6 +23,8 @@ import { emptyDecisionLedger, type DecisionEventDraft } from "@/src/domain/decis
 import { canUseGenerativeAI, type IntelligenceState } from "@/src/domain/intelligence/model";
 import { loadDecisionLedger, persistDecisionEvent } from "./decision-ledger-client";
 import { askConfiguredCopilot } from "@/src/app/intelligence-client";
+import { type Debtor, type EntryIntakeIssue } from "@/src/domain/core/types";
+import { buildOfflineDeskContext } from "@/src/domain/copilot/offline-analysis";
 
 export type DeskStage = "idle" | "recebida" | "validando" | "extraindo" | "calculando" | "concluida";
 export type DeskDecision = "pending" | "approved" | "rejected" | null;
@@ -52,6 +54,7 @@ export function useCopilotDesk(
   intelligence: IntelligenceState,
   defaultCedentId = "",
   demoMode = false,
+  debtors: Debtor[] = [],
   onUsage?: (tokens: number) => void,
 ) {
   const [cedent, setCedent] = useState(defaultCedentId);
@@ -68,6 +71,9 @@ export function useCopilotDesk(
   const [decisionLedger, setDecisionLedger] = useState(emptyDecisionLedger);
   const [decisionError, setDecisionError] = useState("");
   const [asking, setAsking] = useState(false);
+  const [analysisContext, setAnalysisContext] = useState<DeskContext | null>(null);
+  const [intakeIssues, setIntakeIssues] = useState<EntryIntakeIssue[]>([]);
+  const [fileErrors, setFileErrors] = useState<string[]>([]);
   const alive = useRef(true);
   /** Identifica a tarefa em curso; limpar a conversa invalida a anterior. */
   const run = useRef(0);
@@ -93,12 +99,18 @@ export function useCopilotDesk(
     setLogs(current => ({ ...current, [key]: text }));
   }, []);
 
-  const context: DeskContext = { titles: deskDemoTitles, policy: deskDemoPolicy, bureauChecked };
+  const context: DeskContext = analysisContext
+    ? { ...analysisContext, bureauChecked }
+    : { titles: deskDemoTitles, policy: deskDemoPolicy, bureauChecked };
+  const contextRef = useRef<DeskContext>(context);
+  contextRef.current = context;
   const aiAvailable = canUseGenerativeAI(intelligence);
   const operationId = `copilot-${cedent || "unassigned"}`;
   const decisionId = `decision-${operationId}`;
+  const isDraftOperation = operationId.startsWith("copilot-");
 
   useEffect(() => {
+    if (isDraftOperation) return;
     let cancelled = false;
     loadDecisionLedger(intelligence.tenantId, decisionId)
       .then(ledger => {
@@ -114,7 +126,7 @@ export function useCopilotDesk(
     return () => {
       cancelled = true;
     };
-  }, [actor, decisionId, intelligence.tenantId]);
+  }, [actor, decisionId, intelligence.tenantId, isDraftOperation]);
 
   const recordEvent = useCallback(
     (
@@ -131,6 +143,7 @@ export function useCopilotDesk(
       humanRationale?: string,
       snapshot?: { version: number; metrics: Record<string, number | string | boolean> },
     ) => {
+      if (isDraftOperation) return;
       const now = new Date().toISOString();
       const event: DecisionEventDraft = {
         eventId: uniqueId("decision-event"),
@@ -141,13 +154,13 @@ export function useCopilotDesk(
         decisionType: "OPERATION_ELIGIBILITY",
         requestedAction: eventType,
         authorityId: eventType.includes("EXCEPTION") ? "credit-director" : undefined,
-        policyId: deskDemoPolicy.name,
-        policyVersion: deskDemoPolicy.version,
+        policyId: contextRef.current.policy.name,
+        policyVersion: contextRef.current.policy.version,
         inputSnapshotId: `scenario-${snapshot?.version ?? scenarios.at(-1)?.version ?? 0}`,
         inputSnapshotHash: decisionFingerprint({
           files: files.map(file => ({ name: file.name, format: file.format })),
           scenario: snapshot?.version ?? scenarios.at(-1)?.version ?? 0,
-          policy: `${deskDemoPolicy.name}:${deskDemoPolicy.version}`,
+          policy: `${contextRef.current.policy.name}:${contextRef.current.policy.version}`,
         }),
         computedMetrics:
           snapshot?.metrics ??
@@ -181,34 +194,35 @@ export function useCopilotDesk(
           setDecisionError(error instanceof Error ? error.message : "Não foi possível persistir a decisão.");
         });
     },
-    [cedent, decisionId, files, intelligence.tenantId, operationId, scenarios],
+    [cedent, decisionId, files, intelligence.tenantId, isDraftOperation, operationId, scenarios],
   );
 
   const loadExamples = () => {
     if (!demoMode) return;
     setFiles(deskDemoFiles);
     setUserFiles(false);
+    setAnalysisContext(null);
+    setIntakeIssues([]);
+    setFileErrors([]);
   };
 
-  const addFiles = (list: FileList | File[]) => {
-    const added = Array.from(list).map(file => ({ name: file.name, ...deskFileFormat(file.name) }));
+  const addFiles = async (list: FileList | File[]) => {
+    const added = await Promise.all(
+      Array.from(list).map(async file => {
+        const metadata = { name: file.name, ...deskFileFormat(file.name) };
+        try {
+          return { ...metadata, content: await file.text() };
+        } catch {
+          return { ...metadata, readError: "não foi possível ler o arquivo" };
+        }
+      }),
+    );
     if (!added.length) return;
     setFiles(current => [...current, ...added]);
     setUserFiles(true);
   };
 
   const start = async () => {
-    if (!demoMode) {
-      push({
-        role: "ai",
-        reply: {
-          paragraphs: [
-            "A análise automática de arquivos ainda não está conectada neste ambiente. Nenhum conteúdo foi processado nem substituído por dados simulados.",
-          ],
-        },
-      });
-      return;
-    }
     const token = ++run.current;
     correlationId.current = uniqueId("copilot-run");
     const stale = () => !alive.current || token !== run.current;
@@ -217,42 +231,74 @@ export function useCopilotDesk(
     setBureauChecked(false);
     setLogs({});
     setDecisionError("");
+    setIntakeIssues([]);
+    setFileErrors([]);
     push({ role: "me", text: `Analisar ${files.length} arquivo(s)` });
     push({ role: "card", card: "progress" });
-    recordEvent("ANALYSIS_REQUESTED", "PENDING", []);
     log("recebida", `${files.length} arquivo(s) identificado(s) e preservado(s) para análise.`);
-    await wait(900);
+    await wait(250);
     if (stale()) return;
-    log("validando", "XML NF-e, CNAB 400 e XLS no layout padrão reconhecidos. 1 título já existe na carteira.");
-    await wait(1300);
+    const offline =
+      demoMode && !userFiles
+        ? {
+            context: { titles: deskDemoTitles, policy: deskDemoPolicy, bureauChecked: false },
+            issues: [],
+            fileErrors: [],
+            acceptedRows: deskDemoTitles.length,
+          }
+        : buildOfflineDeskContext({ files, knowledge, debtors, cedentId: cedent });
+    setIntakeIssues(offline.issues);
+    setFileErrors(offline.fileErrors);
+    log(
+      "validando",
+      `${files.length - offline.fileErrors.length} arquivo(s) lido(s)${offline.issues.length ? ` · ${offline.issues.length} apontamento(s) de entrada` : " · estrutura válida"}.`,
+    );
+    await wait(300);
     if (stale()) return;
+    if (!offline.context) {
+      log("extraindo", "Nenhum título válido foi extraído; revise os apontamentos do arquivo.");
+      setStage("idle");
+      push({
+        role: "ai",
+        reply: {
+          tool: "analisar_arquivo_offline()",
+          paragraphs: [
+            "Não consegui modelar a operação porque nenhum título válido foi extraído.",
+            ...offline.fileErrors,
+            ...offline.issues.slice(0, 5).map(item => item.message),
+          ],
+        },
+      });
+      return;
+    }
+    setAnalysisContext(offline.context);
+    contextRef.current = offline.context;
+    recordEvent("ANALYSIS_REQUESTED", "PENDING", []);
     log(
       "extraindo",
-      `${deskDemoTitles.length} títulos de 5 sacados. Campos ausentes viram pendência, nada é inventado.`,
+      `${offline.acceptedRows} título(s) de ${new Set(offline.context.titles.map(title => title.debtor)).size} sacado(s). Campos ausentes viram pendência, nada é inventado.`,
     );
-    await wait(1200);
+    await wait(300);
     if (stale()) return;
     log(
       "calculando",
-      `Política ${deskDemoPolicy.name} v${deskDemoPolicy.version}. Exposição e histórico do cedente lidos.`,
+      `Política ${offline.context.policy.name} v${offline.context.policy.version}. Score, limite, exposição e títulos processados localmente.`,
     );
-    await wait(800);
+    await wait(300);
     if (stale()) return;
-    setWaitingAuth(true);
-    setUnread(true);
+    if (offline.context.titles.some(title => title.newDebtor)) {
+      setWaitingAuth(true);
+      setUnread(true);
+    } else await completeAnalysis(false, offline.context, token);
   };
 
-  const authorize = async (allowed: boolean) => {
-    const token = run.current;
-    setWaitingAuth(false);
-    setBureauChecked(allowed);
-    setLogs(current => ({
-      ...current,
-      calculando: `${current.calculando ?? ""} ${allowed ? "Consulta ao birô autorizada." : "Seguiu sem consulta ao birô."}`,
-    }));
-    await wait(1200);
+  async function completeAnalysis(allowed: boolean, sourceContext: DeskContext, token = run.current) {
+    const completedContext = { ...sourceContext, bureauChecked: allowed };
+    contextRef.current = completedContext;
+    setAnalysisContext(completedContext);
+    await wait(250);
     if (!alive.current || token !== run.current) return;
-    const scenario = firstScenario({ ...context, bureauChecked: allowed });
+    const scenario = firstScenario(completedContext);
     setScenarios([scenario]);
     const { result } = scenario;
     recordEvent(
@@ -296,6 +342,17 @@ export function useCopilotDesk(
       },
     });
     setUnread(true);
+  }
+
+  const authorize = async (allowed: boolean) => {
+    const token = run.current;
+    setWaitingAuth(false);
+    setBureauChecked(allowed);
+    setLogs(current => ({
+      ...current,
+      calculando: `${current.calculando ?? ""} ${allowed ? "Consulta ao birô autorizada." : "Seguiu sem consulta ao birô."}`,
+    }));
+    await completeAnalysis(allowed, context, token);
   };
 
   const locked = decision !== null;
@@ -303,17 +360,6 @@ export function useCopilotDesk(
   /** Pergunta livre: primeiro sobre o cenário em análise (se houver); senão, consulta a base e a política. */
   const ask = async (text: string) => {
     push({ role: "me", text });
-    if (!aiAvailable) {
-      push({
-        role: "ai",
-        reply: {
-          paragraphs: [
-            "A IA está desativada ou indisponível para esta organização. O motor determinístico e o relatório estruturado continuam disponíveis.",
-          ],
-        },
-      });
-      return;
-    }
     if (scenarios.length && !locked) {
       const answer = answerDesk(text, context, scenarios);
       if (!answer.fallback) {
@@ -325,6 +371,18 @@ export function useCopilotDesk(
     const localAnswer = answerSystemQuestion(text, knowledge);
     if (localAnswer.tool) {
       push({ role: "ai", reply: localAnswer });
+      return;
+    }
+    if (!aiAvailable) {
+      push({
+        role: "ai",
+        reply: {
+          paragraphs: [
+            ...localAnswer.paragraphs,
+            "Estou em modo offline: consigo consultar dados, explicar a política e modelar cenários; perguntas livres e insights generativos exigem a conexão com IA.",
+          ],
+        },
+      });
       return;
     }
     setAsking(true);
@@ -465,6 +523,10 @@ export function useCopilotDesk(
     setWaitingAuth(false);
     setLogs({});
     setDecisionError("");
+    setAnalysisContext(null);
+    setIntakeIssues([]);
+    setFileErrors([]);
+    setBureauChecked(false);
   };
 
   return {
@@ -472,6 +534,8 @@ export function useCopilotDesk(
     setCedent,
     files,
     userFiles,
+    intakeIssues,
+    fileErrors,
     loadExamples,
     addFiles,
     stage,

@@ -70,4 +70,17 @@ describe("gateway OpenAI do Copiloto", () => {
     delete process.env.OPENAI_API_KEY;
     await expect(createOpenAIResponse("pergunta", "instruções")).rejects.toThrow("OPENAI_API_KEY");
   });
+
+  it("diferencia chave válida sem créditos de um limite temporário", async () => {
+    process.env.OPENAI_API_KEY = "sk-test";
+    const fetcher: typeof fetch = async () =>
+      Response.json(
+        { error: { type: "insufficient_quota", code: "credit_balance_exhausted", message: "no credits" } },
+        { status: 429 },
+      );
+
+    await expect(createOpenAIResponse("pergunta", "instruções", { fetcher })).rejects.toThrow(
+      "A chave está autorizada, mas a organização da OpenAI vinculada a ela está sem créditos de API.",
+    );
+  });
 });

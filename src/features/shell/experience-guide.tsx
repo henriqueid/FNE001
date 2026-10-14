@@ -1,6 +1,6 @@
 "use client";
 
-import { type Operation } from "@/src/domain/core/types";
+import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { type AttentionItem } from "@/src/domain/copilot/attention-center";
 import { type DailyBriefingData } from "@/src/domain/copilot/daily-briefing";
 import { operationalSuggestion } from "@/src/domain/copilot/operational-suggestion";
@@ -93,6 +93,7 @@ export function ExperienceGuide({
   currentUser,
   intelligence,
   onIntelligence,
+  debtors = [],
   demoMode = false,
 }: {
   active: string;
@@ -106,6 +107,7 @@ export function ExperienceGuide({
   currentUser: AccessUser;
   intelligence: IntelligenceState;
   onIntelligence?: (state: IntelligenceState) => void;
+  debtors?: Debtor[];
   demoMode?: boolean;
 }) {
   const [explained, setExplained] = useState(false);
@@ -201,7 +203,9 @@ export function ExperienceGuide({
         currentUser={currentUser}
         intelligence={intelligence}
         onIntelligence={onIntelligence}
+        debtors={debtors}
         demoMode={demoMode}
+        onOpenLive={() => onNavigate("live")}
       />
     </>
   );

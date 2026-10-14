@@ -117,7 +117,7 @@ describe("entrada e normalização de operações", () => {
     });
   });
 
-  it("não finge processar XLSX ou CNAB sem leiaute configurado", () => {
+  it("não finge processar XLSX ou CNAB sem detalhes reconhecíveis", () => {
     const xlsx = normalizeOperationIntake({
       source: "Planilha",
       fileName: "operacao.xlsx",
@@ -135,7 +135,38 @@ describe("entrada e normalização de operações", () => {
     expect(xlsx.intake).toMatchObject({ status: "BLOQUEADO", acceptedRows: 0 });
     expect(cnab.intake).toMatchObject({ status: "BLOQUEADO", acceptedRows: 0 });
     expect(xlsx.intake.issues[0].code).toBe("XLSX_REQUER_LEITOR");
-    expect(cnab.intake.issues[0].code).toBe("CNAB_SEM_LAYOUT");
+    expect(cnab.intake.issues[0].code).toBe("CNAB_SEM_TITULOS");
+  });
+
+  it("extrai título e sacado de um detalhe CNAB 400", () => {
+    const chars = Array.from({ length: 400 }, () => " ");
+    chars[0] = "1";
+    "DM-9001".split("").forEach((char, index) => (chars[110 + index] = char));
+    "301126".split("").forEach((char, index) => (chars[120 + index] = char));
+    "0000000123456".split("").forEach((char, index) => (chars[126 + index] = char));
+    "13102026"
+      .slice(0, 6)
+      .split("")
+      .forEach((char, index) => (chars[150 + index] = char));
+    debtor.document
+      .replace(/\D/g, "")
+      .split("")
+      .forEach((char, index) => (chars[220 + index] = char));
+    debtor.name.split("").forEach((char, index) => (chars[234 + index] = char));
+    const result = normalizeOperationIntake({
+      source: "CNAB",
+      fileName: "remessa.rem",
+      text: chars.join(""),
+      debtors: initialDebtors,
+      importedAt: "2026-10-13T10:00:00Z",
+    });
+    expect(result.intake).toMatchObject({ format: "CNAB", status: "PRONTO", acceptedRows: 1, matchedDebtors: 1 });
+    expect(result.data.entries[0]).toMatchObject({
+      documentNumber: "DM-9001",
+      amount: 1234.56,
+      dueDate: "2026-11-30",
+      debtorName: debtor.name,
+    });
   });
 
   it("oferece modelo com todas as colunas esperadas", () => {

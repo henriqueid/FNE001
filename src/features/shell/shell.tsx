@@ -20,6 +20,7 @@ import { type AttentionItem } from "@/src/domain/copilot/attention-center";
 import { AttentionCenter } from "@/src/features/copilot/attention-center";
 import { type ManagedTask, type TaskCommand } from "@/src/domain/tasks/model";
 import { type IntelligenceState } from "@/src/domain/intelligence/model";
+import { type Debtor } from "@/src/domain/core/types";
 
 import { BellIcon, CloseIcon, MenuIcon, SearchIcon } from "@/src/ui/icons";
 import { type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -32,6 +33,7 @@ const viewBySection: Record<string, AppView> = {
   Controladoria: "controlleria",
   Carteira: "portfolio",
   Comercial: "commercial",
+  "Operação ao vivo": "live",
   Financeiro: "finance",
   Cadastros: "registry",
   Configurações: "settings",
@@ -57,6 +59,7 @@ export function Shell({
   briefingReady = false,
   previewedBy,
   onEndPreview,
+  debtors = [],
   demoMode = false,
 }: {
   children: ReactNode;
@@ -79,6 +82,7 @@ export function Shell({
   briefingReady?: boolean;
   previewedBy?: string;
   onEndPreview?: () => void;
+  debtors?: Debtor[];
   demoMode?: boolean;
 }) {
   const context = useContext(ShellContext);
@@ -321,6 +325,7 @@ export function Shell({
           currentUser={currentUser}
           intelligence={intelligence}
           onIntelligence={onIntelligence}
+          debtors={debtors}
           demoMode={demoMode}
           onOpenAttention={openAttention}
           onNavigate={view => (onNavigate ?? context?.navigate)?.(view)}

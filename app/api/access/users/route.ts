@@ -1,8 +1,10 @@
-import { type AccessState } from "@/src/domain/access/model";
+import { allPermissions, type AccessState } from "@/src/domain/access/model";
+import { accessProfileError } from "@/src/domain/access/governance";
 import { type UserDepartment } from "@/src/domain/copilot/daily-briefing";
 import { hashPassword, passwordValidationError } from "@/src/server/access/password";
 import {
   AccessIdentityConflictError,
+  AccessCriticalChangeError,
   createManagedAccessUser,
   loadAccessDirectory,
   saveAccessDirectory,
@@ -108,6 +110,13 @@ export async function PUT(request: Request) {
     )
   )
     return json({ error: "As áreas de atuação do usuário são inválidas ou não incluem a área principal." }, 400);
-  await saveAccessDirectory(access.db, access.tenantId, access.principal.id, state);
-  return json(await loadAccessDirectory(access.db, access.tenantId, access.principal.id));
+  const invalidProfile = state.users.map(user => accessProfileError(user, allPermissions)).find(Boolean);
+  if (invalidProfile) return json({ error: invalidProfile }, 400);
+  try {
+    await saveAccessDirectory(access.db, access.tenantId, access.principal.id, state);
+    return json(await loadAccessDirectory(access.db, access.tenantId, access.principal.id));
+  } catch (error) {
+    if (error instanceof AccessCriticalChangeError) return json({ error: error.message }, 409);
+    throw error;
+  }
 }

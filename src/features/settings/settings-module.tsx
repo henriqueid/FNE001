@@ -324,7 +324,7 @@ export default function SettingsModule({
             />
           )}
 
-          {section === "access" && <UsersAccessPanel state={access} onState={onAccess} />}
+          {section === "access" && <UsersAccessPanel state={access} onState={onAccess} demoMode={demoMode} />}
 
           {section === "intelligence" && (
             <div className="settings-section-card">

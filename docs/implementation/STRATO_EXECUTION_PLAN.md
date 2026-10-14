@@ -275,7 +275,8 @@ Progresso A5.6 — maker-checker residual:
 - [x] disponibilizar no Cadastro a solicitação, comparação antes/depois, fila pendente, aprovação e rejeição;
 - [x] aplicar dupla aprovação à publicação de políticas de elegibilidade, com congelamento, aprovação ou rejeição independente;
 - [ ] estender dupla aprovação às demais configurações materiais que alterem cálculo, integração ou segurança;
-- [ ] proteger elevação de privilégios e alterações administrativas de credenciais;
+- [x] proteger ativação, elevação de privilégios, expansão de escopo/alçada e identificadores de acesso com decisão independente;
+- [ ] concluir MFA, recuperação de senha e revisão centralizada de sessões no pacote de segurança de conta;
 - [ ] homologar o fluxo residual com duas sessões reais e usuários distintos.
 
 Relatório consolidado de pendências e estimativas: `docs/implementation/STRATO_REMAINING_WORK_REPORT.md`.

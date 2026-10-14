@@ -1,6 +1,7 @@
 "use client";
 
-import { type AccessState } from "@/src/domain/access/model";
+import { type AccessChangeRequest } from "@/src/domain/access/governance";
+import { type AccessState, type AccessUser } from "@/src/domain/access/model";
 import { authenticatedFetch } from "./session-client";
 
 async function accessBody(response: Response) {
@@ -33,6 +34,54 @@ export async function saveAccessDirectory(tenantId: string, state: AccessState) 
     await authenticatedFetch(
       "/api/access/users",
       { method: "PUT", body: JSON.stringify({ ...state, previewUserId: undefined }) },
+      tenantId,
+    ),
+  );
+}
+
+async function accessChangesBody(response: Response) {
+  const body = (await response.json()) as {
+    requests?: AccessChangeRequest[];
+    state?: AccessState;
+    error?: string;
+  };
+  if (!response.ok) throw new Error(body.error ?? "Não foi possível acessar as aprovações de acesso.");
+  return body;
+}
+
+export async function loadAccessChangeRequests(tenantId: string) {
+  const body = await accessChangesBody(
+    await authenticatedFetch("/api/access/change-requests", { cache: "no-store" }, tenantId),
+  );
+  return body.requests ?? [];
+}
+
+export async function createAccessChangeRequest(
+  tenantId: string,
+  subjectUserId: string,
+  proposed: AccessUser,
+  reason: string,
+) {
+  const body = await accessChangesBody(
+    await authenticatedFetch(
+      "/api/access/change-requests",
+      { method: "POST", body: JSON.stringify({ subjectUserId, proposed, reason }) },
+      tenantId,
+    ),
+  );
+  return body.requests ?? [];
+}
+
+export async function decideAccessChangeRequest(
+  tenantId: string,
+  changeId: string,
+  decision: "APPROVED" | "REJECTED",
+  reason: string,
+) {
+  return accessChangesBody(
+    await authenticatedFetch(
+      "/api/access/change-requests",
+      { method: "PUT", body: JSON.stringify({ changeId, decision, reason }) },
       tenantId,
     ),
   );

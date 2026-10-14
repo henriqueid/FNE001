@@ -39,6 +39,7 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 | `/api/tasks`                      | `dashboard:view`                    | `dashboard:view`, com regras de autoria                                                 | tenant + empresa da operação referenciada                       | empresa aplicada       |
 | `/api/eligibility-policies`       | `settings:view`                     | `settings:manage` + solicitante e aprovador distintos                                   | tenant                                                          | maker-checker aplicado |
 | `/api/access/users`               | `users:manage`                      | `users:manage`                                                                          | tenant                                                          | concluído              |
+| `/api/access/change-requests`     | `users:manage`                      | solicitação: `users:manage`; decisão: outro administrador                               | tenant + usuário                                                | maker-checker aplicado |
 | `/api/company`                    | `settings:view`                     | `settings:manage`                                                                       | tenant                                                          | concluído              |
 | `/api/integrations/cnpj`          | `registry:view`                     | consulta externa por capacidade funcional                                               | tenant                                                          | concluído              |
 | `/api/intelligence/configuration` | `settings:manage`                   | `settings:manage`                                                                       | tenant                                                          | concluído              |
@@ -63,6 +64,7 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 - O pacote de favorecidos fica congelado entre preparação e aprovação; lançamentos a pagar e auditoria são reconstruídos no backend, sem confiar no navegador.
 - Contas bancárias cadastrais só mudam por solicitação pendente e decisão de outra identidade; a API comum recusa inclusão ou troca direta.
 - Políticas de elegibilidade são congeladas após o envio; outra identidade precisa aprovar ou rejeitar, e o servidor autentica todas as autorias.
+- Ativação, elevação de nível, novas permissões/alçadas/empresas e mudança de e-mail, login ou CPF exigem outro administrador; solicitante e beneficiário não decidem.
 - O Cadastro separa leitura (`registry:view`) de manutenção (`registry:edit`), inclusive nas evidências cadastrais.
 - O Copiloto recebe do navegador somente a pergunta; o backend lê as fontes no banco, reduz o contexto às empresas da sessão, remove campos não previstos e só mantém cedentes alcançáveis por operações ou títulos visíveis.
 - O Comercial filtra executivo e gerente vinculados na identidade do servidor; uma gravação segmentada recompõe o agregado completo e não apaga carteiras ocultas.
@@ -75,6 +77,6 @@ Em 13/10/2026, sessões reais temporárias validaram no backend: leitura institu
 ## Próximos endurecimentos
 
 1. Separar permissões de leitura e manutenção onde hoje uma permissão ampla atende aos dois usos.
-2. Estender o maker-checker às demais configurações materiais e à elevação de privilégios; políticas, contas bancárias, liberação, favorecidos e exceções já estão protegidos.
+2. Estender o maker-checker às demais configurações materiais; privilégios, políticas, contas bancárias, liberação, favorecidos e exceções já estão protegidos.
 3. Centralizar recibos idempotentes, event ledger e outbox em um contrato comum.
 4. Executar homologação com duas sessões e dois tenants, incluindo tentativas deliberadas de acesso cruzado.

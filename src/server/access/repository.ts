@@ -9,6 +9,7 @@ import { normalizeCpf, normalizeLoginName } from "@/src/domain/access/identity";
 import { userFunctionalAreas, type UserDepartment } from "@/src/domain/copilot/daily-briefing";
 import { type DecisionDatabase } from "@/src/server/decisions/repository";
 import { verifyPassword } from "./password";
+import { criticalAccessChanges } from "@/src/domain/access/governance";
 
 export type ServerPrincipal = {
   id: string;
@@ -257,6 +258,7 @@ export async function registerAccessRequest(
 }
 
 export class AccessIdentityConflictError extends Error {}
+export class AccessCriticalChangeError extends Error {}
 
 export async function createManagedAccessUser(
   db: DecisionDatabase,
@@ -443,13 +445,17 @@ export async function loadAccessDirectory(
   return { version: 2, authenticatedUserId, users };
 }
 
-export async function saveAccessDirectory(db: DecisionDatabase, tenantId: string, actorId: string, state: AccessState) {
-  await seedAccessDirectory(db);
+export async function applyAccessUserProfile(
+  db: DecisionDatabase,
+  tenantId: string,
+  actorId: string,
+  user: AccessUser,
+  eventType = "ACCESS_PROFILE_SAVED",
+) {
   const now = new Date().toISOString();
-  for (const user of state.users.filter(candidate => candidate.tenantIds.includes(tenantId))) {
-    await db
-      .prepare(
-        `INSERT INTO private.access_users (
+  await db
+    .prepare(
+      `INSERT INTO private.access_users (
           user_id, email, login_name, cpf, name, role, department, access_level, status,
           manager_user_id, commercial_rep_id, account_manager_id,
           responsibilities, operation_owner, substitute_user_id, cedent_documents,
@@ -464,99 +470,123 @@ export async function saveAccessDirectory(db: DecisionDatabase, tenantId: string
           responsibilities = excluded.responsibilities, operation_owner = excluded.operation_owner,
           substitute_user_id = excluded.substitute_user_id, cedent_documents = excluded.cedent_documents,
           revenue_goal_share = excluded.revenue_goal_share, updated_at = excluded.updated_at`,
-      )
-      .bind(
-        user.id,
-        user.email || null,
-        user.loginName ?? null,
-        user.cpf ?? null,
-        user.name,
-        user.role,
-        user.department,
-        user.access,
-        user.status,
-        user.managerUserId ?? null,
-        user.commercialRepId ?? null,
-        user.accountManagerId ?? null,
-        user.responsibilities,
-        user.operationOwner ?? null,
-        user.substituteUserId ?? null,
-        user.cedentDocuments ?? [],
-        user.revenueGoalShare ?? null,
-        now,
-      )
-      .run();
-    await db
-      .prepare("UPDATE private.access_credentials SET status = ?, updated_at = ? WHERE user_id = ?")
-      .bind(user.status === "active" ? "active" : user.status, now, user.id)
-      .run();
-    await db
-      .prepare(
-        `INSERT INTO private.tenant_memberships (tenant_id, user_id, company_scopes, created_at)
+    )
+    .bind(
+      user.id,
+      user.email || null,
+      user.loginName ?? null,
+      user.cpf ?? null,
+      user.name,
+      user.role,
+      user.department,
+      user.access,
+      user.status,
+      user.managerUserId ?? null,
+      user.commercialRepId ?? null,
+      user.accountManagerId ?? null,
+      user.responsibilities,
+      user.operationOwner ?? null,
+      user.substituteUserId ?? null,
+      user.cedentDocuments ?? [],
+      user.revenueGoalShare ?? null,
+      now,
+    )
+    .run();
+  await db
+    .prepare("UPDATE private.access_credentials SET status = ?, updated_at = ? WHERE user_id = ?")
+    .bind(user.status === "active" ? "active" : user.status, now, user.id)
+    .run();
+  await db
+    .prepare(
+      `INSERT INTO private.tenant_memberships (tenant_id, user_id, company_scopes, created_at)
          VALUES (?, ?, ?, ?)
          ON CONFLICT(tenant_id, user_id) DO UPDATE SET company_scopes = excluded.company_scopes`,
-      )
-      .bind(tenantId, user.id, user.companyScopes, now)
-      .run();
-    await db
-      .prepare("DELETE FROM private.user_function_assignments WHERE tenant_id = ? AND user_id = ?")
-      .bind(tenantId, user.id)
-      .run();
-    for (const area of userFunctionalAreas(user))
-      await db
-        .prepare(
-          `INSERT INTO private.user_function_assignments
-            (tenant_id, user_id, function_area, assigned_by, created_at) VALUES (?, ?, ?, ?, ?)`,
-        )
-        .bind(tenantId, user.id, area, actorId, now)
-        .run();
-    await db
-      .prepare("DELETE FROM private.access_permissions WHERE tenant_id = ? AND user_id = ?")
-      .bind(tenantId, user.id)
-      .run();
-    for (const permission of user.permissions)
-      await db
-        .prepare(
-          "INSERT INTO private.access_permissions (tenant_id, user_id, permission, created_at) VALUES (?, ?, ?, ?)",
-        )
-        .bind(tenantId, user.id, permission, now)
-        .run();
-    await db
-      .prepare("DELETE FROM private.authority_assignments WHERE tenant_id = ? AND user_id = ?")
-      .bind(tenantId, user.id)
-      .run();
-    for (const authorityId of user.authorityIds ?? [])
-      await db
-        .prepare(
-          `INSERT INTO private.authority_assignments
-            (tenant_id, user_id, authority_id, valid_from, valid_until, created_at)
-           VALUES (?, ?, ?, ?, NULL, ?)`,
-        )
-        .bind(tenantId, user.id, authorityId, now, now)
-        .run();
+    )
+    .bind(tenantId, user.id, user.companyScopes, now)
+    .run();
+  await db
+    .prepare("DELETE FROM private.user_function_assignments WHERE tenant_id = ? AND user_id = ?")
+    .bind(tenantId, user.id)
+    .run();
+  for (const area of userFunctionalAreas(user))
     await db
       .prepare(
-        `INSERT INTO private.access_events
-          (event_id, tenant_id, actor_id, subject_user_id, event_type, payload, created_at)
-         VALUES (?, ?, ?, ?, 'ACCESS_PROFILE_SAVED', ?, ?)`,
+        `INSERT INTO private.user_function_assignments
+            (tenant_id, user_id, function_area, assigned_by, created_at) VALUES (?, ?, ?, ?, ?)`,
       )
-      .bind(
-        crypto.randomUUID(),
-        tenantId,
-        actorId,
-        user.id,
-        {
-          role: user.role,
-          department: user.department,
-          functionalAreas: userFunctionalAreas(user),
-          access: user.access,
-          status: user.status,
-          companyScopes: user.companyScopes,
-          permissions: user.permissions,
-          authorityIds: user.authorityIds ?? [],
-        },
-        now,
-      )
+      .bind(tenantId, user.id, area, actorId, now)
       .run();
+  await db
+    .prepare("DELETE FROM private.access_permissions WHERE tenant_id = ? AND user_id = ?")
+    .bind(tenantId, user.id)
+    .run();
+  for (const permission of user.permissions)
+    await db
+      .prepare(
+        "INSERT INTO private.access_permissions (tenant_id, user_id, permission, created_at) VALUES (?, ?, ?, ?)",
+      )
+      .bind(tenantId, user.id, permission, now)
+      .run();
+  await db
+    .prepare("DELETE FROM private.authority_assignments WHERE tenant_id = ? AND user_id = ?")
+    .bind(tenantId, user.id)
+    .run();
+  for (const authorityId of user.authorityIds ?? [])
+    await db
+      .prepare(
+        `INSERT INTO private.authority_assignments
+            (tenant_id, user_id, authority_id, valid_from, valid_until, created_at)
+           VALUES (?, ?, ?, ?, NULL, ?)`,
+      )
+      .bind(tenantId, user.id, authorityId, now, now)
+      .run();
+  await db
+    .prepare(
+      `INSERT INTO private.access_events
+          (event_id, tenant_id, actor_id, subject_user_id, event_type, payload, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      crypto.randomUUID(),
+      tenantId,
+      actorId,
+      user.id,
+      eventType,
+      {
+        role: user.role,
+        department: user.department,
+        functionalAreas: userFunctionalAreas(user),
+        access: user.access,
+        status: user.status,
+        companyScopes: user.companyScopes,
+        permissions: user.permissions,
+        authorityIds: user.authorityIds ?? [],
+      },
+      now,
+    )
+    .run();
+}
+
+export async function saveAccessDirectory(
+  db: DecisionDatabase,
+  tenantId: string,
+  actorId: string,
+  state: AccessState,
+  options: { allowCriticalChanges?: boolean } = {},
+) {
+  await seedAccessDirectory(db);
+  const current = await loadAccessDirectory(db, tenantId, actorId);
+  const currentById = new Map(current.users.map(user => [user.id, user]));
+  const scoped = state.users.filter(candidate => candidate.tenantIds.includes(tenantId));
+  if (!options.allowCriticalChanges) {
+    for (const user of scoped) {
+      const previous = currentById.get(user.id);
+      if (!previous)
+        throw new AccessCriticalChangeError("Novos usuários devem ser criados pelo fluxo de cadastro de acesso.");
+      const changes = criticalAccessChanges(previous, user);
+      if (changes.length)
+        throw new AccessCriticalChangeError(`Esta alteração exige aprovação independente: ${changes.join(", ")}.`);
+    }
   }
+  for (const user of scoped) await applyAccessUserProfile(db, tenantId, actorId, user);
 }

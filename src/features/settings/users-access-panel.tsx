@@ -10,12 +10,18 @@ import {
   type AccessUser,
   type Permission,
 } from "@/src/domain/access/model";
-import { createManagedUser, saveAccessDirectory } from "@/src/app/access-directory-client";
+import {
+  createAccessChangeRequest,
+  createManagedUser,
+  decideAccessChangeRequest,
+  loadAccessChangeRequests,
+} from "@/src/app/access-directory-client";
 import { useCompanyDestinations } from "@/src/app/company-context";
 import { getStratoTenantId } from "@/src/app/tenant";
 import { userFunctionalAreas, type UserDepartment } from "@/src/domain/copilot/daily-briefing";
 import { formatCpf, normalizeCpf } from "@/src/domain/access/identity";
-import { type FormEvent, useMemo, useState } from "react";
+import { criticalAccessChanges, type AccessChangeRequest } from "@/src/domain/access/governance";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 const departments: UserDepartment[] = [
   "Diretoria",
@@ -56,14 +62,26 @@ const statusLabel: Record<AccessUser["status"], string> = {
   suspended: "Suspenso",
 };
 
-export function UsersAccessPanel({ state, onState }: { state: AccessState; onState: (state: AccessState) => void }) {
+export function UsersAccessPanel({
+  state,
+  onState,
+  demoMode = false,
+}: {
+  state: AccessState;
+  onState: (state: AccessState) => void;
+  demoMode?: boolean;
+}) {
   const destinations = useCompanyDestinations();
   const [selectedId, setSelectedId] = useState(state.previewUserId ?? state.authenticatedUserId);
   const [creating, setCreating] = useState(false);
   const [savingNewUser, setSavingNewUser] = useState(false);
   const [createError, setCreateError] = useState("");
-  const [approvingUserId, setApprovingUserId] = useState<string>();
   const [approvalFeedback, setApprovalFeedback] = useState<{ tone: "success" | "error"; message: string }>();
+  const [changeRequests, setChangeRequests] = useState<AccessChangeRequest[]>([]);
+  const [pendingProposal, setPendingProposal] = useState<{ subjectUserId: string; proposed: AccessUser }>();
+  const [requestReason, setRequestReason] = useState("");
+  const [decisionReasons, setDecisionReasons] = useState<Record<string, string>>({});
+  const [submittingChange, setSubmittingChange] = useState<string>();
   const [draft, setDraft] = useState({
     name: "",
     loginName: "",
@@ -72,7 +90,9 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
     password: "",
     department: "Operações" as UserDepartment,
   });
-  const selected = state.users.find(user => user.id === selectedId) ?? state.users[0];
+  const persistedSelected = state.users.find(user => user.id === selectedId) ?? state.users[0];
+  const selected =
+    pendingProposal?.subjectUserId === persistedSelected.id ? pendingProposal.proposed : persistedSelected;
   const active = state.users.find(user => user.id === state.previewUserId) ?? authenticatedUser(state);
   const actor = authenticatedUser(state);
   const managers = useMemo(
@@ -80,7 +100,24 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
     [state.users],
   );
 
-  const save = (patch: Partial<AccessUser>) => onState(updateAccessUser(state, { ...selected, ...patch }));
+  const selectedPendingRequest = changeRequests.find(request => request.subjectUserId === persistedSelected.id);
+  const save = (patch: Partial<AccessUser>) => {
+    if (!demoMode && selectedPendingRequest) {
+      setApprovalFeedback({
+        tone: "error",
+        message: "Este perfil está congelado enquanto a alteração crítica aguarda decisão.",
+      });
+      return;
+    }
+    const proposed = { ...selected, ...patch };
+    if (!demoMode && criticalAccessChanges(persistedSelected, proposed).length) {
+      setPendingProposal({ subjectUserId: persistedSelected.id, proposed });
+      setApprovalFeedback(undefined);
+      return;
+    }
+    setPendingProposal(undefined);
+    onState(updateAccessUser(state, proposed));
+  };
   const setProfile = (department: UserDepartment, access: AccessUser["access"]) => {
     const areas = [...new Set([department, ...userFunctionalAreas(selected)])];
     save({ department, functionalAreas: areas, access, permissions: permissionsForAreas(areas, access) });
@@ -92,21 +129,76 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
     save({ functionalAreas: normalized, permissions: permissionsForAreas(normalized, selected.access) });
   };
 
-  const approveSelected = async () => {
-    const nextState = updateAccessUser(state, { ...selected, status: "active" });
-    setApprovingUserId(selected.id);
+  useEffect(() => {
+    if (demoMode) return;
+    let cancelled = false;
+    loadAccessChangeRequests(getStratoTenantId())
+      .then(requests => {
+        if (!cancelled) setChangeRequests(requests);
+      })
+      .catch(error => {
+        if (!cancelled)
+          setApprovalFeedback({
+            tone: "error",
+            message: error instanceof Error ? error.message : "Não foi possível carregar as aprovações de acesso.",
+          });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [demoMode]);
+
+  const submitCriticalChange = async () => {
+    if (!pendingProposal) return;
+    setSubmittingChange("request");
     setApprovalFeedback(undefined);
     try {
-      const persisted = await saveAccessDirectory(getStratoTenantId(), nextState);
-      onState({ ...persisted, previewUserId: state.previewUserId });
-      setApprovalFeedback({ tone: "success", message: `Acesso de ${selected.name} aprovado e ativado.` });
+      const requests = await createAccessChangeRequest(
+        getStratoTenantId(),
+        pendingProposal.subjectUserId,
+        pendingProposal.proposed,
+        requestReason,
+      );
+      setChangeRequests(requests);
+      setPendingProposal(undefined);
+      setRequestReason("");
+      setApprovalFeedback({
+        tone: "success",
+        message: "Alteração crítica enviada. Outro administrador deve conferir e decidir.",
+      });
     } catch (error) {
       setApprovalFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Não foi possível aprovar e ativar o acesso.",
+        message: error instanceof Error ? error.message : "Não foi possível enviar a alteração para aprovação.",
       });
     } finally {
-      setApprovingUserId(undefined);
+      setSubmittingChange(undefined);
+    }
+  };
+
+  const decideCriticalChange = async (request: AccessChangeRequest, decision: "APPROVED" | "REJECTED") => {
+    setSubmittingChange(request.id);
+    setApprovalFeedback(undefined);
+    try {
+      const result = await decideAccessChangeRequest(
+        getStratoTenantId(),
+        request.id,
+        decision,
+        decisionReasons[request.id] ?? "",
+      );
+      setChangeRequests(result.requests ?? []);
+      if (result.state) onState({ ...result.state, previewUserId: state.previewUserId });
+      setApprovalFeedback({
+        tone: "success",
+        message: decision === "APPROVED" ? "Alteração crítica aprovada e aplicada." : "Alteração crítica rejeitada.",
+      });
+    } catch (error) {
+      setApprovalFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Não foi possível decidir a alteração.",
+      });
+    } finally {
+      setSubmittingChange(undefined);
     }
   };
 
@@ -156,6 +248,76 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
           <span>escopos empresariais</span>
         </article>
       </section>
+
+      {!demoMode && changeRequests.length > 0 && (
+        <section className="access-approval-queue" aria-label="Alterações críticas aguardando aprovação">
+          <header>
+            <div>
+              <small>SEGREGAÇÃO DE FUNÇÕES</small>
+              <b>Alterações críticas aguardando outra pessoa</b>
+            </div>
+            <span>{changeRequests.length} pendente(s)</span>
+          </header>
+          {changeRequests.map(request => {
+            const changes = criticalAccessChanges(request.previous, request.proposed);
+            const cannotDecide =
+              actor.access !== "admin" || actor.id === request.requestedById || actor.id === request.subjectUserId;
+            return (
+              <article key={request.id}>
+                <div>
+                  <strong>{request.proposed.name}</strong>
+                  <span>{changes.join(" · ")}</span>
+                  <small>
+                    Solicitado por {request.requestedBy} em {new Date(request.requestedAt).toLocaleString("pt-BR")}
+                  </small>
+                  <p>{request.reason}</p>
+                </div>
+                <div className="access-approval-comparison">
+                  <span>
+                    <small>ANTES</small>
+                    <b>{request.previous.access}</b>
+                    <em>{request.previous.status}</em>
+                    <em>{request.previous.permissions.length} permissões</em>
+                    <em>{request.previous.companyScopes.length} empresas</em>
+                  </span>
+                  <span>
+                    <small>PROPOSTA</small>
+                    <b>{request.proposed.access}</b>
+                    <em>{request.proposed.status}</em>
+                    <em>{request.proposed.permissions.length} permissões</em>
+                    <em>{request.proposed.companyScopes.length} empresas</em>
+                  </span>
+                </div>
+                <div className="access-approval-decision">
+                  <input
+                    value={decisionReasons[request.id] ?? ""}
+                    disabled={cannotDecide}
+                    onChange={event =>
+                      setDecisionReasons(current => ({ ...current, [request.id]: event.target.value }))
+                    }
+                    placeholder={cannotDecide ? "Aguardando outro administrador" : "Justificativa da decisão"}
+                  />
+                  <button
+                    type="button"
+                    disabled={cannotDecide || submittingChange === request.id}
+                    onClick={() => void decideCriticalChange(request, "APPROVED")}
+                  >
+                    Aprovar e aplicar
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-action"
+                    disabled={cannotDecide || submittingChange === request.id}
+                    onClick={() => void decideCriticalChange(request, "REJECTED")}
+                  >
+                    Rejeitar
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      )}
 
       <div className="access-active-user">
         <div>
@@ -221,8 +383,12 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
               </p>
             </div>
             {selected.status === "pending" ? (
-              <button type="button" disabled={approvingUserId === selected.id} onClick={() => void approveSelected()}>
-                {approvingUserId === selected.id ? "Aprovando…" : "Aprovar e ativar acesso"}
+              <button type="button" disabled={!!selectedPendingRequest} onClick={() => save({ status: "active" })}>
+                {selectedPendingRequest
+                  ? "Aguardando outro administrador"
+                  : demoMode
+                    ? "Aprovar e ativar acesso"
+                    : "Solicitar ativação do acesso"}
               </button>
             ) : (
               <button
@@ -243,6 +409,38 @@ export function UsersAccessPanel({ state, onState }: { state: AccessState; onSta
             >
               {approvalFeedback.message}
             </p>
+          )}
+
+          {!demoMode && pendingProposal?.subjectUserId === persistedSelected.id && (
+            <section className="access-critical-proposal">
+              <div>
+                <small>ALTERAÇÃO CRÍTICA PREPARADA</small>
+                <b>{criticalAccessChanges(persistedSelected, pendingProposal.proposed).join(" · ")}</b>
+                <p>O perfil vigente não será alterado até a decisão de outro administrador.</p>
+              </div>
+              <input
+                value={requestReason}
+                onChange={event => setRequestReason(event.target.value)}
+                placeholder="Motivo e evidência da alteração"
+              />
+              <button
+                type="button"
+                disabled={submittingChange === "request"}
+                onClick={() => void submitCriticalChange()}
+              >
+                Enviar para aprovação
+              </button>
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={() => {
+                  setPendingProposal(undefined);
+                  setRequestReason("");
+                }}
+              >
+                Descartar proposta
+              </button>
+            </section>
           )}
 
           <div className="access-form-grid">

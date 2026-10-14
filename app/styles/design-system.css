@@ -5279,6 +5279,101 @@ a.fn-btn:not([href]) {
   color: var(--muted);
   font-size: 11px;
 }
+.access-approval-queue {
+  display: grid;
+  gap: 10px;
+  padding: 15px;
+  border: 1px solid color-mix(in srgb, var(--ds-warning) 32%, var(--line));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--ds-warning) 5%, var(--surface));
+}
+.access-approval-queue > header,
+.access-approval-queue > article {
+  display: grid;
+  gap: 12px;
+}
+.access-approval-queue > header {
+  grid-template-columns: 1fr auto;
+}
+.access-approval-queue > header div,
+.access-approval-queue > article > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+.access-approval-queue > header small,
+.access-critical-proposal small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+.access-approval-queue > header span,
+.access-approval-queue article small,
+.access-approval-queue article span,
+.access-approval-queue article p {
+  color: var(--muted);
+  font-size: 10px;
+}
+.access-approval-queue > article {
+  grid-template-columns: minmax(180px, 1.2fr) minmax(190px, 1fr) minmax(210px, 1fr);
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.access-approval-queue article p {
+  margin: 4px 0 0;
+}
+.access-approval-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.access-approval-comparison > span {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--muted) 7%, var(--surface));
+}
+.access-approval-comparison em {
+  font-style: normal;
+}
+.access-approval-decision {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 6px;
+  align-items: center;
+}
+.access-approval-decision input,
+.access-critical-proposal input {
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+.access-approval-decision button,
+.access-critical-proposal button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--ds-accent);
+  border-radius: 9px;
+  background: var(--ds-accent);
+  color: var(--ds-accent-ink);
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.access-approval-decision button.secondary-action,
+.access-critical-proposal button.secondary-action {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--text);
+}
 .access-active-user {
   display: grid;
   grid-template-columns: minmax(210px, auto) 1fr;
@@ -5699,6 +5794,26 @@ a.fn-btn:not([href]) {
   border-color: rgb(239 68 68 / 22%);
   color: #b42318;
   background: rgb(239 68 68 / 8%);
+}
+.access-critical-proposal {
+  display: grid;
+  grid-template-columns: minmax(210px, 1fr) minmax(180px, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 16px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--ds-warning) 35%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ds-warning) 7%, var(--surface));
+}
+.access-critical-proposal > div {
+  display: grid;
+  gap: 3px;
+}
+.access-critical-proposal p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
 }
 .access-create-modal form > footer {
   display: flex;
@@ -7079,6 +7194,10 @@ a.fn-btn:not([href]) {
   .access-workspace {
     grid-template-columns: 1fr;
   }
+  .access-approval-queue > article,
+  .access-critical-proposal {
+    grid-template-columns: 1fr;
+  }
   .access-users {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7193,6 +7312,9 @@ a.fn-btn:not([href]) {
   .access-editor > header {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .access-approval-decision {
+    grid-template-columns: 1fr;
   }
 }
 @media (max-width: 900px) {

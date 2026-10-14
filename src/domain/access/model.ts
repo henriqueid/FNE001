@@ -52,7 +52,7 @@ export type AccessView =
   | "settings";
 
 const allCompanies = destinations.map(destination => destination.name);
-const adminPermissions: Permission[] = [
+export const allPermissions: Permission[] = [
   "dashboard:view",
   "operations:view",
   "operations:edit",
@@ -69,7 +69,7 @@ const adminPermissions: Permission[] = [
 ];
 
 const basePermissions: Record<UserDepartment, Permission[]> = {
-  Diretoria: adminPermissions,
+  Diretoria: allPermissions,
   Operações: ["dashboard:view", "operations:view", "operations:edit", "settings:view"],
   "Risco e crédito": ["dashboard:view", "operations:view", "risk:decide", "settings:view"],
   Controladoria: ["dashboard:view", "operations:view", "controlleria:formalize", "settings:view"],
@@ -80,13 +80,13 @@ const basePermissions: Record<UserDepartment, Permission[]> = {
 
 export function permissionsFor(department: UserDepartment, access: AppUserProfile["access"]): Permission[] {
   const base = basePermissions[department];
-  if (access === "admin") return adminPermissions;
+  if (access === "admin") return allPermissions;
   if (access === "manager" && !base.includes("users:manage")) return [...base, "users:manage"];
   return base;
 }
 
 export function permissionsForAreas(areas: UserDepartment[], access: AppUserProfile["access"]): Permission[] {
-  if (access === "admin") return adminPermissions;
+  if (access === "admin") return allPermissions;
   return [...new Set(areas.flatMap(area => permissionsFor(area, access)))];
 }
 
@@ -107,7 +107,7 @@ export const seedAccessState = (): AccessState => ({
       authorityIds: ["credit-director"],
       responsibilities: ["Visão consolidada", "Alçadas", "Metas", "Risco", "Liquidez"],
       companyScopes: allCompanies,
-      permissions: adminPermissions,
+      permissions: allPermissions,
     },
     {
       id: "user-marina-ops",

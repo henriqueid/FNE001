@@ -31,6 +31,7 @@ export function BankAccountApprovalPanel({
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial assíncrona da fila persistida
     void refresh();
   }, [refresh]);
 

@@ -23,7 +23,10 @@ Resultados CNPJ ainda válidos que já estejam armazenados podem ser reutilizado
 - o navegador recebe apenas provedor, capacidade, estado, tipo da fonte, rótulo e data de atualização;
 - o conteúdo técnico de `config` e qualquer futura referência de credencial permanecem no servidor;
 - a tabela de configuração fica no schema privado, com acesso direto dos clientes revogado;
-- ativar, suspender ou trocar provedores ainda é uma ação de implantação. A administração maker-checker desse cadastro continua como próxima evolução.
+- ativar, suspender, alterar prioridade ou trocar provedores exige proposta e decisão de outra pessoa;
+- a aprovação aplica a configuração completa da capacidade em uma única transação e é recusada se o estado tiver mudado desde a proposta.
+
+O procedimento de proposta, conferência e decisão está em `docs/user-guides/APROVACAO_DE_INTEGRACOES.md`.
 
 ## Tratamento de falhas
 

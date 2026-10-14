@@ -274,7 +274,7 @@ Progresso A5.6 — maker-checker residual:
 - [x] publicar o procedimento de conferência, rejeição e reapresentação de contas bancárias;
 - [x] disponibilizar no Cadastro a solicitação, comparação antes/depois, fila pendente, aprovação e rejeição;
 - [x] aplicar dupla aprovação à publicação de políticas de elegibilidade, com congelamento, aprovação ou rejeição independente;
-- [ ] estender dupla aprovação às demais configurações materiais que alterem cálculo, integração ou segurança;
+- [ ] estender dupla aprovação às demais configurações materiais que alterem cálculo ou segurança; integrações já estão protegidas;
 - [x] proteger ativação, elevação de privilégios, expansão de escopo/alçada e identificadores de acesso com decisão independente;
 - [x] persistir, versionar e submeter a dupla aprovação os parâmetros operacionais globais, com proposta congelada, concorrência otimista e trilha de eventos;
 - [ ] concluir MFA, recuperação de senha e revisão centralizada de sessões no pacote de segurança de conta;
@@ -288,7 +288,7 @@ Progresso A5.7 — disponibilidade real das integrações:
 - [x] expor ao navegador somente disponibilidade sanitizada, sem `config` ou credenciais;
 - [x] distinguir fonte pública ativa de integração institucional/oficial;
 - [x] registrar as capacidades públicas atuais e publicar o guia de disponibilidade;
-- [ ] submeter ativação, suspensão, prioridade e troca de provedor a maker-checker;
+- [x] submeter ativação, suspensão, prioridade e troca de provedor a maker-checker, com retrato congelado e aplicação atômica;
 - [ ] implementar runtime completo com cofre, tentativas, retry, dead-letter e observabilidade.
 
 Relatório consolidado de pendências e estimativas: `docs/implementation/STRATO_REMAINING_WORK_REPORT.md`.

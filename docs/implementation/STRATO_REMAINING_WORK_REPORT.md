@@ -24,7 +24,7 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 - sessões, usuários, permissões, alçadas e escopo por empresa/veículo;
 - decisões versionadas, idempotência, eventos imutáveis, outbox e notificações;
 - escopo de empresa em Operações, Decisões, Carteira, Recebíveis, Financeiro, Tarefas, notificações e reprocessamento da outbox;
-- maker-checker para exceção de risco, liberação financeira, favorecidos, contas bancárias, políticas, privilégios e parâmetros operacionais globais;
+- maker-checker para exceção de risco, liberação financeira, favorecidos, contas bancárias, políticas, privilégios, parâmetros operacionais globais e provedores de integração;
 - leitura cadastral separada da edição e Copiloto alimentado por fontes lidas e filtradas integralmente no backend;
 - funil comercial, comitê, onboarding, carteira/cobrança inicial e Central do Dia;
 - catálogo de integrações reais ligado à configuração persistida, com bloqueio de chamadas sem provedor ativo e
@@ -38,7 +38,7 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 | Homologação multiusuário   | Backend recusa versão obsoleta                                                             | testar duas sessões reais em Operações, Financeiro, Carteira, Comercial, Políticas e Tarefas |   3–5 dias |
 | Ataques cruzados           | testes unitários cobrem escopo                                                             | ensaio com dois tenants, duas empresas e requisições deliberadamente cruzadas                |   2–3 dias |
 | Escopo residual de APIs    | concluído e homologado com sessões reais temporárias                                       | nenhuma pendência funcional neste recorte; repetir no UAT completo com usuários definitivos  |  concluído |
-| Maker-checker residual     | fluxos financeiros, bancários, políticas, privilégios e parâmetros operacionais protegidos | cobrir integrações/demais configurações materiais e executar UAT definitivo                  |   2–4 dias |
+| Maker-checker residual     | fluxos financeiros, bancários, políticas, privilégios, parâmetros e integrações protegidos | cobrir demais configurações materiais e executar UAT definitivo                              |   1–3 dias |
 | Contrato comum de comandos | cada agregado possui implementação confiável                                               | unificar recibo idempotente, event ledger, outbox, correlação e respostas de conflito        |   5–8 dias |
 | Segurança de conta         | sessão e bloqueio existem                                                                  | MFA para perfis críticos, política de senha comprometida, recuperação e revisão de sessão    |   4–7 dias |
 | Operação de plataforma     | build e banco existem                                                                      | backup/restore ensaiado, métricas, logs, alertas, retenção, runbook e deploy produtivo       |   5–8 dias |
@@ -46,10 +46,11 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 
 Checkpoint de integrações concluído em 14/10/2026: CNPJ, CEP, diretório bancário, feriados e participantes Pix agora
 consultam a configuração do servidor antes da chamada externa. A BrasilAPI está identificada como fonte pública, e
-configuração/credenciais não atravessam a API. Ainda faltam governança maker-checker para ativação/troca, cofre de
-credenciais, tentativas, retry, dead-letter e observabilidade; esses itens permanecem nas estimativas acima e da Onda C.
+configuração/credenciais não atravessam a API. Ativação, suspensão, prioridade e troca agora passam por maker-checker,
+com retrato congelado, aprovador distinto e aplicação atômica. Ainda faltam cofre de credenciais, tentativas, retry,
+dead-letter e observabilidade; esses itens permanecem nas estimativas da Onda C.
 
-**Subtotal P0 imediato remanescente:** aproximadamente **23–38 dias úteis**. Parte pode ser executada em paralelo.
+**Subtotal P0 imediato remanescente:** aproximadamente **22–37 dias úteis**. Parte pode ser executada em paralelo.
 
 ## 4. Cunha comercial completa — Onda B
 
@@ -117,6 +118,7 @@ credenciais, tentativas, retry, dead-letter e observabilidade; esses itens perma
 
 Já existe procedimento específico para propor, aprovar, rejeitar e auditar padrões globais em `docs/user-guides/APROVACAO_DE_PARAMETROS_OPERACIONAIS.md`.
 O comportamento atual das fontes externas está documentado em `docs/user-guides/DISPONIBILIDADE_DE_INTEGRACOES.md`.
+O fluxo maker-checker de provedores está documentado em `docs/user-guides/APROVACAO_DE_INTEGRACOES.md`.
 
 ## 9. O que não deve entrar no núcleo agora
 

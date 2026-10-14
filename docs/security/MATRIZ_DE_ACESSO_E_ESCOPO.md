@@ -42,7 +42,7 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 | `/api/access/users`               | `users:manage`                      | `users:manage`                                                                          | tenant                                                          | concluído                           |
 | `/api/access/change-requests`     | `users:manage`                      | solicitação: `users:manage`; decisão: outro administrador                               | tenant + usuário                                                | maker-checker aplicado              |
 | `/api/company`                    | `settings:view`                     | `settings:manage`                                                                       | tenant                                                          | concluído                           |
-| `/api/integrations/configuration` | `settings:view`                     | sem escrita                                                                             | tenant; resposta sanitizada                                     | disponibilidade real aplicada       |
+| `/api/integrations/configuration` | `settings:view`                     | proposta/decisão: `settings:manage`; solicitante e aprovador distintos                  | tenant; resposta sanitizada                                     | maker-checker aplicado              |
 | `/api/integrations/cnpj`          | `registry:view`                     | consulta externa por capacidade funcional                                               | tenant + provedor ativo no servidor                             | execução governada                  |
 | `/api/integrations/public-data`   | capacidade funcional compatível     | sem escrita                                                                             | tenant + provedor ativo no servidor                             | execução governada                  |
 | `/api/intelligence/configuration` | `settings:manage`                   | `settings:manage`                                                                       | tenant                                                          | concluído                           |
@@ -81,6 +81,6 @@ Em 13/10/2026, sessões reais temporárias validaram no backend: leitura institu
 ## Próximos endurecimentos
 
 1. Separar permissões de leitura e manutenção onde hoje uma permissão ampla atende aos dois usos.
-2. Estender o maker-checker às integrações e demais configurações materiais; privilégios, parâmetros operacionais, políticas, contas bancárias, liberação, favorecidos e exceções já estão protegidos.
+2. Estender o maker-checker às demais configurações materiais; integrações, privilégios, parâmetros operacionais, políticas, contas bancárias, liberação, favorecidos e exceções já estão protegidos.
 3. Centralizar recibos idempotentes, event ledger e outbox em um contrato comum.
 4. Executar homologação com duas sessões e dois tenants, incluindo tentativas deliberadas de acesso cruzado.

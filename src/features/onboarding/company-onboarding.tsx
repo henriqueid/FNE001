@@ -3,7 +3,7 @@
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { type CompanyProfile } from "@/src/domain/company/profile";
 import { getStratoTenantId } from "@/src/app/tenant";
-import { CompanyProvider } from "@/src/app/company-context";
+import { CompanyDirectoryProvider, CompanyProvider } from "@/src/app/company-context";
 import { consultLeadCnpj } from "@/src/app/cnpj-enrichment-client";
 import { consultCep } from "@/src/app/public-enrichment-client";
 import { formatDocument, formatZip, onlyDigits } from "@/src/domain/registry/parties";
@@ -49,7 +49,12 @@ export function CompanyOnboarding({ children }: { children: ReactNode }) {
       active = false;
     };
   }, []);
-  if (status === "ready") return <CompanyProvider value={company}>{children}</CompanyProvider>;
+  if (status === "ready")
+    return (
+      <CompanyProvider value={company}>
+        <CompanyDirectoryProvider>{children}</CompanyDirectoryProvider>
+      </CompanyProvider>
+    );
   if (status === "loading")
     return (
       <main className={styles.stage}>

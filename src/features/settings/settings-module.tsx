@@ -1,6 +1,6 @@
 "use client";
 
-import { useCompanyDestinations } from "@/src/app/company-context";
+import { useCompanyDestinations, useCompanyDirectory } from "@/src/app/company-context";
 import { masterRuleCatalog } from "@/src/domain/eligibility/master-rule-catalog";
 import { type EligibilityPolicyState } from "@/src/domain/eligibility/policy-library";
 import PoliciesModule from "@/src/features/policies/policies-module";
@@ -23,6 +23,13 @@ import {
   loadOperationalParameters,
   proposeOperationalParameters,
 } from "@/src/app/operational-parameters-client";
+import {
+  emptyCompanyDestination,
+  validateCompanyDestination,
+  type CompanyDestinationDraft,
+} from "@/src/domain/company/destination";
+import { formatDocument } from "@/src/domain/registry/parties";
+import { LocalizedNumberInput } from "@/src/ui/localized-number-input";
 
 const goalPeriods: Array<{ id: HomePeriod; label: string }> = [
   { id: "dia", label: "Dia" },
@@ -109,8 +116,8 @@ const shortcuts: Array<{
     section: "companies",
     eyebrow: "ESTRUTURA",
     title: "Empresas e veículos",
-    description: "Consulte os escopos que participam do ambiente multiempresa.",
-    action: "Ver empresas",
+    description: "Cadastre e gerencie os escopos que participam do ambiente multiempresa.",
+    action: "Gerenciar empresas",
   },
   {
     section: "integrations",
@@ -171,6 +178,7 @@ export default function SettingsModule({
   demoMode?: boolean;
 }) {
   const destinations = useCompanyDestinations();
+  const companyDirectory = useCompanyDirectory();
   const [section, setSection] = useState<SettingsSection>("overview");
   const activePolicies = policies.policies.filter(policy => policy.status === "ATIVA").length;
   const executableRules = masterRuleCatalog.filter(
@@ -185,6 +193,10 @@ export default function SettingsModule({
   const [operationalDecisionReason, setOperationalDecisionReason] = useState("");
   const [operationalSubmitting, setOperationalSubmitting] = useState(false);
   const [operationalFeedback, setOperationalFeedback] = useState<{ tone: "success" | "error"; message: string }>();
+  const [showCompanyCreate, setShowCompanyCreate] = useState(false);
+  const [companyDraft, setCompanyDraft] = useState<CompanyDestinationDraft>(emptyCompanyDestination);
+  const [companySaving, setCompanySaving] = useState(false);
+  const [companyFeedback, setCompanyFeedback] = useState("");
   const pendingOperationalRequest = operationalRequests.find(request => request.status === "PENDING");
   const operationalHistory = operationalRequests.filter(request => request.status !== "PENDING").slice(0, 5);
   const editableOperationalDefaults = demoMode ? operationalDefaults : operationalDraft;
@@ -216,6 +228,27 @@ export default function SettingsModule({
   const editOperationalDefaults = (candidate: OperationalDefaultsState) => {
     if (demoMode) onOperationalDefaults(candidate);
     else setOperationalDraft(candidate);
+  };
+
+  const submitCompanyDestination = async () => {
+    if (!companyDirectory) return;
+    const validationError = validateCompanyDestination(companyDraft);
+    if (validationError) {
+      setCompanyFeedback(validationError);
+      return;
+    }
+    setCompanySaving(true);
+    setCompanyFeedback("");
+    try {
+      const created = await companyDirectory.create(companyDraft);
+      setCompanyDraft(emptyCompanyDestination());
+      setShowCompanyCreate(false);
+      setCompanyFeedback(`${created.name} foi cadastrado e já pode ser usado em políticas e operações.`);
+    } catch (error) {
+      setCompanyFeedback(error instanceof Error ? error.message : "Não foi possível concluir o cadastro.");
+    } finally {
+      setCompanySaving(false);
+    }
   };
 
   const submitOperationalProposal = async () => {
@@ -671,28 +704,27 @@ export default function SettingsModule({
                       <small>Meta geral de volume</small>
                     </span>
                     {goalPeriods.map(period => (
-                      <label key={period.id}>
+                      <div className="settings-goal-input" key={period.id}>
                         <small>R$</small>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1000"
+                        <LocalizedNumberInput
+                          min={0}
+                          decimals={2}
                           aria-label={`Meta consolidada de originação por ${period.label.toLowerCase()}`}
                           value={editableOperationalDefaults.originationGoals.consolidated[period.id]}
-                          onChange={event =>
+                          onValueChange={value =>
                             editOperationalDefaults({
                               ...editableOperationalDefaults,
                               originationGoals: {
                                 ...editableOperationalDefaults.originationGoals,
                                 consolidated: {
                                   ...editableOperationalDefaults.originationGoals.consolidated,
-                                  [period.id]: Number(event.target.value),
+                                  [period.id]: value,
                                 },
                               },
                             })
                           }
                         />
-                      </label>
+                      </div>
                     ))}
                   </div>
                   {destinations.map(destination => (
@@ -702,17 +734,16 @@ export default function SettingsModule({
                         <small>{destination.institution}</small>
                       </span>
                       {goalPeriods.map(period => (
-                        <label key={period.id}>
+                        <div className="settings-goal-input" key={period.id}>
                           <small>R$</small>
-                          <input
-                            type="number"
-                            min="0"
-                            step="1000"
+                          <LocalizedNumberInput
+                            min={0}
+                            decimals={2}
                             aria-label={`Meta de originação de ${destination.name} por ${period.label.toLowerCase()}`}
                             value={
                               editableOperationalDefaults.originationGoals.byVehicle[destination.name]?.[period.id] ?? 0
                             }
-                            onChange={event =>
+                            onValueChange={value =>
                               editOperationalDefaults({
                                 ...editableOperationalDefaults,
                                 originationGoals: {
@@ -721,14 +752,14 @@ export default function SettingsModule({
                                     ...editableOperationalDefaults.originationGoals.byVehicle,
                                     [destination.name]: {
                                       ...editableOperationalDefaults.originationGoals.byVehicle[destination.name],
-                                      [period.id]: Number(event.target.value),
+                                      [period.id]: value,
                                     },
                                   },
                                 },
                               })
                             }
                           />
-                        </label>
+                        </div>
                       ))}
                     </div>
                   ))}
@@ -753,28 +784,27 @@ export default function SettingsModule({
                       <small>Meta geral do grupo</small>
                     </span>
                     {goalPeriods.map(period => (
-                      <label key={period.id}>
+                      <div className="settings-goal-input" key={period.id}>
                         <small>R$</small>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1000"
+                        <LocalizedNumberInput
+                          min={0}
+                          decimals={2}
                           aria-label={`Meta consolidada de receita por ${period.label.toLowerCase()}`}
                           value={editableOperationalDefaults.revenueGoals.consolidated[period.id]}
-                          onChange={event =>
+                          onValueChange={value =>
                             editOperationalDefaults({
                               ...editableOperationalDefaults,
                               revenueGoals: {
                                 ...editableOperationalDefaults.revenueGoals,
                                 consolidated: {
                                   ...editableOperationalDefaults.revenueGoals.consolidated,
-                                  [period.id]: Number(event.target.value),
+                                  [period.id]: value,
                                 },
                               },
                             })
                           }
                         />
-                      </label>
+                      </div>
                     ))}
                   </div>
                   {destinations.map(destination => (
@@ -785,17 +815,16 @@ export default function SettingsModule({
                       </span>
                       {goalPeriods.map(period => {
                         return (
-                          <label key={period.id}>
+                          <div className="settings-goal-input" key={period.id}>
                             <small>R$</small>
-                            <input
-                              type="number"
-                              min="0"
-                              step="1000"
+                            <LocalizedNumberInput
+                              min={0}
+                              decimals={2}
                               aria-label={`Meta de ${destination.name} por ${period.label.toLowerCase()}`}
                               value={
                                 editableOperationalDefaults.revenueGoals.byVehicle[destination.name]?.[period.id] ?? 0
                               }
-                              onChange={event =>
+                              onValueChange={value =>
                                 editOperationalDefaults({
                                   ...editableOperationalDefaults,
                                   revenueGoals: {
@@ -804,14 +833,14 @@ export default function SettingsModule({
                                       ...editableOperationalDefaults.revenueGoals.byVehicle,
                                       [destination.name]: {
                                         ...editableOperationalDefaults.revenueGoals.byVehicle[destination.name],
-                                        [period.id]: Number(event.target.value),
+                                        [period.id]: value,
                                       },
                                     },
                                   },
                                 })
                               }
                             />
-                          </label>
+                          </div>
                         );
                       })}
                     </div>
@@ -822,31 +851,162 @@ export default function SettingsModule({
           )}
 
           {section === "companies" && (
-            <div className="settings-section-card">
+            <div className="settings-section-card settings-companies-card">
               <header>
-                <span>MULTIEMPRESA</span>
-                <h2>Empresas e veículos</h2>
-                <p>Cada operação e política é resolvida dentro de um destes escopos.</p>
+                <div>
+                  <span>MULTIEMPRESA</span>
+                  <h2>Empresas e veículos</h2>
+                  <p>Cadastre as pessoas jurídicas e os veículos usados como escopo de operações e políticas.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCompanyFeedback("");
+                    setShowCompanyCreate(true);
+                  }}
+                >
+                  Nova empresa ou veículo
+                </button>
               </header>
+              {companyFeedback && (
+                <p className="settings-company-feedback" role="status">
+                  {companyFeedback}
+                </p>
+              )}
+              {companyDirectory?.error && <p className="settings-company-feedback error">{companyDirectory.error}</p>}
               <div className="settings-company-list">
-                {destinations.map(destination => (
-                  <article key={destination.name}>
-                    <div>
-                      <strong>{destination.name}</strong>
-                      <small>{destination.detail}</small>
-                    </div>
-                    <span>{destination.institution}</span>
-                    <b>
-                      {
-                        policies.policies.filter(
-                          policy => policy.company === destination.name && policy.status === "ATIVA",
-                        ).length
-                      }{" "}
-                      política ativa
-                    </b>
-                  </article>
-                ))}
+                {companyDirectory?.loading && <p className="settings-company-empty">Carregando cadastros…</p>}
+                {!companyDirectory?.loading && !destinations.length && (
+                  <div className="settings-company-empty">
+                    <strong>Nenhuma empresa cadastrada</strong>
+                    <span>Cadastre a primeira empresa ou veículo para criar políticas e operações.</span>
+                  </div>
+                )}
+                {destinations.map(destination => {
+                  const entry = companyDirectory?.entries.find(item => item.name === destination.name);
+                  return (
+                    <article key={destination.name}>
+                      <div className="settings-company-identity">
+                        <span className="settings-company-monogram">
+                          {destination.name.slice(0, 2).toLocaleUpperCase()}
+                        </span>
+                        <div>
+                          <strong>{destination.name}</strong>
+                          {entry?.legalName && entry.legalName !== destination.name && <small>{entry.legalName}</small>}
+                          {entry?.document && <small>{formatDocument(entry.document)}</small>}
+                        </div>
+                      </div>
+                      <div className="settings-company-scope">
+                        <span>{destination.institution}</span>
+                        <small>{destination.detail}</small>
+                      </div>
+                      <div className="settings-company-policy-count">
+                        <b>
+                          {
+                            policies.policies.filter(
+                              policy => policy.company === destination.name && policy.status === "ATIVA",
+                            ).length
+                          }
+                        </b>
+                        <small>política(s) ativa(s)</small>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
+            </div>
+          )}
+
+          {showCompanyCreate && (
+            <div className="modal-backdrop" role="presentation">
+              <section
+                className="settings-modal settings-company-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="company-create-title"
+              >
+                <div className="modal-head">
+                  <div>
+                    <span>NOVO ESCOPO</span>
+                    <h2 id="company-create-title">Cadastrar empresa ou veículo</h2>
+                    <p>
+                      O nome fantasia identifica o escopo nas operações. A razão social e o CNPJ preservam o cadastro
+                      jurídico.
+                    </p>
+                  </div>
+                </div>
+                <div className="settings-company-form">
+                  <label className="wide">
+                    <span>Razão social *</span>
+                    <input
+                      value={companyDraft.legalName}
+                      onChange={event => setCompanyDraft(current => ({ ...current, legalName: event.target.value }))}
+                      placeholder="Ex.: Fundo Alpha de Investimento em Direitos Creditórios"
+                    />
+                  </label>
+                  <label>
+                    <span>Nome do veículo / fantasia *</span>
+                    <input
+                      value={companyDraft.tradeName}
+                      onChange={event => setCompanyDraft(current => ({ ...current, tradeName: event.target.value }))}
+                      placeholder="Ex.: FIDC Alpha · Classe Sênior"
+                    />
+                  </label>
+                  <label>
+                    <span>CNPJ *</span>
+                    <input
+                      inputMode="numeric"
+                      value={companyDraft.document}
+                      onChange={event =>
+                        setCompanyDraft(current => ({ ...current, document: formatDocument(event.target.value) }))
+                      }
+                      placeholder="00.000.000/0000-00"
+                    />
+                  </label>
+                  <label>
+                    <span>Tipo de instituição *</span>
+                    <select
+                      value={companyDraft.institution}
+                      onChange={event =>
+                        setCompanyDraft(current => ({
+                          ...current,
+                          institution: event.target.value as CompanyDestinationDraft["institution"],
+                        }))
+                      }
+                    >
+                      <option>Factoring</option>
+                      <option>Securitizadora</option>
+                      <option>FIDC</option>
+                    </select>
+                  </label>
+                  <label className="wide">
+                    <span>Classe, produto ou finalidade *</span>
+                    <input
+                      value={companyDraft.detail}
+                      onChange={event => setCompanyDraft(current => ({ ...current, detail: event.target.value }))}
+                      placeholder="Ex.: Classe Sênior · Antecipação mercantil"
+                    />
+                    <small>Este texto aparece abaixo do nome ao escolher o veículo.</small>
+                  </label>
+                </div>
+                {companyFeedback && <p className="settings-company-feedback error">{companyFeedback}</p>}
+                <footer>
+                  <button
+                    type="button"
+                    className="secondary-action"
+                    onClick={() => {
+                      setShowCompanyCreate(false);
+                      setCompanyFeedback("");
+                    }}
+                    disabled={companySaving}
+                  >
+                    Cancelar
+                  </button>
+                  <button type="button" onClick={() => void submitCompanyDestination()} disabled={companySaving}>
+                    {companySaving ? "Salvando…" : "Cadastrar e disponibilizar"}
+                  </button>
+                </footer>
+              </section>
             </div>
           )}
 

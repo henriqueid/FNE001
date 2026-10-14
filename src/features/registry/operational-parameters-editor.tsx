@@ -9,6 +9,7 @@ import {
   type OperationalDefaultsState,
 } from "@/src/domain/registry/operational-profile";
 import type { ReactNode } from "react";
+import { LocalizedNumberInput } from "@/src/ui/localized-number-input";
 
 type NumericKey = {
   [K in keyof OperationalParameters]: OperationalParameters[K] extends number ? K : never;
@@ -208,12 +209,12 @@ export function OperationalParametersEditor({
                 allowInheritance={allowInheritance}
                 suffix={field.suffix}
               >
-                <input
-                  type="number"
+                <LocalizedNumberInput
                   min={0}
-                  step={field.step ?? 1}
+                  decimals={field.step && field.step < 1 ? 2 : 0}
                   value={effective[field.key]}
-                  onChange={event => setValue(field.key, Number(event.target.value))}
+                  aria-label={field.label}
+                  onValueChange={value => setValue(field.key, value)}
                 />
               </ParameterShell>
             ))}

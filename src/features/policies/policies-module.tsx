@@ -18,6 +18,13 @@ import {
 } from "@/src/domain/eligibility/policy-library";
 import { useMemo, useRef, useState } from "react";
 import { saveFile } from "@/src/ui/download";
+import { LocalizedNumberInput } from "@/src/ui/localized-number-input";
+import {
+  eligibilityOperatorLabel,
+  parsePolicyParameter,
+  policyParameterPresentation,
+  policyParameterText,
+} from "@/src/domain/eligibility/policy-parameter-presentation";
 
 const statusLabel = { RASCUNHO: "Rascunho", ATIVA: "Ativa", ENCERRADA: "Encerrada" } as const;
 const readinessLabel = {
@@ -31,13 +38,6 @@ const outcomeOptions: Array<Exclude<EligibilityOutcome, "APROVADO" | "NAO_AVALIA
   "REPROVADO",
 ];
 const actionOptions: EligibilityAction[] = ["CONTINUAR", "SINALIZAR", "SOLICITAR_DECISAO", "BLOQUEAR"];
-
-function parameterInput(value: EligibilityPolicy["bindings"][number]["parameter"], raw: string) {
-  if (typeof value === "number") return Number(raw.replace(",", "."));
-  if (typeof value === "boolean") return raw === "true";
-  const numeric = Number(raw.replace(",", "."));
-  return raw.trim() && Number.isFinite(numeric) ? numeric : raw;
-}
 
 export default function PoliciesModule({
   state,
@@ -457,6 +457,8 @@ export default function PoliciesModule({
                       {selected.bindings.map(binding => {
                         const rule = catalog.get(binding.ruleId);
                         const editable = selected.status === "RASCUNHO" && (!selected.publicationRequest || demoMode);
+                        const parameter = rule ? policyParameterPresentation(rule, binding.parameter) : undefined;
+                        const operator = binding.operator ?? rule?.defaultOperator ?? "EQ";
                         return (
                           <tr key={binding.ruleId}>
                             <td>
@@ -480,10 +482,16 @@ export default function PoliciesModule({
                               <small>{rule?.category ?? ""}</small>
                             </td>
                             <td>
-                              {typeof binding.parameter === "boolean" ? (
+                              <div className="policy-parameter-field">
+                                <span>{parameter?.label ?? "Parâmetro da regra"}</span>
+                                <small className="policy-parameter-operator">
+                                  O valor observado {eligibilityOperatorLabel(operator)}:
+                                </small>
+                              {parameter?.kind === "boolean" ? (
                                 <select
                                   disabled={!editable}
-                                  value={String(binding.parameter)}
+                                  aria-label={`Parâmetro de ${rule?.name ?? binding.ruleId}`}
+                                  value={binding.parameter === null ? "" : String(binding.parameter)}
                                   onChange={event =>
                                     replacePolicy(
                                       updatePolicyBinding(selected, binding.ruleId, {
@@ -492,23 +500,45 @@ export default function PoliciesModule({
                                     )
                                   }
                                 >
+                                  <option value="" disabled>Selecione</option>
                                   <option value="true">Sim</option>
                                   <option value="false">Não</option>
                                 </select>
+                              ) : parameter && ["currency", "percentage", "days", "integer", "number"].includes(parameter.kind) ? (
+                                <div className="policy-parameter-number">
+                                  {parameter.kind === "currency" && <b>R$</b>}
+                                  <LocalizedNumberInput
+                                    disabled={!editable}
+                                    aria-label={`Parâmetro de ${rule?.name ?? binding.ruleId}`}
+                                    value={typeof binding.parameter === "number" ? binding.parameter : null}
+                                    decimals={parameter.decimals}
+                                    placeholder={parameter.placeholder}
+                                    onValueChange={value =>
+                                      replacePolicy(updatePolicyBinding(selected, binding.ruleId, { parameter: value }))
+                                    }
+                                  />
+                                  {parameter.suffix && parameter.kind !== "currency" && <b>{parameter.suffix}</b>}
+                                </div>
                               ) : (
                                 <input
                                   disabled={!editable}
-                                  placeholder="Definir"
-                                  value={String(binding.parameter ?? "")}
+                                  aria-label={`Parâmetro de ${rule?.name ?? binding.ruleId}`}
+                                  placeholder={parameter?.placeholder ?? "Digite o valor"}
+                                  value={policyParameterText(binding.parameter)}
                                   onChange={event =>
                                     replacePolicy(
                                       updatePolicyBinding(selected, binding.ruleId, {
-                                        parameter: parameterInput(binding.parameter, event.target.value),
+                                        parameter: parsePolicyParameter(parameter?.kind ?? "text", event.target.value),
                                       }),
                                     )
                                   }
                                 />
                               )}
+                                <small className="policy-parameter-help">
+                                  {parameter?.help ?? "Informe o valor que o motor deve comparar."}
+                                  {rule?.dataSource ? ` Fonte: ${rule.dataSource}.` : ""}
+                                </small>
+                              </div>
                             </td>
                             <td>
                               <select

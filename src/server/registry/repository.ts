@@ -1,4 +1,5 @@
 import type { CompanyProfile } from "@/src/domain/company/profile";
+import type { CompanyDestination, CompanyDestinationDraft } from "@/src/domain/company/destination";
 import { onlyDigits, type Party } from "@/src/domain/registry/parties";
 import type { DecisionDatabase } from "@/src/server/decisions/repository";
 import { jsonParameter } from "@/src/server/database/postgres";
@@ -80,6 +81,68 @@ export async function saveCompanyProfile(
     )
     .bind(company.tradeName.trim(), company.tradeName.trim(), tenantId, actorId)
     .run();
+}
+
+type CompanyDestinationRow = {
+  destination_id: string;
+  legal_name: string;
+  trade_name: string;
+  document_digits: string;
+  institution_type: CompanyDestination["institution"];
+  detail: string;
+  status: CompanyDestination["status"];
+};
+
+const destinationFromRow = (row: CompanyDestinationRow): CompanyDestination => ({
+  id: row.destination_id,
+  legalName: row.legal_name,
+  tradeName: row.trade_name,
+  name: row.trade_name,
+  document: row.document_digits,
+  institution: row.institution_type,
+  detail: row.detail,
+  status: row.status,
+});
+
+export async function loadCompanyDestinations(db: DecisionDatabase, tenantId: string) {
+  const result = await db
+    .prepare(
+      `select destination_id, legal_name, trade_name, document_digits, institution_type, detail, status
+       from private.company_destinations where tenant_id = ? order by trade_name`,
+    )
+    .bind(tenantId)
+    .all<CompanyDestinationRow>();
+  return result.results.map(destinationFromRow);
+}
+
+export async function saveCompanyDestination(
+  db: DecisionDatabase,
+  tenantId: string,
+  actorId: string,
+  input: CompanyDestinationDraft,
+) {
+  const id = crypto.randomUUID();
+  const row = await db
+    .prepare(
+      `insert into private.company_destinations
+       (tenant_id, destination_id, legal_name, trade_name, document_digits, institution_type, detail, status, created_by, updated_by)
+       values (?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?)
+       returning destination_id, legal_name, trade_name, document_digits, institution_type, detail, status`,
+    )
+    .bind(
+      tenantId,
+      id,
+      input.legalName.trim(),
+      input.tradeName.trim(),
+      onlyDigits(input.document),
+      input.institution,
+      input.detail.trim(),
+      actorId,
+      actorId,
+    )
+    .first<CompanyDestinationRow>();
+  if (!row) throw new Error("O cadastro não foi confirmado pelo banco.");
+  return destinationFromRow(row);
 }
 
 export type RegistryPartySearchItem = {

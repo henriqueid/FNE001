@@ -5009,6 +5009,151 @@ a.fn-btn:not([href]) {
   color: #26704f;
   font-size: 10px;
 }
+.settings-companies-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.settings-companies-card > header > div {
+  min-width: 0;
+}
+.settings-companies-card > header button {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--ds-grad);
+  color: #fff;
+  font-weight: 750;
+  cursor: pointer;
+}
+.settings-company-list article {
+  grid-template-columns: minmax(0, 1.7fr) minmax(170px, 0.8fr) 110px;
+}
+.settings-company-identity {
+  display: flex !important;
+  align-items: center;
+  gap: 12px !important;
+  min-width: 0;
+}
+.settings-company-identity > div,
+.settings-company-scope,
+.settings-company-policy-count {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.settings-company-monogram {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 10px;
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent) !important;
+  font-size: 10px;
+  font-weight: 850;
+}
+.settings-company-identity strong,
+.settings-company-identity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-company-scope > span {
+  width: max-content;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: var(--ds-surface-3);
+  color: var(--ds-text-2);
+  font-size: 9px;
+  font-weight: 800;
+}
+.settings-company-policy-count {
+  text-align: right;
+}
+.settings-company-policy-count b {
+  font-size: 18px;
+}
+.settings-company-feedback,
+.settings-company-empty {
+  margin: 14px 18px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--ds-success-line);
+  border-radius: 9px;
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
+  font-size: 11px;
+}
+.settings-company-feedback.error {
+  border-color: var(--ds-danger-line);
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger);
+}
+.settings-company-empty {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 18px;
+  border-color: var(--ds-border);
+  background: var(--ds-surface-2);
+  color: var(--ds-text-2);
+}
+.settings-company-modal {
+  width: min(720px, calc(100vw - 32px));
+}
+.settings-company-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 20px;
+}
+.settings-company-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--ds-text-2);
+  font-size: 11px;
+  font-weight: 700;
+}
+.settings-company-form label.wide {
+  grid-column: 1 / -1;
+}
+.settings-company-form input,
+.settings-company-form select {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--ds-border);
+  border-radius: 9px;
+  background: var(--ds-surface);
+  color: var(--ds-text);
+}
+.settings-company-form small {
+  color: var(--ds-text-3);
+  font-weight: 500;
+}
+.settings-company-modal > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--ds-border);
+}
+.settings-company-modal > footer button {
+  padding: 9px 13px;
+  border: 1px solid var(--ds-border);
+  border-radius: 8px;
+  background: var(--ds-accent);
+  color: #fff;
+  font-weight: 750;
+  cursor: pointer;
+}
+.settings-company-modal > footer .secondary-action {
+  background: var(--ds-surface);
+  color: var(--ds-text-2);
+}
 .settings-integration-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -5987,7 +6132,7 @@ a.fn-btn:not([href]) {
   color: var(--ds-text-3);
   cursor: default;
 }
-.rg-parameter input[type="number"],
+.rg-parameter input:not([type="checkbox"]),
 .rg-parameter select {
   width: 100%;
   min-width: 0;
@@ -6603,7 +6748,8 @@ a.fn-btn:not([href]) {
   color: var(--ds-text-3);
   font-size: 10px;
 }
-.settings-goal-row label {
+.settings-goal-row label,
+.settings-goal-input {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -6613,7 +6759,8 @@ a.fn-btn:not([href]) {
   border-radius: 8px;
   background: var(--ds-surface-2);
 }
-.settings-goal-row label small {
+.settings-goal-row label small,
+.settings-goal-input small {
   color: var(--ds-text-3);
   font-size: 9px;
 }
@@ -7021,7 +7168,7 @@ a.fn-btn:not([href]) {
 .policy-rules-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 900px;
+  min-width: 1180px;
 }
 .policy-rules-table th {
   padding: 10px 12px;
@@ -7055,6 +7202,41 @@ a.fn-btn:not([href]) {
   background: #fff;
   color: inherit;
   font-size: 10px;
+}
+.policy-parameter-field {
+  display: grid;
+  gap: 5px;
+  min-width: 230px;
+}
+.policy-parameter-field > span {
+  color: var(--ds-text);
+  font-size: 10px;
+  font-weight: 800;
+}
+.policy-parameter-field .policy-parameter-operator {
+  margin: 0;
+  color: var(--ds-accent);
+  font-size: 9px;
+  line-height: 1.3;
+}
+.policy-parameter-field .policy-parameter-help {
+  max-width: 260px;
+  margin: 0;
+  line-height: 1.35;
+}
+.policy-parameter-number {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.policy-parameter-number input {
+  flex: 1;
+  min-width: 0;
+}
+.policy-parameter-number b {
+  color: var(--ds-text-3);
+  font-size: 9px;
+  white-space: nowrap;
 }
 .policy-rules-table input:disabled,
 .policy-rules-table select:disabled {
@@ -7339,6 +7521,19 @@ a.fn-btn:not([href]) {
   }
   .settings-company-list article {
     grid-template-columns: 1fr;
+  }
+  .settings-companies-card > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .settings-company-policy-count {
+    text-align: left;
+  }
+  .settings-company-form {
+    grid-template-columns: 1fr;
+  }
+  .settings-company-form label.wide {
+    grid-column: auto;
   }
   .settings-inline-option {
     align-items: flex-start;

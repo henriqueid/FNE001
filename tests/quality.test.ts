@@ -14,6 +14,8 @@ import { demoQualityPolicy, type QualityComponentRule } from "@/src/domain/risk/
 import { qualityByDocument, scoredCedent, scoredDebtor } from "@/src/domain/risk/quality-scores";
 import { initialDebtors } from "@/src/domain/core/demo/debtors";
 import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
+import { portfolioQualityHistories } from "@/src/domain/risk/portfolio-quality-history";
+import type { PortfolioState, PortfolioTitleRecord } from "@/src/domain/portfolio/model";
 
 const month = (m: string, over: Partial<QualityMonth> = {}): QualityMonth => ({
   month: m,
@@ -180,11 +182,52 @@ describe("score único 0–1000", () => {
     }
   });
 
-  it("conta nova continua sem score calculado", () => {
+  it("conta nova sem carteira continua sem score calculado", () => {
     const fresh = { ...initialCedents[0], score: 0, settlements: 0 };
-    expect(scoredCedent(fresh, byDoc.get(digits(fresh.document))).score).toBe(0);
+    expect(scoredCedent(fresh).score).toBe(0);
     const newDebtor = { ...initialDebtors[0], score: undefined, settlements: 0 };
     expect(scoredDebtor(newDebtor).score).toBeUndefined();
+  });
+
+  it("calcula score quando a carteira existe mesmo sem liquidações no cadastro", () => {
+    const cedent = { ...initialCedents[0], score: 0, settlements: 0, bureauScore: undefined };
+    const debtor = { ...initialDebtors[0], score: undefined, settlements: 0, bureauScore: undefined };
+    const title: PortfolioTitleRecord = {
+      id: "carteira-1",
+      status: "Em aberto",
+      bankStatus: "Registrado",
+      source: "Carteira anterior",
+      documentNumber: "NF-1",
+      ownerName: cedent.name,
+      ownerDocument: cedent.document,
+      debtorName: debtor.name,
+      debtorDocument: debtor.document,
+      issueDate: "2026-07-01",
+      originalDueDate: "2026-09-01",
+      dueDate: "2026-09-01",
+      originalAmount: 100_000,
+      openAmount: 100_000,
+      paidAmount: 0,
+      repurchasedAmount: 0,
+      discountAmount: 0,
+      abatementAmount: 0,
+      payments: [],
+      collectionOccurrences: [],
+      confirmation: { status: "Não iniciada" },
+      events: [],
+    };
+    const portfolio: PortfolioState = {
+      version: 3,
+      positionDate: "2026-10-15",
+      titles: [title],
+    };
+    const histories = portfolioQualityHistories(portfolio, [cedent], [debtor], "2026-10-15");
+    const trends = qualityByDocument([...histories.cedentHistories, ...histories.debtorHistories], demoQualityPolicy);
+
+    expect(histories.cedentHistories).toHaveLength(1);
+    expect(histories.debtorHistories).toHaveLength(1);
+    expect(scoredCedent(cedent, trends.get(digits(cedent.document))).score).toBeGreaterThan(0);
+    expect(scoredDebtor(debtor, trends.get(digits(debtor.document))).score).toBeGreaterThan(0);
   });
 
   it("faixa positiva vem dos parâmetros operacionais", () => {

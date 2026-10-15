@@ -43,14 +43,13 @@ const fmtRule = (c: QualityTrend["components"][number]) =>
 /** Cedente com o score calculado (quando há histórico) e o score de bureau preservado. */
 export function scoredCedent(cedent: Cedent, trend?: QualityTrend): Cedent {
   const bureauScore = cedent.bureauScore ?? (cedent.score || undefined);
-  if (!trend || !cedent.settlements) return { ...cedent, bureauScore };
+  if (!trend) return { ...cedent, bureauScore };
   return { ...cedent, bureauScore, score: Math.round(trend.index), scoreReasons: scoreReasons(trend) };
 }
 
 /** Sacado com o score calculado; sacado novo (sem score nem liquidações) continua sem score. */
 export function scoredDebtor(debtor: Debtor, trend?: QualityTrend): Debtor {
   const bureauScore = debtor.bureauScore ?? debtor.score;
-  const known = debtor.score != null || (debtor.settlements ?? 0) > 0;
-  if (!trend || !known) return { ...debtor, bureauScore };
+  if (!trend) return { ...debtor, bureauScore };
   return { ...debtor, bureauScore, score: Math.round(trend.index), scoreReasons: scoreReasons(trend) };
 }

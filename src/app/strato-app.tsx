@@ -33,8 +33,9 @@ import { emptyFinance, seedFinance } from "@/src/domain/finance/setup";
 import { isoDate, portfolioTitles } from "@/src/domain/home/metrics";
 import { demoCedentHistories, demoDebtorHistories } from "@/src/domain/core/demo/quality-history";
 import { qualityByDocument, scoredCedent, scoredDebtor } from "@/src/domain/risk/quality-scores";
+import { portfolioQualityHistories } from "@/src/domain/risk/portfolio-quality-history";
 import { QualityContext, type QualityValue, useQualityPolicyState } from "@/src/features/risk/use-quality-policy";
-import { mergeParties, type Party, partyToCedent, seedParties } from "@/src/domain/registry/parties";
+import { mergeParties, type Party, partyToCedent, partyToDebtor, seedParties } from "@/src/domain/registry/parties";
 import { saveParty as savePartyRecord } from "@/src/domain/registry/party-save";
 import { buildRegistry, effectiveCedents, repurchaseEvents } from "@/src/domain/registry/registry";
 import { portfolioHomeTitles, seedPortfolio, syncPortfolio } from "@/src/domain/portfolio/model";
@@ -1082,6 +1083,17 @@ export default function StratoApp() {
       .map(partyToCedent);
     return effectiveCedents(commercial, [...baseline, ...created]);
   }, [commercial, savedParties, isDemo]);
+  const registryDebtors = useMemo(() => {
+    if (isDemo) return debtors;
+    const byDocument = new Map(debtors.map(debtor => [debtor.document.replace(/\D/g, ""), debtor]));
+    savedParties
+      .filter(party => party.roles.includes("sacado") && party.status === "Ativo")
+      .forEach(party => {
+        const document = party.document.replace(/\D/g, "");
+        if (!byDocument.has(document)) byDocument.set(document, partyToDebtor(party));
+      });
+    return [...byDocument.values()];
+  }, [debtors, savedParties, isDemo]);
   function createCopilotOperation(request: CopilotOperationRequest) {
     if (!can(currentUser, "operations:edit")) return undefined;
     const existing = operations.find(
@@ -1135,22 +1147,26 @@ export default function StratoApp() {
   // igual no cadastro, na operação, no painel de Risco e no panorama. O score de bureau fica em `bureauScore`.
   const qualityState = useQualityPolicyState(isDemo);
   const scoreDay = isoDate(new Date());
+  const portfolioHistories = useMemo(
+    () => (isDemo ? undefined : portfolioQualityHistories(portfolio, registryCedents, registryDebtors, scoreDay)),
+    [isDemo, portfolio, registryCedents, registryDebtors, scoreDay],
+  );
   const cedentHistories = useMemo(
-    () => (isDemo ? demoCedentHistories(registryCedents, scoreDay) : []),
-    [registryCedents, scoreDay, isDemo],
+    () => (isDemo ? demoCedentHistories(registryCedents, scoreDay) : (portfolioHistories?.cedentHistories ?? [])),
+    [registryCedents, scoreDay, isDemo, portfolioHistories],
   );
   const debtorHistories = useMemo(
     () =>
       isDemo
         ? demoDebtorHistories(
-            debtors.map(d => {
+            registryDebtors.map(d => {
               const doc = d.document.replace(/\D/g, "");
               return { id: doc, name: d.name, document: doc, exposure: d.portfolioReceivable ?? 0, debtor: d };
             }),
             scoreDay,
           )
-        : [],
-    [debtors, scoreDay, isDemo],
+        : (portfolioHistories?.debtorHistories ?? []),
+    [registryDebtors, scoreDay, isDemo, portfolioHistories],
   );
   const qualityValue = useMemo<QualityValue>(() => {
     const byDocument = qualityByDocument([...cedentHistories, ...debtorHistories], qualityState.policy);
@@ -1161,8 +1177,8 @@ export default function StratoApp() {
     [registryCedents, qualityValue],
   );
   const scoredDebtors = useMemo(
-    () => debtors.map(d => scoredDebtor(d, qualityValue.byDocument.get(d.document.replace(/\D/g, "")))),
-    [debtors, qualityValue],
+    () => registryDebtors.map(d => scoredDebtor(d, qualityValue.byDocument.get(d.document.replace(/\D/g, "")))),
+    [registryDebtors, qualityValue],
   );
   const today = new Date().toISOString().slice(0, 10);
   const parties = useMemo(

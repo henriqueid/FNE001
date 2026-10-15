@@ -60,6 +60,15 @@ describe("Copiloto · consulta à base", () => {
 
   it("resume a carteira e não inventa quando não sabe", () => {
     expect(all("resumo da carteira")).toContain("títulos");
+    expect(all("quantos títulos tenho?")).toContain(`${kb.titles.length} títulos`);
     expect(ask("qual a cor do céu?").tool).toBeUndefined();
+  });
+
+  it("consulta uma carteira persistida mesmo sem operações na mesa", () => {
+    const answer = answerSystemQuestion("qual é o total da carteira?", { ...kb, operations: [] });
+
+    expect(answer.tool).toBe("consultar_carteira(resumo)");
+    expect(answer.paragraphs.join(" ")).toContain(`${kb.titles.length} títulos`);
+    expect(answer.paragraphs.join(" ")).not.toContain("R$ 0,00");
   });
 });

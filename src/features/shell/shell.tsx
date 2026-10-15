@@ -21,6 +21,7 @@ import { AttentionCenter } from "@/src/features/copilot/attention-center";
 import { type ManagedTask, type TaskCommand } from "@/src/domain/tasks/model";
 import { type IntelligenceState } from "@/src/domain/intelligence/model";
 import { type Debtor } from "@/src/domain/core/types";
+import { type PortfolioTitle } from "@/src/domain/home/metrics";
 
 import { BellIcon, CloseIcon, MenuIcon, SearchIcon } from "@/src/ui/icons";
 import { type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -60,6 +61,7 @@ export function Shell({
   previewedBy,
   onEndPreview,
   debtors = [],
+  portfolioTitles = [],
   demoMode = false,
 }: {
   children: ReactNode;
@@ -83,6 +85,7 @@ export function Shell({
   previewedBy?: string;
   onEndPreview?: () => void;
   debtors?: Debtor[];
+  portfolioTitles?: PortfolioTitle[];
   demoMode?: boolean;
 }) {
   const context = useContext(ShellContext);
@@ -327,6 +330,7 @@ export function Shell({
           intelligence={intelligence}
           onIntelligence={onIntelligence}
           debtors={debtors}
+          portfolioTitles={portfolioTitles}
           demoMode={demoMode}
           onOpenAttention={openAttention}
           onNavigate={view => (onNavigate ?? context?.navigate)?.(view)}

@@ -45,7 +45,13 @@ export function answerDesk(text: string, context: DeskContext, scenarios: DeskSc
   const current = scenarios[scenarios.length - 1];
   const { result } = current;
   const { titles, policy } = context;
-  const mentioned = titles.find(title => question.includes(title.document.split(" ")[1].toLocaleLowerCase()));
+  const mentioned = titles.find(title =>
+    title.document
+      .toLocaleLowerCase()
+      .split(/\s+/)
+      .filter(part => part.length >= 3)
+      .some(part => question.includes(part)),
+  );
   const rateMatch = question.match(/(\d+(?:[.,]\d+)?)\s*%/) ?? question.match(/taxa\D*(\d+(?:[.,]\d+)?)/);
 
   if (/compar/.test(question)) {
@@ -154,6 +160,22 @@ export function answerDesk(text: string, context: DeskContext, scenarios: DeskSc
       );
     return { scenario, reply: { tool: `simular_cenario(taxa=${percentBR(ratePercent, 2)})`, paragraphs } };
   }
+
+  const directFinding = /score/.test(question)
+    ? result.findings.find(item => item.id === "cedent-score")
+    : /(limit|disponivel|disponível|cabe)/.test(question)
+      ? result.findings.find(item => item.id === "cedent-limit")
+      : undefined;
+  if (directFinding)
+    return {
+      reply: {
+        tool: `explicar_apontamento(${directFinding.id})`,
+        paragraphs: [
+          `${directFinding.title}. ${directFinding.detail}`,
+          `Evidência: ${directFinding.evidence.toLocaleLowerCase()}. Política aplicada: ${policy.name} v${policy.version}.`,
+        ],
+      },
+    };
 
   if (/(por ?que|porque|sinaliz|bloque|falta|problema|explic|cedo)/.test(question)) {
     const finding =

@@ -8,6 +8,10 @@ import { loadOperations } from "@/src/server/operations/repository";
 import { filterPortfolioScope } from "@/src/server/portfolio/access";
 import { loadCurrentPortfolio } from "@/src/server/portfolio/repository";
 import { loadRegistryParties } from "@/src/server/registry/repository";
+import { initialCedents } from "@/src/domain/core/demo/cedents";
+import { initialOperations } from "@/src/domain/core/demo/operations";
+import { portfolioTitles } from "@/src/domain/home/metrics";
+import { seedEligibilityPolicies } from "@/src/domain/eligibility/policy-library";
 
 const MAX_CONTEXT_LENGTH = 60_000;
 
@@ -131,6 +135,27 @@ export async function loadAuthorizedCopilotContext(db: DecisionDatabase, princip
   ]);
   const operations = filterCompanyScope(principal, allOperations, operation => operation.vehicle);
   const titles = portfolioHomeTitles(filterPortfolioScope(principal, fullPortfolio));
+  const hasPersistedBusinessData = allOperations.length > 0 || fullPortfolio.titles.length > 0;
+  if (principal.tenantId === "strato-demo" && !hasPersistedBusinessData) {
+    const demoTitles = portfolioTitles(initialOperations, true);
+    return authorizeCopilotContext(
+      {
+        referenceDate: saoPauloDate(),
+        operations: initialOperations,
+        cedents: initialCedents,
+        portfolio: demoTitles.map(title => ({
+          debtor: title.debtorName,
+          cedentDocument: title.ownerDocument,
+          amount: title.amount,
+          dueDate: title.dueDate,
+          source: title.source,
+          vehicle: title.vehicle,
+        })),
+        policies: seedEligibilityPolicies().policies,
+      },
+      principal.companyScopes,
+    );
+  }
   return authorizeCopilotContext(
     {
       referenceDate: saoPauloDate(),

@@ -77,4 +77,34 @@ describe("Mesa Inteligente · analista", () => {
     expect(reply.tool).toContain("CONC-SACADO-001");
     expect(reply.paragraphs.join(" ")).toContain("v3.2");
   });
+
+  it("responde aos botões de score e limite com o apontamento correspondente", () => {
+    const constrained: DeskContext = {
+      ...context,
+      cedent: { name: "3C Transportes", score: 0, creditLimitCents: 0, usedLimitCents: 0 },
+    };
+    const scenario = firstScenario(constrained);
+
+    expect(
+      answerDesk(scenario.result.findings.find(item => item.id === "cedent-score")!.question!, constrained, [scenario])
+        .reply.tool,
+    ).toBe("explicar_apontamento(cedent-score)");
+    expect(
+      answerDesk(scenario.result.findings.find(item => item.id === "cedent-limit")!.question!, constrained, [scenario])
+        .reply.tool,
+    ).toBe("explicar_apontamento(cedent-limit)");
+  });
+
+  it("não interrompe a resposta quando o documento importado não contém espaço", () => {
+    const imported: DeskContext = {
+      ...context,
+      titles: [{ ...deskDemoTitles[0], id: "importado", document: "123456" }],
+      cedent: { name: "Cedente Importado", score: 0, creditLimitCents: 0, usedLimitCents: 0 },
+    };
+    const scenario = firstScenario(imported);
+    const answer = answerDesk("Como está o score do cedente?", imported, [scenario]);
+
+    expect(answer.reply.tool).toBe("explicar_apontamento(cedent-score)");
+    expect(answer.reply.paragraphs.join(" ")).toContain("Cedente Importado");
+  });
 });

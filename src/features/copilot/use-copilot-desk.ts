@@ -397,26 +397,40 @@ export function useCopilotDesk(
   /** Pergunta livre: primeiro sobre o cenário em análise (se houver); senão, consulta a base e a política. */
   const ask = async (text: string) => {
     push({ role: "me", text });
-    if (scenarios.length && !locked) {
-      const answer = answerDesk(text, context, scenarios);
-      if (!answer.fallback) {
-        if (answer.scenario) setScenarios(list => [...list, answer.scenario as DeskScenario]);
-        push({ role: "ai", reply: answer.reply });
+    try {
+      if (scenarios.length && !locked) {
+        const answer = answerDesk(text, context, scenarios);
+        if (!answer.fallback) {
+          if (answer.scenario) setScenarios(list => [...list, answer.scenario as DeskScenario]);
+          push({ role: "ai", reply: answer.reply });
+          return;
+        }
+      }
+      const localAnswer = answerSystemQuestion(text, knowledge);
+      if (localAnswer.tool) {
+        push({ role: "ai", reply: localAnswer });
         return;
       }
-    }
-    const localAnswer = answerSystemQuestion(text, knowledge);
-    if (localAnswer.tool) {
-      push({ role: "ai", reply: localAnswer });
-      return;
-    }
-    if (!aiAvailable) {
+      if (!aiAvailable) {
+        push({
+          role: "ai",
+          reply: {
+            paragraphs: [
+              ...localAnswer.paragraphs,
+              "Estou em modo offline: consigo consultar dados, explicar a política e modelar cenários; perguntas livres e insights generativos exigem a conexão com IA.",
+            ],
+          },
+        });
+        return;
+      }
+    } catch (error) {
       push({
         role: "ai",
         reply: {
+          tool: "copilot_error(local)",
           paragraphs: [
-            ...localAnswer.paragraphs,
-            "Estou em modo offline: consigo consultar dados, explicar a política e modelar cenários; perguntas livres e insights generativos exigem a conexão com IA.",
+            error instanceof Error ? error.message : "Não consegui interpretar essa pergunta.",
+            "Tente novamente; a análise e os dados atuais foram preservados.",
           ],
         },
       });

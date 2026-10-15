@@ -356,7 +356,7 @@ export function answerSystemQuestion(text: string, kb: SystemKnowledge): DeskRep
     };
   }
 
-  if (/(carteira|resumo|total|quanto)/.test(q)) {
+  if (/(carteira|resumo|total|quanto|quantos|quantas|saldo|posicao|titul)/.test(q)) {
     const total = kb.titles.reduce((sum, title) => sum + title.amount, 0);
     const overdue = kb.titles.filter(title => title.dueDate < kb.today);
     const term = total

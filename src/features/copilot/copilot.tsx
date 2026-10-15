@@ -14,7 +14,7 @@ import { type DailyBriefingData } from "@/src/domain/copilot/daily-briefing";
 import { type SystemKnowledge, systemSuggestions } from "@/src/domain/copilot/system-query";
 import { masterRuleCatalog } from "@/src/domain/eligibility/master-rule-catalog";
 import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
-import { isoDate, portfolioTitles } from "@/src/domain/home/metrics";
+import { isoDate, type PortfolioTitle } from "@/src/domain/home/metrics";
 import { ShellContext } from "@/src/features/shell/shell-context";
 import { ArrowIcon, CloseIcon, ExpandIcon, SendIcon, SparkIcon, UndoIcon } from "@/src/ui/icons";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -37,6 +37,7 @@ export function Copilot({
   intelligence,
   onIntelligence,
   debtors = [],
+  portfolioTitles = [],
   demoMode = false,
   onOpenLive,
 }: {
@@ -48,6 +49,7 @@ export function Copilot({
   intelligence: IntelligenceState;
   onIntelligence?: (state: IntelligenceState) => void;
   debtors?: Debtor[];
+  portfolioTitles?: PortfolioTitle[];
   demoMode?: boolean;
   onOpenLive?: () => void;
 }) {
@@ -59,13 +61,13 @@ export function Copilot({
     () => ({
       operations: operations ?? [],
       cedents,
-      titles: portfolioTitles(operations ?? []),
+      titles: portfolioTitles,
       policies: policies ?? [],
       rules: masterRuleCatalog,
       parameters: operationalParametersFor(),
       today: isoDate(new Date()),
     }),
-    [operations, cedents, policies],
+    [operations, cedents, portfolioTitles, policies],
   );
   const desk = useCopilotDesk(knowledge, currentUser, intelligence, cedents[0]?.id ?? "", demoMode, debtors, tokens =>
     onIntelligence?.({

@@ -11,6 +11,7 @@ import { type AppView } from "./shell-context";
 import { type Signal } from "./notifications";
 import { type AccessUser } from "@/src/domain/access/model";
 import { type IntelligenceState } from "@/src/domain/intelligence/model";
+import { type PortfolioTitle } from "@/src/domain/home/metrics";
 
 type JourneyStep = {
   label: string;
@@ -94,6 +95,7 @@ export function ExperienceGuide({
   intelligence,
   onIntelligence,
   debtors = [],
+  portfolioTitles = [],
   demoMode = false,
 }: {
   active: string;
@@ -108,6 +110,7 @@ export function ExperienceGuide({
   intelligence: IntelligenceState;
   onIntelligence?: (state: IntelligenceState) => void;
   debtors?: Debtor[];
+  portfolioTitles?: PortfolioTitle[];
   demoMode?: boolean;
 }) {
   const [explained, setExplained] = useState(false);
@@ -204,6 +207,7 @@ export function ExperienceGuide({
         intelligence={intelligence}
         onIntelligence={onIntelligence}
         debtors={debtors}
+        portfolioTitles={portfolioTitles}
         demoMode={demoMode}
         onOpenLive={() => onNavigate("live")}
       />

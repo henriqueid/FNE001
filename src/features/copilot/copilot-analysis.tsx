@@ -151,8 +151,8 @@ export function CopilotAnalysis({
                 <button
                   type="button"
                   className="cpl-ghost"
-                  disabled={desk.locked}
-                  onClick={() => desk.ask(finding.question ?? "")}
+                  disabled={desk.locked || desk.asking}
+                  onClick={() => void desk.ask(finding.question ?? "")}
                 >
                   Perguntar
                 </button>

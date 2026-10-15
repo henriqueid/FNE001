@@ -135,7 +135,7 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
         kind: "REGRA",
         title: `${cedent.name} ainda não possui score interno`,
         detail: "O score precisa ser calculado ou decidido pela alçada antes da aprovação.",
-        question: "Como está o score do cedente?",
+        question: `Por que ${cedent.name} está sem score interno e o que falta para regularizar?`,
       });
     else
       findings.push({
@@ -150,7 +150,7 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
             : cedent.score >= attention
               ? `Faixa de atenção da política (${attention} a ${positive - 1}).`
               : `Abaixo do corte de ${attention}; exige revisão de risco.`,
-        question: "Como está o score do cedente?",
+        question: `Como o score interno de ${cedent.name} afeta esta análise?`,
       });
     const available = Math.max(0, cedent.creditLimitCents - cedent.usedLimitCents);
     if (faceCents > available)
@@ -161,7 +161,7 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
         kind: "REGRA",
         title: "Valor acima do limite disponível do cedente",
         detail: `Disponível ${centsToBRL(available)}; face modelada ${centsToBRL(faceCents)}. Exige alçada de crédito.`,
-        question: "A operação cabe no limite do cedente?",
+        question: `Por que o limite disponível de ${cedent.name} não comporta esta operação?`,
       });
   }
   rows
@@ -187,7 +187,7 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
       kind: "REGRA",
       title: `${newDebtor} sem consulta`,
       detail: "Sacado novo. A política exige consulta ao birô antes de aprovar.",
-      question: `O que falta sobre a ${newDebtor}?`,
+      question: `Por que ${newDebtor} está sem consulta e o que falta para aprovar?`,
     });
   if (top.share > policy.concentrationLimit)
     findings.push({

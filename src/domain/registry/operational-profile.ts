@@ -299,3 +299,11 @@ export function resolveOperationalParameters(
 
 export const inheritedParameterCount = (overrides?: OperationalParameterOverrides) =>
   Object.keys(defaultOperationalParameters).length - Object.keys(overrides ?? {}).length;
+
+/** Mantém visível a proposta já gravada enquanto ela aguarda a decisão de outro usuário. */
+export function operationalDraftFromRequests(
+  effective: OperationalDefaultsState,
+  requests: OperationalParameterChangeRequest[],
+) {
+  return requests.find(request => request.status === "PENDING")?.proposed ?? effective;
+}

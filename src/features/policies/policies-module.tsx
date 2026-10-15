@@ -41,13 +41,17 @@ const actionOptions: EligibilityAction[] = ["CONTINUAR", "SINALIZAR", "SOLICITAR
 
 export default function PoliciesModule({
   state,
+  persistedState,
   onState,
+  onSave,
   approvalActor,
   demoMode = false,
   embedded = false,
 }: {
   state: EligibilityPolicyState;
+  persistedState: EligibilityPolicyState;
   onState: (state: EligibilityPolicyState) => void;
+  onSave: (state: EligibilityPolicyState) => Promise<EligibilityPolicyState>;
   approvalActor: { id: string; name: string };
   demoMode?: boolean;
   embedded?: boolean;
@@ -59,6 +63,7 @@ export default function PoliciesModule({
   const [showCreate, setShowCreate] = useState(false);
   const [catalogSearch, setCatalogSearch] = useState("");
   const [detailSection, setDetailSection] = useState<"rules" | "catalog">("rules");
+  const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState({
     name: "",
     version: "v1.0",
@@ -70,6 +75,11 @@ export default function PoliciesModule({
   const selected = state.policies.find(policy => policy.id === selectedId) ?? state.policies[0];
   const catalog = useMemo(() => new Map(masterRuleCatalog.map(rule => [rule.id, rule])), []);
   const today = new Date().toISOString().slice(0, 10);
+  const snapshot = (value: EligibilityPolicyState) => {
+    const { persistenceVersion: _persistenceVersion, ...content } = value;
+    return content;
+  };
+  const changed = JSON.stringify(snapshot(state)) !== JSON.stringify(snapshot(persistedState));
   const replacePolicy = (policy: EligibilityPolicy) =>
     onState({ ...state, policies: state.policies.map(item => (item.id === policy.id ? policy : item)) });
   const selectedDestination = destinations.find(destination => destination.name === draft.company);
@@ -81,6 +91,20 @@ export default function PoliciesModule({
           .toLocaleLowerCase()
           .includes(catalogSearch.toLocaleLowerCase())),
   );
+
+  const save = async (candidate = state, success = "Política gravada com segurança.") => {
+    setSaving(true);
+    try {
+      await onSave(candidate);
+      setMessage(success);
+      return true;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível gravar a política.");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const createVersion = () => {
     if (!selected) return;
@@ -108,7 +132,7 @@ export default function PoliciesModule({
     setMessage("Política criada como rascunho. Agora selecione as regras e preencha os parâmetros institucionais.");
   };
 
-  const activate = () => {
+  const activate = async () => {
     if (!selected || selected.status !== "RASCUNHO") return;
     if (!selected.bindings.some(binding => binding.enabled && binding.parameter !== null)) {
       setMessage("Ative e parametrize ao menos uma regra antes de publicar a política.");
@@ -118,8 +142,12 @@ export default function PoliciesModule({
       setMessage("Registre uma justificativa de aprovação com pelo menos 10 caracteres.");
       return;
     }
+    if (!demoMode && changed) {
+      setMessage("Grave todas as alterações antes de enviar a política para aprovação.");
+      return;
+    }
     if (!demoMode && !selected.publicationRequest) {
-      replacePolicy({
+      const requested = {
         ...selected,
         publicationRequest: {
           requestedById: approvalActor.id,
@@ -127,9 +155,13 @@ export default function PoliciesModule({
           requestedAt: new Date().toISOString(),
           justification: approvalJustification.trim(),
         },
-      });
-      setApprovalJustification("");
-      setMessage("Política enviada para aprovação. O conteúdo foi congelado e deve ser aprovado por outra pessoa.");
+      };
+      const candidate = {
+        ...state,
+        policies: state.policies.map(item => (item.id === requested.id ? requested : item)),
+      };
+      onState(candidate);
+      if (await save(candidate, "Política gravada e enviada para aprovação.")) setApprovalJustification("");
       return;
     }
     if (!demoMode && selected.publicationRequest?.requestedById === approvalActor.id) {
@@ -138,7 +170,7 @@ export default function PoliciesModule({
       );
       return;
     }
-    onState({
+    const candidate = {
       ...state,
       policies: activatePolicyVersion(state.policies, selected.id, selected.effectiveFrom, {
         approvedById: approvalActor.id,
@@ -146,12 +178,18 @@ export default function PoliciesModule({
         approvedAt: new Date().toISOString(),
         justification: approvalJustification.trim(),
       }),
-    });
-    setApprovalJustification("");
-    setMessage("Versão aprovada e ativada. Novas análises usarão esta vigência; o histórico ficou congelado.");
+    };
+    onState(candidate);
+    if (
+      await save(
+        candidate,
+        "Versão aprovada, gravada e ativada. Novas análises usarão esta vigência; o histórico ficou congelado.",
+      )
+    )
+      setApprovalJustification("");
   };
 
-  const rejectPublication = () => {
+  const rejectPublication = async () => {
     if (!selected?.publicationRequest || selected.status !== "RASCUNHO" || demoMode) return;
     if (selected.publicationRequest.requestedById === approvalActor.id) {
       setMessage("O solicitante não pode rejeitar a própria publicação.");
@@ -162,7 +200,7 @@ export default function PoliciesModule({
       return;
     }
     const { publicationRequest: _publicationRequest, ...policy } = selected;
-    replacePolicy({
+    const rejected = {
       ...policy,
       publicationRejection: {
         rejectedById: approvalActor.id,
@@ -170,9 +208,14 @@ export default function PoliciesModule({
         rejectedAt: new Date().toISOString(),
         justification: approvalJustification.trim(),
       },
-    });
-    setApprovalJustification("");
-    setMessage("Publicação rejeitada. O rascunho foi liberado para correção e um novo envio.");
+    };
+    const candidate = {
+      ...state,
+      policies: state.policies.map(item => (item.id === rejected.id ? rejected : item)),
+    };
+    onState(candidate);
+    if (await save(candidate, "Rejeição gravada. O rascunho foi liberado para correção e um novo envio."))
+      setApprovalJustification("");
   };
 
   const downloadTemplate = () => {
@@ -210,6 +253,15 @@ export default function PoliciesModule({
           </p>
         </div>
         <div className="policy-head-actions">
+          <span role="status">{changed ? "Alterações não gravadas" : "Tudo gravado"}</span>
+          <button
+            type="button"
+            className="policy-primary-action"
+            disabled={!changed || saving}
+            onClick={() => void save()}
+          >
+            {saving ? "Gravando…" : "Gravar alterações"}
+          </button>
           <button type="button" onClick={downloadTemplate}>
             Baixar modelo
           </button>
@@ -380,8 +432,8 @@ export default function PoliciesModule({
                 </label>
                 <button
                   type="button"
-                  onClick={activate}
-                  disabled={!demoMode && selected.publicationRequest?.requestedById === approvalActor.id}
+                  onClick={() => void activate()}
+                  disabled={saving || (!demoMode && selected.publicationRequest?.requestedById === approvalActor.id)}
                 >
                   {demoMode
                     ? "Aprovar e ativar"
@@ -394,7 +446,12 @@ export default function PoliciesModule({
                 {!demoMode &&
                   selected.publicationRequest &&
                   selected.publicationRequest.requestedById !== approvalActor.id && (
-                    <button type="button" className="secondary-action" onClick={rejectPublication}>
+                    <button
+                      type="button"
+                      className="secondary-action"
+                      disabled={saving}
+                      onClick={() => void rejectPublication()}
+                    >
                       Rejeitar publicação
                     </button>
                   )}
@@ -487,53 +544,61 @@ export default function PoliciesModule({
                                 <small className="policy-parameter-operator">
                                   O valor observado {eligibilityOperatorLabel(operator)}:
                                 </small>
-                              {parameter?.kind === "boolean" ? (
-                                <select
-                                  disabled={!editable}
-                                  aria-label={`Parâmetro de ${rule?.name ?? binding.ruleId}`}
-                                  value={binding.parameter === null ? "" : String(binding.parameter)}
-                                  onChange={event =>
-                                    replacePolicy(
-                                      updatePolicyBinding(selected, binding.ruleId, {
-                                        parameter: event.target.value === "true",
-                                      }),
-                                    )
-                                  }
-                                >
-                                  <option value="" disabled>Selecione</option>
-                                  <option value="true">Sim</option>
-                                  <option value="false">Não</option>
-                                </select>
-                              ) : parameter && ["currency", "percentage", "days", "integer", "number"].includes(parameter.kind) ? (
-                                <div className="policy-parameter-number">
-                                  {parameter.kind === "currency" && <b>R$</b>}
-                                  <LocalizedNumberInput
+                                {parameter?.kind === "boolean" ? (
+                                  <select
                                     disabled={!editable}
                                     aria-label={`Parâmetro de ${rule?.name ?? binding.ruleId}`}
-                                    value={typeof binding.parameter === "number" ? binding.parameter : null}
-                                    decimals={parameter.decimals}
-                                    placeholder={parameter.placeholder}
-                                    onValueChange={value =>
-                                      replacePolicy(updatePolicyBinding(selected, binding.ruleId, { parameter: value }))
+                                    value={binding.parameter === null ? "" : String(binding.parameter)}
+                                    onChange={event =>
+                                      replacePolicy(
+                                        updatePolicyBinding(selected, binding.ruleId, {
+                                          parameter: event.target.value === "true",
+                                        }),
+                                      )
+                                    }
+                                  >
+                                    <option value="" disabled>
+                                      Selecione
+                                    </option>
+                                    <option value="true">Sim</option>
+                                    <option value="false">Não</option>
+                                  </select>
+                                ) : parameter &&
+                                  ["currency", "percentage", "days", "integer", "number"].includes(parameter.kind) ? (
+                                  <div className="policy-parameter-number">
+                                    {parameter.kind === "currency" && <b>R$</b>}
+                                    <LocalizedNumberInput
+                                      disabled={!editable}
+                                      aria-label={`Parâmetro de ${rule?.name ?? binding.ruleId}`}
+                                      value={typeof binding.parameter === "number" ? binding.parameter : null}
+                                      decimals={parameter.decimals}
+                                      placeholder={parameter.placeholder}
+                                      onValueChange={value =>
+                                        replacePolicy(
+                                          updatePolicyBinding(selected, binding.ruleId, { parameter: value }),
+                                        )
+                                      }
+                                    />
+                                    {parameter.suffix && parameter.kind !== "currency" && <b>{parameter.suffix}</b>}
+                                  </div>
+                                ) : (
+                                  <input
+                                    disabled={!editable}
+                                    aria-label={`Parâmetro de ${rule?.name ?? binding.ruleId}`}
+                                    placeholder={parameter?.placeholder ?? "Digite o valor"}
+                                    value={policyParameterText(binding.parameter)}
+                                    onChange={event =>
+                                      replacePolicy(
+                                        updatePolicyBinding(selected, binding.ruleId, {
+                                          parameter: parsePolicyParameter(
+                                            parameter?.kind ?? "text",
+                                            event.target.value,
+                                          ),
+                                        }),
+                                      )
                                     }
                                   />
-                                  {parameter.suffix && parameter.kind !== "currency" && <b>{parameter.suffix}</b>}
-                                </div>
-                              ) : (
-                                <input
-                                  disabled={!editable}
-                                  aria-label={`Parâmetro de ${rule?.name ?? binding.ruleId}`}
-                                  placeholder={parameter?.placeholder ?? "Digite o valor"}
-                                  value={policyParameterText(binding.parameter)}
-                                  onChange={event =>
-                                    replacePolicy(
-                                      updatePolicyBinding(selected, binding.ruleId, {
-                                        parameter: parsePolicyParameter(parameter?.kind ?? "text", event.target.value),
-                                      }),
-                                    )
-                                  }
-                                />
-                              )}
+                                )}
                                 <small className="policy-parameter-help">
                                   {parameter?.help ?? "Informe o valor que o motor deve comparar."}
                                   {rule?.dataSource ? ` Fonte: ${rule.dataSource}.` : ""}

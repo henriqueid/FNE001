@@ -42,7 +42,11 @@ import { Shell } from "@/src/features/shell/shell";
 import { type AppView, ShellContext } from "@/src/features/shell/shell-context";
 import { RegistryContext, type RegistryValue } from "./registry-context";
 import { EligibilityPolicyProvider } from "./eligibility-policy-context";
-import { emptyEligibilityPolicies, seedEligibilityPolicies } from "@/src/domain/eligibility/policy-library";
+import {
+  emptyEligibilityPolicies,
+  seedEligibilityPolicies,
+  type EligibilityPolicyState,
+} from "@/src/domain/eligibility/policy-library";
 import { emptyIntegrationState, seedIntegrationState } from "@/src/domain/integrations/model";
 import { IntegrationProvider } from "./integration-context";
 import { emptyOperationalDefaults, seedOperationalDefaults } from "@/src/domain/registry/operational-profile";
@@ -203,9 +207,13 @@ export default function StratoApp() {
   // Cadastro de pessoas (cedentes, sacados, fornecedores, representantes, investidores...).
   const [savedParties, setSavedParties] = useState<Party[]>(() => (isDemo ? seedParties() : []));
   const [policies, setPolicies] = useState(() => (isDemo ? seedEligibilityPolicies() : emptyEligibilityPolicies()));
+  const [persistedPolicies, setPersistedPolicies] = useState(() =>
+    isDemo ? seedEligibilityPolicies() : emptyEligibilityPolicies(),
+  );
   const [policiesServerReady, setPoliciesServerReady] = useState(isDemo);
   const [policyPersistenceError, setPolicyPersistenceError] = useState<string>();
   const policySaveQueue = useRef<Promise<typeof policies> | null>(null);
+  const persistedPoliciesRef = useRef(persistedPolicies);
   const [integrations, setIntegrations] = useState(() => (isDemo ? seedIntegrationState() : emptyIntegrationState()));
   const [integrationsServerReady, setIntegrationsServerReady] = useState(isDemo);
   const [operationalDefaults, setOperationalDefaults] = useState(() =>
@@ -221,11 +229,16 @@ export default function StratoApp() {
   const [taskClock, setTaskClock] = useState(() => Date.now());
 
   const persistRealPolicies = useCallback(
-    (candidate: typeof policies) => {
-      if (isDemo) return;
-      const prior = policySaveQueue.current ?? Promise.resolve(candidate);
+    (candidate: EligibilityPolicyState) => {
+      if (isDemo) {
+        persistedPoliciesRef.current = candidate;
+        setPolicies(candidate);
+        setPersistedPolicies(candidate);
+        return Promise.resolve(candidate);
+      }
+      const prior = policySaveQueue.current ?? Promise.resolve(persistedPoliciesRef.current);
       const queued = prior
-        .catch(() => candidate)
+        .catch(async () => (await loadServerPolicies()) ?? persistedPoliciesRef.current)
         .then(serverBase =>
           persistServerPolicies({
             ...candidate,
@@ -233,17 +246,22 @@ export default function StratoApp() {
           }),
         );
       policySaveQueue.current = queued;
-      void queued
+      return queued
         .then(saved => {
+          persistedPoliciesRef.current = saved;
+          setPersistedPolicies(saved);
           setPolicyPersistenceError(undefined);
-          setPolicies(current =>
-            current === candidate ? saved : { ...current, persistenceVersion: saved.persistenceVersion },
-          );
+          setPolicies(current => {
+            const next = current === candidate ? saved : { ...current, persistenceVersion: saved.persistenceVersion };
+            return next;
+          });
+          return saved;
         })
         .catch(reason => {
           setPolicyPersistenceError(
             reason instanceof Error ? reason.message : "Não foi possível salvar as políticas no banco.",
           );
+          throw reason;
         })
         .finally(() => {
           if (policySaveQueue.current === queued) policySaveQueue.current = null;
@@ -254,7 +272,6 @@ export default function StratoApp() {
 
   function applyPoliciesState(candidate: typeof policies) {
     setPolicies(candidate);
-    persistRealPolicies(candidate);
   }
 
   useEffect(() => {
@@ -596,7 +613,11 @@ export default function StratoApp() {
     if (stored.commercial) setCommercial(stored.commercial);
     if (stored.parties) setSavedParties(stored.parties);
     if (stored.portfolio) setPortfolio(stored.portfolio);
-    if (stored.policies) setPolicies(stored.policies);
+    if (stored.policies) {
+      setPolicies(stored.policies);
+      setPersistedPolicies(stored.policies);
+      persistedPoliciesRef.current = stored.policies;
+    }
     if (stored.integrations) setIntegrations(stored.integrations);
     if (stored.operationalDefaults) setOperationalDefaults(stored.operationalDefaults);
     if (stored.tasks) setTasks(stored.tasks);
@@ -823,7 +844,10 @@ export default function StratoApp() {
     loadServerPolicies()
       .then(serverPolicies => {
         if (cancelled) return;
-        setPolicies(serverPolicies ?? emptyEligibilityPolicies());
+        const loaded = serverPolicies ?? emptyEligibilityPolicies();
+        persistedPoliciesRef.current = loaded;
+        setPolicies(loaded);
+        setPersistedPolicies(loaded);
         setPolicyPersistenceError(undefined);
       })
       .catch(reason => {
@@ -1513,7 +1537,9 @@ export default function StratoApp() {
     page = (
       <SettingsModule
         policies={policies}
+        persistedPolicies={persistedPolicies}
         onPolicies={applyPoliciesState}
+        onSavePolicies={persistRealPolicies}
         showGuidance={showGuidance}
         onGuidance={setShowGuidance}
         showJourney={showJourney}
@@ -1580,6 +1606,7 @@ export default function StratoApp() {
                   setCompanyScope("Consolidado");
                 }}
                 debtors={scoredDebtors}
+                portfolioTitles={livePortfolioTitles}
                 demoMode={isDemo}
               >
                 {operationPersistenceError && (

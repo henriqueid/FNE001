@@ -8,6 +8,7 @@ import IntegrationGovernancePanel from "./integration-governance-panel";
 import { useEffect, useState } from "react";
 import { type IntegrationState, updateIntegrationMode } from "@/src/domain/integrations/model";
 import {
+  operationalDraftFromRequests,
   operationalDefaultsSnapshot,
   type OperationalDefaultsState,
   type OperationalParameterChangeRequest,
@@ -145,7 +146,9 @@ const shortcuts: Array<{
 
 export default function SettingsModule({
   policies,
+  persistedPolicies,
   onPolicies,
+  onSavePolicies,
   showGuidance,
   onGuidance,
   showJourney,
@@ -162,7 +165,9 @@ export default function SettingsModule({
   demoMode = false,
 }: {
   policies: EligibilityPolicyState;
+  persistedPolicies: EligibilityPolicyState;
   onPolicies: (state: EligibilityPolicyState) => void;
+  onSavePolicies: (state: EligibilityPolicyState) => Promise<EligibilityPolicyState>;
   showGuidance: boolean;
   onGuidance: (value: boolean) => void;
   showJourney: boolean;
@@ -212,7 +217,7 @@ export default function SettingsModule({
       .then(result => {
         if (cancelled) return;
         setOperationalRequests(result.requests);
-        setOperationalDraft(result.state);
+        setOperationalDraft(operationalDraftFromRequests(result.state, result.requests));
       })
       .catch(error => {
         if (!cancelled)
@@ -262,10 +267,11 @@ export default function SettingsModule({
         operationalReason,
       );
       setOperationalRequests(requests);
+      setOperationalDraft(operationalDraftFromRequests(operationalDefaults, requests));
       setOperationalReason("");
       setOperationalFeedback({
         tone: "success",
-        message: "Proposta enviada. Os valores efetivos permanecem inalterados até outra pessoa aprovar.",
+        message: "Alterações gravadas e enviadas. Elas continuarão visíveis enquanto aguardam outra pessoa aprovar.",
       });
     } catch (error) {
       setOperationalFeedback({
@@ -454,7 +460,9 @@ export default function SettingsModule({
           {section === "policies" && (
             <PoliciesModule
               state={policies}
+              persistedState={persistedPolicies}
               onState={onPolicies}
+              onSave={onSavePolicies}
               approvalActor={policyApprovalActor}
               demoMode={demoMode}
               embedded
@@ -656,13 +664,14 @@ export default function SettingsModule({
                           onChange={event => setOperationalReason(event.target.value)}
                           placeholder="Explique o objetivo e o impacto esperado"
                         />
+                        <small>Obrigatório para gravar, com pelo menos 10 caracteres.</small>
                       </label>
                       <button
                         type="button"
-                        disabled={!operationalChanged || operationalSubmitting}
+                        disabled={!operationalChanged || operationalSubmitting || operationalReason.trim().length < 10}
                         onClick={() => void submitOperationalProposal()}
                       >
-                        Enviar para aprovação
+                        {operationalSubmitting ? "Gravando…" : "Gravar para aprovação"}
                       </button>
                     </div>
                   )}

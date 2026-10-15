@@ -142,9 +142,9 @@ function projectionStatements(db: DecisionDatabase, tenantId: string, state: Tas
               due_at, snoozed_until, operation_id, snapshot, task_version, created_at, updated_at, completed_at)
            values (
              ?, ?, ?, ?,
-             (select u.user_id from private.access_users u
+             coalesce(?, (select u.user_id from private.access_users u
               join private.tenant_memberships m on m.user_id = u.user_id and m.tenant_id = ?
-              where lower(u.name) = lower(?) limit 1),
+              where lower(u.name) = lower(?) limit 1)),
              ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?
            )
            on conflict (tenant_id, task_id) do update set
@@ -165,6 +165,7 @@ function projectionStatements(db: DecisionDatabase, tenantId: string, state: Tas
           task.id,
           task.source,
           task.status,
+          task.ownerUserId ?? null,
           tenantId,
           task.owner,
           task.owner,

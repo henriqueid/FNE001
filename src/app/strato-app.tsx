@@ -46,14 +46,21 @@ import { emptyEligibilityPolicies, seedEligibilityPolicies } from "@/src/domain/
 import { emptyIntegrationState, seedIntegrationState } from "@/src/domain/integrations/model";
 import { IntegrationProvider } from "./integration-context";
 import { emptyOperationalDefaults, seedOperationalDefaults } from "@/src/domain/registry/operational-profile";
-import { buildDailyBriefing, demoAdminUser, operationsForUser } from "@/src/domain/copilot/daily-briefing";
+import {
+  buildDailyBriefing,
+  demoAdminUser,
+  operationsForUser,
+  withAssignedTasks,
+} from "@/src/domain/copilot/daily-briefing";
 import { buildAttentionItems } from "@/src/domain/copilot/attention-center";
 import {
   actionableAttentionItems,
   applyTaskCommand,
   managedTasks,
+  rebaseTaskState,
   reconcileTasks,
   seedTaskState,
+  taskIsExplicitlyAssigned,
   type TaskCommand,
   type TaskState,
   visibleTasksForUser,
@@ -80,7 +87,11 @@ import {
 } from "./operations-client";
 import { loadFinanceState as loadServerFinance, persistFinanceState as persistServerFinance } from "./finance-client";
 import { loadCurrentPortfolio, persistPortfolioState as persistServerPortfolio } from "./portfolio-client";
-import { loadTaskState as loadServerTasks, persistTaskState as persistServerTasks } from "./tasks-client";
+import {
+  loadTaskState as loadServerTasks,
+  persistTaskState as persistServerTasks,
+  TaskPersistenceError,
+} from "./tasks-client";
 import {
   loadEligibilityPolicyState as loadServerPolicies,
   persistEligibilityPolicyState as persistServerPolicies,
@@ -433,22 +444,43 @@ export default function StratoApp() {
   }
 
   const persistRealTasks = useCallback(
-    (candidate: TaskState) => {
+    (base: TaskState, candidate: TaskState) => {
       if (isDemo) return;
-      const prior = taskSaveQueue.current ?? Promise.resolve(candidate);
+      const prior = taskSaveQueue.current ?? Promise.resolve(base);
       const queued = prior
-        .catch(() => candidate)
-        .then(serverBase =>
-          persistServerTasks({
-            ...candidate,
-            persistenceVersion: serverBase.persistenceVersion ?? candidate.persistenceVersion,
-          }),
-        );
+        .catch(async () => (await loadServerTasks()) ?? base)
+        .then(async serverBase => {
+          // A resposta do servidor já vem recortada para a fila nominal do autor. Em comandos
+          // enfileirados, não reenvia uma tarefa que acabou de ser transferida para outra pessoa.
+          const serverTaskIds = new Set(serverBase.tasks.map(task => task.id));
+          const rebased = rebaseTaskState(base, candidate, serverBase);
+          const outgoing = {
+            ...rebased,
+            tasks: rebased.tasks.filter(
+              task => serverTaskIds.has(task.id) || !base.tasks.some(item => item.id === task.id),
+            ),
+            persistenceVersion: serverBase.persistenceVersion ?? base.persistenceVersion,
+          };
+          try {
+            return await persistServerTasks(outgoing);
+          } catch (reason) {
+            if (!(reason instanceof TaskPersistenceError) || reason.status !== 409) throw reason;
+            const refreshed = await loadServerTasks();
+            if (!refreshed) throw reason;
+            return persistServerTasks(rebaseTaskState(base, candidate, refreshed));
+          }
+        });
       taskSaveQueue.current = queued;
       void queued
         .then(saved => {
           setTaskPersistenceError(undefined);
-          setTasks(current => ({ ...current, persistenceVersion: saved.persistenceVersion }));
+          setTasks(current => {
+            if (current === candidate) {
+              taskRef.current = saved;
+              return saved;
+            }
+            return { ...current, persistenceVersion: saved.persistenceVersion };
+          });
         })
         .catch(reason => {
           setTaskPersistenceError(
@@ -756,6 +788,36 @@ export default function StratoApp() {
   }, [isDemo, storageReady, tasksServerReady]);
 
   useEffect(() => {
+    if (!storageReady || isDemo || !tasksServerReady) return;
+    let cancelled = false;
+    const refreshTasks = () => {
+      if (taskSaveQueue.current) return;
+      const stateBeforeRefresh = taskRef.current;
+      void loadServerTasks()
+        .then(serverTasks => {
+          if (cancelled || taskSaveQueue.current || taskRef.current !== stateBeforeRefresh) return;
+          const loaded = serverTasks ?? seedTaskState();
+          taskRef.current = loaded;
+          setTasks(loaded);
+          setTaskPersistenceError(undefined);
+        })
+        .catch(reason => {
+          if (cancelled) return;
+          setTaskPersistenceError(
+            reason instanceof Error ? reason.message : "Não foi possível atualizar as tarefas do banco.",
+          );
+        });
+    };
+    const interval = window.setInterval(refreshTasks, 15_000);
+    window.addEventListener("focus", refreshTasks);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshTasks);
+    };
+  }, [isDemo, storageReady, tasksServerReady]);
+
+  useEffect(() => {
     if (!storageReady || isDemo || policiesServerReady) return;
     let cancelled = false;
     loadServerPolicies()
@@ -890,12 +952,6 @@ export default function StratoApp() {
     const operationId = params.get("operation");
     const targetView = params.get("view") as AppView | null;
     const operation = operationId ? operations.find(item => item.id === operationId) : undefined;
-    if (operation) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- aplica uma única vez o endereço de uma aba de trabalho compartilhada
-      setSelected(operation);
-      setView("operations");
-      return;
-    }
     const validViews: AppView[] = [
       "home",
       "operations",
@@ -909,7 +965,20 @@ export default function StratoApp() {
       "integrations",
       "settings",
     ];
-    if (targetView && validViews.includes(targetView)) setView(targetView);
+    if (targetView && validViews.includes(targetView)) {
+      if (targetView === "operations" && operation) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- aplica uma única vez o endereço de uma aba de trabalho compartilhada
+        setSelected(operation);
+      } else {
+        setSelected(null);
+      }
+      setView(targetView);
+      return;
+    }
+    if (operation) {
+      setSelected(operation);
+      setView("operations");
+    }
   }, [storageReady, operations]);
 
   function updateOperation(updated: Operation) {
@@ -1180,7 +1249,7 @@ export default function StratoApp() {
     () => (isDemo ? portfolioTitles(operations, true) : portfolioHomeTitles(portfolio)),
     [isDemo, operations, portfolio],
   );
-  const dailyBriefing = useMemo(
+  const operationalDailyBriefing = useMemo(
     () =>
       buildDailyBriefing({
         user: currentUser,
@@ -1261,7 +1330,7 @@ export default function StratoApp() {
     if (next === current) return;
     taskRef.current = next;
     setTasks(next);
-    persistRealTasks(next);
+    persistRealTasks(current, next);
   }, [isDemo, persistentAttentionItems, persistRealTasks, sessionUser.access, storageReady, tasksServerReady]);
   const taskItems = useMemo(() => {
     const allManaged = managedTasks(
@@ -1271,18 +1340,25 @@ export default function StratoApp() {
     );
     const visible = new Set(visibleTasksForUser(allManaged, currentUser, userScope).map(task => task.id));
     const detected = new Set(detectedAttentionItems.map(item => item.id));
-    return allManaged.filter(task => visible.has(task.id) || detected.has(task.id));
+    return allManaged.filter(
+      task => visible.has(task.id) || (detected.has(task.id) && !taskIsExplicitlyAssigned(task)),
+    );
   }, [tasks, persistentAttentionItems, detectedAttentionItems, taskClock, userScope, currentUser]);
   const attentionItems = useMemo(
     () => actionableAttentionItems(taskItems, new Date(taskClock).toISOString()),
     [taskItems, taskClock],
   );
+  const dailyBriefing = useMemo(
+    () => withAssignedTasks(operationalDailyBriefing, attentionItems),
+    [attentionItems, operationalDailyBriefing],
+  );
   const runTaskCommand = (id: string, command: TaskCommand) => {
-    const next = applyTaskCommand(taskRef.current, id, command, new Date().toISOString());
-    if (next === taskRef.current) return;
+    const current = taskRef.current;
+    const next = applyTaskCommand(current, id, command, new Date().toISOString());
+    if (next === current) return;
     taskRef.current = next;
     setTasks(next);
-    persistRealTasks(next);
+    persistRealTasks(current, next);
   };
   if (
     !isDemo &&
@@ -1420,6 +1496,7 @@ export default function StratoApp() {
         companyScope={companyScope}
         onNavigate={navigate}
         focus={portfolioFocus}
+        debtors={scoredDebtors}
       />
     );
   else if (view === "controlleria")

@@ -14,7 +14,7 @@ import type { RegistryPartySearchItem } from "@/src/server/registry/repository";
 import { compact } from "@/src/features/finance/finance-ui";
 import { SearchIcon } from "@/src/ui/icons";
 import { useEffect, useMemo, useState } from "react";
-import { scoreTone } from "./registry-format";
+import { scoreClassification, scoreTone } from "./registry-format";
 
 type Props = {
   debtors: Debtor[];
@@ -86,8 +86,11 @@ export function DebtorsTab({ debtors, operations, onEditDocument, onEditParty, p
         });
       });
     remote.forEach(item => {
-      rows.set(digits(item.party.document), {
-        debtor: partyToDebtor(item.party),
+      const key = digits(item.party.document);
+      const local = rows.get(key)?.debtor;
+      const registered = partyToDebtor(item.party);
+      rows.set(key, {
+        debtor: { ...registered, score: local?.score, scoreReasons: local?.scoreReasons },
         party: item.party,
         openAmount: item.openAmount,
         cedentCount: item.cedentCount,
@@ -123,7 +126,7 @@ export function DebtorsTab({ debtors, operations, onEditDocument, onEditParty, p
               <th>Sacado</th>
               <th>Cidade</th>
               <th>Origem</th>
-              <th className="num">Score</th>
+              <th className="num">Score / classificação</th>
               <th className="num">Em aberto na carteira</th>
               <th className="num">Cedentes</th>
               <th className="num">Atraso médio</th>
@@ -154,6 +157,7 @@ export function DebtorsTab({ debtors, operations, onEditDocument, onEditParty, p
                   </td>
                   <td className="num">
                     <b className={scoreTone(debtor.score ?? 0)}>{debtor.score ?? "—"}</b>
+                    <small className={scoreTone(debtor.score ?? 0)}>{scoreClassification(debtor.score)}</small>
                   </td>
                   <td className="num">{openAmount ? compact(openAmount) : "—"}</td>
                   <td className="num">{cedentCount || "—"}</td>

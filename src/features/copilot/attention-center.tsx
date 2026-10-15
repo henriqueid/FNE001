@@ -80,7 +80,7 @@ export function AttentionCenter({
   const team = assignees.length
     ? assignees
     : [{ id: currentUser.id, name: currentUser.name, department: currentUser.department }];
-  const [delegateTo, setDelegateTo] = useState(team[0].name);
+  const [delegateTo, setDelegateTo] = useState(team[0].id);
   const [snoozeUntil, setSnoozeUntil] = useState(tomorrowMorning);
   const active = items.filter(item => item.status !== "completed");
   const filtered = useMemo(
@@ -293,6 +293,7 @@ export function AttentionCenter({
                           type: "assign",
                           by: currentUser.name,
                           owner: currentUser.name,
+                          ownerUserId: currentUser.id,
                           department: currentUser.department,
                         })
                       }
@@ -330,7 +331,7 @@ export function AttentionCenter({
                         Responsável
                         <select value={delegateTo} onChange={event => setDelegateTo(event.target.value)}>
                           {team.map(member => (
-                            <option key={member.name} value={member.name}>
+                            <option key={member.id} value={member.id}>
                               {member.name} · {member.department}
                             </option>
                           ))}
@@ -368,12 +369,14 @@ export function AttentionCenter({
                             note,
                           });
                         if (actionPanel === "delegate") {
-                          const member = team.find(item => item.name === delegateTo);
+                          const member = team.find(item => item.id === delegateTo);
+                          if (!member) return;
                           run({
                             type: "assign",
                             by: currentUser.name,
-                            owner: delegateTo,
-                            department: member?.department,
+                            owner: member.name,
+                            ownerUserId: member.id,
+                            department: member.department,
                             note,
                           });
                         }

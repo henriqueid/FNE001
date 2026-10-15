@@ -5,8 +5,19 @@ const headers = () => ({ "x-strato-tenant-id": getStratoTenantId() });
 
 async function responseBody<T>(response: Response): Promise<T> {
   const body = (await response.json().catch(() => ({}))) as T & { error?: string };
-  if (!response.ok) throw new Error(body.error ?? "Não foi possível acessar as tarefas.");
+  if (!response.ok)
+    throw new TaskPersistenceError(body.error ?? "Não foi possível acessar as tarefas.", response.status);
   return body;
+}
+
+export class TaskPersistenceError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "TaskPersistenceError";
+  }
 }
 
 export async function loadTaskState(): Promise<TaskState | null> {

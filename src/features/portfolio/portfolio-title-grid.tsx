@@ -25,6 +25,10 @@ export type PortfolioGridRow = Omit<PortfolioTitleRecord, "source"> & {
   displayStatus: PortfolioDisplayStatus;
   late: number;
   repId?: string;
+  cedentScore?: number;
+  cedentClassification?: string;
+  debtorScore?: number;
+  debtorClassification?: string;
 };
 
 type ColumnKey =
@@ -137,6 +141,12 @@ function gridColumns(repName: (id?: string) => string, onDetail: (row: Portfolio
         <>
           {row.ownerName}
           <small>{row.ownerDocument}</small>
+          {row.cedentClassification && (
+            <small>
+              Classificação: {row.cedentClassification}
+              {row.cedentScore ? ` · score ${row.cedentScore}` : ""}
+            </small>
+          )}
         </>
       ),
     },
@@ -149,6 +159,12 @@ function gridColumns(repName: (id?: string) => string, onDetail: (row: Portfolio
         <>
           {row.debtorName}
           <small>{row.debtorDocument}</small>
+          {row.debtorClassification && (
+            <small>
+              Classificação: {row.debtorClassification}
+              {row.debtorScore ? ` · score ${row.debtorScore}` : ""}
+            </small>
+          )}
         </>
       ),
     },

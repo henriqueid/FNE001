@@ -25,6 +25,8 @@ export type TaskRecord = {
   source: "automatic" | "manual";
   status: TaskStatus;
   owner: string;
+  /** Identificador nominal do usuário após assumir ou receber uma delegação. */
+  ownerUserId?: string;
   department: string;
   dueAt: string;
   snoozedUntil?: string;
@@ -43,6 +45,7 @@ export type ManagedTask = AttentionItem &
     | "source"
     | "status"
     | "owner"
+    | "ownerUserId"
     | "department"
     | "dueAt"
     | "snoozedUntil"
@@ -54,12 +57,15 @@ export type ManagedTask = AttentionItem &
 
 export type TaskCommand =
   | { type: "start"; by: string }
-  | { type: "assign"; by: string; owner: string; department?: string; note?: string }
+  | { type: "assign"; by: string; owner: string; ownerUserId?: string; department?: string; note?: string }
   | { type: "snooze"; by: string; until: string; note?: string }
   | { type: "complete"; by: string; note?: string }
   | { type: "reopen"; by: string; note?: string };
 
 export const seedTaskState = (): TaskState => ({ version: 1, tasks: [] });
+
+export const taskIsExplicitlyAssigned = (task: Pick<TaskRecord, "history">) =>
+  (task.history ?? []).some(entry => entry.action === "assigned");
 
 const snapshotOf = (item: AttentionItem): TaskSnapshot => {
   const { operation, ...snapshot } = item;
@@ -150,6 +156,7 @@ export function managedTasks(state: TaskState, items: AttentionItem[], now?: str
       source: record.source,
       status: reminderReached ? "open" : record.status,
       owner: record.owner,
+      ownerUserId: record.ownerUserId,
       department: record.department,
       dueAt: record.dueAt,
       snoozedUntil: record.snoozedUntil,
@@ -186,9 +193,12 @@ export function actionableAttentionItems(tasks: ManagedTask[], now: string): Att
 /** Última barreira de visibilidade: também protege tarefas históricas já persistidas. */
 export function visibleTasksForUser(tasks: ManagedTask[], user: AppUserProfile, scope?: UserScopeContext) {
   const areas = userFunctionalAreas(user);
-  if (user.access === "admin" || areas.includes("Diretoria")) return tasks;
   return tasks.filter(task => {
-    if (task.owner === user.name) return true;
+    // Depois de uma atribuição explícita a tarefa deixa de ser uma fila da área e passa a ser
+    // uma pendência nominal. Isso também impede que quem delegou continue vendo-a pela área.
+    if (taskIsExplicitlyAssigned(task))
+      return task.ownerUserId ? task.ownerUserId === user.id : task.owner === user.name;
+    if (user.access === "admin" || areas.includes("Diretoria") || task.owner === user.name) return true;
     if (task.operation) return operationBelongsToUser(task.operation, user, scope);
     return functionalAreasMatchQueue(areas, task.department);
   });
@@ -212,6 +222,7 @@ export function applyTaskCommand(state: TaskState, id: string, command: TaskComm
         ...task,
         status: "in_progress" as const,
         owner: command.owner,
+        ownerUserId: command.ownerUserId,
         department: command.department ?? task.department,
         snoozedUntil: undefined,
         updatedAt: now,
@@ -250,6 +261,46 @@ export function applyTaskCommand(state: TaskState, id: string, command: TaskComm
     };
   });
   return found ? { ...state, tasks } : state;
+}
+
+/** Reaplica somente as mudanças locais sobre uma versão mais recente recebida do servidor. */
+export function rebaseTaskState(base: TaskState, candidate: TaskState, current: TaskState): TaskState {
+  const baseById = new Map(base.tasks.map(task => [task.id, task]));
+  const currentById = new Map(current.tasks.map(task => [task.id, task]));
+  const changed = candidate.tasks.filter(task => JSON.stringify(task) !== JSON.stringify(baseById.get(task.id)));
+  if (!changed.length) return current;
+
+  const replacements = new Map<string, TaskRecord>();
+  for (const task of changed) {
+    const serverTask = currentById.get(task.id);
+    const baseTask = baseById.get(task.id);
+    // Uma tarefa que existia na base, mas sumiu da resposta recortada do servidor,
+    // deixou de ser visível (por exemplo, após delegação) e não pode ser reenviada.
+    if (!serverTask) {
+      if (!baseTask) replacements.set(task.id, task);
+      continue;
+    }
+    if (!baseTask) {
+      replacements.set(task.id, task);
+      continue;
+    }
+    const baseHistoryIds = new Set(baseTask.history.map(entry => entry.id));
+    const serverHistoryIds = new Set(serverTask.history.map(entry => entry.id));
+    const localHistory = task.history.filter(entry => !baseHistoryIds.has(entry.id) && !serverHistoryIds.has(entry.id));
+    const localChanges = Object.fromEntries(
+      (Object.keys(task) as (keyof TaskRecord)[])
+        .filter(key => key !== "history" && JSON.stringify(task[key]) !== JSON.stringify(baseTask[key]))
+        .map(key => [key, task[key]]),
+    ) as Partial<TaskRecord>;
+    replacements.set(task.id, {
+      ...serverTask,
+      ...localChanges,
+      history: [...serverTask.history, ...localHistory],
+    });
+  }
+  const tasks = current.tasks.map(task => replacements.get(task.id) ?? task);
+  for (const task of changed) if (!currentById.has(task.id) && !baseById.has(task.id)) tasks.push(task);
+  return { ...current, tasks };
 }
 
 export function migrateTaskState(value: unknown): TaskState {

@@ -7,6 +7,7 @@
  */
 import { useRegistry } from "@/src/app/registry-context";
 import { digits } from "@/src/domain/commercial/calendar";
+import { type Debtor } from "@/src/domain/core/types";
 import { type AppView } from "@/src/features/shell/shell-context";
 import { useMemo, useState } from "react";
 import { repAt } from "@/src/domain/commercial/rules";
@@ -33,6 +34,7 @@ import { fmtDays, fmtPct, IndicatorGrid } from "@/src/features/indicators/indica
 import { useQualityPolicy } from "@/src/features/risk/use-quality-policy";
 import { CollectionCenter } from "./collection-center";
 import type { PortfolioFocus, PortfolioSituation, PortfolioTab } from "./portfolio-navigation";
+import { scoreChipTone, scoreClassification } from "@/src/features/registry/registry-format";
 
 type Props = {
   portfolio: PortfolioState;
@@ -40,9 +42,10 @@ type Props = {
   companyScope: string;
   onNavigate: (view: AppView) => void;
   focus?: PortfolioFocus;
+  debtors: Debtor[];
 };
 
-export default function PortfolioModule({ portfolio, onPortfolio, companyScope, onNavigate, focus }: Props) {
+export default function PortfolioModule({ portfolio, onPortfolio, companyScope, onNavigate, focus, debtors }: Props) {
   const { commercial, cedents } = useRegistry();
   const { policy } = useQualityPolicy();
   const today = todayIso();
@@ -55,16 +58,24 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
     () =>
       portfolio.titles
         .filter(title => companyScope === "Consolidado" || title.company === companyScope)
-        .map(title => ({
-          ...title,
-          amount: portfolioBalance(title),
-          reference: title.documentNumber,
-          source: title.source === "Operação liberada" ? ("Operação liberada" as const) : ("Carteira" as const),
-          originLabel: title.importSource ?? title.source,
-          vehicle: title.company,
-          displayStatus: portfolioDisplayStatus(title, today),
-        })),
-    [companyScope, portfolio, today],
+        .map(title => {
+          const cedent = cedents.find(item => digits(item.document) === digits(title.ownerDocument));
+          const debtor = debtors.find(item => digits(item.document) === digits(title.debtorDocument));
+          return {
+            ...title,
+            amount: portfolioBalance(title),
+            reference: title.documentNumber,
+            source: title.source === "Operação liberada" ? ("Operação liberada" as const) : ("Carteira" as const),
+            originLabel: title.importSource ?? title.source,
+            vehicle: title.company,
+            displayStatus: portfolioDisplayStatus(title, today),
+            cedentScore: cedent?.score,
+            cedentClassification: scoreClassification(cedent?.score),
+            debtorScore: debtor?.score,
+            debtorClassification: scoreClassification(debtor?.score),
+          };
+        }),
+    [cedents, companyScope, debtors, portfolio, today],
   );
   const withRep = useMemo(
     () =>
@@ -376,6 +387,7 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
                 <tr>
                   <th>Cedente</th>
                   <th>Comercial</th>
+                  <th>Classificação</th>
                   <th className="num">Em aberto</th>
                   <th className="num">Vencido</th>
                   <th className="num">% vencido</th>
@@ -394,6 +406,12 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
                         <small>{c.document}</small>
                       </td>
                       <td>{repName(c.repId)}</td>
+                      <td>
+                        <span className={`fn-chip ${scoreChipTone(ced?.score)}`}>
+                          {scoreClassification(ced?.score)}
+                          {ced?.score ? ` · ${ced.score}` : ""}
+                        </span>
+                      </td>
                       <td className="num">{compact(c.open)}</td>
                       <td className="num">
                         <span className={c.overdue ? "bad" : ""}>{c.overdue ? compact(c.overdue) : "—"}</span>

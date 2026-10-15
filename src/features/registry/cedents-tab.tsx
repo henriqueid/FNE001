@@ -16,7 +16,7 @@ import { br, compact } from "@/src/features/finance/finance-ui";
 import { type AppView } from "@/src/features/shell/shell-context";
 import { SearchIcon } from "@/src/ui/icons";
 import { Fragment, useMemo, useState } from "react";
-import { scoreTone } from "./registry-format";
+import { scoreClassification, scoreTone } from "./registry-format";
 
 type Props = {
   operations: Operation[];
@@ -135,7 +135,7 @@ export function CedentsTab({
               <tr>
                 <th>Cedente</th>
                 <th>Relacionamento</th>
-                <th className="num">Score</th>
+                <th className="num">Score / classificação</th>
                 <th className="num">Crédito</th>
                 <th className="num">Carteira em aberto</th>
                 <th className="num">Em andamento</th>
@@ -174,6 +174,9 @@ export function CedentsTab({
                       </td>
                       <td className="num">
                         <b className={scoreTone(record.cedent.score)}>{record.cedent.score || "—"}</b>
+                        <small className={scoreTone(record.cedent.score)}>
+                          {scoreClassification(record.cedent.score)}
+                        </small>
                       </td>
                       <td className="num">
                         <b>{record.cedent.creditLimit ? compact(record.cedent.creditLimit) : "—"}</b>

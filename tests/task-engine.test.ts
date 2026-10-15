@@ -4,6 +4,7 @@ import { initialOperations } from "@/src/domain/core/demo/operations";
 import {
   actionableAttentionItems,
   applyTaskCommand,
+  rebaseTaskState,
   managedTasks,
   reconcileTasks,
   seedTaskState,
@@ -60,6 +61,37 @@ describe("motor de tarefas", () => {
     ]);
   });
 
+  it("transfere uma tarefa delegada exclusivamente para a fila nominal do destinatário", () => {
+    const initial = reconcileTasks(seedTaskState(), detected, now);
+    const id = initial.tasks[0].id;
+    const delegated = applyTaskCommand(
+      initial,
+      id,
+      {
+        type: "assign",
+        by: "Henrique",
+        owner: "Marina Costa",
+        ownerUserId: "user-marina",
+        department: "Operações",
+      },
+      "2026-10-10T12:05:00.000Z",
+    );
+    const tasks = managedTasks(delegated, detected, now);
+    const delegator = visibleTasksForUser(tasks, demoAdminUser);
+    const recipient = visibleTasksForUser(tasks, {
+      id: "user-marina",
+      name: "Marina Costa",
+      role: "Analista",
+      department: "Operações",
+      access: "operator",
+      responsibilities: ["Operação"],
+    });
+
+    expect(delegator.some(task => task.id === id)).toBe(false);
+    expect(recipient.some(task => task.id === id)).toBe(true);
+    expect(actionableAttentionItems(recipient, now).some(task => task.id === id)).toBe(true);
+  });
+
   it("retira tarefas adiadas e concluídas dos alertas acionáveis", () => {
     const initial = reconcileTasks(seedTaskState(), detected, now);
     const first = initial.tasks[0].id;
@@ -75,6 +107,45 @@ describe("motor de tarefas", () => {
 
     expect(actionable.some(item => item.id === first)).toBe(false);
     expect(actionable.some(item => item.id === second)).toBe(false);
+  });
+
+  it("reaplica uma conclusão local sobre a versão mais recente sem apagar histórico concorrente", () => {
+    const initial = reconcileTasks(seedTaskState(), detected, now);
+    const id = initial.tasks[0].id;
+    const completed = applyTaskCommand(initial, id, { type: "complete", by: "Henrique" }, "2026-10-10T12:05:00.000Z");
+    const concurrent = applyTaskCommand(
+      initial,
+      initial.tasks[1].id,
+      { type: "start", by: "Marina Costa" },
+      "2026-10-10T12:04:00.000Z",
+    );
+    const current = { ...concurrent, persistenceVersion: 8 };
+
+    const rebased = rebaseTaskState(initial, completed, current);
+
+    expect(rebased.persistenceVersion).toBe(8);
+    expect(rebased.tasks.find(task => task.id === id)?.status).toBe("completed");
+    expect(rebased.tasks.find(task => task.id === initial.tasks[1].id)?.status).toBe("in_progress");
+  });
+
+  it("preserva mudanças concorrentes na mesma tarefa e não reinsere tarefa que saiu da visão", () => {
+    const initial = reconcileTasks(seedTaskState(), detected, now);
+    const id = initial.tasks[0].id;
+    const completed = applyTaskCommand(initial, id, { type: "complete", by: "Henrique" }, "2026-10-10T12:05:00.000Z");
+    const concurrent = {
+      ...initial,
+      persistenceVersion: 9,
+      tasks: initial.tasks.map(task => (task.id === id ? { ...task, dueAt: "2026-10-11T18:00:00.000Z" } : task)),
+    };
+
+    const rebased = rebaseTaskState(initial, completed, concurrent);
+    expect(rebased.tasks.find(task => task.id === id)).toMatchObject({
+      status: "completed",
+      dueAt: "2026-10-11T18:00:00.000Z",
+    });
+
+    const noLongerVisible = { ...concurrent, tasks: concurrent.tasks.filter(task => task.id !== id) };
+    expect(rebaseTaskState(initial, completed, noLongerVisible).tasks.some(task => task.id === id)).toBe(false);
   });
 
   it("reativa o lembrete quando chega o horário definido", () => {

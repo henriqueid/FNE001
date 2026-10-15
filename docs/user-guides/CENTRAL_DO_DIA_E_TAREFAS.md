@@ -26,6 +26,8 @@ A fila já respeita o perfil, o departamento, a carteira nominal e o escopo de e
 
 - **Assumir** coloca a tarefa em andamento com o usuário atual.
 - **Delegar** usa o diretório ativo de usuários do tenant; escolha a pessoa e registre uma observação quando houver contexto importante.
+- Ao confirmar, a tarefa sai da fila nominal de quem delegou e entra na fila do destinatário. Ela passa a compor o sino de notificações, o Copiloto e o resumo do dia dessa pessoa.
+- A fila é atualizada ao retornar para a janela e, enquanto aberta, em intervalos curtos; não é necessário recarregar a página.
 - O nome exibido é acompanhado, no banco, pelo identificador estável do usuário sempre que ele pertence ao tenant.
 - A atribuição anterior permanece no histórico; ela não é sobrescrita.
 

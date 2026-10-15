@@ -28,4 +28,18 @@ describe("escopo de empresa das tarefas", () => {
     expect(taskVisibleTo(task("op-b"), principal, companies)).toBe(false);
     expect(taskVisibleTo(task("op-inexistente"), principal, companies)).toBe(false);
   });
+
+  it("entrega uma tarefa delegada apenas ao usuário nominal, mesmo na mesma área", () => {
+    const delegated = {
+      ...task(),
+      owner: "Destinatário",
+      ownerUserId: "recipient-id",
+      history: [{ action: "assigned" }],
+    } as TaskRecord;
+    const origin = { ...principal, id: "origin-id", name: "Origem", access: "operator" } as ServerPrincipal;
+    const recipient = { ...origin, id: "recipient-id", name: "Destinatário" } as ServerPrincipal;
+
+    expect(taskVisibleTo(delegated, origin, companies)).toBe(false);
+    expect(taskVisibleTo(delegated, recipient, companies)).toBe(true);
+  });
 });

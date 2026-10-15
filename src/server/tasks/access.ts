@@ -1,5 +1,5 @@
 import { functionalAreasMatchQueue } from "@/src/domain/copilot/daily-briefing";
-import type { TaskRecord, TaskState } from "@/src/domain/tasks/model";
+import { taskIsExplicitlyAssigned, type TaskRecord, type TaskState } from "@/src/domain/tasks/model";
 import type { ServerPrincipal } from "@/src/server/access/repository";
 import { principalHasCompanyScope } from "@/src/server/access/scope";
 
@@ -9,6 +9,10 @@ export function taskVisibleTo(task: TaskRecord, principal: ServerPrincipal, oper
     const company = operationCompanies.get(operationId);
     if (!company || !principalHasCompanyScope(principal, company)) return false;
   }
+  // Uma tarefa assumida/delegada é nominal. A área continua servindo apenas para filas ainda
+  // não atribuídas, evitando que o delegante mantenha a pendência depois da transferência.
+  if (taskIsExplicitlyAssigned(task))
+    return task.ownerUserId ? task.ownerUserId === principal.id : task.owner === principal.name;
   return (
     principal.access === "admin" ||
     task.owner === principal.name ||

@@ -16,7 +16,7 @@ import { dailyBriefingStorageKey, shouldAutoOpenDailyBriefing } from "./daily-br
 import { DailyBriefing } from "@/src/features/copilot/daily-briefing";
 import { type DailyBriefingData } from "@/src/domain/copilot/daily-briefing";
 import { can, type AccessUser } from "@/src/domain/access/model";
-import { type AttentionItem } from "@/src/domain/copilot/attention-center";
+import { attentionItemOperation, type AttentionItem } from "@/src/domain/copilot/attention-center";
 import { AttentionCenter } from "@/src/features/copilot/attention-center";
 import { type ManagedTask, type TaskCommand } from "@/src/domain/tasks/model";
 import { type IntelligenceState } from "@/src/domain/intelligence/model";
@@ -161,7 +161,8 @@ export function Shell({
   };
   const activateTask = (item: AttentionItem) => {
     setActiveTaskId(item.id);
-    if (item.operation) context?.openOperation(item.operation);
+    const operation = attentionItemOperation(item);
+    if (operation) context?.openOperation(operation);
     else (onNavigate ?? context?.navigate)?.(item.view);
   };
   const openTask = (item: AttentionItem) => {

@@ -143,6 +143,15 @@ export function buildAttentionItems({
 
 export function attentionItemHref(item: AttentionItem) {
   const query = new URLSearchParams({ view: item.view, attention: item.id });
-  if (item.operation) query.set("operation", item.operation.id);
+  const operation = attentionItemOperation(item);
+  if (operation) query.set("operation", operation.id);
   return `/?${query.toString()}`;
+}
+
+/**
+ * A operação vinculada dá contexto ao aviso, mas não pode sobrescrever o
+ * módulo de destino. Somente avisos que declaram Operações abrem o workspace.
+ */
+export function attentionItemOperation(item: AttentionItem) {
+  return item.view === "operations" ? item.operation : undefined;
 }

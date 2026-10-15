@@ -229,3 +229,23 @@ export function buildDailyBriefing({
 }
 
 export type DailyBriefingData = ReturnType<typeof buildDailyBriefing>;
+
+/** Inclui a fila nominal já filtrada do usuário no resumo apresentado pelo Copiloto. */
+export function withAssignedTasks(
+  briefing: DailyBriefingData,
+  tasks: { id: string; title: string; summary: string; tone: DailyBriefingPriority["tone"] }[],
+): DailyBriefingData {
+  if (!tasks.length) return { ...briefing, taskCount: 0, priorities: [] };
+  return {
+    ...briefing,
+    taskCount: tasks.length,
+    priorities: tasks.map(task => ({
+      id: `task-${task.id}`,
+      title: task.title,
+      detail: task.summary,
+      count: 1,
+      tone: task.tone,
+      view: "operations",
+    })),
+  };
+}

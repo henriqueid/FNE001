@@ -1,4 +1,9 @@
-import { demoAdminUser, buildDailyBriefing, operationsForUser } from "@/src/domain/copilot/daily-briefing";
+import {
+  demoAdminUser,
+  buildDailyBriefing,
+  operationsForUser,
+  withAssignedTasks,
+} from "@/src/domain/copilot/daily-briefing";
 import { initialOperations } from "@/src/domain/core/demo/operations";
 import { portfolioTitles } from "@/src/domain/home/metrics";
 import { describe, expect, it } from "vitest";
@@ -19,6 +24,30 @@ describe("abertura diária do Copiloto", () => {
     repOfCedent: (document: string, date: string) => repAt(commercial, document, date),
     managerOfCedent: (document: string) => managerOf(commercial, document),
   };
+  it("destaca tarefas nominais na contagem e na agenda do dia", () => {
+    const briefing = withAssignedTasks(
+      buildDailyBriefing({
+        user: demoAdminUser,
+        operations: [],
+        financials: {},
+        titles: [],
+        referenceDate: "2026-10-10",
+        revenueTarget: 0,
+      }),
+      [
+        { id: "task-a", title: "Revisar operação A", summary: "Bloqueio de política.", tone: "critical" },
+        { id: "task-b", title: "Cobrar título B", summary: "Título vencido.", tone: "warning" },
+      ],
+    );
+
+    expect(briefing.taskCount).toBe(2);
+    expect(briefing.priorities[0]).toMatchObject({
+      id: "task-task-a",
+      title: "Revisar operação A",
+      count: 1,
+      tone: "critical",
+    });
+  });
   it("entrega visão consolidada ao administrador", () => {
     const briefing = buildDailyBriefing({
       user: demoAdminUser,

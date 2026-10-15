@@ -117,7 +117,7 @@ type PricingVersionBarProps = {
   onStartNewVersion: () => void;
 };
 
-/** Versão da condição: protegida quando salva, com motivo para liberar nova revisão. */
+/** Versão da condição: protegida quando salva e liberada explicitamente para uma nova revisão. */
 export function PricingVersionBar({
   pricing,
   activeVersionReason,
@@ -134,7 +134,7 @@ export function PricingVersionBar({
         </strong>
         <small>
           {pricing.locked
-            ? `Salva por ${pricing.savedBy ?? "Usuário"} em ${pricing.savedAt ?? "data não informada"}. Para alterar taxa ou tarifas, informe o motivo e libere a edição. A condição atual continuará no histórico.`
+            ? `Salva por ${pricing.savedBy ?? "Usuário"} em ${pricing.savedAt ?? "data não informada"}. Clique em editar para liberar taxa, tarifas e demais condições. A versão atual continuará no histórico.`
             : activeVersionReason
               ? `Motivo da revisão: ${activeVersionReason}`
               : "Ao salvar, esta revisão será registrada sem apagar a condição anterior."}
@@ -143,16 +143,16 @@ export function PricingVersionBar({
       {pricing.locked && (
         <div className="pricing-version-action">
           <label>
-            <span>MOTIVO DA REVISÃO</span>
+            <span>MOTIVO DA REVISÃO · OPCIONAL</span>
             <input
               aria-label="Motivo da revisão da condição"
               value={versionReason}
-              placeholder="Ex.: renegociação da taxa"
+              placeholder="Ex.: renegociação da taxa (opcional)"
               onChange={event => onVersionReasonChange(event.target.value)}
             />
           </label>
           <button type="button" className="pricing-edit-action" onClick={onStartNewVersion}>
-            Editar taxa e tarifas
+            Editar condição comercial
           </button>
         </div>
       )}

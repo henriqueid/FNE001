@@ -1,23 +1,22 @@
 /**
- * Gestão por exceção na esteira: depois que o motor libera a operação (snapshot dentro da política ou
- * exceções já deliberadas), as etapas sem decisão humana avançam sozinhas até a Tela Final (Aprovação).
+ * Gestão por exceção na esteira: ao entrar em Lastro, a etapa é dispensada automaticamente somente
+ * quando o cadastro do cedente não exige pré-checagem. A esteira sempre para em Preço.
  *
- * - Lastro avança quando todas as evidências estão validadas e a amostra sorteada foi confirmada.
- *   Se há confirmação pendente, a esteira PARA ali: ligar para o sacado é trabalho humano.
- * - Preço avança quando a condição comercial já foi salva, ou quando a condição padrão da modalidade
- *   respeita o piso de taxa e gera líquido e spread positivos (ela é salva em nome do motor).
+ * - Lastro obrigatório exige um parecer geral e conclusão manual; evidências, confirmações e checklist
+ *   são apenas apoio e não bloqueiam o parecer.
+ * - Preço nunca avança automaticamente. Salvar a condição e concluir a etapa são ações separadas.
  * - Aprovação e assinaturas continuam humanas. Depois da última assinatura e de todos os requisitos
  *   concluídos, o orquestrador apenas disponibiliza a operação na etapa de Liberação.
  * - A autorização financeira nunca é automática: favorecidos e pagamento ainda exigem conferência humana.
  *
- * Cada avanço automático fica registrado na conclusão da etapa ("Motor de elegibilidade") e no
- * histórico da condição comercial, com o motivo.
+ * Cada dispensa automática fica registrada na conclusão da etapa e no parecer de lastro
+ * em nome do "Motor de elegibilidade".
  */
 import { stages } from "@/src/domain/core/stages";
 import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
 import { eligibilityRouteFor } from "@/src/domain/eligibility/orchestration";
-import { isConfirmationResolved, lastroAssessmentFor } from "./lastro";
+import { lastroAssessmentFor } from "./lastro";
 import {
   defaultPricing,
   pricingCalculation,
@@ -108,63 +107,36 @@ export function autoAdvanceWithinPolicy(
   const steps: AutoAdvanceStep[] = [];
   let current = operation;
   if (!operationalParametersFor(operation.institution).autoAdvanceWithinPolicy) return { operation, steps };
-  for (let guard = 0; guard < 3; guard++) {
-    if (current.status === "Cancelada" || !current.eligibilityReview) break;
-    if (!eligibilityRouteFor(current).canAdvance) break;
-    if (current.stage === 3) {
-      const lastro = lastroAssessmentFor(current, debtors);
-      if (!lastro.ready) {
-        const pending = lastro.rows.filter(
-          row => row.evidenceStatus !== "Validada" || (row.sampled && !isConfirmationResolved(row)),
-        ).length;
-        return {
-          operation: current,
-          steps,
-          stoppedAt: {
-            stageId: 3,
-            stage: stageName(3),
-            reason: lastro.divergences
-              ? `${lastro.divergences} divergência(s) de lastro exigem análise`
-              : `${pending} título(s) aguardam evidência ou confirmação do sacado`,
-          },
-        };
-      }
-      if (lastro.exceptions.length)
-        return {
-          operation: current,
-          steps,
-          stoppedAt: {
-            stageId: 3,
-            stage: stageName(3),
-            reason: `${lastro.exceptions.length} exceção(ões) de lastro registrada(s): conclua a etapa manualmente`,
-          },
-        };
-      current = completeStage(current, at, stages[3].description);
-      steps.push({ stageId: 3, stage: stageName(3), reason: "evidências validadas e amostra confirmada" });
-      continue;
-    }
-    if (current.stage === 4) {
-      if (current.pricingReview?.status === "Condição salva") {
-        current = completeStage(current, at, "Submeter condição comercial às alçadas");
-        steps.push({ stageId: 4, stage: stageName(4), reason: "condição comercial salva" });
-        continue;
-      }
-      if (current.pricingReview) {
-        return {
-          operation: current,
-          steps,
-          stoppedAt: { stageId: 4, stage: stageName(4), reason: "condição comercial em simulação" },
-        };
-      }
-      const priced = automaticPricing(current, at);
-      if (!priced.operation)
-        return { operation: current, steps, stoppedAt: { stageId: 4, stage: stageName(4), reason: priced.reason } };
-      current = completeStage(priced.operation, at, "Submeter condição comercial às alçadas");
-      steps.push({ stageId: 4, stage: stageName(4), reason: priced.reason });
-      continue;
-    }
-    break;
-  }
+  if (current.status === "Cancelada" || current.stage !== 3) return { operation: current, steps };
+  if (current.eligibilityReview && !eligibilityRouteFor(current).canAdvance) return { operation: current, steps };
+  const lastro = lastroAssessmentFor(current, debtors);
+  if (lastro.required)
+    return {
+      operation: current,
+      steps,
+      stoppedAt: {
+        stageId: 3,
+        stage: stageName(3),
+        reason: lastro.ready
+          ? "parecer registrado; conclua a etapa manualmente"
+          : "pré-checagem obrigatória: registre o status geral do parecer",
+      },
+    };
+  current = completeStage(
+    {
+      ...current,
+      lastroReview: {
+        ...current.lastroReview,
+        status: "Dispensado",
+        opinion: "Pré-checagem dispensada conforme cadastro do cedente.",
+        reviewedAt: at,
+        reviewedBy: AUTO_ACTOR,
+      },
+    },
+    at,
+    stages[3].description,
+  );
+  steps.push({ stageId: 3, stage: stageName(3), reason: "pré-checagem dispensada no cadastro do cedente" });
   return { operation: current, steps };
 }
 
@@ -173,5 +145,5 @@ export function autoAdvanceMessage(result: AutoAdvanceResult) {
   const done = result.steps.map(step => `${step.stage} (${step.reason})`).join(" e ");
   const stop = result.stoppedAt ? `Parou em ${result.stoppedAt.stage}: ${result.stoppedAt.reason}.` : "";
   if (!result.steps.length) return stop;
-  return `Dentro da política: o motor concluiu ${done}. ${stop || "A operação está na Tela Final para decisão."}`.trim();
+  return `Automação da esteira: ${done ? `concluiu ${done}.` : ""} ${stop || "A operação está em Preço para análise manual."}`.trim();
 }

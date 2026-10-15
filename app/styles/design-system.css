@@ -6084,6 +6084,44 @@ a.fn-btn:not([href]) {
 .settings-inline-option > div small {
   color: var(--muted);
 }
+.settings-interface-save {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 22px;
+  border-top: 1px solid var(--ds-border);
+  background: var(--ds-surface-2);
+}
+.settings-interface-save > div {
+  display: grid;
+  gap: 4px;
+}
+.settings-interface-save strong {
+  font-size: 12px;
+}
+.settings-interface-save span {
+  color: var(--muted);
+  font-size: 10px;
+}
+.settings-interface-save button {
+  min-height: 40px;
+  padding: 0 17px;
+  border: 1px solid var(--ds-accent);
+  border-radius: 10px;
+  color: var(--ds-accent-ink);
+  background: var(--ds-accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.settings-interface-save button:disabled {
+  border-color: var(--ds-border);
+  color: var(--muted);
+  background: var(--ds-surface);
+  cursor: not-allowed;
+}
 
 /* ---------- Cadastro do cedente · navegação e parâmetros ---------- */
 .rg-profile-tabs {
@@ -7625,6 +7663,13 @@ a.fn-btn:not([href]) {
     align-items: flex-start;
     flex-direction: column;
   }
+  .settings-interface-save {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .settings-interface-save button {
+    width: 100%;
+  }
   .settings-ai-provider > header,
   .settings-ai-actions {
     align-items: stretch;
@@ -7943,4 +7988,142 @@ a.fn-btn:not([href]) {
   justify-self: start;
   border-color: var(--ds-danger);
   color: var(--ds-danger);
+}
+
+/* Cadastro do cedente · opção que controla a pré-checagem de lastro. */
+.rg-check-line {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--ds-border);
+  border-radius: 10px;
+  background: var(--ds-surface-2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ds-text-2);
+  font-size: 13px;
+  cursor: pointer;
+}
+.rg-check-line input {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0;
+  accent-color: var(--ds-accent);
+}
+
+/* Lastro · o parecer é o único requisito; os controles detalhados são apoio. */
+.lastro-opinion {
+  padding: 16px 18px;
+  border: 1px solid var(--ds-border-strong);
+  border-radius: 10px;
+  background: var(--ds-surface);
+  display: grid;
+  grid-template-columns: minmax(210px, 0.8fr) minmax(180px, 0.55fr) minmax(280px, 1.4fr);
+  gap: 16px;
+  align-items: end;
+}
+.lastro-opinion > div,
+.lastro-opinion label {
+  display: grid;
+  gap: 6px;
+}
+.lastro-opinion span,
+.lastro-opinion label {
+  color: var(--ds-text-2);
+  font-size: 11px;
+  font-weight: 750;
+}
+.lastro-opinion strong {
+  color: var(--ds-text);
+  font-size: 15px;
+}
+.lastro-opinion small {
+  color: var(--ds-text-3);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.lastro-opinion select,
+.lastro-opinion textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--ds-border);
+  border-radius: 8px;
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font: inherit;
+  font-weight: 500;
+}
+.lastro-opinion textarea {
+  resize: vertical;
+}
+.lastro-supporting-analysis {
+  border: 1px solid var(--ds-border);
+  border-radius: 10px;
+  background: var(--ds-surface-2);
+  overflow: hidden;
+}
+.lastro-supporting-analysis > summary {
+  padding: 13px 16px;
+  color: var(--ds-text-2);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.lastro-supporting-analysis[open] > summary {
+  border-bottom: 1px solid var(--ds-border);
+}
+.lastro-supporting-analysis > :not(summary) {
+  margin: 12px;
+}
+
+/* Preço · parecer herdado da etapa anterior para apoiar a condição comercial. */
+.pricing-lastro-opinion {
+  padding: 13px 15px;
+  border: 1px solid var(--ds-border);
+  border-left: 4px solid var(--ds-border-strong);
+  border-radius: 8px;
+  background: var(--ds-surface);
+  display: grid;
+  grid-template-columns: minmax(150px, 0.35fr) minmax(260px, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+}
+.pricing-lastro-opinion > div {
+  display: grid;
+  gap: 3px;
+}
+.pricing-lastro-opinion span,
+.pricing-lastro-opinion small {
+  color: var(--ds-text-3);
+  font-size: 10px;
+  font-weight: 750;
+}
+.pricing-lastro-opinion strong {
+  color: var(--ds-text);
+  font-size: 13px;
+}
+.pricing-lastro-opinion p {
+  margin: 0;
+  color: var(--ds-text-2);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.pricing-lastro-opinion.positive {
+  border-left-color: var(--ds-success);
+  background: color-mix(in srgb, var(--ds-success) 8%, var(--ds-surface));
+}
+.pricing-lastro-opinion.warning {
+  border-left-color: var(--ds-warning);
+  background: color-mix(in srgb, var(--ds-warning) 8%, var(--ds-surface));
+}
+.pricing-lastro-opinion.negative {
+  border-left-color: var(--ds-danger);
+  background: color-mix(in srgb, var(--ds-danger) 8%, var(--ds-surface));
+}
+@media (max-width: 900px) {
+  .lastro-opinion,
+  .pricing-lastro-opinion {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
 }

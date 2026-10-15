@@ -31,6 +31,36 @@ const INITIAL_OFFSET_FILTERS: OffsetFilters = {
   search: "",
 };
 
+function PricingLastroOpinion({ operation }: { operation: Operation }) {
+  const required = operation.lastroPrecheckRequired ?? false;
+  const status = operation.lastroReview?.status ?? (required ? "Pendente" : "Dispensado");
+  const opinion = operation.lastroReview?.opinion;
+  const tone =
+    status === "Desfavorável"
+      ? "negative"
+      : status === "Favorável com ressalvas"
+        ? "warning"
+        : status === "Favorável"
+          ? "positive"
+          : "neutral";
+
+  return (
+    <section className={`pricing-lastro-opinion ${tone}`} aria-label="Parecer do lastro">
+      <div>
+        <span>PARECER DO LASTRO</span>
+        <strong>{status}</strong>
+      </div>
+      <p>
+        {opinion ||
+          (required
+            ? "O parecer da pré-checagem ainda não foi registrado. Retorne à etapa Lastro antes de concluir o preço."
+            : "Pré-checagem dispensada conforme o cadastro do cedente; não há ressalva de lastro para a formação do preço.")}
+      </p>
+      {operation.lastroReview?.reviewedBy ? <small>Registrado por {operation.lastroReview.reviewedBy}</small> : null}
+    </section>
+  );
+}
+
 export function PricingPanel({
   operation,
   onChange,
@@ -69,6 +99,7 @@ export function PricingPanel({
       <PricingHero status={pricing.status} />
       <PricingQuickNav />
       <PricingSourceStrip calculated={calculated} ready={draft.pricingSourceReady} />
+      <PricingLastroOpinion operation={operation} />
       <PricingVersionBar
         pricing={pricing}
         activeVersionReason={draft.activeVersionReason}

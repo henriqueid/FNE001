@@ -120,6 +120,7 @@ export function buildNeeds({
   dueToday,
   pend,
   profile,
+  delegatedDecisionOperationIds = new Set<string>(),
 }: {
   active: Operation[];
   fin: Record<string, OpFinancial>;
@@ -130,9 +131,11 @@ export function buildNeeds({
   dueToday: AgendaDay;
   pend: SettlementPending;
   profile: HomeProfile;
+  delegatedDecisionOperationIds?: ReadonlySet<string>;
 }): NeedItem[] {
   return [
     ...active.flatMap((op): NeedItem[] => {
+      if (op.blockers > 0 && delegatedDecisionOperationIds.has(op.id)) return [];
       if (op.blockers > 0)
         return [
           {

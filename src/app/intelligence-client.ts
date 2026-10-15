@@ -1,5 +1,6 @@
 import { type DeskReply } from "@/src/domain/copilot/desk-assistant";
 import { type SystemKnowledge } from "@/src/domain/copilot/system-query";
+import type { IntelligenceState } from "@/src/domain/intelligence/model";
 import { getStratoTenantId } from "./tenant";
 
 export type AIProviderConfiguration = {
@@ -32,6 +33,20 @@ export async function testAIConfiguration() {
     configuration: AIProviderConfiguration;
     test: { ok: boolean; model: string; usage: { totalTokens: number } };
   }>(response);
+}
+
+export async function loadIntelligenceState() {
+  const response = await fetch("/api/intelligence/state", { cache: "no-store", headers: headers() });
+  return (await bodyOf<{ state: IntelligenceState }>(response)).state;
+}
+
+export async function persistIntelligenceState(state: IntelligenceState) {
+  const response = await fetch("/api/intelligence/state", {
+    method: "PUT",
+    headers: headers(),
+    body: JSON.stringify({ state }),
+  });
+  return (await bodyOf<{ state: IntelligenceState }>(response)).state;
 }
 
 export async function askConfiguredCopilot(question: string, _knowledge: SystemKnowledge) {

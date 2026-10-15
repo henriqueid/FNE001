@@ -48,7 +48,8 @@ import { buildRevenuePace } from "@/src/domain/home/revenue-pace";
 import { financeIndicators } from "@/src/domain/indicators/finance";
 import { pipelineIndicators } from "@/src/domain/indicators/pipeline";
 import { daysFrom } from "@/src/domain/indicators/portfolio";
-import { useMemo } from "react";
+import { addDays } from "@/src/domain/finance/ledger";
+import { useCallback, useMemo } from "react";
 import type { OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
 
 export type HomeMetricsInput = {
@@ -66,6 +67,7 @@ export type HomeMetricsInput = {
   originationGoals: OperationalDefaultsState["originationGoals"];
   includeDemoPortfolio?: boolean;
   portfolioTitlesOverride?: PortfolioTitle[];
+  delegatedDecisionOperationIds?: ReadonlySet<string>;
 };
 
 export type HealthTone = "critical" | "watch" | "ok";
@@ -87,6 +89,7 @@ export function useHomeMetrics({
   originationGoals,
   includeDemoPortfolio = false,
   portfolioTitlesOverride,
+  delegatedDecisionOperationIds,
 }: HomeMetricsInput) {
   const registryCedents = useCedents();
   const fin = financials;
@@ -145,6 +148,45 @@ export function useHomeMetrics({
   );
   const vehExp = useMemo(() => vehicleExposure(scoped, fin), [scoped, fin]);
 
+  // A projeção usa o histórico dos cedentes expostos: a parcela média em atraso
+  // sai da data original e reaparece depois do atraso médio observado.
+  const exposedDocuments = new Set(cedExp.map(cedent => cedent.document.replace(/\D/g, "")));
+  const riskCedents = registryCedents.filter(cedent => exposedDocuments.has(cedent.document.replace(/\D/g, "")));
+  const historicalSettlements = riskCedents.reduce((sum, cedent) => sum + cedent.settlements, 0);
+  const historicalLateSettlements = riskCedents.reduce((sum, cedent) => sum + cedent.lateSettlements, 0);
+  const averageDelinquencyRate = Math.max(
+    0,
+    Math.min(1, historicalSettlements ? historicalLateSettlements / historicalSettlements : overdueRatio / 100),
+  );
+  const averageDelayDays = Math.max(
+    1,
+    Math.round(
+      historicalLateSettlements
+        ? riskCedents.reduce((sum, cedent) => sum + cedent.averageDelayDays * cedent.lateSettlements, 0) /
+            historicalLateSettlements
+        : 1,
+    ),
+  );
+  const projectedReceivables = useCallback(
+    (lateRecovery: number) =>
+      carteira.flatMap(receivable => {
+        const lateAmount = receivable.amount * averageDelinquencyRate;
+        return [
+          { ...receivable, amount: receivable.amount - lateAmount },
+          ...(lateAmount > 0
+            ? [
+                {
+                  ...receivable,
+                  date: addDays(receivable.date, averageDelayDays),
+                  amount: lateAmount * lateRecovery,
+                },
+              ]
+            : []),
+        ];
+      }),
+    [averageDelayDays, averageDelinquencyRate, carteira],
+  );
+
   // caixa: saldos reais das contas + títulos do financeiro + carteira − operações prontas para liberar
   const bankAccounts = scopedAccounts(finance, companyScope);
   const bankBalance = bankAccounts.reduce((s, a) => s + accountBalance(finance, a.id), 0);
@@ -155,8 +197,8 @@ export function useHomeMetrics({
     .filter(op => isActive(op) && (op.status === "Pronta para formalizar" || op.stage === 5))
     .reduce((s, op) => s + netOf(op), 0);
   const cash = useMemo(() => {
-    const curve = (factor: number) =>
-      dailyProjection(finance, companyScope, today, carteira, factor).map(
+    const curve = (lateRecovery: number) =>
+      dailyProjection(finance, companyScope, today, projectedReceivables(lateRecovery), 1).map(
         (v, i) => v - readyOut - (i >= 2 ? formalizationOut : 0),
       );
     const openFin = finance.titles.filter(
@@ -164,7 +206,9 @@ export function useHomeMetrics({
     );
     const dueToday = openFin.filter(t => t.kind === "Pagar" && t.dueDate <= today).reduce((s, t) => s + t.amount, 0);
     const inflow30 =
-      carteira.filter(c => c.date >= today && daysBetween(today, c.date) <= 30).reduce((s, c) => s + c.amount, 0) +
+      projectedReceivables(homeSettings.recovery.base)
+        .filter(c => c.date >= today && daysBetween(today, c.date) <= 30)
+        .reduce((s, c) => s + c.amount, 0) +
       openFin
         .filter(t => t.kind === "Receber" && daysBetween(today, t.dueDate) <= 30)
         .reduce((s, t) => s + t.amount, 0);
@@ -175,15 +219,23 @@ export function useHomeMetrics({
       outflowToday: dueToday + readyOut,
       inflow30,
     };
-  }, [finance, companyScope, today, carteira, readyOut, formalizationOut]);
+  }, [finance, companyScope, today, readyOut, formalizationOut, projectedReceivables]);
   // linha do tempo do caixa para o gráfico principal: realizado (30 dias atrás) + projetado (60 dias à frente)
   const timeline = useMemo(() => {
     const back = homeSettings.timeline.daysBack,
       ahead = homeSettings.timeline.daysAhead;
     const from = isoDate(new Date(new Date(`${today}T12:00:00`).getTime() - back * 86_400_000));
     const to = isoDate(new Date(new Date(`${today}T12:00:00`).getTime() + ahead * 86_400_000));
-    const run = (factor: number) =>
-      cashFlow(finance, { scope: companyScope, from, to, today, granularity: "dia", carteira, carteiraFactor: factor });
+    const run = (lateRecovery: number) =>
+      cashFlow(finance, {
+        scope: companyScope,
+        from,
+        to,
+        today,
+        granularity: "dia",
+        carteira: projectedReceivables(lateRecovery),
+        carteiraFactor: 1,
+      });
     const base = run(homeSettings.recovery.base);
     const todayIndex = base.findIndex(p => p.from === today);
     // a partir de hoje desconta as liberações prontas; de D+2 em diante, as que estão em formalização
@@ -198,11 +250,34 @@ export function useHomeMetrics({
       optimistic: line(run(homeSettings.recovery.optimistic)),
       inflow: base.map(p => p.totalIn),
       outflow: base.map(p => p.totalOut),
+      atRiskInflow: base.map(point =>
+        carteira
+          .filter(
+            receivable =>
+              receivable.date >= point.from &&
+              receivable.date <= point.to &&
+              receivable.date >= today &&
+              (companyScope === "Consolidado" || receivable.company === companyScope),
+          )
+          .reduce((sum, receivable) => sum + receivable.amount * averageDelinquencyRate, 0),
+      ),
+      averageDelinquencyRate,
+      averageDelayDays,
       // descontos aplicados sobre a curva: aparecem marcados no gráfico para a queda não parecer erro
       readyOut,
       formalizationOut,
     };
-  }, [finance, companyScope, today, carteira, readyOut, formalizationOut]);
+  }, [
+    finance,
+    companyScope,
+    today,
+    carteira,
+    readyOut,
+    formalizationOut,
+    averageDelinquencyRate,
+    averageDelayDays,
+    projectedReceivables,
+  ]);
   const overduePayables = finance.titles.filter(
     t =>
       t.status === "Em aberto" &&
@@ -410,6 +485,7 @@ export function useHomeMetrics({
     dueToday,
     pend,
     profile,
+    delegatedDecisionOperationIds,
   });
   const milestones = buildMilestones({ blockedOps, fromReleased, ready, readyAmount, dueToday, pend });
   const collectionRows = buildCollectionRows(agingBuckets, pend);

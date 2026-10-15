@@ -57,4 +57,27 @@ describe("atalhos do painel geral para a carteira", () => {
       portfolioFocus: { tab: "titulos", situation: "vencidos" },
     });
   });
+
+  it("retira do painel a decisão que foi delegada a outro usuário", () => {
+    const operation = {
+      id: "op-delegated",
+      blockers: 1,
+      status: "Em atenção",
+      profiles: [],
+    } as unknown as Operation;
+    const needs = buildNeeds({
+      active: [operation],
+      fin: {},
+      releasesToPay: [],
+      overduePayables: [],
+      overdueTitles: [],
+      overdueTotal: 0,
+      dueToday: { count: 0, amount: 0, titles: [] },
+      pend: { pendingCount: 0, pendingAmount: 0, creditCount: 0, creditAmount: 0 },
+      profile: "gestao",
+      delegatedDecisionOperationIds: new Set([operation.id]),
+    } as unknown as Parameters<typeof buildNeeds>[0]);
+
+    expect(needs.some(item => item.id === operation.id)).toBe(false);
+  });
 });

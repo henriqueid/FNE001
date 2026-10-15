@@ -8,7 +8,7 @@
  */
 import { type PointerEvent as ReactPointerEvent, type KeyboardEvent, useRef, useState } from "react";
 import { axisMoney, niceMax } from "./charts";
-import { compact, IconSquare, TextTabs } from "./widgets";
+import { compact, IconSquare, pct, TextTabs } from "./widgets";
 import { ExpandIcon, EyeIcon, EyeOffIcon } from "@/src/ui/icons";
 import { useElementSize } from "@/src/ui/use-element-width";
 
@@ -23,6 +23,9 @@ export type CashTimeline = {
   optimistic: number[];
   inflow: number[];
   outflow: number[];
+  atRiskInflow: number[];
+  averageDelinquencyRate: number;
+  averageDelayDays: number;
   readyOut: number;
   formalizationOut: number;
 };
@@ -112,6 +115,7 @@ export function CashHero({
   const endChange = series[today] ? ((series[end] - series[today]) / series[today]) * 100 : 0;
   const inflow = t.inflow.slice(a, b + 1).reduce((s, v) => s + v, 0);
   const outflow = t.outflow.slice(a, b + 1).reduce((s, v) => s + v, 0);
+  const atRisk = t.atRiskInflow.slice(a, b + 1).reduce((s, v) => s + v, 0);
   const change = series[a] ? ((series[b] - series[a]) / series[a]) * 100 : 0;
 
   const chooseHorizon = (h: Horizon) => {
@@ -246,6 +250,17 @@ export function CashHero({
         </div>
       </div>
 
+      {t.averageDelinquencyRate > 0 && (
+        <div className="lx-liquidity-risk" role="note">
+          <span>!</span>
+          <p>
+            Projeção ajustada por <b>{pct(t.averageDelinquencyRate * 100, 1)} de inadimplência média</b>. Até{" "}
+            {compact(atRisk)} dos recebimentos selecionados podem entrar com cerca de{" "}
+            <b>{t.averageDelayDays} dia(s) de atraso</b>.
+          </p>
+        </div>
+      )}
+
       <div className="lx-hero-chart" ref={chartRef}>
         <svg
           viewBox={`0 0 ${W} ${H}`}
@@ -286,6 +301,18 @@ export function CashHero({
               </g>
             );
           })}
+          {t.atRiskInflow.map((value, i) =>
+            value > 0 && i >= today ? (
+              <circle
+                key={`risk-${t.dates[i]}`}
+                cx={x(i)}
+                cy={flowTop - 5}
+                r={3.5}
+                className="late-risk"
+                aria-label={`${compact(value)} com possibilidade de atraso em ${ddmm(t.dates[i])}`}
+              />
+            ) : null,
+          )}
           <path
             d={smooth(t.optimistic.slice(today).map((v, k) => [x(today + k), y(v)]))}
             className={`ln alt${scenario === "optimistic" ? " lead" : ""}`}
@@ -335,7 +362,7 @@ export function CashHero({
               </div>
               <small>
                 entradas de {ddmm(t.dates[a])} a {ddmm(t.dates[b])} · saídas {compact(outflow)} · % = variação do saldo
-                no intervalo
+                no intervalo{atRisk ? ` · ${compact(atRisk)} sujeitos a atraso` : ""}
               </small>
             </>
           ) : (
@@ -346,6 +373,7 @@ export function CashHero({
               </div>
               <small>
                 entradas {compact(t.inflow[hover])} · saídas {compact(t.outflow[hover])}
+                {t.atRiskInflow[hover] ? ` · risco de atraso ${compact(t.atRiskInflow[hover])}` : ""}
               </small>
             </>
           )}

@@ -114,6 +114,20 @@ export function PartyRoleFields({ party, onChange, issueFor }: Props) {
                         <input value={`${link.status} · desde ${link.since}`} disabled />
                       </Field>
                     )}
+                    <Field
+                      label="Pré-checagem de lastro"
+                      hint="Quando exigida, a operação aguarda um parecer manual no Lastro antes de seguir para Preço."
+                      wide
+                    >
+                      <label className="rg-check-line">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(d.requiresLastroPrecheck)}
+                          onChange={e => update("cedente", { requiresLastroPrecheck: e.target.checked })}
+                        />
+                        <span>Exigir pré-checagem de lastro nas novas operações</span>
+                      </label>
+                    </Field>
                   </>
                 );
               })()}

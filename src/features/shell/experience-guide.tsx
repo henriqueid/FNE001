@@ -6,7 +6,7 @@ import { type DailyBriefingData } from "@/src/domain/copilot/daily-briefing";
 import { operationalSuggestion } from "@/src/domain/copilot/operational-suggestion";
 import { Copilot } from "@/src/features/copilot/copilot";
 import { ArrowIcon, CheckIcon } from "@/src/ui/icons";
-import { useState } from "react";
+import { type Dispatch, type SetStateAction, useState } from "react";
 import { type AppView } from "./shell-context";
 import { type Signal } from "./notifications";
 import { type AccessUser } from "@/src/domain/access/model";
@@ -108,7 +108,7 @@ export function ExperienceGuide({
   showJourney: boolean;
   currentUser: AccessUser;
   intelligence: IntelligenceState;
-  onIntelligence?: (state: IntelligenceState) => void;
+  onIntelligence?: Dispatch<SetStateAction<IntelligenceState>>;
   debtors?: Debtor[];
   portfolioTitles?: PortfolioTitle[];
   demoMode?: boolean;

@@ -8,7 +8,7 @@ import { type Cedent, type Debtor, type ManualEntryData, type Operation } from "
 import { operationNeedsCedent } from "@/src/domain/operations/queries";
 import { stageInsightFor } from "@/src/domain/operations/stage-insight";
 import { ReleasedOperationSummary } from "@/src/features/operations/release/released-summary";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { AssignCedentModal } from "./assign-cedent-modal";
 import { CancellationModal } from "./cancellation-modal";
 import { OperationSummaryAside } from "./operation-summary-aside";
@@ -66,7 +66,7 @@ export function OperationWorkspace({
   const configuredPolicies = useEligibilityPolicies();
   const stageInsight = stageInsightFor(operation, active, automation, configuredPolicies);
 
-  /** Grava a operação; se o motor libera e não há decisão humana, Lastro e Preço avançam sozinhos. */
+  /** Grava a operação; Lastro dispensado avança somente até Preço. */
   function commit(next: Operation) {
     const result = autoAdvanceWithinPolicy(next, { debtors, at: workspaceTimestamp() });
     setOperation(result.operation);
@@ -78,6 +78,24 @@ export function OperationWorkspace({
     }
     return result;
   }
+
+  /** Migra também operações antigas que já estavam paradas no Lastro sem exigência no cadastro. */
+  useEffect(() => {
+    if (operation.stage !== 3 || operation.lastroPrecheckRequired) return;
+    const result = autoAdvanceWithinPolicy(operation, { debtors, at: workspaceTimestamp() });
+    if (!result.steps.length) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setOperation(result.operation);
+      onUpdate(result.operation);
+      setActive(result.operation.stage);
+      setFeedback({ tone: "success", message: autoAdvanceMessage(result) });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [debtors, onUpdate, operation]);
 
   const advance = useStageAdvance({
     operation,

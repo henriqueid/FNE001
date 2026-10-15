@@ -10,6 +10,7 @@ import {
 } from "@/src/domain/core/types";
 import { stages } from "@/src/domain/core/stages";
 import { effectiveRunSummary } from "@/src/domain/eligibility/decision";
+import { withEligibilityRoute } from "@/src/domain/eligibility/orchestration";
 import type {
   EligibilityEvaluation,
   EligibilityOutcome,
@@ -52,6 +53,20 @@ export function copilotEligibilityReview(
   evaluatedAt: string,
   runId: string,
 ): EligibilityReview {
+  if (context.policy.configured === false) {
+    return {
+      run: {
+        id: `eligibility-${runId}-v${scenario.version}`,
+        evaluatedAt,
+        inputFingerprint: `${runId}:${scenario.version}:${scenario.included.join(",")}:no-policy`,
+        overallOutcome: "APROVADO",
+        policyVersions: [],
+        evaluations: [],
+        counts: counts([]),
+      },
+      overrides: [],
+    };
+  }
   const evaluations: EligibilityEvaluation[] = scenario.result.findings.map((finding, index) => {
     const outcome = outcomeFor(finding);
     return {
@@ -102,6 +117,47 @@ export function copilotEligibilityReview(
     },
     overrides: [],
   };
+}
+
+/** Identifica o snapshot legado que tratava parâmetros padrão como uma política publicada. */
+export function hasSyntheticOperationalPolicy(review: EligibilityReview | undefined) {
+  if (!review || review.run.policyVersions.length !== 1) return false;
+  const [policy] = review.run.policyVersions;
+  return policy.name === "Parâmetros operacionais" && policy.version === "vigente";
+}
+
+/** Remove o bloqueio fabricado, preservando o snapshot incorreto na trilha para auditoria. */
+export function clearSyntheticOperationalPolicy(operation: Operation, at: string): Operation {
+  const review = operation.eligibilityReview;
+  if (!hasSyntheticOperationalPolicy(review) || !review) return operation;
+  const run = {
+    ...review.run,
+    id: `${review.run.id}:sem-politica`,
+    evaluatedAt: at,
+    inputFingerprint: `${review.run.inputFingerprint ?? review.run.id}:sem-politica`,
+    overallOutcome: "APROVADO" as const,
+    policyVersions: [],
+    evaluations: [],
+    counts: counts([]),
+  };
+  return withEligibilityRoute({
+    ...operation,
+    policy: "Sem política ativa",
+    eligibilityReview: {
+      run,
+      overrides: [],
+      history: [
+        ...(review.history ?? []),
+        {
+          run: review.run,
+          overrides: review.overrides,
+          supersededAt: at,
+          supersededBy: run.id,
+          reason: "Correção: parâmetros operacionais não representam uma política ativa publicada.",
+        },
+      ],
+    },
+  });
 }
 
 const sourceFor = (request: CopilotOperationRequest): OperationSource => {
@@ -240,7 +296,10 @@ export function buildCopilotOperation({
       : route.counts.EXCECAO
         ? "Deliberar exceções da análise do Copiloto"
         : "Aprovar o encaminhamento da análise",
-    policy: `${request.context.policy.name} v${request.context.policy.version}`,
+    policy:
+      request.context.policy.configured === false
+        ? "Sem política ativa"
+        : `${request.context.policy.name} v${request.context.policy.version}`,
     amount: calculated.face,
     netAmount: roundPricing(calculated.net),
     pricingReview,

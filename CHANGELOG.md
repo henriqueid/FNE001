@@ -1,5 +1,15 @@
 # Changelog
 
+## Não lançado — 15/10/2026 · Persistência da IA e consolidação operacional
+
+- Licença, ativação, disponibilidade, orçamento e consumo da IA passam a ser persistidos por organização no PostgreSQL privado.
+- A tela de Inteligência deixa de retestar automaticamente a OpenAI ao ser aberta; o teste manual não apaga parâmetros salvos em falhas transitórias.
+- Atualizações assíncronas do Copiloto deixam de sobrescrever valores mais novos de configuração ou consumo.
+- Gestão por exceção e delegação de decisões foram conectadas às métricas e filas operacionais sem duplicar responsabilidade no usuário de origem.
+- Home, risco, lastro, preço e workspace receberam indicadores, alertas e validações adicionais derivados dos mesmos dados determinísticos.
+- Cadastro passou a propagar parâmetros de pré-checagem de lastro para as operações e análises relacionadas.
+- Adicionado `CLAUDE.md` com estado atual, arquitetura, produção, segurança e roteiro de retomada.
+
 ## Supabase e backend definitivo
 
 - Nova tela de acesso conectada ao Supabase Auth, com validação de sessão no servidor e saída pelo menu do usuário.

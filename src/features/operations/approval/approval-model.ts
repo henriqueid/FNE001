@@ -218,13 +218,13 @@ export function buildReadinessChecklist(
           : "Existem decisões de risco pendentes",
     },
     {
-      label: "Lastro e confirmação",
+      label: "Parecer de lastro",
       ok: lastro.ready,
-      detail: lastro.ready
-        ? lastro.exceptions.length
-          ? `Concluído com ${lastro.exceptions.length} exceção(ões) de confirmação para a alçada`
-          : "Evidências e confirmações concluídas"
-        : `${lastro.divergences} divergência(s) ou confirmação pendente`,
+      detail: !lastro.required
+        ? "Pré-checagem dispensada no cadastro do cedente"
+        : lastro.ready
+          ? `Parecer ${lastro.status.toLowerCase()} registrado`
+          : "Status geral da pré-checagem pendente",
     },
     {
       label: "Condição comercial",
@@ -245,9 +245,9 @@ export function buildReadinessChecklist(
 export function buildDefaultApprovals(
   operation: Operation,
   prerequisitesReady: boolean,
-  lastroExceptions = 0,
+  lastroConcerns = 0,
 ): ApprovalItem[] {
-  const automaticCredit = operation.risk === "Baixo" && prerequisitesReady && lastroExceptions === 0;
+  const automaticCredit = operation.risk === "Baixo" && prerequisitesReady && lastroConcerns === 0;
   return [
     {
       id: "originacao",
@@ -260,11 +260,11 @@ export function buildDefaultApprovals(
     {
       id: "credito",
       role: "Alçada de crédito",
-      approver: operation.risk === "Baixo" && !lastroExceptions ? "Motor de alçada" : "Comitê de Crédito",
+      approver: operation.risk === "Baixo" && !lastroConcerns ? "Motor de alçada" : "Comitê de Crédito",
       status: automaticCredit ? "Aprovado" : "Pendente",
       decidedAt: automaticCredit ? "Agora" : undefined,
-      note: lastroExceptions
-        ? `Exceção de lastro em ${lastroExceptions} título(s) da amostra: requer deliberação humana`
+      note: lastroConcerns
+        ? "Parecer de lastro com ressalva ou desfavorável: requer deliberação humana"
         : operation.risk === "Baixo"
           ? "Dentro da política vigente"
           : "Requer deliberação humana",
@@ -300,9 +300,9 @@ export function buildDefaultDocuments(
     },
     {
       id: "lastro",
-      name: "Dossiê de lastro e confirmações",
-      required: true,
-      status: lastro.ready ? "Pronto" : "Pendente",
+      name: "Parecer da pré-checagem de lastro",
+      required: lastro.required,
+      status: lastro.required ? (lastro.ready ? "Pronto" : "Pendente") : "Dispensado",
       source: "Etapa Lastro",
     },
     {

@@ -24,6 +24,8 @@ export type DeskTitle = {
 export type DeskPolicy = {
   name: string;
   version: string;
+  /** `false` quando só existem referências operacionais, sem política ativa publicada. */
+  configured?: boolean;
   /** Participação máxima de um sacado no valor de face da operação (%). */
   concentrationLimit: number;
   /** Piso de taxa mensal (% a.m.); abaixo dele o cenário exige alçada comercial. */
@@ -130,11 +132,22 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
   });
 
   const findings: DeskFinding[] = [];
+  const policyConfigured = policy.configured !== false;
   if (context.cedent) {
     const { cedent } = context;
     const attention = policy.scoreAttention ?? 600;
     const positive = policy.scorePositive ?? 700;
-    if (cedent.score <= 0)
+    if (!policyConfigured && cedent.score > 0)
+      findings.push({
+        id: "cedent-score",
+        severity: "info",
+        evidence: "Fato",
+        kind: "FATO",
+        title: `Score cadastral do cedente: ${cedent.score}`,
+        detail: "Informação cadastral; nenhuma política de elegibilidade ativa foi aplicada.",
+        question: `Qual é o score cadastral de ${cedent.name}?`,
+      });
+    else if (policyConfigured && cedent.score <= 0)
       findings.push({
         id: "cedent-score",
         severity: "impedimento",
@@ -144,7 +157,7 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
         detail: "O score precisa ser calculado ou decidido pela alçada antes da aprovação.",
         question: `Por que ${cedent.name} está sem score interno e o que falta para regularizar?`,
       });
-    else
+    else if (policyConfigured)
       findings.push({
         id: "cedent-score",
         severity: cedent.score < attention ? "alcada" : "info",
@@ -159,28 +172,30 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
               : `Abaixo do corte de ${attention}; exige revisão de risco.`,
         question: `Como o score interno de ${cedent.name} afeta esta análise?`,
       });
-    const creditLimitKnown = cedent.creditLimitKnown ?? cedent.creditLimitCents > 0;
-    const available = Math.max(0, cedent.creditLimitCents - cedent.usedLimitCents);
-    if (!creditLimitKnown)
-      findings.push({
-        id: "cedent-limit",
-        severity: "impedimento",
-        evidence: "Sem dados",
-        kind: "REGRA",
-        title: `${cedent.name} ainda não possui limite de crédito aprovado`,
-        detail: "O limite precisa ser definido no cadastro ou aprovado pelo comitê antes da decisão da operação.",
-        question: `A operação cabe no limite de ${cedent.name}?`,
-      });
-    else if (faceCents > available)
-      findings.push({
-        id: "cedent-limit",
-        severity: "alcada",
-        evidence: "Fato",
-        kind: "REGRA",
-        title: "Valor acima do limite disponível do cedente",
-        detail: `Disponível ${centsToBRL(available)}; face modelada ${centsToBRL(faceCents)}. Exige alçada de crédito.`,
-        question: `Por que o limite disponível de ${cedent.name} não comporta esta operação?`,
-      });
+    if (policyConfigured) {
+      const creditLimitKnown = cedent.creditLimitKnown ?? cedent.creditLimitCents > 0;
+      const available = Math.max(0, cedent.creditLimitCents - cedent.usedLimitCents);
+      if (!creditLimitKnown)
+        findings.push({
+          id: "cedent-limit",
+          severity: "impedimento",
+          evidence: "Sem dados",
+          kind: "REGRA",
+          title: `${cedent.name} ainda não possui limite de crédito aprovado`,
+          detail: "O limite precisa ser definido no cadastro ou aprovado pelo comitê antes da decisão da operação.",
+          question: `A operação cabe no limite de ${cedent.name}?`,
+        });
+      else if (faceCents > available)
+        findings.push({
+          id: "cedent-limit",
+          severity: "alcada",
+          evidence: "Fato",
+          kind: "REGRA",
+          title: "Valor acima do limite disponível do cedente",
+          detail: `Disponível ${centsToBRL(available)}; face modelada ${centsToBRL(faceCents)}. Exige alçada de crédito.`,
+          question: `Por que o limite disponível de ${cedent.name} não comporta esta operação?`,
+        });
+    }
   }
   rows
     .filter(title => title.duplicate)
@@ -197,7 +212,7 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
     );
   const hasNewDebtor = rows.some(title => title.newDebtor);
   const newDebtor = rows.find(title => title.newDebtor)?.debtor ?? "";
-  if (hasNewDebtor && !bureauChecked)
+  if (policyConfigured && hasNewDebtor && !bureauChecked)
     findings.push({
       id: "bureau",
       severity: "impedimento",
@@ -207,7 +222,7 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
       detail: "Sacado novo. A política exige consulta ao birô antes de aprovar.",
       question: `Por que ${newDebtor} está sem consulta e o que falta para aprovar?`,
     });
-  if (top.share > policy.concentrationLimit)
+  if (policyConfigured && top.share > policy.concentrationLimit)
     findings.push({
       id: "concentration",
       severity: "alcada",
@@ -217,7 +232,7 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
       detail: `Limite da política ${policy.name} v${policy.version}: ${policy.concentrationLimit}%. Exige alçada ou ajuste.`,
       question: `Por que a ${top.debtor} foi sinalizada?`,
     });
-  if (ratePercent < policy.rateFloor)
+  if (policyConfigured && ratePercent < policy.rateFloor)
     findings.push({
       id: "rate-floor",
       severity: "alcada",
@@ -236,11 +251,13 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
         evidence: "Fato",
         kind: "FATO",
         title: `${title.document} vence em ${title.days} dias`,
-        detail: `Abaixo do prazo de referência de ${policy.minDays} dias. Não bloqueia; vale conferir com o cedente.`,
+        detail: policyConfigured
+          ? `Abaixo do prazo de referência de ${policy.minDays} dias. Não bloqueia; vale conferir com o cedente.`
+          : `Abaixo da referência operacional de ${policy.minDays} dias. Nenhuma política ativa foi aplicada.`,
         question: `O ${title.document} vence cedo, isso é problema?`,
       }),
     );
-  if (hasNewDebtor && bureauChecked)
+  if (policyConfigured && hasNewDebtor && bureauChecked)
     findings.push({
       id: "bureau-ok",
       severity: "info",

@@ -17,7 +17,11 @@ function withLastro(op: Operation, confirmation: NonNullable<LastroReviewItem["c
       { evidenceDecision: "Validada" as const, confirmation, confirmationNotes: "Sacado atendeu e não confirmou." },
     ]),
   );
-  return { ...op, lastroReview: { items } };
+  return {
+    ...op,
+    lastroPrecheckRequired: true,
+    lastroReview: { status: "Favorável", opinion: "Parecer geral registrado.", items },
+  };
 }
 
 const atLastro = (op: Operation): Operation => {
@@ -32,9 +36,9 @@ const atLastro = (op: Operation): Operation => {
   };
 };
 
-describe("exceções de confirmação no lastro", () => {
+describe("parecer geral da pré-checagem de lastro", () => {
   it.each(["Não confirmado", "Não confirma para terceiros", "Confirmado com ressalva"] as const)(
-    "%s não trava o lastro, mas fica registrado como exceção",
+    "%s fica como apoio e não trava um parecer geral registrado",
     confirmation => {
       const lastro = lastroAssessmentFor(withLastro(base, confirmation), initialDebtors);
       expect(lastro.ready).toBe(true);
@@ -43,29 +47,34 @@ describe("exceções de confirmação no lastro", () => {
     },
   );
 
-  it("recusa continua sendo divergência que bloqueia o avanço", () => {
+  it("divergência não substitui nem bloqueia o status geral", () => {
     const lastro = lastroAssessmentFor(withLastro(base, "Recusado"), initialDebtors);
-    expect(lastro.ready).toBe(false);
+    expect(lastro.ready).toBe(true);
     expect(lastro.divergences).toBeGreaterThan(0);
   });
 
-  it("com exceção o avanço automático para no Lastro para conclusão manual", () => {
+  it("pré-checagem obrigatória sem status geral permanece pendente", () => {
+    const op: Operation = { ...base, lastroPrecheckRequired: true, lastroReview: undefined };
+    expect(lastroAssessmentFor(op, initialDebtors).ready).toBe(false);
+  });
+
+  it("com parecer registrado, o avanço automático ainda para para conclusão manual", () => {
     const op = withLastro(atLastro(base), "Não confirma para terceiros");
     const result = autoAdvanceWithinPolicy(op, { debtors: initialDebtors, at: "05/10/2026 10:00" });
     expect(result.operation.stage).toBe(3);
-    expect(result.stoppedAt?.reason).toContain("exceção");
+    expect(result.stoppedAt?.reason).toContain("manualmente");
   });
 
-  it("exceção de lastro tira a aprovação automática da alçada de crédito", () => {
+  it("parecer com ressalva tira a aprovação automática da alçada de crédito", () => {
     const low = { ...base, risk: "Baixo" as const };
     const credit = (exceptions: number) =>
       buildDefaultApprovals(low, true, exceptions).find(item => item.id === "credito");
     expect(credit(0)?.status).toBe("Aprovado");
     expect(credit(2)).toMatchObject({ status: "Pendente", approver: "Comitê de Crédito" });
-    expect(credit(2)?.note).toContain("Exceção de lastro");
+    expect(credit(2)?.note).toContain("ressalva ou desfavorável");
   });
 
-  it("usa o mesmo cadastro real de sacados na tela e no bloqueio de avanço", () => {
+  it("documentos e confirmações não são obrigatórios para concluir a etapa", () => {
     const entries = (base.manualEntry?.entries ?? []).map(entry =>
       entry.id === "risk-3408-3"
         ? { ...entry, nfeKey: "41260952927676000129550010000664201002468102", cfop: "5102" }
@@ -86,13 +95,14 @@ describe("exceções de confirmação no lastro", () => {
       risk: "Baixo",
       stage: 3,
       blockers: 0,
+      lastroPrecheckRequired: true,
       eligibilityReview: undefined,
       manualEntry: { ...base.manualEntry!, entries },
-      lastroReview: { items },
+      lastroReview: { status: "Desfavorável", opinion: "Risco relevante para o preço.", items },
     };
 
     expect(lastroAssessmentFor(realOperation, initialDebtors).ready).toBe(true);
-    expect(lastroAssessmentFor(realOperation, []).ready).toBe(false);
+    expect(lastroAssessmentFor(realOperation, []).ready).toBe(true);
     expect(stageAdvanceBlocker(realOperation, automationFor(realOperation), initialDebtors)).toBeNull();
   });
 });

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { parsePolicyParameter, policyParameterPresentation } from "@/src/domain/eligibility/policy-parameter-presentation";
+import {
+  parsePolicyParameter,
+  policyParameterPresentation,
+} from "@/src/domain/eligibility/policy-parameter-presentation";
 import type { MasterRule } from "@/src/domain/eligibility/model";
 
 const rule = (variable: string, defaultOperator: MasterRule["defaultOperator"] = "LTE"): MasterRule => ({

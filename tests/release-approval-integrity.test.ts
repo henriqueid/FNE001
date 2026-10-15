@@ -42,12 +42,12 @@ describe("integridade da aprovação de favorecidos", () => {
       payees: [{ ...prepared.payees![0], pixKey: "chave-do-atacante", amount: 100 }],
     });
 
-    expect(() =>
-      governReleaseTransition(current, changed, { id: "checker", name: "Aprovador" }),
-    ).toThrow(OperationGovernanceError);
-    expect(() =>
-      governReleaseTransition(current, changed, { id: "checker", name: "Aprovador" }),
-    ).toThrow("não podem mudar durante a aprovação");
+    expect(() => governReleaseTransition(current, changed, { id: "checker", name: "Aprovador" })).toThrow(
+      OperationGovernanceError,
+    );
+    expect(() => governReleaseTransition(current, changed, { id: "checker", name: "Aprovador" })).toThrow(
+      "não podem mudar durante a aprovação",
+    );
   });
 
   it("ignora lançamentos forjados pelo navegador e os recria do pacote preparado", () => {

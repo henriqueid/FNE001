@@ -12,22 +12,83 @@ export function LastroHeader({ assessment }: { assessment: LastroAssessment }) {
   return (
     <div className="lastro-head">
       <div>
-        <span>LASTRO E CONFIRMAÇÃO</span>
-        <h3>Validação documental e confirmação por título</h3>
+        <span>LASTRO · PARECER OPERACIONAL</span>
+        <h3>{assessment.required ? "Pré-checagem exigida pelo cadastro" : "Pré-checagem dispensada"}</h3>
         <p>
-          A amostra é priorizada automaticamente por risco, concentração, qualidade do sacado e ausência de evidência.
+          {assessment.required
+            ? "Registre um status geral. Evidências, confirmações e checklist são apoios opcionais para a análise."
+            : "O cadastro do cedente não exige pré-checagem; a etapa segue automaticamente para Preço."}
         </p>
       </div>
       <Badge tone={assessment.ready ? "ready" : assessment.divergences ? "cancelled" : "attention"}>
-        {assessment.ready
-          ? assessment.exceptions.length
-            ? `Pronto · ${assessment.exceptions.length} exceção(ões)`
-            : "Pronto para avançar"
-          : assessment.divergences
-            ? `${assessment.divergences} divergência(s)`
-            : "Intervenção necessária"}
+        {assessment.status}
       </Badge>
     </div>
+  );
+}
+
+const defaultOpinion = (status: NonNullable<Operation["lastroReview"]>["status"]) =>
+  status === "Favorável"
+    ? "Pré-checagem favorável. Nenhum ponto impeditivo foi identificado para a análise de preço."
+    : status === "Favorável com ressalvas"
+      ? "Pré-checagem favorável com ressalvas. Os pontos registrados devem ser considerados na formação do preço."
+      : status === "Desfavorável"
+        ? "Pré-checagem desfavorável. O risco identificado deve ser considerado antes de definir a condição comercial."
+        : "";
+
+export function LastroOpinion({
+  operation,
+  assessment,
+  onChange,
+}: {
+  operation: Operation;
+  assessment: LastroAssessment;
+  onChange: (operation: Operation) => void;
+}) {
+  const update = (patch: Partial<NonNullable<Operation["lastroReview"]>>) =>
+    onChange({
+      ...operation,
+      lastroReview: {
+        ...operation.lastroReview,
+        ...patch,
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: "Henrique",
+      },
+    });
+  return (
+    <section className="lastro-opinion" aria-label="Parecer geral do lastro">
+      <div>
+        <span>STATUS OBRIGATÓRIO</span>
+        <strong>Parecer da pré-checagem</strong>
+        <small>Este resultado será apresentado ao analista na etapa de Preço.</small>
+      </div>
+      <label>
+        Status
+        <select
+          aria-label="Status do parecer de lastro"
+          value={assessment.status}
+          onChange={event => {
+            const status = event.target.value as NonNullable<Operation["lastroReview"]>["status"];
+            update({ status, opinion: operation.lastroReview?.opinion || defaultOpinion(status) });
+          }}
+        >
+          <option value="Pendente">Selecione o resultado</option>
+          <option value="Favorável">Favorável</option>
+          <option value="Favorável com ressalvas">Favorável com ressalvas</option>
+          <option value="Desfavorável">Desfavorável</option>
+        </select>
+      </label>
+      <label>
+        Parecer para o analista de preço
+        <textarea
+          aria-label="Parecer do lastro para preço"
+          rows={4}
+          value={operation.lastroReview?.opinion ?? ""}
+          onChange={event => update({ opinion: event.target.value })}
+          placeholder="Registre os pontos que devem ser considerados na formação do preço."
+        />
+      </label>
+    </section>
   );
 }
 
@@ -100,18 +161,18 @@ export function LastroResult({ assessment }: { assessment: LastroAssessment }) {
       {assessment.ready ? <CheckIcon /> : <AlertIcon />}
       <div>
         <strong>
-          {assessment.ready
-            ? assessment.exceptions.length
-              ? "Lastro concluído com exceção"
-              : "Lastro concluído"
-            : "A operação ainda não pode avançar"}
+          {!assessment.required
+            ? "Lastro aprovado automaticamente"
+            : assessment.ready
+              ? `Parecer ${assessment.status.toLowerCase()} registrado`
+              : "Registre o status do parecer"}
         </strong>
         <span>
-          {assessment.ready
-            ? assessment.exceptions.length
-              ? `${assessment.exceptions.length} título(s) da amostra sem confirmação plena (${[...new Set(assessment.exceptions.map(row => row.confirmation))].join(", ").toLowerCase()}). A exceção segue para a alçada na Aprovação.`
-              : "Evidências validadas e sacados da amostra confirmados."
-            : `${assessment.rows.length - assessment.evidenceValid} evidência(s) e ${assessment.sampleSize - assessment.confirmed - assessment.exceptions.length} confirmação(ões) ainda pendentes.`}
+          {!assessment.required
+            ? "Pré-checagem dispensada no cadastro do cedente. O fluxo segue somente até a etapa de Preço."
+            : assessment.ready
+              ? "Use o botão de conclusão da etapa para avançar manualmente até Preço."
+              : "Confirmações e documentos são opcionais; somente o status geral é necessário para concluir."}
         </span>
       </div>
     </div>

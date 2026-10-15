@@ -1,25 +1,22 @@
 "use client";
 
 import { loadAIConfiguration, testAIConfiguration, type AIProviderConfiguration } from "@/src/app/intelligence-client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 type CheckState = "idle" | "loading" | "success" | "error";
 
 export function AIConfigurationPanel({
   active = false,
+  available = false,
   onAvailabilityChange,
 }: {
   active?: boolean;
+  available?: boolean;
   onAvailabilityChange?: (available: boolean) => void;
 }) {
   const [configuration, setConfiguration] = useState<AIProviderConfiguration | null>(null);
   const [state, setState] = useState<CheckState>("loading");
   const [message, setMessage] = useState("");
-  const availabilityChange = useRef(onAvailabilityChange);
-
-  useEffect(() => {
-    availabilityChange.current = onAvailabilityChange;
-  }, [onAvailabilityChange]);
 
   const refresh = () => {
     setState("loading");
@@ -38,30 +35,20 @@ export function AIConfigurationPanel({
   useEffect(() => {
     let mounted = true;
     void loadAIConfiguration()
-      .then(async result => {
+      .then(result => {
         if (!mounted) return;
         setConfiguration(result);
-        if (!active || !result.configured) {
-          setState("idle");
-          return;
-        }
-        const tested = await testAIConfiguration();
-        if (!mounted) return;
-        setConfiguration(tested.configuration);
-        setState("success");
-        setMessage(`Conexão validada com ${tested.test.model}. O Copiloto já pode responder perguntas livres.`);
-        availabilityChange.current?.(true);
+        setState("idle");
       })
       .catch(error => {
         if (!mounted) return;
         setState("error");
         setMessage(error instanceof Error ? error.message : "Não foi possível ler a configuração do servidor.");
-        if (active) availabilityChange.current?.(false);
       });
     return () => {
       mounted = false;
     };
-  }, [active]);
+  }, []);
 
   const test = () => {
     setState("loading");
@@ -88,16 +75,22 @@ export function AIConfigurationPanel({
           <h3 id="settings-ai-provider-title">Conexão com a OpenAI</h3>
           <p>Valide aqui se o servidor consegue receber uma resposta real do modelo.</p>
         </div>
-        <b data-state={state === "error" ? "missing" : configuration?.configured ? "configured" : "missing"}>
+        <b
+          data-state={
+            state === "error" ? "missing" : active && available && configuration?.configured ? "configured" : "missing"
+          }
+        >
           {state === "loading"
             ? "Verificando…"
             : state === "error" && configuration?.configured
               ? "Provedor indisponível"
               : state === "success"
                 ? "Conexão validada"
-                : configuration?.configured
-                  ? "Teste pendente"
-                  : "Credencial ausente"}
+                : active && available && configuration?.configured
+                  ? "Conexão ativa"
+                  : configuration?.configured
+                    ? "Teste pendente"
+                    : "Credencial ausente"}
         </b>
       </header>
 

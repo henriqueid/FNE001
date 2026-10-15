@@ -5,7 +5,7 @@ import { masterRuleCatalog } from "@/src/domain/eligibility/master-rule-catalog"
 import { type EligibilityPolicyState } from "@/src/domain/eligibility/policy-library";
 import PoliciesModule from "@/src/features/policies/policies-module";
 import IntegrationGovernancePanel from "./integration-governance-panel";
-import { useEffect, useState } from "react";
+import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { type IntegrationState, updateIntegrationMode } from "@/src/domain/integrations/model";
 import { operationalDefaultsSnapshot, type OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
 import { OperationalParametersEditor } from "@/src/features/registry/operational-parameters-editor";
@@ -170,7 +170,7 @@ export default function SettingsModule({
   access: AccessState;
   onAccess: (state: AccessState) => void;
   intelligence: IntelligenceState;
-  onIntelligence: (state: IntelligenceState) => void;
+  onIntelligence: Dispatch<SetStateAction<IntelligenceState>>;
   policyApprovalActor: { id: string; name: string };
   demoMode?: boolean;
 }) {
@@ -191,10 +191,13 @@ export default function SettingsModule({
   const [companyDraft, setCompanyDraft] = useState<CompanyDestinationDraft>(emptyCompanyDestination);
   const [companySaving, setCompanySaving] = useState(false);
   const [companyFeedback, setCompanyFeedback] = useState("");
+  const [interfaceDraft, setInterfaceDraft] = useState({ showGuidance, showJourney });
+  const [interfaceSaved, setInterfaceSaved] = useState(false);
   const editableOperationalDefaults = operationalDraft;
   const operationalChanged =
     JSON.stringify(operationalDefaultsSnapshot(operationalDraft)) !==
     JSON.stringify(operationalDefaultsSnapshot(operationalDefaults));
+  const interfaceChanged = interfaceDraft.showGuidance !== showGuidance || interfaceDraft.showJourney !== showJourney;
 
   useEffect(() => {
     if (demoMode) return;
@@ -259,6 +262,12 @@ export default function SettingsModule({
     } finally {
       setOperationalSubmitting(false);
     }
+  };
+
+  const saveInterfacePreferences = () => {
+    onGuidance(interfaceDraft.showGuidance);
+    onJourney(interfaceDraft.showJourney);
+    setInterfaceSaved(true);
   };
 
   return (
@@ -460,13 +469,13 @@ export default function SettingsModule({
                     checked={intelligence.contracted}
                     onChange={event => {
                       const contracted = event.target.checked;
-                      onIntelligence({
-                        ...intelligence,
+                      onIntelligence(current => ({
+                        ...current,
                         contracted,
-                        enabled: contracted ? intelligence.enabled : false,
-                        status: contracted ? intelligence.status : "AI_DISABLED",
+                        enabled: contracted ? current.enabled : false,
+                        status: contracted ? current.status : "AI_DISABLED",
                         updatedAt: new Date().toISOString(),
-                      });
+                      }));
                     }}
                   />
                   <span>
@@ -483,14 +492,14 @@ export default function SettingsModule({
                     disabled={!intelligence.contracted}
                     onChange={event => {
                       const enabled = event.target.checked;
-                      onIntelligence({
-                        ...intelligence,
+                      onIntelligence(current => ({
+                        ...current,
                         enabled,
                         status: enabled ? "AI_PROCESSING" : "AI_DISABLED",
                         monthlyTokenBudget:
-                          enabled && intelligence.monthlyTokenBudget <= 0 ? 1_000_000 : intelligence.monthlyTokenBudget,
+                          enabled && current.monthlyTokenBudget <= 0 ? 1_000_000 : current.monthlyTokenBudget,
                         updatedAt: new Date().toISOString(),
-                      });
+                      }));
                     }}
                   />
                   <span>
@@ -503,14 +512,14 @@ export default function SettingsModule({
               </div>
               <AIConfigurationPanel
                 active={intelligence.contracted && intelligence.enabled}
+                available={effectiveAIStatus(intelligence) === "AI_AVAILABLE"}
                 onAvailabilityChange={available =>
-                  onIntelligence({
-                    ...intelligence,
+                  onIntelligence(current => ({
+                    ...current,
                     status: available ? "AI_AVAILABLE" : "AI_UNAVAILABLE",
-                    monthlyTokenBudget:
-                      intelligence.monthlyTokenBudget > 0 ? intelligence.monthlyTokenBudget : 1_000_000,
+                    monthlyTokenBudget: current.monthlyTokenBudget > 0 ? current.monthlyTokenBudget : 1_000_000,
                     updatedAt: new Date().toISOString(),
-                  })
+                  }))
                 }
               />
               <div className="settings-goal-row">
@@ -526,11 +535,11 @@ export default function SettingsModule({
                     aria-label="Orçamento mensal de tokens da IA"
                     value={intelligence.monthlyTokenBudget}
                     onChange={event =>
-                      onIntelligence({
-                        ...intelligence,
+                      onIntelligence(current => ({
+                        ...current,
                         monthlyTokenBudget: Math.max(0, Number(event.target.value)),
                         updatedAt: new Date().toISOString(),
-                      })
+                      }))
                     }
                   />
                 </label>
@@ -1021,11 +1030,14 @@ export default function SettingsModule({
                   <input
                     aria-label="Exibir explicações permanentes"
                     type="checkbox"
-                    checked={showGuidance}
-                    onChange={event => onGuidance(event.target.checked)}
+                    checked={interfaceDraft.showGuidance}
+                    onChange={event => {
+                      setInterfaceDraft(current => ({ ...current, showGuidance: event.target.checked }));
+                      setInterfaceSaved(false);
+                    }}
                   />
                   <span />
-                  <b>{showGuidance ? "Visíveis" : "Ocultas"}</b>
+                  <b>{interfaceDraft.showGuidance ? "Visíveis" : "Ocultas"}</b>
                 </label>
               </section>
               <section className="settings-inline-option">
@@ -1040,13 +1052,31 @@ export default function SettingsModule({
                   <input
                     aria-label="Exibir barra de jornada e ajuda"
                     type="checkbox"
-                    checked={showJourney}
-                    onChange={event => onJourney(event.target.checked)}
+                    checked={interfaceDraft.showJourney}
+                    onChange={event => {
+                      setInterfaceDraft(current => ({ ...current, showJourney: event.target.checked }));
+                      setInterfaceSaved(false);
+                    }}
                   />
                   <span />
-                  <b>{showJourney ? "Visível" : "Oculta"}</b>
+                  <b>{interfaceDraft.showJourney ? "Visível" : "Oculta"}</b>
                 </label>
               </section>
+              <footer className="settings-interface-save">
+                <div role="status" aria-live="polite">
+                  <strong>
+                    {interfaceChanged
+                      ? "Há alterações ainda não salvas."
+                      : interfaceSaved
+                        ? "Configurações salvas."
+                        : "Todas as configurações estão salvas."}
+                  </strong>
+                  <span>As preferências permanecem neste navegador depois de recarregar a página.</span>
+                </div>
+                <button type="button" disabled={!interfaceChanged} onClick={saveInterfacePreferences}>
+                  Salvar configurações
+                </button>
+              </footer>
             </div>
           )}
         </section>

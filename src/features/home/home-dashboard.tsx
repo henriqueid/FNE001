@@ -40,6 +40,7 @@ export default function HomeDashboard({
   originationGoals,
   includeDemoPortfolio = false,
   portfolioTitlesOverride,
+  delegatedDecisionOperationIds,
 }: {
   operations: Operation[];
   debtors: Debtor[];
@@ -57,6 +58,7 @@ export default function HomeDashboard({
   originationGoals: OperationalDefaultsState["originationGoals"];
   includeDemoPortfolio?: boolean;
   portfolioTitlesOverride?: PortfolioTitle[];
+  delegatedDecisionOperationIds?: ReadonlySet<string>;
 }) {
   const { period, setPeriod, profile, chooseProfile, now, positionDate, setPositionDate } = useHomePreferences();
   const position = new Date(`${positionDate}T12:00:00`);
@@ -76,6 +78,7 @@ export default function HomeDashboard({
     originationGoals,
     includeDemoPortfolio,
     portfolioTitlesOverride,
+    delegatedDecisionOperationIds,
   });
 
   return (

@@ -6,7 +6,6 @@ import { authorityQueue, pendingAuthoritiesFor, pendingDecisionsFor } from "@/sr
 import { type EligibilityOutcome } from "@/src/domain/eligibility/model";
 import { evaluateOperationEligibility } from "@/src/domain/eligibility/operation-adapter";
 import { AUTO_ACTOR, autoAdvanceWithinPolicy } from "@/src/domain/operations/auto-advance";
-import { defaultPricing } from "@/src/domain/operations/pricing";
 import { inQueue } from "@/src/features/operations/central/central-model";
 
 const AT = "02/10/2026 10:00";
@@ -29,17 +28,6 @@ function withRun(op: Operation, outcome: EligibilityOutcome, authority = "Comit�
   };
 }
 
-/** Todas as evidências validadas e todos os títulos confirmados. */
-function withLastroReady(op: Operation): Operation {
-  const items = Object.fromEntries(
-    (op.manualEntry?.entries ?? []).map(title => [
-      title.id,
-      { evidenceDecision: "Validada" as const, confirmation: "Confirmado" as const },
-    ]),
-  );
-  return { ...op, lastroReview: { items } };
-}
-
 const atStage = (op: Operation, stage: number): Operation => ({
   ...op,
   stage,
@@ -49,33 +37,34 @@ const atStage = (op: Operation, stage: number): Operation => ({
 });
 
 describe("avanço automático dentro da política", () => {
-  it("dentro da política com lastro pronto: Lastro e Preço avançam sozinhos até a Aprovação", () => {
-    const op = withLastroReady(withRun(atStage(base, 3), "APROVADO"));
+  it("sem pré-checagem obrigatória, dispensa o Lastro e para em Preço", () => {
+    const op = withRun(atStage({ ...base, lastroPrecheckRequired: false }, 3), "APROVADO");
     const result = autoAdvanceWithinPolicy(op, { debtors: initialDebtors, at: AT });
-    expect(result.operation.stage).toBe(5);
-    expect(result.steps.map(step => step.stageId)).toEqual([3, 4]);
-    expect(result.operation.pricingReview).toMatchObject({
-      status: "Condição salva",
-      savedBy: AUTO_ACTOR,
-      locked: true,
-    });
-    expect(result.operation.stageCompletions?.filter(item => item.completedBy === AUTO_ACTOR)).toHaveLength(2);
+    expect(result.operation.stage).toBe(4);
+    expect(result.steps.map(step => step.stageId)).toEqual([3]);
+    expect(result.operation.lastroReview).toMatchObject({ status: "Dispensado", reviewedBy: AUTO_ACTOR });
+    expect(result.operation.pricingReview).toBeUndefined();
+    expect(result.operation.stageCompletions?.filter(item => item.completedBy === AUTO_ACTOR)).toHaveLength(1);
   });
-  it("para no Lastro quando falta confirmação do sacado", () => {
-    const op = withRun(atStage({ ...base, lastroReview: undefined, risk: "Alto" }, 3), "APROVADO");
+  it("com pré-checagem obrigatória, para no Lastro quando falta o parecer geral", () => {
+    const op = withRun(
+      atStage({ ...base, lastroPrecheckRequired: true, lastroReview: undefined, risk: "Alto" }, 3),
+      "APROVADO",
+    );
     const result = autoAdvanceWithinPolicy(op, { debtors: initialDebtors, at: AT });
     expect(result.operation.stage).toBe(3);
     expect(result.steps).toEqual([]);
     expect(result.stoppedAt?.stageId).toBe(3);
+    expect(result.stoppedAt?.reason).toContain("status geral");
   });
   it("exceção pendente no motor: nada avança", () => {
-    const op = withLastroReady(withRun(atStage(base, 3), "EXCECAO"));
+    const op = withRun(atStage(base, 3), "EXCECAO");
     const result = autoAdvanceWithinPolicy(op, { debtors: initialDebtors, at: AT });
     expect(result.operation.stage).toBe(3);
     expect(result.steps).toEqual([]);
   });
   it("exceção aprovada pela alçada libera o avanço", () => {
-    const op = withLastroReady(withRun(atStage(base, 3), "EXCECAO"));
+    const op = withRun(atStage(base, 3), "EXCECAO");
     const evaluation = op.eligibilityReview!.run.evaluations[0];
     const decided: Operation = {
       ...op,
@@ -100,25 +89,24 @@ describe("avanço automático dentro da política", () => {
         ],
       },
     };
-    expect(autoAdvanceWithinPolicy(decided, { debtors: initialDebtors, at: AT }).operation.stage).toBe(5);
+    expect(autoAdvanceWithinPolicy(decided, { debtors: initialDebtors, at: AT }).operation.stage).toBe(4);
   });
-  it("Preço com condição em simulação para e espera o operador", () => {
+  it("Preço nunca avança automaticamente", () => {
     const op = withRun(atStage(base, 4), "APROVADO");
-    const simulated = { ...op, pricingReview: { ...defaultPricing(op), status: "Simulação" as const } };
-    const result = autoAdvanceWithinPolicy(simulated, { debtors: initialDebtors, at: AT });
-    expect(result.operation.stage).toBe(4);
-    expect(result.stoppedAt?.reason).toContain("simulação");
-  });
-  it("taxa padrão abaixo do piso: Preço para para a alçada comercial", () => {
-    const op = withRun(atStage({ ...base, institution: "FIDC", risk: "Alto" }, 4), "APROVADO");
-    // FIDC: taxa padrão 2,1% a.m. contra piso de 2,4% a.m. para risco alto.
     const result = autoAdvanceWithinPolicy(op, { debtors: initialDebtors, at: AT });
     expect(result.operation.stage).toBe(4);
-    expect(result.stoppedAt?.reason).toContain("piso");
+    expect(result.steps).toEqual([]);
+    expect(result.operation.pricingReview).toBeUndefined();
   });
-  it("sem snapshot do motor, a esteira continua manual", () => {
-    const op = withLastroReady({ ...atStage(base, 3), eligibilityReview: undefined });
-    expect(autoAdvanceWithinPolicy(op, { debtors: initialDebtors, at: AT }).operation.stage).toBe(3);
+  it("o parecer obrigatório nunca conclui o Lastro automaticamente", () => {
+    const op = {
+      ...withRun(atStage(base, 3), "APROVADO"),
+      lastroPrecheckRequired: true,
+      lastroReview: { status: "Favorável" as const, opinion: "Apto para seguir." },
+    };
+    const result = autoAdvanceWithinPolicy(op, { debtors: initialDebtors, at: AT });
+    expect(result.operation.stage).toBe(3);
+    expect(result.stoppedAt?.reason).toContain("manualmente");
   });
   it("Aprovação nunca avança sozinha", () => {
     const op = withRun(atStage(base, 5), "APROVADO");

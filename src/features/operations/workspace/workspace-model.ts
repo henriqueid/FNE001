@@ -150,7 +150,7 @@ export function stageAdvanceBlocker(
     return {
       feedback: {
         tone: "warning",
-        message: "Valide todas as evidências e confirme os sacados selecionados na amostra antes de concluir o lastro.",
+        message: "Registre o status geral do parecer de lastro antes de concluir a etapa.",
       },
     };
   }
@@ -245,6 +245,7 @@ export function withCedent(operation: Operation, cedent: Cedent): Operation {
     ...operation,
     cedent: cedent.name,
     document: cedent.document,
+    lastroPrecheckRequired: cedent.requiresLastroPrecheck ?? false,
     risk: riskFromScore(cedent.score, operationalParametersFor(operation.institution).scoreBands),
     alerts: Math.max(operation.alerts, cedent.incidents),
     nextAction: operation.stage === 1 ? operation.nextAction : "Revisar risco com o cedente vinculado",

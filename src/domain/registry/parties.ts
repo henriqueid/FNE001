@@ -80,6 +80,7 @@ export type CedentRoleData = {
   tranches?: LimitTranche[];
   contract?: ClientContractProfile;
   compliance?: ClientComplianceProfile;
+  requiresLastroPrecheck?: boolean;
 };
 export type SacadoRoleData = { creditLimit: number; confirmationContact: string };
 export type SupplierRoleData = { category: string; paymentTermDays: number };
@@ -314,6 +315,7 @@ export function defaultRoleData(role: PartyRole): PartyRoleData[PartyRole] {
           registrationReviewAt: "",
           creditReviewAt: "",
         },
+        requiresLastroPrecheck: false,
       };
     case "sacado":
       return { creditLimit: 0, confirmationContact: "" };
@@ -399,6 +401,7 @@ export function mergeParties(
       managerId: sources.managerOfCedent?.(c.document) ?? "",
       contractUntil: "",
       guarantee: "Com regresso",
+      requiresLastroPrecheck: c.requiresLastroPrecheck ?? false,
     };
     upsert(
       c.document,
@@ -504,6 +507,7 @@ export function partyToCedent(party: Party): Cedent {
     incidents: 0,
     publicStatus: party.status === "Ativo" ? "Cadastro novo" : `Inativo · ${party.inactiveReason ?? ""}`,
     scoreReasons: ["Conta nova: score ainda não calculado"],
+    requiresLastroPrecheck: party.roleData.cedente?.requiresLastroPrecheck ?? false,
   };
 }
 

@@ -17,7 +17,7 @@ import { operationalParametersFor } from "@/src/domain/eligibility/operational-p
 import { isoDate, type PortfolioTitle } from "@/src/domain/home/metrics";
 import { ShellContext } from "@/src/features/shell/shell-context";
 import { ArrowIcon, CloseIcon, ExpandIcon, SendIcon, SparkIcon, UndoIcon } from "@/src/ui/icons";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { type Dispatch, type SetStateAction, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { CopilotAnalysis } from "./copilot-analysis";
 import { type CopilotSuggestion, ProgressCard, ReplyBubble, ResultCard, StartCard } from "./copilot-thread";
 import { useCopilotDesk } from "./use-copilot-desk";
@@ -47,7 +47,7 @@ export function Copilot({
   onOpenAttention: (itemId?: string) => void;
   currentUser: AccessUser;
   intelligence: IntelligenceState;
-  onIntelligence?: (state: IntelligenceState) => void;
+  onIntelligence?: Dispatch<SetStateAction<IntelligenceState>>;
   debtors?: Debtor[];
   portfolioTitles?: PortfolioTitle[];
   demoMode?: boolean;
@@ -70,12 +70,12 @@ export function Copilot({
     [operations, cedents, portfolioTitles, policies],
   );
   const desk = useCopilotDesk(knowledge, currentUser, intelligence, cedents[0]?.id ?? "", demoMode, debtors, tokens =>
-    onIntelligence?.({
-      ...intelligence,
-      usedTokens: intelligence.usedTokens + tokens,
+    onIntelligence?.(current => ({
+      ...current,
+      usedTokens: current.usedTokens + tokens,
       status: "AI_AVAILABLE",
       updatedAt: new Date().toISOString(),
-    }),
+    })),
   );
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);

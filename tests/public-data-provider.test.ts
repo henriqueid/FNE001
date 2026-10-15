@@ -35,9 +35,7 @@ describe("fontes públicas sem credenciais", () => {
 
   it("normaliza o catálogo público de bancos", async () => {
     const fetcher = vi.fn(() =>
-      response([
-        { ispb: "60701190", name: "ITAÚ UNIBANCO S.A.", code: 341, fullName: "Itaú Unibanco S.A." },
-      ]),
+      response([{ ispb: "60701190", name: "ITAÚ UNIBANCO S.A.", code: 341, fullName: "Itaú Unibanco S.A." }]),
     ) as unknown as typeof fetch;
 
     await expect(fetchBrasilApiBanks(fetcher)).resolves.toEqual([

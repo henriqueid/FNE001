@@ -246,10 +246,7 @@ export function usePricingDraft(operation: Operation, onChange: (operation: Oper
   }
 
   function startNewPricingVersion() {
-    if (!versionReason.trim()) {
-      setFeedback("Informe por que a condição será alterada. Esse motivo ficará no histórico da operação.");
-      return;
-    }
+    const reason = versionReason.trim() || "Revisão manual da condição comercial";
     const nextVersion = (pricing.version ?? 0) + 1;
     const at = new Date().toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
     const auditEntry = {
@@ -257,7 +254,7 @@ export function usePricingDraft(operation: Operation, onChange: (operation: Oper
       at,
       by: "Henrique",
       action: "Nova versão iniciada" as const,
-      reason: versionReason.trim(),
+      reason,
       ...auditSnapshot(),
     };
     setPricing(current => ({
@@ -268,7 +265,7 @@ export function usePricingDraft(operation: Operation, onChange: (operation: Oper
       savedBy: undefined,
       audit: [...(current.audit ?? []), auditEntry],
     }));
-    setActiveVersionReason(versionReason.trim());
+    setActiveVersionReason(reason);
     setVersionReason("");
     setFeedback(`Edição liberada. Ao salvar, a revisão ${nextVersion} será registrada sem apagar a condição anterior.`);
   }

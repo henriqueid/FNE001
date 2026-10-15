@@ -1441,6 +1441,34 @@ table th {
   position: relative;
   margin-top: 22px;
 }
+.lx-liquidity-risk {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--ds-warning) 28%, var(--ds-border));
+  border-radius: 10px;
+  color: var(--ds-text-2);
+  background: color-mix(in srgb, var(--ds-warning) 7%, var(--ds-surface));
+}
+.lx-liquidity-risk > span {
+  display: grid;
+  flex: 0 0 23px;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--ds-warning);
+  background: color-mix(in srgb, var(--ds-warning) 14%, transparent);
+  font-size: 12px;
+  font-weight: 800;
+}
+.lx-liquidity-risk p {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
 .lx-hero.is-compact {
   margin-bottom: 14px;
 }
@@ -1487,6 +1515,11 @@ table th {
 }
 .lx-hero-chart svg rect.bar.hover {
   fill: var(--ds-text-2);
+}
+.lx-hero-chart .late-risk {
+  fill: var(--ds-warning);
+  stroke: var(--ds-surface);
+  stroke-width: 1.5;
 }
 .lx-hero-chart .mark line {
   stroke: var(--ds-text-2);
@@ -4806,6 +4839,86 @@ table th {
 .vg-risk-card .vg-capacity-main {
   background: color-mix(in srgb, #b42318 7%, var(--ds-surface));
 }
+.vg-score-report {
+  margin-bottom: 14px;
+}
+.vg-score-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.vg-score-column {
+  overflow: hidden;
+  border: 1px solid var(--ds-border);
+  border-radius: 13px;
+}
+.vg-score-column > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--ds-surface-2);
+}
+.vg-score-column > header span {
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.vg-score-column > header small,
+.vg-score-column > p {
+  color: var(--ds-text-3);
+  font-size: 11.5px;
+}
+.vg-score-column ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vg-score-column li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--ds-border);
+}
+.vg-score-column li > b {
+  color: var(--ds-text-3);
+  font-size: 12px;
+}
+.vg-score-column li > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.vg-score-column li strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vg-score-column li small {
+  color: var(--ds-text-3);
+  font-size: 11px;
+}
+.vg-score-column li em {
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 750;
+}
+.vg-score-column.down li em {
+  color: var(--ds-danger);
+}
+.vg-score-column.up li em {
+  color: #168447;
+}
+.vg-score-column > p {
+  margin: 0;
+  padding: 18px 14px;
+  border-top: 1px solid var(--ds-border);
+}
 .vg-capacity-action {
   width: 100%;
   justify-content: center;
@@ -5038,6 +5151,9 @@ table th {
   }
   .vg-focus-card {
     padding: 18px;
+  }
+  .vg-score-grid {
+    grid-template-columns: 1fr;
   }
   .vg-priority-card .vg-need-list li {
     grid-template-columns: 1fr;

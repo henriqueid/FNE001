@@ -187,7 +187,7 @@ describe("entrada e normalização de operações", () => {
         source: "Planilha",
         operationType: "Duplicatas em leiaute validado",
         destination: destinations[0],
-        cedent: initialCedents[0],
+        cedent: { ...initialCedents[0], requiresLastroPrecheck: true },
         importedData: normalized.data,
         entryIntake: normalized.intake,
       },
@@ -201,6 +201,7 @@ describe("entrada e normalização de operações", () => {
       titleCount: 1,
       manualEntry: { receivableType: "Duplicata" },
       entryIntake: { fileName: "nova-operacao.csv", acceptedRows: 1 },
+      lastroPrecheckRequired: true,
     });
     expect(operation.automation).toBeGreaterThan(75);
     expect(operation.policy).toBe("Política não configurada");

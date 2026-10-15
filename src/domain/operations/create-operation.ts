@@ -80,6 +80,7 @@ export function buildNewOperation(
     commercialRepId: repAt(commercial, cedent.document, today),
     accountManagerId: managerOf(commercial, cedent.document),
     clientOperationalParameters: operationalParameters,
+    lastroPrecheckRequired: cedent.requiresLastroPrecheck ?? false,
     id: `op-${Date.now()}`,
     proposal: `#${borderoSequence}`,
     aditivoNumber,

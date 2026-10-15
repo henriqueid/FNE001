@@ -98,24 +98,28 @@ export function stageInsightFor(
     return {
       ...common,
       state: !lastro.ready && stageId < operation.stage ? "Revisão necessária" : common.state,
-      title: "Lastro, evidências e confirmação",
-      description: "A cobertura documental e a amostra de confirmação são recalculadas conforme o risco da operação.",
+      title: "Parecer de lastro",
+      description: lastro.required
+        ? "A pré-checagem exige um parecer geral; evidências e confirmações são apoios opcionais."
+        : "A pré-checagem foi dispensada conforme o cadastro do cedente.",
       metrics: [
         {
-          label: "COBERTURA",
-          value: entries.length ? `${Math.round((lastro.evidenceValid / entries.length) * 100)}%` : "—",
-          detail: `${lastro.evidenceValid} de ${entries.length} evidências validadas`,
+          label: "EXIGÊNCIA",
+          value: lastro.required ? "Obrigatória" : "Dispensada",
+          detail: "Definida no cadastro do cedente",
         },
-        { label: "AMOSTRA", value: String(lastro.sampleSize), detail: `${lastro.confirmed} confirmações positivas` },
+        { label: "STATUS", value: lastro.status, detail: lastro.ready ? "Parecer registrado" : "Aguardando análise" },
         {
-          label: "DIVERGÊNCIAS",
-          value: String(lastro.divergences),
-          detail: lastro.divergences ? "Exigem intervenção" : "Nenhuma divergência registrada",
+          label: "APOIOS",
+          value: `${lastro.evidenceValid}/${entries.length}`,
+          detail: "Evidências validadas (opcional)",
         },
       ],
-      result: lastro.ready
-        ? "Lastro concluído e amostra confirmada."
-        : "Existem títulos aguardando evidência ou confirmação.",
+      result: !lastro.required
+        ? "Pré-checagem dispensada; fluxo liberado até Preço."
+        : lastro.ready
+          ? `Parecer ${lastro.status.toLowerCase()} disponível para a análise de preço.`
+          : "Registre o status geral para concluir manualmente a etapa.",
       tone: lastro.ready ? "positive" : "warning",
     };
   }

@@ -1,14 +1,7 @@
-import {
-  validateCompanyDestination,
-  type CompanyDestinationDraft,
-} from "@/src/domain/company/destination";
+import { validateCompanyDestination, type CompanyDestinationDraft } from "@/src/domain/company/destination";
 import { sessionPrincipal } from "@/src/server/access/session";
 import { getDatabase } from "@/src/server/database/postgres";
-import {
-  loadCompanyDestinations,
-  loadCompanyProfile,
-  saveCompanyDestination,
-} from "@/src/server/registry/repository";
+import { loadCompanyDestinations, loadCompanyProfile, saveCompanyDestination } from "@/src/server/registry/repository";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
@@ -24,7 +17,9 @@ async function context(request: Request) {
 export async function GET(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
-  if (!access.principal.permissions.some(permission => permission === "settings:view" || permission === "settings:manage"))
+  if (
+    !access.principal.permissions.some(permission => permission === "settings:view" || permission === "settings:manage")
+  )
     return json({ error: "Sem permissão para consultar empresas e veículos." }, 403);
   const destinations = await loadCompanyDestinations(access.db, access.tenantId);
   if (destinations.length) return json({ destinations });

@@ -79,7 +79,7 @@ import {
   seedAccessState,
   stopUserPreview,
 } from "@/src/domain/access/model";
-import { emptyIntelligenceState, seedIntelligenceState } from "@/src/domain/intelligence/model";
+import { emptyIntelligenceState, seedIntelligenceState, type IntelligenceState } from "@/src/domain/intelligence/model";
 import { type PublishedNotification } from "@/src/domain/notifications/model";
 import { loadAccessDirectory, saveAccessDirectory } from "./access-directory-client";
 import { syncPublishedNotifications } from "./notification-client";
@@ -107,6 +107,10 @@ import {
 } from "./commercial-client";
 import { loadOperationalParameters as loadServerOperationalParameters } from "./operational-parameters-client";
 import { loadIntegrationState as loadServerIntegrations } from "./integrations-client";
+import {
+  loadIntelligenceState as loadServerIntelligence,
+  persistIntelligenceState as persistServerIntelligence,
+} from "./intelligence-client";
 import type { PortfolioFocus } from "@/src/features/portfolio/portfolio-navigation";
 import {
   approveCopilotOperation as approveCopilotOperationFlow,
@@ -171,6 +175,9 @@ export default function StratoApp() {
   const [access, setAccess] = useState(() => seedAccessState());
   const [accessServerReady, setAccessServerReady] = useState(isDemo);
   const [intelligence, setIntelligence] = useState(() => (isDemo ? seedIntelligenceState() : emptyIntelligenceState()));
+  const [intelligenceServerReady, setIntelligenceServerReady] = useState(isDemo);
+  const persistedIntelligenceRef = useRef<IntelligenceState | null>(isDemo ? intelligence : null);
+  const intelligenceSaveQueue = useRef<Promise<IntelligenceState> | null>(null);
   const currentUser = useMemo(() => activeUser(access), [access]);
   const sessionUser = useMemo(() => authenticatedUser(access), [access]);
   const [view, setView] = useState<AppView>("home");
@@ -606,7 +613,8 @@ export default function StratoApp() {
 
   // Restaura o que foi salvo depois de montar (evita divergência na hidratação do SSR).
   useEffect(() => {
-    const stored = isDemo ? loadPersistedState() : {};
+    const browserState = loadPersistedState();
+    const stored = isDemo ? browserState : { guidance: browserState.guidance, journey: browserState.journey };
     /* eslint-disable react-hooks/set-state-in-effect -- restauração única do localStorage após montar */
     if (stored.operations) setOperations(stored.operations);
     if (stored.debtors) setDebtors(stored.debtors);
@@ -672,10 +680,6 @@ export default function StratoApp() {
     storageReady,
     isDemo,
   ]);
-
-  useEffect(() => {
-    if (storageReady) saveGuidance(showGuidance);
-  }, [showGuidance, storageReady]);
 
   useEffect(() => {
     if (!storageReady || accessServerReady) return;
@@ -902,6 +906,49 @@ export default function StratoApp() {
   }, [integrationsServerReady, isDemo, storageReady]);
 
   useEffect(() => {
+    if (!storageReady || isDemo || intelligenceServerReady) return;
+    let cancelled = false;
+    loadServerIntelligence()
+      .then(serverState => {
+        if (cancelled) return;
+        persistedIntelligenceRef.current = serverState;
+        setIntelligence(serverState);
+        setIntelligenceServerReady(true);
+      })
+      .catch(() => {
+        /* não grava o estado vazio por cima do servidor quando a leitura falha */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [intelligenceServerReady, isDemo, storageReady]);
+
+  useEffect(() => {
+    if (!storageReady || isDemo || !intelligenceServerReady || intelligence === persistedIntelligenceRef.current)
+      return;
+    const candidate = intelligence;
+    const timer = window.setTimeout(() => {
+      const prior = intelligenceSaveQueue.current ?? Promise.resolve(candidate);
+      const queued = prior.catch(() => candidate).then(() => persistServerIntelligence(candidate));
+      intelligenceSaveQueue.current = queued;
+      void queued
+        .then(saved => {
+          persistedIntelligenceRef.current = saved;
+          setIntelligence(current =>
+            current === candidate ? saved : { ...current, persistenceVersion: saved.persistenceVersion },
+          );
+        })
+        .catch(() => {
+          /* mantém a alteração em memória; uma próxima mudança tentará gravar novamente */
+        })
+        .finally(() => {
+          if (intelligenceSaveQueue.current === queued) intelligenceSaveQueue.current = null;
+        });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [intelligence, intelligenceServerReady, isDemo, storageReady]);
+
+  useEffect(() => {
     if (!storageReady || isDemo || portfolioServerReady) return;
     let cancelled = false;
     loadCurrentPortfolio()
@@ -951,10 +998,6 @@ export default function StratoApp() {
       window.clearInterval(timer);
     };
   }, [accessServerReady, intelligence.tenantId]);
-
-  useEffect(() => {
-    if (storageReady) saveJourneyBar(showJourney);
-  }, [showJourney, storageReady]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setTaskClock(Date.now()), 60_000);
@@ -1076,7 +1119,17 @@ export default function StratoApp() {
   const commercialLive = useMemo(() => ({ ...commercial, carteiraEvents }), [commercial, carteiraEvents]);
   // Cedentes = cadastro de crédito existente + cedentes novos criados no Cadastro; limite vem do comitê.
   const registryCedents = useMemo(() => {
-    const baseline = isDemo ? initialCedents : [];
+    const baseline = isDemo
+      ? initialCedents.map(cedent => {
+          const registered = savedParties.find(
+            party => party.document.replace(/\D/g, "") === cedent.document.replace(/\D/g, ""),
+          );
+          return {
+            ...cedent,
+            requiresLastroPrecheck: registered?.roleData.cedente?.requiresLastroPrecheck ?? false,
+          };
+        })
+      : [];
     const known = new Set(baseline.map(c => c.document.replace(/\D/g, "")));
     const created = savedParties
       .filter(p => p.roles.includes("cedente") && p.status === "Ativo" && !known.has(p.document.replace(/\D/g, "")))
@@ -1388,6 +1441,16 @@ export default function StratoApp() {
     () => actionableAttentionItems(taskItems, new Date(taskClock).toISOString()),
     [taskItems, taskClock],
   );
+  const delegatedDecisionOperationIds = useMemo(
+    () =>
+      new Set(
+        tasks.tasks
+          .filter(task => task.snapshot.kind === "decision" && taskIsExplicitlyAssigned(task))
+          .filter(task => (task.ownerUserId ? task.ownerUserId !== currentUser.id : task.owner !== currentUser.name))
+          .flatMap(task => (task.snapshot.operationId ? [task.snapshot.operationId] : [])),
+      ),
+    [currentUser.id, currentUser.name, tasks.tasks],
+  );
   const dailyBriefing = useMemo(
     () => withAssignedTasks(operationalDailyBriefing, attentionItems),
     [attentionItems, operationalDailyBriefing],
@@ -1506,6 +1569,7 @@ export default function StratoApp() {
         originationGoals={operationalDefaults.originationGoals}
         includeDemoPortfolio={isDemo}
         portfolioTitlesOverride={livePortfolioTitles}
+        delegatedDecisionOperationIds={delegatedDecisionOperationIds}
       />
     );
   else if (view === "live")
@@ -1557,9 +1621,15 @@ export default function StratoApp() {
         onPolicies={applyPoliciesState}
         onSavePolicies={persistRealPolicies}
         showGuidance={showGuidance}
-        onGuidance={setShowGuidance}
+        onGuidance={value => {
+          setShowGuidance(value);
+          saveGuidance(value);
+        }}
         showJourney={showJourney}
-        onJourney={setShowJourney}
+        onJourney={value => {
+          setShowJourney(value);
+          saveJourneyBar(value);
+        }}
         integrations={integrations}
         onIntegrations={setIntegrations}
         operationalDefaults={operationalDefaults}

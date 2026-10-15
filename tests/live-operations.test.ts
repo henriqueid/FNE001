@@ -26,4 +26,18 @@ describe("operação ao vivo", () => {
     expect(live.length).toBeGreaterThan(0);
     expect(live.every(item => item.screen && item.task && item.result)).toBe(true);
   });
+
+  it("não inventa atividade para usuário sem evidência operacional", () => {
+    const state = seedAccessState();
+    const admin = state.users.find(user => user.access === "admin")!;
+    const userWithoutActivity = {
+      ...state.users.find(user => user.id === "user-lucas-risco")!,
+      id: "user-deivid",
+      name: "Deivid",
+    };
+
+    const live = buildLiveOperators([...state.users, userWithoutActivity], admin, initialOperations);
+
+    expect(live.some(item => item.user.id === userWithoutActivity.id)).toBe(false);
+  });
 });

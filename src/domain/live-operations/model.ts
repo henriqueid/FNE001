@@ -32,13 +32,22 @@ export function supervisedUsers(users: AccessUser[], viewer: AccessUser) {
 
 /** Monta a projeção da sala operacional sem expor conteúdo digitado ou a tela física do usuário. */
 export function buildLiveOperators(users: AccessUser[], viewer: AccessUser, operations: Operation[]): LiveOperator[] {
-  return supervisedUsers(users, viewer).map((user, index) => {
+  const supervised = supervisedUsers(users, viewer);
+  const usersWithOperationalEvidence = supervised.filter(user =>
+    operations.some(operation => operation.owner === user.name),
+  );
+
+  return usersWithOperationalEvidence.map((user, index) => {
     const seed = seededNumber(user.id);
     const owned = operations.filter(operation => operation.owner === user.name);
     const operation =
       owned.find(item => item.status !== "Cancelada" && item.status !== "Liberada ao financeiro") ?? owned[0];
     const presence: LivePresence =
-      index === users.length - 1 && users.length > 4 ? "offline" : seed % 5 === 0 ? "away" : "active";
+      index === usersWithOperationalEvidence.length - 1 && usersWithOperationalEvidence.length > 4
+        ? "offline"
+        : seed % 5 === 0
+          ? "away"
+          : "active";
     const stage = operation ? (stages.find(item => item.id === operation.stage)?.title ?? "Operação") : undefined;
     const roleActivity =
       user.department === "Comercial"

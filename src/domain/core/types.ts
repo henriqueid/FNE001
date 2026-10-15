@@ -223,6 +223,8 @@ export type Cedent = {
   scoreReasons?: string[];
   incidentDetails?: string[];
   portfolioMetrics?: DebtorPortfolioMetrics;
+  /** Define se novas operações exigem parecer humano na etapa de Lastro. */
+  requiresLastroPrecheck?: boolean;
 };
 
 export type CedentPortfolioTitle = {
@@ -291,6 +293,8 @@ export type Operation = {
   accountManagerId?: string;
   /** Fotografia dos parâmetros gerais + específicos resolvidos na criação. */
   clientOperationalParameters?: ClientOperationalParameters;
+  /** Fotografia da exigência definida no cadastro do cedente na criação da operação. */
+  lastroPrecheckRequired?: boolean;
   automation: number;
   blockers: number;
   alerts: number;
@@ -336,6 +340,10 @@ export type Operation = {
     audit?: { entity: string; decision: "Aprovado" | "Reprovado"; by: string; at: string; policy: string }[];
   };
   lastroReview?: {
+    status?: "Dispensado" | "Pendente" | "Favorável" | "Favorável com ressalvas" | "Desfavorável";
+    opinion?: string;
+    reviewedAt?: string;
+    reviewedBy?: string;
     items?: Record<
       string,
       {

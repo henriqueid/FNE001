@@ -4,7 +4,7 @@
  * do sacado por título. O estado vive em `useLastroValidation`; aqui só há composição.
  */
 import { type Debtor, type Operation } from "@/src/domain/core/types";
-import { LastroHeader, LastroKpis, LastroResult } from "./lastro-overview";
+import { LastroHeader, LastroKpis, LastroOpinion, LastroResult } from "./lastro-overview";
 import { LastroSampleGrid, LastroSampleToolbar } from "./lastro-sample-grid";
 import { PrecheckModal } from "./precheck-modal";
 import { useLastroValidation } from "./use-lastro-validation";
@@ -24,20 +24,27 @@ export function LastroValidationPanel({
   return (
     <section className="lastro-workbench">
       <LastroHeader assessment={assessment} />
-      <LastroKpis assessment={assessment} indicators={lastro.indicators} risk={operation.risk} />
-      <LastroSampleToolbar
-        filter={lastro.filter}
-        totalCount={assessment.rows.length}
-        sampleSize={assessment.sampleSize}
-        interventionCount={lastro.indicators.interventionCount}
-        onFilterChange={lastro.setFilter}
-      />
-      <LastroSampleGrid
-        rows={lastro.visibleRows}
-        reviewItems={operation.lastroReview?.items}
-        onSelect={lastro.setSelectedId}
-        onUpdateItem={lastro.updateItem}
-      />
+      {assessment.required && <LastroOpinion operation={operation} assessment={assessment} onChange={onChange} />}
+      {assessment.required && (
+        <details className="lastro-supporting-analysis">
+          <summary>Análise de apoio opcional</summary>
+          <p>Confirmações, evidências e checklist ajudam o parecer, mas não são obrigatórios para concluir.</p>
+          <LastroKpis assessment={assessment} indicators={lastro.indicators} risk={operation.risk} />
+          <LastroSampleToolbar
+            filter={lastro.filter}
+            totalCount={assessment.rows.length}
+            sampleSize={assessment.sampleSize}
+            interventionCount={lastro.indicators.interventionCount}
+            onFilterChange={lastro.setFilter}
+          />
+          <LastroSampleGrid
+            rows={lastro.visibleRows}
+            reviewItems={operation.lastroReview?.items}
+            onSelect={lastro.setSelectedId}
+            onUpdateItem={lastro.updateItem}
+          />
+        </details>
+      )}
       <LastroResult assessment={assessment} />
       {selected && (
         <PrecheckModal

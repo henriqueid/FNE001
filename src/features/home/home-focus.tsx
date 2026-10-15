@@ -11,6 +11,7 @@ import { Pipeline } from "./sections/pipeline";
 import type { HomeMetrics } from "./use-home-metrics";
 import { compact, pct } from "./widgets";
 import type { PortfolioFocus } from "@/src/features/portfolio/portfolio-navigation";
+import type { QualityTrend } from "@/src/domain/risk/quality";
 
 type FocusProps = {
   metrics: HomeMetrics;
@@ -124,6 +125,59 @@ function MetricRow({ label, value, tone }: { label: string; value: string; tone?
       <span>{label}</span>
       <b className={tone}>{value}</b>
     </div>
+  );
+}
+
+function ScoreMoversColumn({ title, items, tone }: { title: string; items: QualityTrend[]; tone: "down" | "up" }) {
+  return (
+    <section className={`vg-score-column ${tone}`}>
+      <header>
+        <span>{title}</span>
+        <small>
+          {items.length} cliente{items.length === 1 ? "" : "s"}
+        </small>
+      </header>
+      {items.length ? (
+        <ol>
+          {items.slice(0, 5).map((item, index) => (
+            <li key={item.id}>
+              <b>{index + 1}</b>
+              <span>
+                <strong>{item.name}</strong>
+                <small>
+                  Score {Math.round(item.previousIndex)} → {Math.round(item.index)}
+                </small>
+              </span>
+              <em>
+                {item.delta > 0 ? "+" : "−"}
+                {Math.round(Math.abs(item.delta))} pts
+              </em>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p>Nenhuma variação relevante no período.</p>
+      )}
+    </section>
+  );
+}
+
+function ScoreMoversReport({ metrics: m }: { metrics: HomeMetrics }) {
+  const ranking = m.risk.cedentQuality;
+  return (
+    <section className="vg-focus-card vg-score-report" aria-label="Relatório de variação de score dos clientes">
+      <header>
+        <div>
+          <span>VARIAÇÃO DE SCORE</span>
+          <h2>Clientes que mais mudaram</h2>
+          <p>Top 5 cedentes que pioraram e top 5 que melhoraram na janela da política de risco.</p>
+        </div>
+      </header>
+      <div className="vg-score-grid">
+        <ScoreMoversColumn title="Mais perderam score" items={ranking.worsening} tone="down" />
+        <ScoreMoversColumn title="Mais melhoraram" items={ranking.improving} tone="up" />
+      </div>
+    </section>
   );
 }
 
@@ -525,6 +579,7 @@ function RiskFocus(props: FocusProps) {
         }
         evidence={`${compact(m.market.overdue30)} acima de 30 dias, ${compact(m.market.overdue90)} acima de 90 dias e ${pct(m.risk.cedentConcentration.topShare)} nos 10 maiores cedentes`}
       />
+      <ScoreMoversReport metrics={m} />
       <section className="vg-focus-card vg-flow-card">
         <header>
           <div>

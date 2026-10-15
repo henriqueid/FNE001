@@ -22,8 +22,7 @@ function payeeError(payee: ReleasePayee) {
   if (payee.method === "PIX" && !payee.pixKey?.trim()) return "Todo pagamento PIX precisa ter uma chave.";
   if (payee.method === "TED" && !(payee.bank?.trim() && payee.agency?.trim() && payee.account?.trim()))
     return "Todo pagamento por TED precisa ter banco, agência e conta.";
-  if (payee.relation === "Terceiro" && !payee.justification?.trim())
-    return "Pagamento a terceiro exige justificativa.";
+  if (payee.relation === "Terceiro" && !payee.justification?.trim()) return "Pagamento a terceiro exige justificativa.";
   return null;
 }
 

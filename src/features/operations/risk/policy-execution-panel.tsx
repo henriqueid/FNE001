@@ -10,6 +10,7 @@ import { eligibilityRouteFor, withEligibilityRoute } from "@/src/domain/eligibil
 import { type EligibilityOutcome, type EligibilityOverrideDecision } from "@/src/domain/eligibility/model";
 import { useEffect, useMemo, useState } from "react";
 import { saveFile } from "@/src/ui/download";
+import { clearSyntheticOperationalPolicy, hasSyntheticOperationalPolicy } from "@/src/domain/copilot/operation-handoff";
 
 const outcomeLabel: Record<EligibilityOutcome, string> = {
   APROVADO: "Aprovado",
@@ -52,6 +53,7 @@ export function PolicyExecutionPanel({
     [operation, debtors, cedent, configuredPolicies],
   );
   const run = operation.eligibilityReview?.run ?? calculatedRun;
+  const hasAppliedPolicy = run.policyVersions.length > 0;
   const hasHistoricalSnapshot = Boolean(operation.eligibilityReview?.run);
   const overrides = operation.eligibilityReview?.overrides ?? [];
   const executionHistory = operation.eligibilityReview?.history ?? [];
@@ -65,6 +67,17 @@ export function PolicyExecutionPanel({
   const visible = run.evaluations.filter(item => showApproved || item.outcome !== "APROVADO");
   const availableTitles = operation.manualEntry?.entries.length ?? 0;
   const readOnly = operation.stage !== 2;
+
+  useEffect(() => {
+    if (
+      operation.stage !== 2 ||
+      configuredPolicies == null ||
+      configuredPolicies.length > 0 ||
+      !hasSyntheticOperationalPolicy(operation.eligibilityReview)
+    )
+      return;
+    onChange(clearSyntheticOperationalPolicy(operation, new Date().toISOString()));
+  }, [configuredPolicies, onChange, operation]);
 
   useEffect(() => {
     if (operation.stage !== 2 || operation.eligibilityReview || calculatedRun.evaluations.length === 0) return;
@@ -143,12 +156,17 @@ export function PolicyExecutionPanel({
     <section className="policy-execution" data-testid="policy-execution">
       <header className="policy-execution-head">
         <div>
-          <span>RESULTADO DA POLÍTICA · {hasHistoricalSnapshot ? "EXECUÇÃO VERSIONADA" : "PRÉVIA NÃO HISTÓRICA"}</span>
-          <h4>Motor Universal de Elegibilidade</h4>
+          <span>
+            {hasAppliedPolicy ? "RESULTADO DA POLÍTICA" : "ANÁLISE OPERACIONAL · SEM POLÍTICA ATIVA"} ·{" "}
+            {hasHistoricalSnapshot ? "EXECUÇÃO VERSIONADA" : "PRÉVIA NÃO HISTÓRICA"}
+          </span>
+          <h4>{hasAppliedPolicy ? "Motor Universal de Elegibilidade" : "Validação sem regras publicadas"}</h4>
           <p>
-            {hasHistoricalSnapshot
-              ? "A execução fica congelada com as versões aplicadas. Exceções preservam o resultado original e qualquer decisão humana posterior."
-              : "Esta operação não possui um snapshot original. O cálculo atual serve somente como prévia e não será gravado como se tivesse ocorrido no passado."}
+            {!hasAppliedPolicy
+              ? "Nenhuma política ativa foi aplicada. Parâmetros operacionais podem apoiar cálculos, mas não criam bloqueios de elegibilidade."
+              : hasHistoricalSnapshot
+                ? "A execução fica congelada com as versões aplicadas. Exceções preservam o resultado original e qualquer decisão humana posterior."
+                : "Esta operação não possui um snapshot original. O cálculo atual serve somente como prévia e não será gravado como se tivesse ocorrido no passado."}
           </p>
         </div>
         <div className="policy-execution-head-actions">
@@ -262,6 +280,7 @@ export function PolicyExecutionPanel({
 
           <div className="policy-toolbar">
             <div>
+              {!hasAppliedPolicy && <span>Nenhuma política ativa foi aplicada</span>}
               {run.policyVersions.map(policy => (
                 <span key={policy.id}>
                   {policy.name} {policy.version}
@@ -443,7 +462,9 @@ export function PolicyExecutionPanel({
             {hasHistoricalSnapshot
               ? "A execução salva o resultado e as versões utilizadas. "
               : "Prévia não persistida: o sistema não fabrica histórico retroativo. "}
-            Os parâmetros devem ser homologados pela instituição antes de o motor controlar o fluxo da operação.
+            {hasAppliedPolicy
+              ? "Os parâmetros devem ser homologados pela instituição antes de o motor controlar o fluxo da operação."
+              : "Parâmetros operacionais permanecem apenas como referência e não controlam o fluxo sem uma política ativa."}
             {executionHistory.length > 0 &&
               ` A trilha conserva ${executionHistory.length} execução(ões) substituída(s), incluindo seus overrides.`}
           </footer>

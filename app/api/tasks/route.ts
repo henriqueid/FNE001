@@ -32,7 +32,13 @@ export async function GET(request: Request) {
     loadTaskState(access.db, access.tenantId),
     operationCompanyMap(access.db, access.tenantId),
   ]);
-  return json({ tasks: visibleTaskState(tasks, access.principal, operationCompanies) });
+  // O administrador sincroniza a fila automática completa no cliente. Ele recebe o estado
+  // integral, mas a apresentação continua passando por `visibleTasksForUser`, que esconde
+  // tarefas delegadas a outra pessoa. Sem isso, a ausência no recorte era interpretada como
+  // uma tarefa nova e a decisão delegada acabava recriada no painel do delegante.
+  return json({
+    tasks: access.principal.access === "admin" ? tasks : visibleTaskState(tasks, access.principal, operationCompanies),
+  });
 }
 
 export async function PUT(request: Request) {

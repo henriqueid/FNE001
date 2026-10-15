@@ -45,8 +45,9 @@ function policyFor(knowledge: SystemKnowledge, cedent?: Cedent): DeskPolicy {
   const pricing = knowledge.parameters.pricingDefaults;
   const named = concentration?.policy ?? active.at(-1);
   return {
-    name: named?.name ?? "Parâmetros operacionais",
-    version: named?.version ?? "vigente",
+    name: named?.name ?? "Sem política ativa",
+    version: named?.version ?? "",
+    configured: Boolean(named),
     concentrationLimit: typeof concentration?.binding.parameter === "number" ? concentration.binding.parameter : 30,
     rateFloor: knowledge.parameters.rateFloorByRisk[risk],
     minDays: knowledge.parameters.minimumTermDays,

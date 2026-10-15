@@ -24,7 +24,16 @@ import { type Debtor } from "@/src/domain/core/types";
 import { type PortfolioTitle } from "@/src/domain/home/metrics";
 
 import { BellIcon, CloseIcon, MenuIcon, SearchIcon } from "@/src/ui/icons";
-import { type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 export { initials } from "./user-menu";
 
@@ -75,7 +84,7 @@ export function Shell({
   showJourney?: boolean;
   currentUser: AccessUser;
   intelligence: IntelligenceState;
-  onIntelligence?: (state: IntelligenceState) => void;
+  onIntelligence?: Dispatch<SetStateAction<IntelligenceState>>;
   dailyBriefing: DailyBriefingData;
   attentionItems: AttentionItem[];
   taskItems: ManagedTask[];

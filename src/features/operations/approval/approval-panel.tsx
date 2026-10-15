@@ -55,7 +55,8 @@ export function ApprovalPanel({
   const lastro = lastroAssessmentFor(operation, debtors);
   const checklist = buildReadinessChecklist(operation, lastro);
   const prerequisitesReady = checklist.every(item => item.ok);
-  const defaultApprovals = buildDefaultApprovals(operation, prerequisitesReady, lastro.exceptions.length);
+  const lastroConcerns = ["Favorável com ressalvas", "Desfavorável"].includes(lastro.status) ? 1 : 0;
+  const defaultApprovals = buildDefaultApprovals(operation, prerequisitesReady, lastroConcerns);
   const defaultDocuments = buildDefaultDocuments(operation, lastro);
   const defaultSignatures = buildDefaultSignatures(operation);
   const review: ApprovalReview = operation.approvalReview ?? {

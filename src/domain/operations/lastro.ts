@@ -50,6 +50,8 @@ export function lastroAssessmentFor(
   operation: Operation,
   debtorCatalog: Debtor[] = isDemoOperation(operation) ? initialDebtors : [],
 ) {
+  const required = operation.lastroPrecheckRequired ?? false;
+  const status = operation.lastroReview?.status ?? (required ? "Pendente" : "Dispensado");
   const entries = operation.manualEntry?.entries ?? [];
   const { lastroSampleRatio, lastroRelevantShare, scoreBands, cfopPrefixes } = operationalParametersFor(
     operation.institution,
@@ -149,7 +151,11 @@ export function lastroAssessmentFor(
   const failureAction = client?.confirmationFailureAction ?? "Enviar para alçada";
   const blocksForConfirmation =
     !confirmationMinimumMet && ["Bloquear", "Solicitar nova amostra"].includes(failureAction);
+  const hasFinalOpinion = ["Favorável", "Favorável com ressalvas", "Desfavorável"].includes(status);
   return {
+    required,
+    status,
+    opinion: operation.lastroReview?.opinion ?? "",
     rows,
     sampleSize: sampledIds.size,
     evidenceValid,
@@ -164,7 +170,9 @@ export function lastroAssessmentFor(
     minimumConfirmedTitles,
     confirmationMinimumMet,
     confirmationFailureAction: failureAction,
-    ready:
+    /** Confirmações, evidências e checklist apoiam o parecer, mas não bloqueiam a etapa. */
+    ready: !required || hasFinalOpinion,
+    supportingChecksComplete:
       rows.length > 0 &&
       evidenceValid === rows.length &&
       divergences === 0 &&

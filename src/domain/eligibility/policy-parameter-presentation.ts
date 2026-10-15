@@ -1,6 +1,7 @@
 import type { EligibilityOperator, EligibilityValue, MasterRule } from "./model";
 
-export type PolicyParameterKind = "boolean" | "currency" | "percentage" | "days" | "integer" | "number" | "list" | "text";
+export type PolicyParameterKind =
+  "boolean" | "currency" | "percentage" | "days" | "integer" | "number" | "list" | "text";
 
 export type PolicyParameterPresentation = {
   kind: PolicyParameterKind;
@@ -82,9 +83,16 @@ export function policyParameterPresentation(rule: MasterRule, current: Eligibili
 }
 
 export function parsePolicyParameter(kind: PolicyParameterKind, raw: string): EligibilityValue {
-  if (kind === "list") return raw.split(",").map(value => value.trim()).filter(Boolean);
+  if (kind === "list")
+    return raw
+      .split(",")
+      .map(value => value.trim())
+      .filter(Boolean);
   if (["currency", "percentage", "days", "integer", "number"].includes(kind)) {
-    const normalized = raw.replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, "");
+    const normalized = raw
+      .replace(/\./g, "")
+      .replace(",", ".")
+      .replace(/[^0-9.-]/g, "");
     const numeric = Number(normalized);
     return Number.isFinite(numeric) ? numeric : null;
   }

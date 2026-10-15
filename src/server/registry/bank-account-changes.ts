@@ -78,8 +78,7 @@ export function bankAccountProposalError(accounts: PartyBankAccount[], reason: s
     ids.add(account.id);
     if (!(account.bank.trim() && account.agency.trim() && account.account.trim()))
       return "Banco, agência e conta são obrigatórios.";
-    if (account.holderDocument.replace(/\D/g, "").length < 11)
-      return "O CPF/CNPJ do titular da conta está incompleto.";
+    if (account.holderDocument.replace(/\D/g, "").length < 11) return "O CPF/CNPJ do titular da conta está incompleto.";
     if (account.main) main += 1;
   }
   if (accounts.length && main !== 1) return "Defina exatamente uma conta bancária como principal.";
@@ -118,7 +117,8 @@ export async function requestBankAccountChange(
       .bind(tenantId, partyId)
       .first<{ payload: Party }>();
     if (!party) throw new Error("Cadastro não encontrado.");
-    if (same(party.payload.bankAccounts, proposedAccounts)) throw new Error("As contas propostas são iguais às atuais.");
+    if (same(party.payload.bankAccounts, proposedAccounts))
+      throw new Error("As contas propostas são iguais às atuais.");
     const changeId = crypto.randomUUID();
     await transaction
       .prepare(

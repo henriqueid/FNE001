@@ -57,7 +57,9 @@ export async function saveIntelligenceState(
          enabled = excluded.enabled,
          status = excluded.status,
          monthly_token_budget = excluded.monthly_token_budget,
-         used_tokens = excluded.used_tokens,
+         -- O consumo é contabilizado somente pelo servidor (recordIntelligenceUsage); a tela de
+         -- configuração não pode reduzir nem sobrescrever o contador.
+         used_tokens = private.intelligence_states.used_tokens,
          aggregate_version = private.intelligence_states.aggregate_version + 1,
          updated_by = excluded.updated_by,
          updated_at = now()
@@ -68,4 +70,21 @@ export async function saveIntelligenceState(
     .first<IntelligenceStateRow>();
   if (!row) throw new Error("A configuração de IA não foi gravada.");
   return stateFromRow(row);
+}
+
+/** Soma o consumo de forma atômica, independentemente do perfil de quem usou o Copiloto. */
+export async function recordIntelligenceUsage(db: DecisionDatabase, tenantId: string, tokens: number) {
+  if (!Number.isSafeInteger(tokens) || tokens <= 0) return loadIntelligenceState(db, tenantId);
+  const row = await db
+    .prepare(
+      `update private.intelligence_states
+          set used_tokens = used_tokens + ?,
+              updated_at = now()
+        where tenant_id = ?
+       returning tenant_id, contracted, enabled, status, monthly_token_budget, used_tokens,
+                 aggregate_version, updated_at`,
+    )
+    .bind(tokens, tenantId)
+    .first<IntelligenceStateRow>();
+  return row ? stateFromRow(row) : null;
 }

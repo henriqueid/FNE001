@@ -4,7 +4,7 @@ Este arquivo é o ponto de retomada para Claude Code e outros agentes. Antes de 
 
 ## Onde paramos
 
-Última atualização: **15/10/2026**, após a correção da persistência e da estabilidade da IA e a publicação integral do estado de trabalho acumulado na branch `main`.
+Última atualização: **15/10/2026**, após a revisão de código do lote do Codex e as correções de escopo de tarefas, dispensa de Lastro em operações antigas e contabilização do consumo de IA no servidor.
 
 O STRATO é uma aplicação operacional de recebíveis em React 19 + Vite/vinext, com APIs no mesmo processo Node e PostgreSQL privado no Supabase. O tenant produtivo padrão é `strato-demo`. O navegador nunca deve receber `DATABASE_URL`, `OPENAI_API_KEY` ou credenciais administrativas.
 
@@ -13,6 +13,10 @@ O STRATO é uma aplicação operacional de recebíveis em React 19 + Vite/vinext
 - Autenticação, sessões, permissões, empresas, cadastros, operações, carteira, financeiro, comercial, tarefas, políticas, integrações e parâmetros operacionais possuem persistência server-side em diferentes níveis de maturidade.
 - O Copiloto usa a OpenAI Responses API somente para interpretação e síntese. Cálculos, elegibilidade, preço, alçadas e movimentações financeiras continuam determinísticos.
 - Licença, ativação, estado, orçamento e consumo da IA agora são persistidos por tenant em `private.intelligence_states`.
+- O consumo de tokens é somado somente no servidor (`recordIntelligenceUsage`, chamado por `/api/copilot/chat`); o `PUT /api/intelligence/state` (exige `settings:manage`) nunca altera `used_tokens`.
+- Parâmetros operacionais usam gravação direta com `settings:manage` por decisão do Henrique (15/10/2026); não reintroduzir maker-checker sem pedido explícito.
+- Central do Dia: `taskSyncVisibleTo`/`syncTaskState` definem o recorte de sincronização; GET, validação do PUT e resposta do PUT devem usar o mesmo recorte, e o escopo de empresa vale também para administradores.
+- Lastro: operação sem `lastroPrecheckRequired` nunca é dispensada pelo motor; a exigência é resolvida pelo cadastro do cedente (`withResolvedLastroPrecheck`).
 - Abrir a tela de Inteligência e IA não dispara mais um teste automático de conexão. O teste é explícito, evitando oscilações de estado por falhas transitórias.
 - Atualizações assíncronas da IA usam setters funcionais para não sobrescrever orçamento, licença ou consumo alterados enquanto uma requisição estava em andamento.
 - A migração `20261015043300_persist_intelligence_configuration.sql` já foi aplicada ao projeto Supabase de produção STRATO.

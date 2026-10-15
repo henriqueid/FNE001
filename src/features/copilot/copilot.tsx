@@ -69,13 +69,22 @@ export function Copilot({
     }),
     [operations, cedents, portfolioTitles, policies],
   );
-  const desk = useCopilotDesk(knowledge, currentUser, intelligence, cedents[0]?.id ?? "", demoMode, debtors, tokens =>
-    onIntelligence?.(current => ({
-      ...current,
-      usedTokens: current.usedTokens + tokens,
-      status: "AI_AVAILABLE",
-      updatedAt: new Date().toISOString(),
-    })),
+  const desk = useCopilotDesk(
+    knowledge,
+    currentUser,
+    intelligence,
+    cedents[0]?.id ?? "",
+    demoMode,
+    debtors,
+    (tokens, serverUsedTokens) =>
+      onIntelligence?.(current => ({
+        ...current,
+        // O servidor já contabilizou o consumo; o valor local só é estimado se a resposta não trouxer o total.
+        usedTokens:
+          serverUsedTokens === undefined ? current.usedTokens + tokens : Math.max(current.usedTokens, serverUsedTokens),
+        status: "AI_AVAILABLE",
+        updatedAt: new Date().toISOString(),
+      })),
   );
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);

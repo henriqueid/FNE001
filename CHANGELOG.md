@@ -1,5 +1,12 @@
 # Changelog
 
+## Não lançado — 15/10/2026 · Correções da revisão de código
+
+- Central do Dia: o administrador volta a respeitar o escopo de empresa na leitura das tarefas. Ele continua recebendo as tarefas que delegou (para não recriá-las), e leitura, validação e resposta da gravação usam o mesmo recorte, eliminando o 403 que impedia salvar depois de uma delegação.
+- Lastro: operações antigas, sem a exigência de pré-checagem registrada, não são mais dispensadas automaticamente. A exigência é resolvida pelo cadastro atual do cedente; sem cedente localizado, a etapa fica para decisão humana. O motor também volta a exigir análise de elegibilidade antes de dispensar o Lastro.
+- IA: o consumo de tokens passa a ser somado pelo servidor a cada resposta do Copiloto, para qualquer perfil. A gravação da configuração não sobrescreve mais o contador, e o servidor bloqueia o Copiloto quando a IA está desativada ou o orçamento mensal foi atingido.
+- Documentação: matriz de acesso e guias atualizados para a gravação direta dos parâmetros operacionais (dupla aprovação removida por decisão de produto).
+
 ## Não lançado — 15/10/2026 · Persistência da IA e consolidação operacional
 
 - Licença, ativação, disponibilidade, orçamento e consumo da IA passam a ser persistidos por organização no PostgreSQL privado.

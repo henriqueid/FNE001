@@ -38,7 +38,7 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 | `/api/receivables`                | capacidade operacional              | sem escrita direta                                                                      | tenant + empresa da operação                                    | empresa aplicada                    |
 | `/api/tasks`                      | `dashboard:view`                    | `dashboard:view`, com regras de autoria                                                 | tenant + empresa da operação referenciada                       | empresa aplicada                    |
 | `/api/eligibility-policies`       | `settings:view`                     | `settings:manage` + solicitante e aprovador distintos                                   | tenant                                                          | maker-checker aplicado              |
-| `/api/operational-parameters`     | `settings:view`                     | `settings:manage` + solicitante e aprovador distintos                                   | tenant                                                          | versionado e maker-checker aplicado |
+| `/api/operational-parameters`     | `settings:view`                     | `settings:manage` (gravação direta, decisão de produto de 15/10/2026)                   | tenant                                                          | versionado e idempotente            |
 | `/api/access/users`               | `users:manage`                      | `users:manage`                                                                          | tenant                                                          | concluído                           |
 | `/api/access/change-requests`     | `users:manage`                      | solicitação: `users:manage`; decisão: outro administrador                               | tenant + usuário                                                | maker-checker aplicado              |
 | `/api/company`                    | `settings:view`                     | `settings:manage`                                                                       | tenant                                                          | concluído                           |
@@ -85,6 +85,6 @@ Em 14/10/2026, duas sessões e dois tenants temporários confirmaram vínculo es
 ## Próximos endurecimentos
 
 1. Separar permissões de leitura e manutenção onde hoje uma permissão ampla atende aos dois usos.
-2. Estender o maker-checker às demais configurações materiais; integrações, privilégios, parâmetros operacionais, políticas, contas bancárias, liberação, favorecidos e exceções já estão protegidos.
+2. Estender o maker-checker às demais configurações materiais; integrações, privilégios, políticas, contas bancárias, liberação, favorecidos e exceções já estão protegidos. Parâmetros operacionais usam gravação direta por decisão de produto (15/10/2026).
 3. Centralizar recibos idempotentes, event ledger e outbox em um contrato comum.
 4. Repetir a matriz de isolamento no UAT integral anterior ao go-live e após mudanças de identidade, sessão ou escopo.

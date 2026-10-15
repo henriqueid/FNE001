@@ -926,6 +926,8 @@ export default function StratoApp() {
   useEffect(() => {
     if (!storageReady || isDemo || !intelligenceServerReady || intelligence === persistedIntelligenceRef.current)
       return;
+    // Somente quem administra as configurações grava a licença e o orçamento; o consumo é registrado pelo servidor.
+    if (!currentUser.permissions.includes("settings:manage")) return;
     const candidate = intelligence;
     const timer = window.setTimeout(() => {
       const prior = intelligenceSaveQueue.current ?? Promise.resolve(candidate);
@@ -946,7 +948,7 @@ export default function StratoApp() {
         });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [intelligence, intelligenceServerReady, isDemo, storageReady]);
+  }, [currentUser.permissions, intelligence, intelligenceServerReady, isDemo, storageReady]);
 
   useEffect(() => {
     if (!storageReady || isDemo || portfolioServerReady) return;

@@ -1,7 +1,9 @@
 import { sessionPrincipal } from "@/src/server/access/session";
 import { getDatabase } from "@/src/server/database/postgres";
+import { effectiveAIStatus } from "@/src/domain/intelligence/model";
 import { loadAuthorizedCopilotContext } from "@/src/server/intelligence/authorized-context";
 import { createOpenAIResponse } from "@/src/server/intelligence/openai-gateway";
+import { loadIntelligenceState, recordIntelligenceUsage } from "@/src/server/intelligence/repository";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
@@ -34,15 +36,28 @@ export async function POST(request: Request) {
   if (!question) return json({ error: "Escreva uma pergunta para o Copiloto." }, 400);
   if (question.length > 2_000) return json({ error: "A pergunta deve ter no máximo 2.000 caracteres." }, 400);
 
+  const intelligence = await loadIntelligenceState(db, tenantId);
+  if (intelligence) {
+    const status = effectiveAIStatus(intelligence);
+    if (status === "AI_DISABLED") return json({ error: "O Copiloto com IA está desativado para esta empresa." }, 403);
+    if (intelligence.usedTokens >= intelligence.monthlyTokenBudget)
+      return json({ error: "O orçamento mensal de IA desta empresa foi atingido." }, 429);
+  }
+
   try {
     const context = JSON.stringify(await loadAuthorizedCopilotContext(db, principal));
     const result = await createOpenAIResponse(
       `PERGUNTA DO USUÁRIO:\n${question}\n\nCONTEXTO AUTORIZADO DO STRATO (JSON):\n${context}`,
       COPILOT_INSTRUCTIONS,
     );
+    const updated = await recordIntelligenceUsage(db, tenantId, result.usage.totalTokens).catch(error => {
+      console.error("copilot_usage_record_failed", error);
+      return null;
+    });
     return json({
       reply: { tool: `openai_responses(model=${result.model})`, paragraphs: answerParagraphs(result.text) },
       usage: result.usage,
+      usedTokens: updated?.usedTokens,
       requestId: result.requestId,
     });
   } catch (error) {

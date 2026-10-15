@@ -24,7 +24,7 @@ As estimativas abaixo são esforço técnico líquido para uma pequena equipe ex
 - sessões, usuários, permissões, alçadas e escopo por empresa/veículo;
 - decisões versionadas, idempotência, eventos imutáveis, outbox e notificações;
 - escopo de empresa em Operações, Decisões, Carteira, Recebíveis, Financeiro, Tarefas, notificações e reprocessamento da outbox;
-- maker-checker para exceção de risco, liberação financeira, favorecidos, contas bancárias, políticas, privilégios, parâmetros operacionais globais e provedores de integração;
+- maker-checker para exceção de risco, liberação financeira, favorecidos, contas bancárias, políticas, privilégios e provedores de integração (parâmetros operacionais globais usam gravação direta versionada desde 15/10/2026, por decisão de produto);
 - leitura cadastral separada da edição e Copiloto alimentado por fontes lidas e filtradas integralmente no backend;
 - funil comercial, comitê, onboarding, carteira/cobrança inicial e Central do Dia;
 - catálogo de integrações reais ligado à configuração persistida, com bloqueio de chamadas sem provedor ativo e
@@ -116,7 +116,7 @@ dead-letter e observabilidade; esses itens permanecem nas estimativas da Onda C.
 - trilhas curtas por perfil e ambiente de treinamento;
 - notas de versão e matriz de mudanças que exigem retreinamento.
 
-Já existe procedimento específico para propor, aprovar, rejeitar e auditar padrões globais em `docs/user-guides/APROVACAO_DE_PARAMETROS_OPERACIONAIS.md`.
+O procedimento de gravação direta e auditoria dos padrões globais está em `docs/user-guides/APROVACAO_DE_PARAMETROS_OPERACIONAIS.md` (dupla aprovação removida por decisão de produto em 15/10/2026).
 O comportamento atual das fontes externas está documentado em `docs/user-guides/DISPONIBILIDADE_DE_INTEGRACOES.md`.
 O fluxo maker-checker de provedores está documentado em `docs/user-guides/APROVACAO_DE_INTEGRACOES.md`.
 

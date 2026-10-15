@@ -63,6 +63,8 @@ export async function askConfiguredCopilot(question: string, _knowledge: SystemK
       reply: DeskReply;
       requestId?: string;
       usage: { inputTokens: number; outputTokens: number; totalTokens: number };
+      /** Total consolidado no servidor depois desta resposta. */
+      usedTokens?: number;
     }>(response);
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError")

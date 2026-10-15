@@ -55,7 +55,7 @@ export function useCopilotDesk(
   defaultCedentId = "",
   demoMode = false,
   debtors: Debtor[] = [],
-  onUsage?: (tokens: number) => void,
+  onUsage?: (tokens: number, serverUsedTokens?: number) => void,
 ) {
   const [cedent, setCedent] = useState(defaultCedentId);
   const [files, setFiles] = useState<DeskFile[]>([]);
@@ -440,7 +440,7 @@ export function useCopilotDesk(
     try {
       const result = await askConfiguredCopilot(text, knowledge);
       push({ role: "ai", reply: result.reply });
-      if (result.usage.totalTokens > 0) onUsage?.(result.usage.totalTokens);
+      if (result.usage.totalTokens > 0) onUsage?.(result.usage.totalTokens, result.usedTokens);
     } catch (error) {
       push({
         role: "ai",

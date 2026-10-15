@@ -34,6 +34,24 @@ describe("Copiloto · consulta à base", () => {
     expect(all("52.927.676/0001-29")).toContain("GZ Transportes Ltda");
   });
 
+  it("não apresenta score ou limite ausente como valor zero", () => {
+    const newCedent = {
+      ...kb.cedents[0],
+      id: "cedente-novo",
+      document: "11.111.111/0001-11",
+      name: "Cedente Novo",
+      score: 0,
+      creditLimit: 0,
+      usedLimit: 0,
+    };
+    const answer = answerSystemQuestion("como está o Cedente Novo?", { ...kb, cedents: [newCedent] });
+    const text = answer.paragraphs.join(" ");
+
+    expect(text).toContain("score interno ainda não calculado");
+    expect(text).toContain("Limite de crédito ainda não disponível");
+    expect(text).not.toContain("R$ 0,00");
+  });
+
   it("encontra o sacado e mostra a exposição", () => {
     const sacado = kb.titles[0].debtorName;
     const text = all(`qual a exposição do ${sacado}?`);

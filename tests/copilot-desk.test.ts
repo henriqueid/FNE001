@@ -93,6 +93,12 @@ describe("Mesa Inteligente · analista", () => {
       answerDesk(scenario.result.findings.find(item => item.id === "cedent-limit")!.question!, constrained, [scenario])
         .reply.tool,
     ).toBe("explicar_apontamento(cedent-limit)");
+    const limitAnswer = answerDesk("A operação cabe no limite do cedente?", constrained, [
+      scenario,
+    ]).reply.paragraphs.join(" ");
+    expect(limitAnswer).toContain("ainda não possui limite de crédito aprovado");
+    expect(limitAnswer).toContain("sem dados");
+    expect(limitAnswer).not.toContain("R$ 0,00");
   });
 
   it("não interrompe a resposta quando o documento importado não contém espaço", () => {

@@ -157,6 +157,7 @@ export function buildOfflineDeskContext({
             score: cedent.score,
             creditLimitCents: Math.round(cedent.creditLimit * 100),
             usedLimitCents: Math.round(cedent.usedLimit * 100),
+            creditLimitKnown: cedent.creditLimit > 0,
           }
         : undefined,
     },

@@ -5886,6 +5886,20 @@ table th {
 .cpl-analysis > * {
   flex-shrink: 0;
 }
+.cpl-analysis > .cpl-decision {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  padding: 12px;
+  border: 1px solid var(--ds-border-strong);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ds-surface) 94%, transparent);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--ds-text) 10%, transparent);
+  backdrop-filter: blur(12px);
+}
+.cpl-analysis > .cpl-decision.is-handoff {
+  border-color: color-mix(in srgb, var(--ds-accent) 45%, var(--ds-border));
+}
 .cpl-analysis h3 {
   margin: 0 0 9px;
   font-size: 15px;

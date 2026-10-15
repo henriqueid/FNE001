@@ -81,7 +81,14 @@ export type DeskContext = {
   policy: DeskPolicy;
   /** A consulta ao birô do sacado novo foi autorizada e feita. */
   bureauChecked: boolean;
-  cedent?: { name: string; score: number; creditLimitCents: number; usedLimitCents: number };
+  cedent?: {
+    name: string;
+    score: number;
+    creditLimitCents: number;
+    usedLimitCents: number;
+    /** Distingue ausência de decisão de crédito de um limite monetário real. */
+    creditLimitKnown?: boolean;
+  };
 };
 
 /** Alíquotas de IOF apenas para a demonstração (diária + adicional); a versão real vem de tabela versionada. */
@@ -152,8 +159,19 @@ export function deskCalculation(context: DeskContext, included: string[], ratePe
               : `Abaixo do corte de ${attention}; exige revisão de risco.`,
         question: `Como o score interno de ${cedent.name} afeta esta análise?`,
       });
+    const creditLimitKnown = cedent.creditLimitKnown ?? cedent.creditLimitCents > 0;
     const available = Math.max(0, cedent.creditLimitCents - cedent.usedLimitCents);
-    if (faceCents > available)
+    if (!creditLimitKnown)
+      findings.push({
+        id: "cedent-limit",
+        severity: "impedimento",
+        evidence: "Sem dados",
+        kind: "REGRA",
+        title: `${cedent.name} ainda não possui limite de crédito aprovado`,
+        detail: "O limite precisa ser definido no cadastro ou aprovado pelo comitê antes da decisão da operação.",
+        question: `A operação cabe no limite de ${cedent.name}?`,
+      });
+    else if (faceCents > available)
       findings.push({
         id: "cedent-limit",
         severity: "alcada",

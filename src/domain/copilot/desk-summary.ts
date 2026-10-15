@@ -144,17 +144,21 @@ export function buildDeskSummary(
     ],
     debtors,
     terms,
-    limit: cedent
-      ? {
-          limitCents: cents(cedent.creditLimit),
-          usedCents: cents(cedent.usedLimit),
-          operationCents: result.faceCents,
-          availableAfterCents: cents(cedent.creditLimit) - cents(cedent.usedLimit) - result.faceCents,
-          useAfter: cedent.creditLimit
-            ? ((cents(cedent.usedLimit) + result.faceCents) / cents(cedent.creditLimit)) * 100
-            : 0,
-        }
-      : undefined,
+    limit:
+      cedent &&
+      (context.cedent
+        ? (context.cedent.creditLimitKnown ?? context.cedent.creditLimitCents > 0)
+        : cedent.creditLimit > 0)
+        ? {
+            limitCents: cents(cedent.creditLimit),
+            usedCents: cents(cedent.usedLimit),
+            operationCents: result.faceCents,
+            availableAfterCents: cents(cedent.creditLimit) - cents(cedent.usedLimit) - result.faceCents,
+            useAfter: cedent.creditLimit
+              ? ((cents(cedent.usedLimit) + result.faceCents) / cents(cedent.creditLimit)) * 100
+              : 0,
+          }
+        : undefined,
     cedentPortfolio: cedent
       ? {
           openCents: ownPortfolio.reduce((sum, title) => sum + cents(title.amount), 0),

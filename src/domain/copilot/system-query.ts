@@ -97,12 +97,16 @@ function cedentAnswer(cedent: Cedent, kb: SystemKnowledge): DeskReply {
   const open = kb.operations.filter(
     op => digits(op.document) === digits(cedent.document) && !CLOSED.includes(op.status),
   );
+  const hasScore = cedent.score > 0;
+  const hasCreditLimit = cedent.creditLimit > 0;
   const available = cedent.creditLimit - cedent.usedLimit;
   return {
     tool: `consultar_cadastro(cedente="${cedent.name}")`,
     paragraphs: [
-      `${cedent.name} (${cedent.document}): score ${cedent.score} de 1000${cedent.bureauScore ? `, birô ${cedent.bureauScore} em campo separado` : ""}.`,
-      `Limite ${brl(cedent.creditLimit)}, usado ${brl(cedent.usedLimit)} (${pct(cedent.creditLimit ? (cedent.usedLimit / cedent.creditLimit) * 100 : 0)}), disponível ${brl(available)}.`,
+      `${cedent.name} (${cedent.document}): ${hasScore ? `score ${cedent.score} de 1000` : "score interno ainda não calculado"}${cedent.bureauScore ? `, birô ${cedent.bureauScore} em campo separado` : ""}.`,
+      hasCreditLimit
+        ? `Limite ${brl(cedent.creditLimit)}, usado ${brl(cedent.usedLimit)} (${pct((cedent.usedLimit / cedent.creditLimit) * 100)}), disponível ${brl(available)}.`
+        : "Limite de crédito ainda não disponível: aguarda definição no cadastro ou aprovação do comitê.",
       `Carteira: ${owned.length} título(s) em aberto somando ${brl(owned.reduce((sum, title) => sum + title.amount, 0))}${overdue.length ? `, ${overdue.length} vencido(s) (${brl(overdue.reduce((sum, title) => sum + title.amount, 0))})` : ", nenhum vencido"}.`,
       `Histórico: ${cedent.settlements} liquidações, ${cedent.lateSettlements} com atraso, atraso médio de ${cedent.averageDelayDays} dias, ${cedent.repurchases} recompra(s).`,
       open.length

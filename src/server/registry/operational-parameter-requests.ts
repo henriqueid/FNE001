@@ -10,6 +10,11 @@ import type { DecisionDatabase } from "@/src/server/decisions/repository";
 import type { ServerPrincipal } from "@/src/server/access/repository";
 
 type StateRow = { payload: OperationalDefaultsState; aggregate_version: number };
+type CommandRow = {
+  request_hash: string;
+  result_version: number;
+  result_payload: OperationalDefaultsState;
+};
 type RequestRow = {
   change_id: string;
   request_hash: string;
@@ -56,6 +61,16 @@ export async function operationalParameterRequestHash(input: {
   return hex(new Uint8Array(digest));
 }
 
+export async function operationalParameterSaveHash(input: {
+  tenantId: string;
+  actorId: string;
+  expectedVersion: number;
+  state: OperationalDefaultsState;
+}) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(stable(input))));
+  return hex(new Uint8Array(digest));
+}
+
 const mapped = (row: RequestRow): OperationalParameterChangeRequest => ({
   id: row.change_id,
   expectedVersion: row.expected_version,
@@ -79,6 +94,108 @@ export async function loadOperationalParameterState(db: DecisionDatabase, tenant
     .bind(tenantId)
     .first<StateRow>();
   return row ? { ...row.payload, persistenceVersion: row.aggregate_version } : null;
+}
+
+export async function saveOperationalParameterState(
+  db: DecisionDatabase,
+  tenantId: string,
+  actor: Pick<ServerPrincipal, "id">,
+  state: OperationalDefaultsState,
+  expectedVersion: number,
+  commandId: string,
+  requestHash: string,
+) {
+  const validationError = validateOperationalDefaults(state);
+  if (validationError) throw new OperationalParameterConflictError(validationError);
+  const candidate = operationalDefaultsSnapshot(state);
+  const work = async (transaction: DecisionDatabase) => {
+    const replay = await transaction
+      .prepare(
+        `select request_hash, result_version, result_payload
+         from private.operational_parameter_commands
+         where tenant_id = ? and command_id = ?`,
+      )
+      .bind(tenantId, commandId)
+      .first<CommandRow>();
+    if (replay) {
+      if (replay.request_hash !== requestHash)
+        throw new OperationalParameterConflictError("A chave deste comando já foi usada com outro conteúdo.");
+      return { ...replay.result_payload, persistenceVersion: replay.result_version };
+    }
+    const current = await loadOperationalParameterState(transaction, tenantId);
+    if ((current?.persistenceVersion ?? 0) !== expectedVersion)
+      throw new OperationalParameterConflictError("Os parâmetros mudaram. Recarregue a versão atual antes de salvar.");
+    if (same(operationalDefaultsSnapshot(current ?? emptyOperationalDefaults()), candidate))
+      throw new OperationalParameterConflictError("Nenhuma alteração de parâmetro foi informada.");
+
+    const eventId = crypto.randomUUID();
+    const outboxId = crypto.randomUUID();
+    const saved = await transaction
+      .prepare(
+        `with saved as (
+           insert into private.operational_parameter_states
+             (tenant_id, aggregate_version, payload, created_by, updated_by)
+           values (?, 1, ?::jsonb, ?, ?)
+           on conflict (tenant_id) do update set
+             aggregate_version = private.operational_parameter_states.aggregate_version + 1,
+             payload = excluded.payload, updated_by = excluded.updated_by, updated_at = now()
+           where private.operational_parameter_states.aggregate_version = ?
+           returning aggregate_version, payload
+         ), recorded as (
+           insert into private.domain_events
+             (tenant_id, event_id, aggregate_type, aggregate_id, aggregate_version,
+              event_type, actor_id, correlation_id, payload)
+           select ?, ?, 'OperationalParameterState', ?, aggregate_version,
+             'OPERATIONAL_PARAMETERS_SAVED', ?, ?,
+             jsonb_build_object('expectedVersion', ?::integer)
+           from saved returning event_id, aggregate_version
+         ), enqueued as (
+           insert into private.domain_outbox
+             (tenant_id, outbox_id, event_id, topic, aggregate_type, aggregate_id,
+              aggregate_version, payload)
+           select ?, ?, event_id, 'strato.operational-parameters', 'OperationalParameterState', ?,
+             aggregate_version, jsonb_build_object('eventId', event_id,
+               'eventType', 'OPERATIONAL_PARAMETERS_SAVED', 'tenantId', ?::text,
+               'aggregateVersion', aggregate_version)
+           from recorded
+         ), commanded as (
+           insert into private.operational_parameter_commands
+             (tenant_id, command_id, request_hash, expected_version, result_version,
+              result_payload, event_id, actor_id)
+           select ?, ?, ?, ?::integer, aggregate_version, payload, ?, ?
+           from saved
+           returning result_version, result_payload
+         )
+         select result_version, result_payload from commanded`,
+      )
+      .bind(
+        tenantId,
+        jsonParameter(candidate),
+        actor.id,
+        actor.id,
+        expectedVersion,
+        tenantId,
+        eventId,
+        tenantId,
+        actor.id,
+        commandId,
+        expectedVersion,
+        tenantId,
+        outboxId,
+        tenantId,
+        tenantId,
+        tenantId,
+        commandId,
+        requestHash,
+        expectedVersion,
+        eventId,
+        actor.id,
+      )
+      .first<{ result_version: number; result_payload: OperationalDefaultsState }>();
+    if (!saved) throw new OperationalParameterConflictError("Os parâmetros mudaram durante a gravação.");
+    return { ...saved.result_payload, persistenceVersion: saved.result_version };
+  };
+  return db.transaction ? db.transaction(work) : work(db);
 }
 
 export async function listOperationalParameterChanges(db: DecisionDatabase, tenantId: string) {

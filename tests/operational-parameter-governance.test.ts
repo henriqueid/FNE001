@@ -8,7 +8,9 @@ import {
   decideOperationalParameterChange,
   OperationalParameterConflictError,
   operationalParameterRequestHash,
+  operationalParameterSaveHash,
   requestOperationalParameterChange,
+  saveOperationalParameterState,
 } from "@/src/server/registry/operational-parameter-requests";
 import type { DecisionDatabase, DecisionStatement } from "@/src/server/decisions/repository";
 import { describe, expect, it } from "vitest";
@@ -43,6 +45,7 @@ class Statement implements DecisionStatement {
 class FakeDatabase implements DecisionDatabase {
   state?: OperationalDefaultsState;
   request?: Record<string, unknown>;
+  command?: Record<string, unknown>;
   prepares: string[] = [];
 
   prepare(query: string) {
@@ -54,6 +57,7 @@ class FakeDatabase implements DecisionDatabase {
       if (!this.state) return null;
       return { payload: this.state, aggregate_version: this.state.persistenceVersion };
     }
+    if (query.includes("from private.operational_parameter_commands")) return this.command ?? null;
     if (query.includes("where tenant_id = ? and command_id = ?")) return this.request ?? null;
     if (query.includes("for update")) return this.request ?? null;
     if (query.includes("with requested as")) {
@@ -79,6 +83,14 @@ class FakeDatabase implements DecisionDatabase {
     if (query.includes("with saved as")) {
       const version = Number(values[4]) + 1;
       this.state = { ...(values[1] as OperationalDefaultsState), persistenceVersion: version };
+      if (query.includes("operational_parameter_commands")) {
+        this.command = {
+          request_hash: values[17],
+          result_version: version,
+          result_payload: values[1],
+        };
+        return { result_version: version, result_payload: values[1] };
+      }
       return { aggregate_version: version };
     }
     return null;
@@ -126,6 +138,22 @@ describe("governança dos parâmetros operacionais", () => {
     expect(await operationalParameterRequestHash({ ...base, proposed: left })).toBe(
       await operationalParameterRequestHash({ ...base, proposed: right }),
     );
+  });
+
+  it("salva e aplica diretamente para o usuário autorizado, com repetição idempotente", async () => {
+    const db = new FakeDatabase();
+    const state = emptyOperationalDefaults();
+    state.general.monthlyRate = 2.7;
+    state.general.maximumMonthlyRate = 5;
+    const input = { tenantId: "tenant-1", actorId: maker.id, expectedVersion: 0, state };
+    const hash = await operationalParameterSaveHash(input);
+
+    const saved = await saveOperationalParameterState(db, "tenant-1", maker, state, 0, "save-command-123", hash);
+    const replay = await saveOperationalParameterState(db, "tenant-1", maker, state, 0, "save-command-123", hash);
+
+    expect(saved.persistenceVersion).toBe(1);
+    expect(saved.general.monthlyRate).toBe(2.7);
+    expect(replay).toEqual(saved);
   });
 
   it("registra proposta sem aplicá-la e bloqueia a decisão do solicitante", async () => {

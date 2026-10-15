@@ -2,12 +2,10 @@ import { emptyOperationalDefaults, validateOperationalDefaults } from "@/src/dom
 import { sessionPrincipal } from "@/src/server/access/session";
 import { getDatabase } from "@/src/server/database/postgres";
 import {
-  decideOperationalParameterChange,
-  listOperationalParameterChanges,
   loadOperationalParameterState,
   OperationalParameterConflictError,
-  operationalParameterRequestHash,
-  requestOperationalParameterChange,
+  operationalParameterSaveHash,
+  saveOperationalParameterState,
 } from "@/src/server/registry/operational-parameter-requests";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
@@ -33,84 +31,47 @@ export async function GET(request: Request) {
     ...emptyOperationalDefaults(),
     persistenceVersion: 0,
   };
-  const requests = access.principal.permissions.includes("settings:manage")
-    ? await listOperationalParameterChanges(access.db, access.tenantId)
-    : [];
-  return json({ state, requests });
-}
-
-export async function POST(request: Request) {
-  const access = await context(request);
-  if ("error" in access) return access.error;
-  if (!access.principal.permissions.includes("settings:manage"))
-    return json({ error: "Sem permissão para propor parâmetros operacionais." }, 403);
-  const body = (await request.json().catch(() => null)) as {
-    proposed?: ReturnType<typeof emptyOperationalDefaults>;
-    expectedVersion?: number;
-    reason?: string;
-    commandId?: string;
-  } | null;
-  if (
-    !body?.proposed ||
-    !Number.isInteger(body.expectedVersion) ||
-    Number(body.expectedVersion) < 0 ||
-    !body.commandId ||
-    !/^[A-Za-z0-9:_-]{8,200}$/.test(body.commandId)
-  )
-    return json({ error: "Proposta de parâmetros inválida." }, 400);
-  const validationError = validateOperationalDefaults(body.proposed);
-  if (validationError) return json({ error: validationError }, 400);
-  const expectedVersion = Number(body.expectedVersion);
-  const reason = body.reason ?? "";
-  const requestHash = await operationalParameterRequestHash({
-    tenantId: access.tenantId,
-    actorId: access.principal.id,
-    expectedVersion,
-    proposed: body.proposed,
-    reason,
-  });
-  try {
-    await requestOperationalParameterChange(
-      access.db,
-      access.tenantId,
-      access.principal,
-      body.proposed,
-      expectedVersion,
-      reason,
-      body.commandId,
-      requestHash,
-    );
-    return json({ requests: await listOperationalParameterChanges(access.db, access.tenantId) }, 201);
-  } catch (error) {
-    if (error instanceof OperationalParameterConflictError) return json({ error: error.message }, 409);
-    if ((error as { code?: string }).code === "23505")
-      return json({ error: "Já existe uma proposta de parâmetros aguardando decisão." }, 409);
-    throw error;
-  }
+  return json({ state });
 }
 
 export async function PUT(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
   if (!access.principal.permissions.includes("settings:manage"))
-    return json({ error: "Sem permissão para decidir parâmetros operacionais." }, 403);
+    return json({ error: "Sem permissão para salvar parâmetros operacionais." }, 403);
   const body = (await request.json().catch(() => null)) as {
-    changeId?: string;
-    decision?: "APPROVED" | "REJECTED";
-    reason?: string;
+    state?: ReturnType<typeof emptyOperationalDefaults>;
+    expectedVersion?: number;
+    commandId?: string;
   } | null;
-  if (!body?.changeId || !["APPROVED", "REJECTED"].includes(body.decision ?? ""))
-    return json({ error: "Decisão de parâmetros inválida." }, 400);
+  if (
+    !body?.state ||
+    !Number.isInteger(body.expectedVersion) ||
+    Number(body.expectedVersion) < 0 ||
+    !body.commandId ||
+    !/^[A-Za-z0-9:_-]{8,200}$/.test(body.commandId)
+  )
+    return json({ error: "Parâmetros operacionais inválidos." }, 400);
+  const validationError = validateOperationalDefaults(body.state);
+  if (validationError) return json({ error: validationError }, 400);
+  const expectedVersion = Number(body.expectedVersion);
+  const requestHash = await operationalParameterSaveHash({
+    tenantId: access.tenantId,
+    actorId: access.principal.id,
+    expectedVersion,
+    state: body.state,
+  });
   try {
-    const state = await decideOperationalParameterChange(
+    const state = await saveOperationalParameterState(
       access.db,
       access.tenantId,
       access.principal,
-      body.changeId,
-      body.decision!,
-      body.reason ?? "",
+      body.state,
+      expectedVersion,
+      body.commandId,
+      requestHash,
     );
-    return json({ state, requests: await listOperationalParameterChanges(access.db, access.tenantId) });
+    return json({ state });
   } catch (error) {
     if (error instanceof OperationalParameterConflictError) return json({ error: error.message }, 409);
     throw error;

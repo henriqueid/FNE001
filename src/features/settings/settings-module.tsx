@@ -7,12 +7,7 @@ import PoliciesModule from "@/src/features/policies/policies-module";
 import IntegrationGovernancePanel from "./integration-governance-panel";
 import { useEffect, useState } from "react";
 import { type IntegrationState, updateIntegrationMode } from "@/src/domain/integrations/model";
-import {
-  operationalDraftFromRequests,
-  operationalDefaultsSnapshot,
-  type OperationalDefaultsState,
-  type OperationalParameterChangeRequest,
-} from "@/src/domain/registry/operational-profile";
+import { operationalDefaultsSnapshot, type OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
 import { OperationalParametersEditor } from "@/src/features/registry/operational-parameters-editor";
 import { type HomePeriod } from "@/src/domain/home/settings";
 import { type AccessState } from "@/src/domain/access/model";
@@ -20,11 +15,7 @@ import { UsersAccessPanel } from "./users-access-panel";
 import { aiStatusLabel, effectiveAIStatus, type IntelligenceState } from "@/src/domain/intelligence/model";
 import { OutboxHealthPanel } from "./outbox-health-panel";
 import { AIConfigurationPanel } from "./ai-configuration-panel";
-import {
-  decideOperationalParameters,
-  loadOperationalParameters,
-  proposeOperationalParameters,
-} from "@/src/app/operational-parameters-client";
+import { loadOperationalParameters, persistOperationalParameters } from "@/src/app/operational-parameters-client";
 import {
   emptyCompanyDestination,
   validateCompanyDestination,
@@ -194,18 +185,13 @@ export default function SettingsModule({
   const activeIntegrations = integrations.providers.filter(provider => provider.mode === "ATIVA").length;
   const demoIntegrations = integrations.providers.filter(provider => provider.mode === "DEMONSTRACAO").length;
   const [operationalDraft, setOperationalDraft] = useState(operationalDefaults);
-  const [operationalRequests, setOperationalRequests] = useState<OperationalParameterChangeRequest[]>([]);
-  const [operationalReason, setOperationalReason] = useState("");
-  const [operationalDecisionReason, setOperationalDecisionReason] = useState("");
   const [operationalSubmitting, setOperationalSubmitting] = useState(false);
   const [operationalFeedback, setOperationalFeedback] = useState<{ tone: "success" | "error"; message: string }>();
   const [showCompanyCreate, setShowCompanyCreate] = useState(false);
   const [companyDraft, setCompanyDraft] = useState<CompanyDestinationDraft>(emptyCompanyDestination);
   const [companySaving, setCompanySaving] = useState(false);
   const [companyFeedback, setCompanyFeedback] = useState("");
-  const pendingOperationalRequest = operationalRequests.find(request => request.status === "PENDING");
-  const operationalHistory = operationalRequests.filter(request => request.status !== "PENDING").slice(0, 5);
-  const editableOperationalDefaults = demoMode ? operationalDefaults : operationalDraft;
+  const editableOperationalDefaults = operationalDraft;
   const operationalChanged =
     JSON.stringify(operationalDefaultsSnapshot(operationalDraft)) !==
     JSON.stringify(operationalDefaultsSnapshot(operationalDefaults));
@@ -216,25 +202,22 @@ export default function SettingsModule({
     loadOperationalParameters()
       .then(result => {
         if (cancelled) return;
-        setOperationalRequests(result.requests);
-        setOperationalDraft(operationalDraftFromRequests(result.state, result.requests));
+        onOperationalDefaults(result.state);
+        setOperationalDraft(result.state);
       })
       .catch(error => {
         if (!cancelled)
           setOperationalFeedback({
             tone: "error",
-            message: error instanceof Error ? error.message : "Não foi possível carregar as aprovações.",
+            message: error instanceof Error ? error.message : "Não foi possível carregar os padrões operacionais.",
           });
       });
     return () => {
       cancelled = true;
     };
-  }, [demoMode]);
+  }, [demoMode, onOperationalDefaults]);
 
-  const editOperationalDefaults = (candidate: OperationalDefaultsState) => {
-    if (demoMode) onOperationalDefaults(candidate);
-    else setOperationalDraft(candidate);
-  };
+  const editOperationalDefaults = (candidate: OperationalDefaultsState) => setOperationalDraft(candidate);
 
   const submitCompanyDestination = async () => {
     if (!companyDirectory) return;
@@ -257,57 +240,21 @@ export default function SettingsModule({
     }
   };
 
-  const submitOperationalProposal = async () => {
+  const saveOperationalDefaults = async () => {
     setOperationalSubmitting(true);
     setOperationalFeedback(undefined);
     try {
-      const requests = await proposeOperationalParameters(
-        operationalDraft,
-        operationalDefaults.persistenceVersion ?? 0,
-        operationalReason,
-      );
-      setOperationalRequests(requests);
-      setOperationalDraft(operationalDraftFromRequests(operationalDefaults, requests));
-      setOperationalReason("");
+      const saved = demoMode ? operationalDraft : await persistOperationalParameters(operationalDraft);
+      onOperationalDefaults(saved);
+      setOperationalDraft(saved);
       setOperationalFeedback({
         tone: "success",
-        message: "Alterações gravadas e enviadas. Elas continuarão visíveis enquanto aguardam outra pessoa aprovar.",
+        message: "Padrões operacionais salvos e já aplicados.",
       });
     } catch (error) {
       setOperationalFeedback({
         tone: "error",
-        message: error instanceof Error ? error.message : "Não foi possível enviar a proposta.",
-      });
-    } finally {
-      setOperationalSubmitting(false);
-    }
-  };
-
-  const decideOperationalProposal = async (decision: "APPROVED" | "REJECTED") => {
-    if (!pendingOperationalRequest) return;
-    setOperationalSubmitting(true);
-    setOperationalFeedback(undefined);
-    try {
-      const result = await decideOperationalParameters(
-        pendingOperationalRequest.id,
-        decision,
-        operationalDecisionReason,
-      );
-      setOperationalRequests(result.requests);
-      onOperationalDefaults(result.state);
-      setOperationalDraft(result.state);
-      setOperationalDecisionReason("");
-      setOperationalFeedback({
-        tone: "success",
-        message:
-          decision === "APPROVED"
-            ? "Nova versão aprovada e aplicada."
-            : "Proposta rejeitada sem alterar a versão efetiva.",
-      });
-    } catch (error) {
-      setOperationalFeedback({
-        tone: "error",
-        message: error instanceof Error ? error.message : "Não foi possível registrar a decisão.",
+        message: error instanceof Error ? error.message : "Não foi possível salvar os padrões operacionais.",
       });
     } finally {
       setOperationalSubmitting(false);
@@ -606,101 +553,29 @@ export default function SettingsModule({
                   padrão; zero continua sendo um valor válido.
                 </p>
               </header>
-              {!demoMode && (
-                <section className="settings-operational-governance" aria-label="Governança dos parâmetros">
-                  <div>
-                    <strong>Versão efetiva {operationalDefaults.persistenceVersion ?? 0}</strong>
-                    <span>
-                      {pendingOperationalRequest
-                        ? `Proposta de ${pendingOperationalRequest.requestedBy} aguardando outra pessoa.`
-                        : operationalChanged
-                          ? "Alterações preparadas, ainda sem efeito operacional."
-                          : "Nenhuma alteração pendente."}
-                    </span>
-                  </div>
-                  {pendingOperationalRequest ? (
-                    <div className="settings-operational-approval">
-                      <p>
-                        <b>Motivo da proposta:</b> {pendingOperationalRequest.reason}
-                      </p>
-                      <label>
-                        Justificativa da decisão
-                        <textarea
-                          value={operationalDecisionReason}
-                          onChange={event => setOperationalDecisionReason(event.target.value)}
-                          placeholder="Registre a análise realizada"
-                        />
-                      </label>
-                      <div>
-                        <button
-                          type="button"
-                          disabled={
-                            operationalSubmitting || pendingOperationalRequest.requestedById === policyApprovalActor.id
-                          }
-                          onClick={() => void decideOperationalProposal("REJECTED")}
-                        >
-                          Rejeitar
-                        </button>
-                        <button
-                          type="button"
-                          disabled={
-                            operationalSubmitting || pendingOperationalRequest.requestedById === policyApprovalActor.id
-                          }
-                          onClick={() => void decideOperationalProposal("APPROVED")}
-                        >
-                          Aprovar e aplicar
-                        </button>
-                      </div>
-                      {pendingOperationalRequest.requestedById === policyApprovalActor.id && (
-                        <small>Entre com outra pessoa autorizada para decidir esta proposta.</small>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="settings-operational-proposal">
-                      <label>
-                        Motivo da alteração
-                        <textarea
-                          value={operationalReason}
-                          onChange={event => setOperationalReason(event.target.value)}
-                          placeholder="Explique o objetivo e o impacto esperado"
-                        />
-                        <small>Obrigatório para gravar, com pelo menos 10 caracteres.</small>
-                      </label>
-                      <button
-                        type="button"
-                        disabled={!operationalChanged || operationalSubmitting || operationalReason.trim().length < 10}
-                        onClick={() => void submitOperationalProposal()}
-                      >
-                        {operationalSubmitting ? "Gravando…" : "Gravar para aprovação"}
-                      </button>
-                    </div>
-                  )}
-                  {operationalFeedback && (
-                    <p className={`settings-operational-feedback ${operationalFeedback.tone}`}>
-                      {operationalFeedback.message}
-                    </p>
-                  )}
-                  {!!operationalHistory.length && (
-                    <div className="settings-operational-history">
-                      <strong>Histórico recente</strong>
-                      {operationalHistory.map(request => (
-                        <article key={request.id}>
-                          <span>
-                            {request.status === "APPROVED" ? "Aprovada" : "Rejeitada"} · versão de origem{" "}
-                            {request.expectedVersion}
-                            {request.appliedVersion ? ` → ${request.appliedVersion}` : ""}
-                          </span>
-                          <small>
-                            {request.requestedBy} solicitou · {request.decidedBy} decidiu
-                          </small>
-                          <small>{request.decisionReason}</small>
-                        </article>
-                      ))}
-                    </div>
-                  )}
-                </section>
-              )}
-              <fieldset className="settings-operational-fields" disabled={!demoMode && !!pendingOperationalRequest}>
+              <section className="settings-operational-governance" aria-label="Gravação dos parâmetros">
+                <div>
+                  <strong>Versão salva {operationalDefaults.persistenceVersion ?? 0}</strong>
+                  <span>
+                    {operationalChanged ? "Há alterações ainda não salvas." : "Todos os campos estão salvos e ativos."}
+                  </span>
+                </div>
+                <div className="settings-operational-proposal">
+                  <button
+                    type="button"
+                    disabled={!operationalChanged || operationalSubmitting}
+                    onClick={() => void saveOperationalDefaults()}
+                  >
+                    {operationalSubmitting ? "Salvando…" : "Salvar alterações"}
+                  </button>
+                </div>
+                {operationalFeedback && (
+                  <p className={`settings-operational-feedback ${operationalFeedback.tone}`}>
+                    {operationalFeedback.message}
+                  </p>
+                )}
+              </section>
+              <fieldset className="settings-operational-fields" disabled={operationalSubmitting}>
                 <OperationalParametersEditor
                   defaults={editableOperationalDefaults}
                   overrides={editableOperationalDefaults.general}

@@ -1,7 +1,4 @@
-import type {
-  OperationalDefaultsState,
-  OperationalParameterChangeRequest,
-} from "@/src/domain/registry/operational-profile";
+import type { OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
 import { getStratoTenantId } from "./tenant";
 
 const headers = () => ({ "x-strato-tenant-id": getStratoTenantId() });
@@ -14,20 +11,16 @@ async function body<T>(response: Response): Promise<T> {
 
 export async function loadOperationalParameters() {
   const response = await fetch("/api/operational-parameters", { cache: "no-store", headers: headers() });
-  return body<{ state: OperationalDefaultsState; requests: OperationalParameterChangeRequest[] }>(response);
+  return body<{ state: OperationalDefaultsState }>(response);
 }
 
-export async function proposeOperationalParameters(
-  proposed: OperationalDefaultsState,
-  expectedVersion: number,
-  reason: string,
-) {
+export async function persistOperationalParameters(state: OperationalDefaultsState) {
   const commandId = crypto.randomUUID();
   const request = () =>
     fetch("/api/operational-parameters", {
-      method: "POST",
+      method: "PUT",
       headers: { ...headers(), "content-type": "application/json" },
-      body: JSON.stringify({ proposed, expectedVersion, reason, commandId }),
+      body: JSON.stringify({ state, expectedVersion: state.persistenceVersion ?? 0, commandId }),
     });
   let response: Response;
   try {
@@ -35,14 +28,5 @@ export async function proposeOperationalParameters(
   } catch {
     response = await request();
   }
-  return (await body<{ requests: OperationalParameterChangeRequest[] }>(response)).requests;
-}
-
-export async function decideOperationalParameters(changeId: string, decision: "APPROVED" | "REJECTED", reason: string) {
-  const response = await fetch("/api/operational-parameters", {
-    method: "PUT",
-    headers: { ...headers(), "content-type": "application/json" },
-    body: JSON.stringify({ changeId, decision, reason }),
-  });
-  return body<{ state: OperationalDefaultsState; requests: OperationalParameterChangeRequest[] }>(response);
+  return (await body<{ state: OperationalDefaultsState }>(response)).state;
 }

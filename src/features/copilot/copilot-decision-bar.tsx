@@ -10,6 +10,7 @@ export type CopilotOperationActions = {
   operation?: Operation;
   error?: string;
   onGenerate: () => void;
+  onGenerateAndOpen: () => void;
   onApprove: (authorityApproved?: boolean) => void;
   onOpen: () => void;
 };
@@ -27,12 +28,20 @@ export function DecisionBar({
   const { result } = scenario;
   if (!operationActions.operation)
     return (
-      <div className="cpl-decision">
-        <span>Gere a operação para congelar este cenário, registrar a Entrada concluída e colocá-la na esteira.</span>
+      <div className="cpl-decision is-handoff" aria-label="Encaminhar operação para o fluxo">
+        <span>
+          <b>Levar esta OP para o fluxo</b>
+          <small>Congela o cenário, conclui a Entrada e cria a OP na esteira operacional.</small>
+        </span>
         {operationActions.error && <small className="cpl-decision-error">{operationActions.error}</small>}
-        <button type="button" className="cpl-primary is-small" onClick={operationActions.onGenerate}>
-          Gerar operação <ArrowIcon />
-        </button>
+        <div className="cpl-decision-actions">
+          <button type="button" className="cpl-ghost" onClick={operationActions.onGenerate}>
+            Enviar OP para a esteira
+          </button>
+          <button type="button" className="cpl-primary is-small" onClick={operationActions.onGenerateAndOpen}>
+            Enviar e abrir OP <ArrowIcon />
+          </button>
+        </div>
       </div>
     );
   if (desk.decision === "pending")

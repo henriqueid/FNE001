@@ -99,29 +99,36 @@ export function Copilot({
     generatedOperation?.copilotOrigin?.runId === desk.runId ? generatedOperation : undefined;
   const currentGeneratedOperation =
     operations?.find(operation => operation.id === operationFromCurrentRun?.id) ?? operationFromCurrentRun;
+  const generateOperation = (openAfter: boolean) => {
+    const scenario = desk.scenarios.at(-1);
+    if (!scenario || !shell) return;
+    const operation = shell.createCopilotOperation({
+      runId: desk.runId,
+      cedentId: desk.cedent || cedents[0]?.id || "",
+      scenario,
+      context: desk.context,
+      files: desk.files,
+      importedData: desk.importedData,
+      entryIntake: desk.entryIntake,
+    });
+    if (!operation) {
+      setOperationError("Não foi possível gerar a operação. Verifique sua permissão, o cedente e a empresa ativa.");
+      return;
+    }
+    setOperationError("");
+    setGeneratedOperation(operation);
+    desk.linkOperation(operation.id);
+    if (openAfter) {
+      shell.openOperation(operation);
+      setExpanded(false);
+      setOpen(false);
+    }
+  };
   const operationActions = {
     operation: currentGeneratedOperation,
     error: operationError,
-    onGenerate: () => {
-      const scenario = desk.scenarios.at(-1);
-      if (!scenario || !shell) return;
-      const operation = shell.createCopilotOperation({
-        runId: desk.runId,
-        cedentId: desk.cedent || cedents[0]?.id || "",
-        scenario,
-        context: desk.context,
-        files: desk.files,
-        importedData: desk.importedData,
-        entryIntake: desk.entryIntake,
-      });
-      if (!operation) {
-        setOperationError("Não foi possível gerar a operação. Verifique sua permissão, o cedente e a empresa ativa.");
-        return;
-      }
-      setOperationError("");
-      setGeneratedOperation(operation);
-      desk.linkOperation(operation.id);
-    },
+    onGenerate: () => generateOperation(false),
+    onGenerateAndOpen: () => generateOperation(true),
     onApprove: (authorityApproved = false) => {
       if (!currentGeneratedOperation || !shell) return;
       const operation = shell.approveCopilotOperation(currentGeneratedOperation.id, authorityApproved);

@@ -69,7 +69,12 @@ export function operationMutationPermissionError(
   if (riskChanged && !has("risk:decide")) return "Somente Risco pode alterar decisões de risco e elegibilidade.";
   if (approvalChanged && !has("controlleria:formalize"))
     return "Somente Controladoria pode alterar aprovação e formalização.";
-  if (releaseChanged && !has("finance:release")) return "Somente o Financeiro pode preparar ou aprovar uma liberação.";
+  if (releaseChanged) {
+    if (current.releaseReview?.status === "Enviada ao financeiro" && !has("finance:release"))
+      return "Somente o Financeiro pode registrar ou estornar pagamentos.";
+    if (!has("operations:edit") && !has("finance:release"))
+      return "Somente Operações ou o Financeiro pode preparar e enviar uma liberação.";
+  }
 
   // O motor pode salvar a condição padrão como efeito da decisão de Risco.
   const automaticPricingFromRisk =

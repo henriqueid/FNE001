@@ -1,5 +1,9 @@
 # Changelog
 
+## 18/10/2026 · Conclusão individual da OP
+
+- O preparador pode enviar a OP ao financeiro sem segundo aprovador obrigatório, com permissão operacional. Pagamentos e estornos continuam exigindo permissão financeira.
+
 ## Não lançado — 15/10/2026 · Correções da revisão de código
 
 - Central do Dia: o administrador volta a respeitar o escopo de empresa na leitura das tarefas. Ele continua recebendo as tarefas que delegou (para não recriá-las), e leitura, validação e resposta da gravação usam o mesmo recorte, eliminando o 403 que impedia salvar depois de uma delegação.

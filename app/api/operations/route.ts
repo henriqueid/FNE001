@@ -9,7 +9,6 @@ import {
   assertOperationTransition,
   governReleaseTransition,
   OperationGovernanceError,
-  releaseReviewChanged,
 } from "@/src/server/operations/governance";
 import { loadOperationSnapshot, loadOperations, saveOperation } from "@/src/server/operations/repository";
 import { ReceivableDuplicateError } from "@/src/server/receivables/repository";
@@ -56,8 +55,6 @@ export async function PUT(request: Request) {
   const scopeError = operationWriteScopeError(access.principal, currentCompany, command.operation.vehicle);
   if (scopeError) return json({ error: scopeError }, 403);
   try {
-    if (releaseReviewChanged(current, command.operation) && !access.principal.permissions.includes("finance:release"))
-      return json({ error: "Somente o Financeiro pode preparar ou aprovar uma liberação." }, 403);
     const permissionError = operationMutationPermissionError(current, command.operation, access.principal.permissions);
     if (permissionError) return json({ error: permissionError }, 403);
     assertOperationTransition(current, command.operation);

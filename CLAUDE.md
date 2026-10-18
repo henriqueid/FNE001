@@ -2,6 +2,10 @@
 
 Este arquivo é o ponto de retomada para Claude Code e outros agentes. Antes de alterar o projeto, leia também `README.md`, `docs/ARCHITECTURE.md`, `docs/CONVENTIONS.md` e `docs/DEPLOY_HOSTINGER.md`.
 
+## Ajuste de liberação — 18/10/2026
+
+Preparador autorizado pode enviar a OP ao financeiro sem segunda pessoa obrigatória; pagamentos e estornos preservam a permissão financeira.
+
 ## Onde paramos
 
 Última atualização: **15/10/2026**, após a revisão de código do lote do Codex e as correções de escopo de tarefas, dispensa de Lastro em operações antigas e contabilização do consumo de IA no servidor.

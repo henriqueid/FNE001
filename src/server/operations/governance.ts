@@ -104,11 +104,7 @@ export function governReleaseTransition(
   }
 
   if (!previous?.preparedById)
-    throw new OperationGovernanceError(
-      "A liberação precisa ser preparada e salva antes de ser aprovada por uma segunda pessoa.",
-    );
-  if (previous.preparedById === actor.id)
-    throw new OperationGovernanceError("Quem preparou a liberação não pode aprovar o próprio pagamento.");
+    throw new OperationGovernanceError("A liberação precisa ser preparada e salva antes de ser enviada ao financeiro.");
   if (approvalChangedPreparedRelease(previous, next))
     throw new OperationGovernanceError(
       "Favorecidos, contas, valores e data não podem mudar durante a aprovação; devolva para nova preparação.",

@@ -11,8 +11,11 @@ import {
   nextScenario,
   percentBR,
 } from "./desk-engine";
+import type { ReportLink } from "./report";
 
 export type DeskReply = {
+  report?: ReportLink;
+  suggestedQuestions?: string[];
   tool?: string;
   paragraphs: string[];
   table?: { head: string[]; rows: string[][] };

@@ -1,5 +1,12 @@
 # Changelog
 
+## 18/10/2026 — Camadas do Copiloto
+
+- Consultas determinísticas completas, resumo com “Ver mais”, filtros e evidências.
+- Memória privada de comportamento, revisão e aprendizado por empresa.
+- Fronteira externa restrita a CDI/Selic opcionais; orçamento de IA reservado no servidor.
+
+
 ## 18/10/2026 · Conclusão individual da OP
 
 - O preparador pode enviar a OP ao financeiro sem segundo aprovador obrigatório, com permissão operacional. Pagamentos e estornos continuam exigindo permissão financeira.

@@ -1,0 +1,190 @@
+/* Análise do Copiloto: apresentação Ledger, acessível em ambos os temas. */
+.cpl-report-modal,
+.cpl-report-modal * {
+  box-sizing: border-box;
+}
+.cpl-report-modal {
+  width: min(1160px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 1px solid var(--ds-border);
+  border-radius: 14px;
+  background: var(--ds-elev);
+  color: var(--ds-text);
+  font-family: var(--ds-font);
+}
+.cpl-report-modal::backdrop {
+  background: color-mix(in srgb, var(--ds-text) 30%, transparent);
+}
+.cpl-report-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--ds-border);
+}
+.cpl-report-header h2 {
+  margin: 6px 0 0;
+  font-size: 26px;
+}
+.cpl-report-content {
+  padding: 24px;
+  overflow: auto;
+  max-height: calc(100dvh - 160px);
+}
+.cpl-report-title {
+  display: block;
+  font-size: 18px;
+  margin: 10px 0;
+}
+.cpl-report-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin: 20px 0;
+}
+.cpl-report-metrics dt {
+  font-size: 12px;
+  color: var(--ds-text-2);
+}
+.cpl-report-metrics dd {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 4px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.cpl-report-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding: 16px 0;
+}
+.cpl-report-filters label {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.cpl-report-filters label,
+.cpl-memory-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.cpl-report-modal input,
+.cpl-report-modal select,
+.cpl-report-modal textarea {
+  color: var(--ds-text);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: 6px;
+  padding: 10px;
+  font: inherit;
+  min-width: 0;
+  width: 100%;
+}
+.cpl-report-modal textarea {
+  resize: vertical;
+}
+.cpl-report-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+  border-bottom: 1px solid var(--ds-border);
+}
+.cpl-report-tabs button,
+.cpl-report-pagination button,
+.cpl-memory-form .cpl-result-actions button {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  border: 1px solid var(--ds-border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+.cpl-report-tabs button[aria-pressed="true"] {
+  background: var(--ds-accent);
+  color: var(--ds-accent-ink);
+}
+.cpl-report-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+}
+.cpl-report-modal details {
+  padding: 12px 0;
+  overflow-wrap: anywhere;
+}
+.cpl-report-modal summary {
+  cursor: pointer;
+}
+.cpl-report-modal .cpl-table {
+  overflow-x: auto;
+}
+.cpl-report-modal .cpl-table table {
+  min-width: 620px;
+  width: 100%;
+}
+.cpl-report-modal .cpl-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.cpl-memory-form {
+  display: grid;
+  gap: 14px;
+  padding: 18px 0;
+}
+.cpl-memory-form .cpl-memory-check {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+}
+.cpl-memory-check input {
+  width: auto;
+  margin-top: 3px;
+}
+.cpl-memory-form .cpl-primary {
+  justify-self: start;
+}
+.cpl-memory-event {
+  padding: 18px 0;
+  border-top: 1px solid var(--ds-border);
+  overflow-wrap: anywhere;
+}
+.cpl-memory-event small {
+  color: var(--ds-text-2);
+}
+.cpl-report-modal button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+@media (max-width: 640px) {
+  .cpl-report-modal {
+    width: calc(100vw - 12px);
+    max-height: calc(100dvh - 12px);
+  }
+  .cpl-report-header,
+  .cpl-report-content {
+    padding: 16px;
+  }
+  .cpl-report-header h2 {
+    font-size: 21px;
+  }
+  .cpl-report-content {
+    max-height: calc(100dvh - 130px);
+  }
+  .cpl-report-modal button,
+  .cpl-report-modal input,
+  .cpl-report-modal select {
+    min-height: 44px;
+  }
+  .cpl-report-modal input,
+  .cpl-report-modal select,
+  .cpl-report-modal textarea {
+    font-size: 16px;
+  }
+}

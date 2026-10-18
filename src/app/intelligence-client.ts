@@ -2,6 +2,8 @@ import { type DeskReply } from "@/src/domain/copilot/desk-assistant";
 import { type SystemKnowledge } from "@/src/domain/copilot/system-query";
 import type { IntelligenceState } from "@/src/domain/intelligence/model";
 import { getStratoTenantId } from "./tenant";
+import type { CopilotReport } from "@/src/domain/copilot/report";
+import type { BehaviorEvent, MemoryDraft } from "@/src/domain/copilot/behavior";
 
 export type AIProviderConfiguration = {
   provider: "openai";
@@ -49,22 +51,30 @@ export async function persistIntelligenceState(state: IntelligenceState) {
   return (await bodyOf<{ state: IntelligenceState }>(response)).state;
 }
 
-export async function askConfiguredCopilot(question: string, _knowledge: SystemKnowledge) {
+export async function askConfiguredCopilot(
+  question: string,
+  _knowledge?: SystemKnowledge,
+  options: {
+    allowInterpretation?: boolean;
+    previousReportId?: string;
+    refreshReportId?: string;
+    filters?: { company?: string; document?: string };
+  } = {},
+) {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 80_000);
   try {
     const response = await fetch("/api/copilot/chat", {
       method: "POST",
       headers: headers(),
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, ...options }),
       signal: controller.signal,
     });
     return await bodyOf<{
       reply: DeskReply;
       requestId?: string;
-      usage: { inputTokens: number; outputTokens: number; totalTokens: number };
-      /** Total consolidado no servidor depois desta resposta. */
       usedTokens?: number;
+      usage: { inputTokens: number; outputTokens: number; totalTokens: number };
     }>(response);
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError")
@@ -73,4 +83,40 @@ export async function askConfiguredCopilot(question: string, _knowledge: SystemK
   } finally {
     window.clearTimeout(timeout);
   }
+}
+
+export async function loadCopilotReport(id: string) {
+  return (
+    await bodyOf<{ report: CopilotReport }>(
+      await fetch(`/api/copilot/reports?id=${encodeURIComponent(id)}`, { cache: "no-store", headers: headers() }),
+    )
+  ).report;
+}
+export async function loadCopilotHistory() {
+  return (
+    await bodyOf<{ history: { question: string; reply: DeskReply }[] }>(
+      await fetch("/api/copilot/reports", { cache: "no-store", headers: headers() }),
+    )
+  ).history;
+}
+export async function saveCopilotMemory(draft: MemoryDraft) {
+  return bodyOf<{ event: BehaviorEvent }>(
+    await fetch("/api/copilot/memory", { method: "POST", headers: headers(), body: JSON.stringify(draft) }),
+  );
+}
+export async function loadCopilotMemories() {
+  return (
+    await bodyOf<{ events: BehaviorEvent[] }>(
+      await fetch("/api/copilot/memory", { headers: headers(), cache: "no-store" }),
+    )
+  ).events;
+}
+export async function reviewCopilotMemory(id: string, status: "validated" | "rejected" | "revoked", rationale: string) {
+  return bodyOf<{ ok: true }>(
+    await fetch("/api/copilot/memory", {
+      method: "PATCH",
+      headers: headers(),
+      body: JSON.stringify({ id, status, rationale }),
+    }),
+  );
 }

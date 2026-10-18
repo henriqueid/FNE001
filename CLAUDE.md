@@ -1,5 +1,10 @@
 # STRATO — contexto de continuidade
 
+## Copiloto · publicação autorizada em 18/10/2026
+
+Dados, comportamento e aprendizado em `src/server/copilot/`; contrato na seção 10 de `docs/ARCHITECTURE.md`. Requer `20261018054805_copilot_evidence_memory.sql`. Conector CDI/Selic desativado por padrão. O lote foi separado das melhorias operacionais locais; ver registro `docs/deployments/2026-10-18-copilot.md`.
+
+
 Este arquivo é o ponto de retomada para Claude Code e outros agentes. Antes de alterar o projeto, leia também `README.md`, `docs/ARCHITECTURE.md`, `docs/CONVENTIONS.md` e `docs/DEPLOY_HOSTINGER.md`.
 
 ## Ajuste de liberação — 18/10/2026

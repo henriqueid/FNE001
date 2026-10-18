@@ -23,6 +23,7 @@ import { type OperationalParameters } from "@/src/domain/eligibility/operational
 import { type PortfolioTitle } from "@/src/domain/home/metrics";
 import { pendingDecisionsFor } from "@/src/domain/eligibility/authority-queue";
 import { type DeskReply } from "./desk-assistant";
+import { analyzePortfolioQuestion } from "./analytics";
 
 const CLOSED: Operation["status"][] = ["Cancelada", "Liberada ao financeiro"];
 
@@ -229,6 +230,39 @@ function policyAnswer(question: string, kb: SystemKnowledge): DeskReply {
 export function answerSystemQuestion(text: string, kb: SystemKnowledge): DeskReply {
   const q = plain(text);
   const numbers = digits(text);
+  const analysis = /(maior|mais|ranking|vencid|resumo.*carteira|quant.*titulo)/.test(q)
+    ? analyzePortfolioQuestion(text, kb.titles, kb.today)
+    : null;
+  if (analysis)
+    return {
+      tool:
+        analysis.query.group === "summary"
+          ? "consultar_carteira(resumo)"
+          : analysis.query.group === "debtor"
+            ? "consultar_carteira(agrupar=sacado)"
+            : analysis.query.group === "owner"
+              ? "consultar_carteira(agrupar=cedente)"
+              : "consultar_carteira(situacao=vencidos)",
+      paragraphs: analysis.clarification
+        ? [analysis.clarification]
+        : [
+            `${analysis.title}: ${analysis.titleCount} títulos, ${brl(analysis.totalBalance)}. ${analysis.criterion}`,
+            ...analysis.warnings,
+          ],
+      table:
+        !analysis.clarification && analysis.query.group !== "summary"
+          ? {
+              head: ["Entidade", "CPF/CNPJ", "Saldo", "Títulos", "Participação"],
+              rows: analysis.rows.map(row => [
+                row.name,
+                row.document || "Não identificado",
+                brl(row.balance),
+                String(row.count),
+                pct(row.share),
+              ]),
+            }
+          : undefined,
+    };
 
   const cedent =
     (numbers.length >= 8 ? kb.cedents.find(item => digits(item.document).startsWith(numbers)) : undefined) ??

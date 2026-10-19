@@ -13,7 +13,7 @@
  * em nome do "Motor de elegibilidade".
  */
 import { stages } from "@/src/domain/core/stages";
-import { type Debtor, type Operation } from "@/src/domain/core/types";
+import { type Cedent, type Debtor, type Operation } from "@/src/domain/core/types";
 import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
 import { eligibilityRouteFor } from "@/src/domain/eligibility/orchestration";
 import { lastroAssessmentFor } from "./lastro";
@@ -108,7 +108,10 @@ export function autoAdvanceWithinPolicy(
   let current = operation;
   if (!operationalParametersFor(operation.institution).autoAdvanceWithinPolicy) return { operation, steps };
   if (current.status === "Cancelada" || current.stage !== 3) return { operation: current, steps };
-  if (current.eligibilityReview && !eligibilityRouteFor(current).canAdvance) return { operation: current, steps };
+  // Sem análise de elegibilidade não há base para o motor dispensar nada em seu nome.
+  if (!current.eligibilityReview || !eligibilityRouteFor(current).canAdvance) return { operation: current, steps };
+  // Operação sem a exigência registrada (anterior ao cadastro da pré-checagem) nunca é dispensada às cegas.
+  if (current.lastroPrecheckRequired === undefined) return { operation: current, steps };
   const lastro = lastroAssessmentFor(current, debtors);
   if (lastro.required)
     return {
@@ -138,6 +141,24 @@ export function autoAdvanceWithinPolicy(
   );
   steps.push({ stageId: 3, stage: stageName(3), reason: "pré-checagem dispensada no cadastro do cedente" });
   return { operation: current, steps };
+}
+
+/**
+ * Operações criadas antes da pré-checagem por cedente não carregam a exigência. Ela é resolvida pelo
+ * cadastro atual do cedente; sem cedente localizado, retorna `undefined` e a etapa fica para decisão humana.
+ */
+export function withResolvedLastroPrecheck(
+  operation: Operation,
+  cedents: Pick<Cedent, "document" | "name" | "requiresLastroPrecheck">[],
+): Operation | undefined {
+  if (operation.lastroPrecheckRequired !== undefined) return operation;
+  const digits = (value?: string) => (value ?? "").replace(/\D/g, "");
+  const document = digits(operation.document);
+  const cedent = cedents.find(item =>
+    document ? digits(item.document) === document : item.name.trim() === operation.cedent?.trim(),
+  );
+  if (!cedent) return undefined;
+  return { ...operation, lastroPrecheckRequired: cedent.requiresLastroPrecheck ?? false };
 }
 
 /** Frase para o operador sobre o que o motor fez (ou por que parou). */

@@ -5,7 +5,7 @@ import { type Operation } from "@/src/domain/core/types";
 import { authorityQueue, pendingAuthoritiesFor, pendingDecisionsFor } from "@/src/domain/eligibility/authority-queue";
 import { type EligibilityOutcome } from "@/src/domain/eligibility/model";
 import { evaluateOperationEligibility } from "@/src/domain/eligibility/operation-adapter";
-import { AUTO_ACTOR, autoAdvanceWithinPolicy } from "@/src/domain/operations/auto-advance";
+import { AUTO_ACTOR, autoAdvanceWithinPolicy, withResolvedLastroPrecheck } from "@/src/domain/operations/auto-advance";
 import { inQueue } from "@/src/features/operations/central/central-model";
 
 const AT = "02/10/2026 10:00";
@@ -64,7 +64,7 @@ describe("avanço automático dentro da política", () => {
     expect(result.steps).toEqual([]);
   });
   it("exceção aprovada pela alçada libera o avanço", () => {
-    const op = withRun(atStage(base, 3), "EXCECAO");
+    const op = withRun(atStage({ ...base, lastroPrecheckRequired: false }, 3), "EXCECAO");
     const evaluation = op.eligibilityReview!.run.evaluations[0];
     const decided: Operation = {
       ...op,
@@ -130,5 +130,39 @@ describe("fila de exceções por alçada", () => {
   it("operação cancelada sai da fila", () => {
     const a = withRun({ ...base, status: "Cancelada" }, "EXCECAO");
     expect(pendingDecisionsFor(a)).toEqual([]);
+  });
+});
+
+describe("operações anteriores à pré-checagem por cedente", () => {
+  const legacy = (): Operation => {
+    const op = withRun(atStage({ ...base, lastroReview: undefined }, 3), "APROVADO");
+    delete op.lastroPrecheckRequired;
+    return op;
+  };
+
+  it("não dispensa o Lastro de operação sem a exigência registrada", () => {
+    const result = autoAdvanceWithinPolicy(legacy(), { debtors: initialDebtors, at: AT });
+    expect(result.operation.stage).toBe(3);
+    expect(result.steps).toEqual([]);
+  });
+
+  it("não dispensa o Lastro sem análise de elegibilidade", () => {
+    const op = { ...atStage({ ...base, lastroPrecheckRequired: false }, 3), eligibilityReview: undefined };
+    expect(autoAdvanceWithinPolicy(op, { debtors: initialDebtors, at: AT }).steps).toEqual([]);
+  });
+
+  it("resolve a exigência pelo cadastro atual do cedente", () => {
+    const op = legacy();
+    const cedent = { document: op.document, name: op.cedent, requiresLastroPrecheck: true };
+    const required = withResolvedLastroPrecheck(op, [cedent]);
+    expect(required?.lastroPrecheckRequired).toBe(true);
+    expect(autoAdvanceWithinPolicy(required!, { debtors: initialDebtors, at: AT }).operation.stage).toBe(3);
+
+    const optional = withResolvedLastroPrecheck(op, [{ ...cedent, requiresLastroPrecheck: false }]);
+    expect(autoAdvanceWithinPolicy(optional!, { debtors: initialDebtors, at: AT }).operation.stage).toBe(4);
+  });
+
+  it("sem cedente localizado, mantém a etapa para decisão humana", () => {
+    expect(withResolvedLastroPrecheck(legacy(), [])).toBeUndefined();
   });
 });

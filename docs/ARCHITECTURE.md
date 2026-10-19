@@ -160,6 +160,8 @@ Regras implementadas (arquivo de referência entre parênteses):
 
 ## 5. Padrões do domínio
 
+A preparação e o envio da OP ao financeiro podem ser feitos pelo mesmo usuário com `operations:edit`, preservando autoria e validações. O envio gera pagamentos pendentes; registrar ou estornar o pagamento exige `finance:release`.
+
 - **Funções puras que devolvem resultado:** ações retornam `{ state, error?, message?, effects? }` (`Result` no financeiro, `CResult` no comercial). A tela aplica o novo estado ou mostra o erro; nada lança exceção para a interface.
 - **Transação no financeiro:** `run(state, fn)` trabalha num rascunho (`draftOf`), e `post` recusa lançamento desbalanceado. Se qualquer passo falha, o estado original fica intacto.
 - **Nada é apagado:** títulos são excluídos com motivo e estorno, baixas são estornadas por contrapartida, operações são canceladas com memória, cadastros são inativados.

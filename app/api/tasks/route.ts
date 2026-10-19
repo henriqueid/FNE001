@@ -3,7 +3,7 @@ import { validateTaskState } from "@/src/domain/tasks/persistence";
 import { sessionPrincipal } from "@/src/server/access/session";
 import { operationCompanyMap } from "@/src/server/access/scope";
 import { getDatabase } from "@/src/server/database/postgres";
-import { taskVisibleTo, visibleTaskState } from "@/src/server/tasks/access";
+import { syncTaskState, taskSyncVisibleTo } from "@/src/server/tasks/access";
 import {
   loadTaskState,
   saveTaskState,
@@ -32,13 +32,9 @@ export async function GET(request: Request) {
     loadTaskState(access.db, access.tenantId),
     operationCompanyMap(access.db, access.tenantId),
   ]);
-  // O administrador sincroniza a fila automática completa no cliente. Ele recebe o estado
-  // integral, mas a apresentação continua passando por `visibleTasksForUser`, que esconde
-  // tarefas delegadas a outra pessoa. Sem isso, a ausência no recorte era interpretada como
-  // uma tarefa nova e a decisão delegada acabava recriada no painel do delegante.
-  return json({
-    tasks: access.principal.access === "admin" ? tasks : visibleTaskState(tasks, access.principal, operationCompanies),
-  });
+  // O administrador recebe também as tarefas delegadas (dentro do seu escopo de empresa) para que a
+  // fila automática não as recrie; a apresentação continua passando por `visibleTasksForUser`.
+  return json({ tasks: syncTaskState(tasks, access.principal, operationCompanies) });
 }
 
 export async function PUT(request: Request) {
@@ -65,7 +61,7 @@ export async function PUT(request: Request) {
     operationCompanyMap(access.db, access.tenantId),
   ]);
   if (!current) return json({ error: "A Central do Dia ainda precisa ser inicializada por um administrador." }, 409);
-  const visibleCurrent = current.tasks.filter(task => taskVisibleTo(task, access.principal, operationCompanies));
+  const visibleCurrent = current.tasks.filter(task => taskSyncVisibleTo(task, access.principal, operationCompanies));
   const visibleIds = new Set(visibleCurrent.map(task => task.id));
   if (
     command.tasks.tasks.some(task => !visibleIds.has(task.id)) ||
@@ -102,7 +98,7 @@ export async function PUT(request: Request) {
         { error: "As tarefas foram alteradas por outra pessoa. Atualize a Central do Dia antes de tentar novamente." },
         409,
       );
-    return json({ tasks: visibleTaskState(tasks, access.principal, operationCompanies) });
+    return json({ tasks: syncTaskState(tasks, access.principal, operationCompanies) });
   } catch (reason) {
     if (reason instanceof TaskCommandConflictError || reason instanceof TaskTransitionError)
       return json({ error: reason.message }, 409);

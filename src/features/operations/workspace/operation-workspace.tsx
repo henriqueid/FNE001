@@ -29,7 +29,11 @@ import {
   workspaceTimestamp,
 } from "./workspace-model";
 import { useEligibilityPolicies } from "@/src/app/eligibility-policy-context";
-import { autoAdvanceMessage, autoAdvanceWithinPolicy } from "@/src/domain/operations/auto-advance";
+import {
+  autoAdvanceMessage,
+  autoAdvanceWithinPolicy,
+  withResolvedLastroPrecheck,
+} from "@/src/domain/operations/auto-advance";
 
 export function OperationWorkspace({
   operation: initialOperation,
@@ -79,23 +83,29 @@ export function OperationWorkspace({
     return result;
   }
 
-  /** Migra também operações antigas que já estavam paradas no Lastro sem exigência no cadastro. */
+  /**
+   * Migra operações antigas paradas no Lastro: a exigência vem do cadastro atual do cedente.
+   * Se o cedente exige pré-checagem, apenas registra a exigência; se não for localizado, nada muda.
+   */
   useEffect(() => {
     if (operation.stage !== 3 || operation.lastroPrecheckRequired) return;
-    const result = autoAdvanceWithinPolicy(operation, { debtors, at: workspaceTimestamp() });
-    if (!result.steps.length) return;
+    const resolved = withResolvedLastroPrecheck(operation, registryCedents);
+    if (!resolved) return;
+    const result = autoAdvanceWithinPolicy(resolved, { debtors, at: workspaceTimestamp() });
+    if (!result.steps.length && resolved === operation) return;
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
       setOperation(result.operation);
       onUpdate(result.operation);
+      if (!result.steps.length) return;
       setActive(result.operation.stage);
       setFeedback({ tone: "success", message: autoAdvanceMessage(result) });
     });
     return () => {
       cancelled = true;
     };
-  }, [debtors, onUpdate, operation]);
+  }, [debtors, onUpdate, operation, registryCedents]);
 
   const advance = useStageAdvance({
     operation,

@@ -11,9 +11,13 @@
 
 Este arquivo é o ponto de retomada para Claude Code e outros agentes. Antes de alterar o projeto, leia também `README.md`, `docs/ARCHITECTURE.md`, `docs/CONVENTIONS.md` e `docs/DEPLOY_HOSTINGER.md`.
 
+## Ajuste de liberação — 18/10/2026
+
+Preparador autorizado pode enviar a OP ao financeiro sem segunda pessoa obrigatória; pagamentos e estornos preservam a permissão financeira.
+
 ## Onde paramos
 
-Última atualização: **18/10/2026**, com melhorias locais de prontidão, ainda sem commit ou publicação. O último estado publicado descrito neste arquivo continua sendo o de **15/10/2026**. O inventário de implementação/verificação está em `docs/superpowers/plans/2026-10-18-prontidao-operacional.md`; use esse registro para pendências, sem inferir prontidão produtiva pela existência de telas ou testes.
+Última atualização: **19/10/2026**. Publicação integral das correções operacionais autorizada pelo usuário e em preparação. Integração preserva o Copiloto já publicado; resultado final em `docs/deployments/2026-10-19-operacional.md`.
 
 ## Melhoria local após auditoria
 
@@ -37,6 +41,10 @@ O STRATO é uma aplicação operacional de recebíveis em React 19 + Vite/vinext
 - Autenticação, sessões, permissões, empresas, cadastros, operações, carteira, financeiro, comercial, tarefas, políticas, integrações e parâmetros operacionais possuem persistência server-side em diferentes níveis de maturidade.
 - O Copiloto usa a OpenAI Responses API somente para interpretação e síntese. Cálculos, elegibilidade, preço, alçadas e movimentações financeiras continuam determinísticos.
 - Licença, ativação, estado, orçamento e consumo da IA agora são persistidos por tenant em `private.intelligence_states`.
+- O consumo de tokens é somado somente no servidor (`recordIntelligenceUsage`, chamado por `/api/copilot/chat`); o `PUT /api/intelligence/state` (exige `settings:manage`) nunca altera `used_tokens`.
+- Parâmetros operacionais usam gravação direta com `settings:manage` por decisão do Henrique (15/10/2026); não reintroduzir maker-checker sem pedido explícito.
+- Central do Dia: `taskSyncVisibleTo`/`syncTaskState` definem o recorte de sincronização; GET, validação do PUT e resposta do PUT devem usar o mesmo recorte, e o escopo de empresa vale também para administradores.
+- Lastro: operação sem `lastroPrecheckRequired` nunca é dispensada pelo motor; a exigência é resolvida pelo cadastro do cedente (`withResolvedLastroPrecheck`).
 - Abrir a tela de Inteligência e IA não dispara mais um teste automático de conexão. O teste é explícito, evitando oscilações de estado por falhas transitórias.
 - Atualizações assíncronas da IA usam setters funcionais para não sobrescrever orçamento, licença ou consumo alterados enquanto uma requisição estava em andamento.
 - A migração `20261015043300_persist_intelligence_configuration.sql` já foi aplicada ao projeto Supabase de produção STRATO.

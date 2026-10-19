@@ -281,7 +281,7 @@ Progresso A5.6 — maker-checker residual:
 - [x] aplicar dupla aprovação à publicação de políticas de elegibilidade, com congelamento, aprovação ou rejeição independente;
 - [ ] estender dupla aprovação às demais configurações materiais que alterem cálculo ou segurança; integrações já estão protegidas;
 - [x] proteger ativação, elevação de privilégios, expansão de escopo/alçada e identificadores de acesso com decisão independente;
-- [x] persistir, versionar e submeter a dupla aprovação os parâmetros operacionais globais, com proposta congelada, concorrência otimista e trilha de eventos;
+- [x] persistir e versionar os parâmetros operacionais globais, com concorrência otimista e trilha de eventos (dupla aprovação removida por decisão de produto em 15/10/2026);
 - [ ] concluir MFA, recuperação de senha e revisão centralizada de sessões no pacote de segurança de conta;
 - [ ] homologar o fluxo residual com duas sessões reais e usuários distintos.
 

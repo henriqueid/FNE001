@@ -83,6 +83,7 @@ import { emptyIntelligenceState, seedIntelligenceState, type IntelligenceState }
 import { type PublishedNotification } from "@/src/domain/notifications/model";
 import { loadAccessDirectory } from "./access-directory-client";
 import { syncPublishedNotifications } from "./notification-client";
+import { useHomeRadar } from "./use-home-radar";
 import { useStratoAuth } from "@/src/features/auth/auth-context";
 import { loadRegistryParties, persistRegistryParty } from "./registry-client";
 import { useCompanyDestinations } from "./company-context";
@@ -182,6 +183,12 @@ export default function StratoApp() {
   const currentUser = useMemo(() => activeUser(access), [access]);
   const sessionUser = useMemo(() => authenticatedUser(access), [access]);
   const [view, setView] = useState<AppView>("home");
+  const radar = useHomeRadar(
+    intelligence.tenantId,
+    view === "home" && accessServerReady && !isDemo && !access.previewUserId && can(currentUser, "dashboard:view"),
+    companyScope,
+    `${currentUser.id}:${currentUser.permissions.join(",")}:${currentUser.companyScopes.join(",")}`,
+  );
   const [portfolioFocus, setPortfolioFocus] = useState<PortfolioFocus>();
   const navigate = (target: AppView) => {
     if (!canAccessView(currentUser, target)) return;
@@ -1665,6 +1672,23 @@ export default function StratoApp() {
         includeDemoPortfolio={isDemo}
         portfolioTitlesOverride={livePortfolioTitles}
         delegatedDecisionOperationIds={delegatedDecisionOperationIds}
+        canViewRadarScores={can(currentUser, "portfolio:manage")}
+        radar={{
+          ...radar,
+          mode: isDemo ? "demo" : access.previewUserId ? "preview" : "live",
+          onRefresh: radar.refresh,
+          onAccept: radar.accept,
+          onEvent: event => {
+            if (event.operationId) {
+              const operation = scopedOperations.find(item => item.id === event.operationId);
+              if (operation && can(currentUser, "operations:view")) {
+                setSelected(operation);
+                return;
+              }
+            }
+            navigate(event.view);
+          },
+        }}
       />
     );
   else if (view === "live")

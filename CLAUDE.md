@@ -46,6 +46,8 @@ O STRATO é uma aplicação operacional de recebíveis em React 19 + Vite/vinext
 
 ## Estado funcional atual
 
+- Radar lateral da Visão geral implementado localmente em 19/10/2026: endpoint somente de leitura `/api/home/radar`, filtro server-side por módulo/empresa, consulta a cada 30 segundos, novidades pendentes e posição de score existente. CDI/Selic dependem de `STRATO_MARKET_INDICATORS_ENABLED=true`; notícias dependem de fonte aprovada. Não houve migração nem publicação nesta tarefa.
+
 - Autenticação, sessões, permissões, empresas, cadastros, operações, carteira, financeiro, comercial, tarefas, políticas, integrações e parâmetros operacionais possuem persistência server-side em diferentes níveis de maturidade.
 - O Copiloto usa a OpenAI Responses API somente para interpretação e síntese. Cálculos, elegibilidade, preço, alçadas e movimentações financeiras continuam determinísticos.
 - Licença, ativação, estado, orçamento e consumo da IA agora são persistidos por tenant em `private.intelligence_states`.

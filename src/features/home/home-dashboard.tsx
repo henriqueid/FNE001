@@ -8,6 +8,7 @@
  * - `home-header.tsx`, `home-kpis.tsx`, `home-sections-map.tsx`: apresentação.
  */
 import { HomeFocus } from "./home-focus";
+import { HomeRadar, type HomeRadarProps } from "./home-radar";
 import { HomeHeader } from "./home-header";
 import { HomeKpis } from "./home-kpis";
 import { useHomeMetrics } from "./use-home-metrics";
@@ -41,6 +42,8 @@ export default function HomeDashboard({
   includeDemoPortfolio = false,
   portfolioTitlesOverride,
   delegatedDecisionOperationIds,
+  radar,
+  canViewRadarScores = false,
 }: {
   operations: Operation[];
   debtors: Debtor[];
@@ -59,6 +62,8 @@ export default function HomeDashboard({
   includeDemoPortfolio?: boolean;
   portfolioTitlesOverride?: PortfolioTitle[];
   delegatedDecisionOperationIds?: ReadonlySet<string>;
+  radar?: HomeRadarProps;
+  canViewRadarScores?: boolean;
 }) {
   const { period, setPeriod, profile, chooseProfile, now, positionDate, setPositionDate } = useHomePreferences();
   const position = new Date(`${positionDate}T12:00:00`);
@@ -82,35 +87,46 @@ export default function HomeDashboard({
   });
 
   return (
-    <div className="page-wrap vg">
-      <HomeHeader
-        metrics={metrics}
-        positionDate={positionDate}
-        onPositionDateChange={setPositionDate}
-        period={period}
-        onPeriodChange={setPeriod}
-        profile={profile}
-        onProfileChange={chooseProfile}
-        companyScope={companyScope}
-        onGoLive={onGoLive}
-        onNew={onNew}
-      />
+    <div className={`page-wrap vg${radar ? " vg-with-radar" : ""}`}>
+      <div className="vg-dashboard-main">
+        <HomeHeader
+          metrics={metrics}
+          positionDate={positionDate}
+          onPositionDateChange={setPositionDate}
+          period={period}
+          onPeriodChange={setPeriod}
+          profile={profile}
+          onProfileChange={chooseProfile}
+          companyScope={companyScope}
+          onGoLive={onGoLive}
+          onNew={onNew}
+        />
 
-      <HomeKpis metrics={metrics} profile={profile} onGoOperations={onGoOperations} onGoFinance={onGoFinance} />
+        <HomeKpis metrics={metrics} profile={profile} onGoOperations={onGoOperations} onGoFinance={onGoFinance} />
 
-      <HomeFocus
-        metrics={metrics}
-        profile={profile}
-        onOpen={onOpen}
-        onGoOperations={onGoOperations}
-        onGoFinance={onGoFinance}
-        onGoPortfolio={onGoPortfolio}
-      />
+        <HomeFocus
+          metrics={metrics}
+          profile={profile}
+          onOpen={onOpen}
+          onGoOperations={onGoOperations}
+          onGoFinance={onGoFinance}
+          onGoPortfolio={onGoPortfolio}
+        />
 
-      <p className="vg-footnote">
-        Posição em {position.toLocaleDateString("pt-BR")} · calculado a partir das operações, da carteira, dos cadastros
-        e do financeiro · atualizado às {now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-      </p>
+        <p className="vg-footnote">
+          Posição em {position.toLocaleDateString("pt-BR")} · calculado a partir das operações, da carteira, dos
+          cadastros e do financeiro · atualizado às{" "}
+          {now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+        </p>
+      </div>
+      {radar && (
+        <HomeRadar
+          {...radar}
+          canViewScores={canViewRadarScores}
+          scores={[...metrics.risk.cedentQuality.trends].sort((a, b) => a.delta - b.delta || b.exposure - a.exposure)}
+          onScores={() => onGoPortfolio({ tab: "cedentes" })}
+        />
+      )}
     </div>
   );
 }

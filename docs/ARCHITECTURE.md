@@ -129,6 +129,8 @@ O ambiente definitivo usa o projeto Supabase `STRATO`, na região de São Paulo,
 - "Restaurar dados de demonstração" (busca global) chama `clearPersistedState` e recria o seed.
 - A navegação usa `view` e aceita links diretos controlados por permissão; `selected` abre o workspace de uma operação autorizada.
 
+O radar da Visão geral usa `GET /api/home/radar`, uma projeção sem gravação dos eventos materiais de operações (últimos sete dias), notificações autorizadas e CDI/meta Selic do conector BCB existente. A sessão, o módulo e o escopo empresarial são validados no servidor; o filtro de empresa só restringe o escopo. `src/app/use-home-radar.ts` consulta a cada 30 segundos enquanto a home está visível, evita requisições sobrepostas e mantém novos eventos pendentes de leitura. Demonstração e simulação de usuário não consultam o endpoint. O score lateral reutiliza a posição calculada pelo contexto de qualidade e não declara mudança histórica quando não há série comparável. Notícias editoriais não são coletadas sem fonte aprovada. Não há migração nem alteração das regras de negócio.
+
 Dois contextos descem da raiz:
 
 - `ShellContext` (`features/shell/shell-context.ts`): operações, navegar, abrir operação, nova operação, preferências, restaurar demonstração. Usado pelo shell, pela busca e pelos alertas.

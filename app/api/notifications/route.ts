@@ -1,6 +1,7 @@
 import { sessionPrincipal } from "@/src/server/access/session";
 import { getDatabase } from "@/src/server/database/postgres";
 import { listPublishedNotifications, outboxHealth } from "@/src/server/outbox/publisher";
+import { listAccessChangeNotifications } from "@/src/server/access/notifications";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
@@ -13,7 +14,10 @@ export async function GET(request: Request) {
   if (!principal.permissions.includes("dashboard:view"))
     return json({ error: "Usuário sem acesso à Central do Dia." }, 403);
   return json({
-    notifications: await listPublishedNotifications(db, tenantId, principal),
+    notifications: [
+      ...(await listAccessChangeNotifications(db, tenantId, principal)),
+      ...(await listPublishedNotifications(db, tenantId, principal)),
+    ],
     health: principal.access === "admin" ? await outboxHealth(db, tenantId, principal.companyScopes) : undefined,
   });
 }

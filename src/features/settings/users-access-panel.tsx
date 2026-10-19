@@ -181,18 +181,21 @@ export function UsersAccessPanel({
     setSubmittingChange("request");
     setApprovalFeedback(undefined);
     try {
-      const requests = await createAccessChangeRequest(
+      const result = await createAccessChangeRequest(
         getStratoTenantId(),
         pendingProposal.subjectUserId,
         pendingProposal.proposed,
         requestReason,
       );
-      setChangeRequests(requests);
+      setChangeRequests(result.requests ?? []);
+      if (result.state) onState({ ...result.state, previewUserId: state.previewUserId });
       setPendingProposal(undefined);
       setRequestReason("");
       setApprovalFeedback({
         tone: "success",
-        message: "Alteração crítica enviada. Outro administrador deve conferir e decidir.",
+        message: result.applied
+          ? "Alteração administrativa aplicada e confirmada pelo servidor."
+          : "Alteração crítica enviada. Um administrador deve conferir e decidir.",
       });
     } catch (error) {
       setApprovalFeedback({
@@ -281,15 +284,14 @@ export function UsersAccessPanel({
         <section className="access-approval-queue" aria-label="Alterações críticas aguardando aprovação">
           <header>
             <div>
-              <small>SEGREGAÇÃO DE FUNÇÕES</small>
-              <b>Alterações críticas aguardando outra pessoa</b>
+              <small>SOLICITAÇÕES DE ACESSO</small>
+              <b>Alterações aguardando decisão administrativa</b>
             </div>
             <span>{changeRequests.length} pendente(s)</span>
           </header>
           {changeRequests.map(request => {
             const changes = criticalAccessChanges(request.previous, request.proposed);
-            const cannotDecide =
-              actor.access !== "admin" || actor.id === request.requestedById || actor.id === request.subjectUserId;
+            const cannotDecide = !directAdmin;
             return (
               <article key={request.id}>
                 <div>
@@ -323,7 +325,7 @@ export function UsersAccessPanel({
                     onChange={event =>
                       setDecisionReasons(current => ({ ...current, [request.id]: event.target.value }))
                     }
-                    placeholder={cannotDecide ? "Aguardando outro administrador" : "Justificativa da decisão"}
+                    placeholder={cannotDecide ? "Aguardando administrador" : "Justificativa da decisão"}
                   />
                   <button
                     type="button"

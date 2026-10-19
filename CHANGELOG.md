@@ -1,5 +1,10 @@
 # Changelog
 
+## 19/10/2026 — Pendências e notificações de acesso
+
+- Administrador vigente pode decidir solicitações próprias já pendentes, com conferência do perfil original e auditoria. O endpoint legado aplica diretamente novas alterações administrativas.
+- Solicitações pendentes aparecem na Central de Notificações por tenant, inclusive as antigas, e o alerta desaparece após a decisão.
+
 ## 19/10/2026 — Acesso administrativo e edição de usuários
 
 - Administrador ativo recebe todas as permissões, inclusive em cadastro legado incompleto; tenant e empresas permanecem delimitados.

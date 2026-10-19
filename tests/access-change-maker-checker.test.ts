@@ -111,6 +111,52 @@ const maker = { id: "maker", name: "Preparador" };
 const checker = { id: "checker", name: "Aprovador" };
 
 describe("maker-checker de privilégios", () => {
+  it("aplica diretamente a solicitação do administrador vigente sem criar pendência", async () => {
+    const db = new FakeDatabase();
+    db.user = { ...db.user, access: "admin" };
+    const directory = await loadAccessDirectory(db, "tenant-1", db.user.id);
+    const result = await requestAccessChange(
+      db,
+      "tenant-1",
+      { id: db.user.id, name: db.user.name },
+      db.user.id,
+      { ...directory.users[0], authorityIds: ["credit-director"] },
+      "Ajuste administrativo autorizado",
+    );
+    expect(result).toBeNull();
+    expect(db.request).toBeUndefined();
+    expect(db.runs.some(item => item.query.includes("INSERT INTO private.access_events"))).toBe(true);
+  });
+
+  it("permite que administrador vigente decida solicitação própria já pendente", async () => {
+    const db = new FakeDatabase();
+    const directory = await loadAccessDirectory(db, "tenant-1", db.user.id);
+    db.user = { ...db.user, access: "admin" };
+    const adminDirectory = await loadAccessDirectory(db, "tenant-1", db.user.id);
+    db.request = {
+      change_id: "pending-self",
+      subject_user_id: db.user.id,
+      previous_profile: adminDirectory.users[0],
+      proposed_profile: { ...adminDirectory.users[0], authorityIds: ["credit-director"] },
+      status: "PENDING",
+      requested_by: db.user.id,
+      requested_by_name: db.user.name,
+      requested_at: "2026-10-19T19:04:13Z",
+    };
+    await expect(
+      decideAccessChange(
+        db,
+        "tenant-1",
+        { id: db.user.id, name: db.user.name },
+        "pending-self",
+        "APPROVED",
+        "Conferido pelo administrador",
+      ),
+    ).resolves.toBeUndefined();
+    expect(db.runs.some(item => item.values.includes("ACCESS_CRITICAL_CHANGE_APPROVED"))).toBe(true);
+    expect(directory.users[0].access).toBe("operator");
+  });
+
   it("não aceita que o perfil enviado pelo operador se declare administrador", async () => {
     const db = new FakeDatabase();
     const proposed = { ...db.user, access: "admin" as const, permissions: allPermissions };
@@ -173,6 +219,7 @@ describe("maker-checker de privilégios", () => {
       "Promoção aprovada no comitê de acessos.",
     );
     expect(changeId).toMatch(/^access-change-/);
+    if (!changeId) throw new Error("O operador deve gerar uma solicitação pendente.");
     expect(db.user.access).toBe("operator");
     await expect(decideAccessChange(db, "tenant-1", maker, changeId, "APPROVED", "Conferido")).rejects.toThrow(
       "solicitante",
@@ -197,6 +244,7 @@ describe("maker-checker de privilégios", () => {
       proposed,
       "Gestão de equipe validada pela Diretoria.",
     );
+    if (!changeId) throw new Error("O operador deve gerar uma solicitação pendente.");
     await decideAccessChange(db, "tenant-1", checker, changeId, "APPROVED", "Evidências conferidas");
     expect(
       db.runs.some(

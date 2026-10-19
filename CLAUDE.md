@@ -1,5 +1,9 @@
 # STRATO — contexto de continuidade
 
+## Complemento de pendências de acesso · 19/10/2026
+
+Relato humano confirmou pedido próprio de Henrique pendente: o lote anterior não havia coberto POST/PUT legado nem notificação. Administrador vigente agora decide solicitação própria preservando conferência do perfil original; POST legado aplica diretamente a alteração administrativa. Solicitações pendentes projetadas na Central por tenant, inclusive as antigas, com resolução automática do aviso. Check 700 testes aprovados/14 ignorados; build aprovado e revisão independente sem bloqueios. Publicação em preparação.
+
 ## Correção administrativa · 19/10/2026
 
 Usuário determinou acesso completo para administradores e edição direta de usuários. Administrador ativo recebe todas as permissões efetivas no servidor e no cliente, preservando tenants, empresas e alçadas. Edição administrativa usa Salvar acessos com confirmação e auditoria; gestores conservam aprovação independente para mudanças críticas. Removido autosave global que ocultava erros. Mensagem da liberação esclarece atuação do administrador no Financeiro. Check: 695 testes aprovados/14 ignorados; build e runner PostgreSQL isolado aprovados. Publicado código 4f96d0f, serviço ativo e saúde pública ok; registro em docs/deployments/2026-10-19-acesso-administrativo.md.

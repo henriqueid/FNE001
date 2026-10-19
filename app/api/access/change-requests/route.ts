@@ -49,7 +49,16 @@ export async function POST(request: Request) {
       body.proposed,
       body.reason ?? "",
     );
-    return json({ changeId, requests: await listPendingAccessChanges(access.db, access.tenantId) }, 201);
+    return json(
+      {
+        changeId,
+        applied: changeId === null,
+        state:
+          changeId === null ? await loadAccessDirectory(access.db, access.tenantId, access.principal.id) : undefined,
+        requests: await listPendingAccessChanges(access.db, access.tenantId),
+      },
+      201,
+    );
   } catch (error) {
     if (error instanceof AccessChangeConflictError) return json({ error: error.message }, 409);
     if ((error as { code?: string }).code === "23505")
@@ -62,7 +71,7 @@ export async function PUT(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
   if (access.principal.access !== "admin")
-    return json({ error: "Somente outro administrador pode decidir alterações críticas de acesso." }, 403);
+    return json({ error: "Somente administrador pode decidir alterações críticas de acesso." }, 403);
   const body = (await request.json().catch(() => null)) as {
     changeId?: string;
     decision?: "APPROVED" | "REJECTED";

@@ -46,6 +46,7 @@ export async function saveAccessUser(tenantId: string, state: AccessState, user:
 
 async function accessChangesBody(response: Response) {
   const body = (await response.json()) as {
+    applied?: boolean;
     requests?: AccessChangeRequest[];
     state?: AccessState;
     error?: string;
@@ -74,7 +75,7 @@ export async function createAccessChangeRequest(
       tenantId,
     ),
   );
-  return body.requests ?? [];
+  return body;
 }
 
 export async function decideAccessChangeRequest(

@@ -83,6 +83,12 @@ export async function requestAccessChange(
     throw new AccessChangeConflictError("O perfil proposto não corresponde ao usuário e à organização.");
   const critical = criticalAccessChanges(previous, proposed);
   if (!critical.length) throw new AccessChangeConflictError("A proposta não contém uma alteração crítica de acesso.");
+  const requester = directory.users.find(user => user.id === actor.id);
+  if (requester?.status === "active" && requester.access === "admin") {
+    if (!db.transaction) throw new AccessChangeConflictError("A alteração administrativa exige transação de banco.");
+    await db.transaction(transaction => applyAccessUserProfile(transaction, tenantId, actor.id, proposed));
+    return null;
+  }
   const changeId = `access-change-${crypto.randomUUID()}`;
   await db
     .prepare(
@@ -128,13 +134,15 @@ export async function decideAccessChange(
       .bind(tenantId, changeId)
       .first<ChangeRow>();
     if (!row || row.status !== "PENDING") throw new AccessChangeConflictError("A solicitação não está mais pendente.");
-    if (row.requested_by === actor.id)
+    const directory = await loadAccessDirectory(transaction, tenantId, actor.id);
+    const decider = directory.users.find(user => user.id === actor.id);
+    const directAdmin = decider?.status === "active" && decider.access === "admin";
+    if (!directAdmin && row.requested_by === actor.id)
       throw new AccessChangeConflictError("O solicitante não pode decidir a própria alteração.");
-    if (row.subject_user_id === actor.id)
+    if (!directAdmin && row.subject_user_id === actor.id)
       throw new AccessChangeConflictError("O beneficiário não pode aprovar a própria alteração.");
     const now = new Date().toISOString();
     if (decision === "APPROVED") {
-      const directory = await loadAccessDirectory(transaction, tenantId, actor.id);
       const current = directory.users.find(user => user.id === row.subject_user_id);
       if (!current || !same(current, row.previous_profile))
         throw new AccessChangeConflictError(

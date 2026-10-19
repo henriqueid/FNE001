@@ -1,5 +1,6 @@
 import {
   activeUser,
+  allPermissions,
   authenticatedUser,
   can,
   canAccessView,
@@ -17,6 +18,12 @@ import { initialOperations } from "@/src/domain/core/demo/operations";
 import { describe, expect, it } from "vitest";
 
 describe("identidade e autorização", () => {
+  it("mantém todas as permissões do administrador mesmo com cadastro legado incompleto", () => {
+    const admin = { ...seedAccessState().users[0], permissions: [] };
+    for (const permission of allPermissions) expect(can(admin, permission)).toBe(true);
+    expect(can({ ...admin, status: "suspended" }, "finance:release")).toBe(false);
+    expect(can({ ...admin, access: "operator" }, "users:manage")).toBe(false);
+  });
   it("inicia com administrador consolidado e permissões completas", () => {
     const state = seedAccessState();
     const user = activeUser(state);

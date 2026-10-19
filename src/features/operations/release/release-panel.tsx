@@ -285,11 +285,11 @@ export function ReleasePanel({
         </div>
       )}
       {!released && !demo && review.preparedBy && (
-        <div className="release-feedback warning">
-          <AlertIcon />
+        <div className="release-feedback">
+          <CheckIcon />
           <span>
-            Preparada por {review.preparedBy}. Confira os dados e envie ao financeiro. O pagamento exige permissão
-            financeira.
+            Preparada por {review.preparedBy}. Confira os dados e envie ao financeiro. O administrador também pode
+            realizar o pagamento no Financeiro.
           </span>
         </div>
       )}

@@ -1,5 +1,6 @@
 import {
   permissionsFor,
+  effectivePermissions,
   seedAccessState,
   type AccessState,
   type AccessUser,
@@ -94,7 +95,10 @@ export async function principalForSession(
     access: user.access_level,
     status: user.status,
     tenantId: user.tenant_id,
-    permissions: permissions.results.map(item => item.permission),
+    permissions: effectivePermissions({
+      access: user.access_level,
+      permissions: permissions.results.map(item => item.permission),
+    }),
     authorityIds: authorities.results.map(item => item.authority_id),
     companyScopes: JSON.parse(user.company_scopes_json) as string[],
     commercialRepId: user.commercial_rep_id ?? undefined,
@@ -439,7 +443,10 @@ export async function loadAccessDirectory(
       responsibilities: JSON.parse(row.responsibilities_json) as string[],
       cedentDocuments: JSON.parse(row.cedent_documents_json) as string[],
       revenueGoalShare: row.revenue_goal_share === null ? undefined : Number(row.revenue_goal_share),
-      permissions: permissions.results.map(item => item.permission),
+      permissions: effectivePermissions({
+        access: row.access_level,
+        permissions: permissions.results.map(item => item.permission),
+      }),
     });
   }
   return { version: 2, authenticatedUserId, users };
@@ -452,6 +459,7 @@ export async function applyAccessUserProfile(
   user: AccessUser,
   eventType = "ACCESS_PROFILE_SAVED",
 ) {
+  user = { ...user, permissions: effectivePermissions(user) };
   const now = new Date().toISOString();
   await db
     .prepare(
@@ -577,6 +585,8 @@ export async function saveAccessDirectory(
   await seedAccessDirectory(db);
   const current = await loadAccessDirectory(db, tenantId, actorId);
   const currentById = new Map(current.users.map(user => [user.id, user]));
+  const actor = currentById.get(actorId);
+  const directAdmin = actor?.status === "active" && actor.access === "admin";
   const scoped = state.users.filter(candidate => candidate.tenantIds.includes(tenantId));
   if (!options.allowCriticalChanges) {
     for (const user of scoped) {
@@ -584,7 +594,7 @@ export async function saveAccessDirectory(
       if (!previous)
         throw new AccessCriticalChangeError("Novos usuários devem ser criados pelo fluxo de cadastro de acesso.");
       const changes = criticalAccessChanges(previous, user);
-      if (changes.length)
+      if (changes.length && !directAdmin)
         throw new AccessCriticalChangeError(`Esta alteração exige aprovação independente: ${changes.join(", ")}.`);
     }
   }

@@ -1,6 +1,6 @@
-import { seedAccessState, type AccessUser } from "@/src/domain/access/model";
+import { allPermissions, seedAccessState, type AccessUser } from "@/src/domain/access/model";
 import { decideAccessChange, requestAccessChange } from "@/src/server/access/change-requests";
-import { AccessCriticalChangeError, saveAccessDirectory } from "@/src/server/access/repository";
+import { AccessCriticalChangeError, loadAccessDirectory, saveAccessDirectory } from "@/src/server/access/repository";
 import type { DecisionDatabase, DecisionStatement } from "@/src/server/decisions/repository";
 import { describe, expect, it } from "vitest";
 
@@ -111,6 +111,43 @@ const maker = { id: "maker", name: "Preparador" };
 const checker = { id: "checker", name: "Aprovador" };
 
 describe("maker-checker de privilégios", () => {
+  it("não aceita que o perfil enviado pelo operador se declare administrador", async () => {
+    const db = new FakeDatabase();
+    const proposed = { ...db.user, access: "admin" as const, permissions: allPermissions };
+    await expect(
+      saveAccessDirectory(db, "tenant-1", db.user.id, {
+        version: 2,
+        authenticatedUserId: db.user.id,
+        users: [proposed],
+      }),
+    ).rejects.toBeInstanceOf(AccessCriticalChangeError);
+    expect(db.runs).toHaveLength(0);
+  });
+
+  it("não concede edição direta a administrador suspenso", async () => {
+    const db = new FakeDatabase();
+    db.user = { ...db.user, access: "admin", status: "suspended" };
+    const proposed = { ...db.user, status: "active" as const };
+    await expect(
+      saveAccessDirectory(db, "tenant-1", db.user.id, {
+        version: 2,
+        authenticatedUserId: db.user.id,
+        users: [proposed],
+      }),
+    ).rejects.toBeInstanceOf(AccessCriticalChangeError);
+    expect(db.runs).toHaveLength(0);
+  });
+
+  it("permite alteração direta pelo administrador vigente e registra auditoria", async () => {
+    const db = new FakeDatabase();
+    db.user = { ...db.user, access: "admin", permissions: [] };
+    const state = await loadAccessDirectory(db, "tenant-1", db.user.id);
+    expect(state.users[0].permissions).toEqual(allPermissions);
+    const proposed = { ...state.users[0], authorityIds: ["credit-director"] };
+    await saveAccessDirectory(db, "tenant-1", db.user.id, { ...state, users: [proposed] });
+    expect(db.runs.some(item => item.query.includes("INSERT INTO private.access_events"))).toBe(true);
+  });
+
   it("bloqueia elevação direta no diretório", async () => {
     const db = new FakeDatabase();
     const proposed = { ...db.user, access: "admin" as const };

@@ -1,5 +1,9 @@
 # STRATO — contexto de continuidade
 
+## Correção administrativa · 19/10/2026
+
+Usuário determinou acesso completo para administradores e edição direta de usuários. Administrador ativo recebe todas as permissões efetivas no servidor e no cliente, preservando tenants, empresas e alçadas. Edição administrativa usa Salvar acessos com confirmação e auditoria; gestores conservam aprovação independente para mudanças críticas. Removido autosave global que ocultava erros. Mensagem da liberação esclarece atuação do administrador no Financeiro. Check: 695 testes aprovados/14 ignorados; build e runner PostgreSQL isolado aprovados. Publicação em preparação; registro em docs/deployments/2026-10-19-acesso-administrativo.md.
+
 ## Copiloto publicado · 18/10/2026
 
 - O usuário aprovou as três camadas (dados, comportamento, aprendizado), respostas verificáveis e “Ver mais”. Implementação em `src/server/copilot/`, `src/domain/copilot/` e componentes de relatório/memória da feature.

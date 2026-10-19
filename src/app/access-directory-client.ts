@@ -39,6 +39,11 @@ export async function saveAccessDirectory(tenantId: string, state: AccessState) 
   );
 }
 
+/** Atualiza somente o perfil editado para não reenviar concessões antigas de outros usuários. */
+export async function saveAccessUser(tenantId: string, state: AccessState, user: AccessUser) {
+  return saveAccessDirectory(tenantId, { ...state, users: [user] });
+}
+
 async function accessChangesBody(response: Response) {
   const body = (await response.json()) as {
     requests?: AccessChangeRequest[];

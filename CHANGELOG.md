@@ -1,5 +1,11 @@
 # Changelog
 
+## 19/10/2026 — Acesso administrativo e edição de usuários
+
+- Administrador ativo recebe todas as permissões, inclusive em cadastro legado incompleto; tenant e empresas permanecem delimitados.
+- Administrador pode salvar acessos diretamente com auditoria, sem segundo aprovador. A interface exige Salvar acessos e confirma a persistência; erros deixam de ser ocultados.
+- Liberação usa orientação informativa e esclarece que o administrador pode pagar no Financeiro.
+
 ## Não lançado — 18/10/2026 · Itaú112 e encargos de cobrança
 
 - Carteira112 escritural: remessa com nosso número zerado, controle exclusivo por título e atribuição bancária validada no retorno02. Liquidação depende da confirmação; colisões, reatribuições e divergências de valor/vencimento são recusadas.

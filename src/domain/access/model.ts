@@ -197,7 +197,12 @@ export function authenticatedUser(state: AccessState): AccessUser {
 }
 
 export function can(user: AccessUser, permission: Permission) {
-  return user.status === "active" && user.permissions.includes(permission);
+  return user.status === "active" && effectivePermissions(user).includes(permission);
+}
+
+/** Administradores ativos recebem o catálogo completo; demais perfis conservam as concessões explícitas. */
+export function effectivePermissions(user: Pick<AccessUser, "access" | "permissions">): Permission[] {
+  return user.access === "admin" ? [...allPermissions] : user.permissions;
 }
 
 const viewPermissions: Record<AccessView, Permission[]> = {

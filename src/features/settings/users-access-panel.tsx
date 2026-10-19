@@ -15,6 +15,7 @@ import {
   createManagedUser,
   decideAccessChangeRequest,
   loadAccessChangeRequests,
+  saveAccessUser,
 } from "@/src/app/access-directory-client";
 import { useCompanyDestinations } from "@/src/app/company-context";
 import { getStratoTenantId } from "@/src/app/tenant";
@@ -41,7 +42,7 @@ const permissionLabels: Record<Permission, string> = {
   "controlleria:formalize": "Formalizar operações",
   "portfolio:manage": "Gerenciar carteira",
   "finance:view": "Consultar financeiro",
-  "finance:release": "Preparar liberações",
+  "finance:release": "Realizar pagamentos e estornos",
   "registry:view": "Consultar cadastros",
   "registry:edit": "Editar cadastros",
   "settings:view": "Consultar empresa e políticas",
@@ -82,6 +83,7 @@ export function UsersAccessPanel({
   const [requestReason, setRequestReason] = useState("");
   const [decisionReasons, setDecisionReasons] = useState<Record<string, string>>({});
   const [submittingChange, setSubmittingChange] = useState<string>();
+  const [savingProfile, setSavingProfile] = useState(false);
   const [draft, setDraft] = useState({
     name: "",
     loginName: "",
@@ -95,14 +97,34 @@ export function UsersAccessPanel({
     pendingProposal?.subjectUserId === persistedSelected.id ? pendingProposal.proposed : persistedSelected;
   const active = state.users.find(user => user.id === state.previewUserId) ?? authenticatedUser(state);
   const actor = authenticatedUser(state);
+  const directAdmin = actor.status === "active" && actor.access === "admin";
   const managers = useMemo(
     () => state.users.filter(user => user.access !== "operator" && user.status === "active"),
     [state.users],
   );
 
   const selectedPendingRequest = changeRequests.find(request => request.subjectUserId === persistedSelected.id);
+  const persistProfile = async (proposed: AccessUser) => {
+    if (savingProfile) return;
+    setSavingProfile(true);
+    setApprovalFeedback(undefined);
+    try {
+      const saved = await saveAccessUser(getStratoTenantId(), state, proposed);
+      onState({ ...saved, previewUserId: state.previewUserId });
+      setPendingProposal(undefined);
+      setApprovalFeedback({ tone: "success", message: "Acessos salvos e confirmados pelo servidor." });
+    } catch (error) {
+      setApprovalFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Não foi possível salvar os acessos.",
+      });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
   const save = (patch: Partial<AccessUser>) => {
-    if (!demoMode && selectedPendingRequest) {
+    if (savingProfile) return;
+    if (!demoMode && selectedPendingRequest && !directAdmin) {
       setApprovalFeedback({
         tone: "error",
         message: "Este perfil está congelado enquanto a alteração crítica aguarda decisão.",
@@ -110,13 +132,19 @@ export function UsersAccessPanel({
       return;
     }
     const proposed = { ...selected, ...patch };
+    if (!demoMode && directAdmin) {
+      setPendingProposal({ subjectUserId: persistedSelected.id, proposed });
+      setApprovalFeedback(undefined);
+      return;
+    }
     if (!demoMode && criticalAccessChanges(persistedSelected, proposed).length) {
       setPendingProposal({ subjectUserId: persistedSelected.id, proposed });
       setApprovalFeedback(undefined);
       return;
     }
     setPendingProposal(undefined);
-    onState(updateAccessUser(state, proposed));
+    if (demoMode) onState(updateAccessUser(state, proposed));
+    else void persistProfile(proposed);
   };
   const setProfile = (department: UserDepartment, access: AccessUser["access"]) => {
     const areas = [...new Set([department, ...userFunctionalAreas(selected)])];
@@ -383,10 +411,14 @@ export function UsersAccessPanel({
               </p>
             </div>
             {selected.status === "pending" ? (
-              <button type="button" disabled={!!selectedPendingRequest} onClick={() => save({ status: "active" })}>
-                {selectedPendingRequest
+              <button
+                type="button"
+                disabled={!!selectedPendingRequest && !directAdmin}
+                onClick={() => save({ status: "active" })}
+              >
+                {selectedPendingRequest && !directAdmin
                   ? "Aguardando outro administrador"
-                  : demoMode
+                  : demoMode || directAdmin
                     ? "Aprovar e ativar acesso"
                     : "Solicitar ativação do acesso"}
               </button>
@@ -411,7 +443,26 @@ export function UsersAccessPanel({
             </p>
           )}
 
-          {!demoMode && pendingProposal?.subjectUserId === persistedSelected.id && (
+          {!demoMode && directAdmin && pendingProposal?.subjectUserId === persistedSelected.id && (
+            <section className="access-critical-proposal">
+              <div>
+                <small>ALTERAÇÕES NÃO SALVAS</small>
+                <p>O administrador pode salvar diretamente. As mudanças ficam registradas no histórico.</p>
+              </div>
+              <button
+                type="button"
+                disabled={savingProfile}
+                onClick={() => void persistProfile(pendingProposal.proposed)}
+              >
+                {savingProfile ? "Salvando acessos…" : "Salvar acessos"}
+              </button>
+              <button type="button" disabled={savingProfile} onClick={() => setPendingProposal(undefined)}>
+                Descartar alterações
+              </button>
+            </section>
+          )}
+
+          {!demoMode && !directAdmin && pendingProposal?.subjectUserId === persistedSelected.id && (
             <section className="access-critical-proposal">
               <div>
                 <small>ALTERAÇÃO CRÍTICA PREPARADA</small>
@@ -589,7 +640,7 @@ export function UsersAccessPanel({
             <header>
               <div>
                 <small>PERMISSÕES EFETIVAS</small>
-                <b>Ações liberadas</b>
+                <b>{selected.access === "admin" ? "Administrador · todas as ações liberadas" : "Ações liberadas"}</b>
               </div>
               <span>{selected.permissions.length} permissões</span>
             </header>

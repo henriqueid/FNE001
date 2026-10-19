@@ -81,7 +81,7 @@ import {
 } from "@/src/domain/access/model";
 import { emptyIntelligenceState, seedIntelligenceState, type IntelligenceState } from "@/src/domain/intelligence/model";
 import { type PublishedNotification } from "@/src/domain/notifications/model";
-import { loadAccessDirectory, saveAccessDirectory } from "./access-directory-client";
+import { loadAccessDirectory } from "./access-directory-client";
 import { syncPublishedNotifications } from "./notification-client";
 import { useStratoAuth } from "@/src/features/auth/auth-context";
 import { loadRegistryParties, persistRegistryParty } from "./registry-client";
@@ -1001,16 +1001,6 @@ export default function StratoApp() {
       cancelled = true;
     };
   }, [isDemo, portfolioServerReady, storageReady]);
-
-  useEffect(() => {
-    if (!accessServerReady || isDemo) return;
-    const timer = window.setTimeout(() => {
-      void saveAccessDirectory(intelligence.tenantId, access).catch(() => {
-        /* o estado local continua disponível e uma próxima alteração tenta novamente */
-      });
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [access, accessServerReady, intelligence.tenantId, isDemo]);
 
   useEffect(() => {
     if (!accessServerReady) return;

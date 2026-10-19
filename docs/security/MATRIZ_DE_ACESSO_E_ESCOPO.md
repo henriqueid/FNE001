@@ -67,7 +67,7 @@ Escopo vazio significa nenhum veículo autorizado. O valor `*` é reservado para
 - O pacote de favorecidos fica congelado entre preparação e aprovação; lançamentos a pagar e auditoria são reconstruídos no backend, sem confiar no navegador.
 - Contas bancárias cadastrais só mudam por solicitação pendente e decisão de outra identidade; a API comum recusa inclusão ou troca direta.
 - Políticas de elegibilidade são congeladas após o envio; outra identidade precisa aprovar ou rejeitar, e o servidor autentica todas as autorias.
-- Ativação, elevação de nível, novas permissões/alçadas/empresas e mudança de e-mail, login ou CPF exigem outro administrador; solicitante e beneficiário não decidem.
+- Administrador ativo tem todas as permissões e pode salvar diretamente alterações de usuários, incluindo ativação, nível, permissões, alçadas, empresas e identificação, com auditoria. A condição administrativa vem do cadastro vigente no servidor. Para demais gestores, ampliações críticas seguem o fluxo de outro administrador; solicitante e beneficiário não decidem pedidos independentes. Decisão de produto de 19/10/2026.
 - O Cadastro separa leitura (`registry:view`) de manutenção (`registry:edit`), inclusive nas evidências cadastrais.
 - O Copiloto recebe do navegador somente a pergunta; o backend lê as fontes no banco, reduz o contexto às empresas da sessão, remove campos não previstos e só mantém cedentes alcançáveis por operações ou títulos visíveis.
 - O Comercial filtra executivo e gerente vinculados na identidade do servidor; uma gravação segmentada recompõe o agregado completo e não apaga carteiras ocultas.

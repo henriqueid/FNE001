@@ -1,12 +1,12 @@
 # Changelog
 
-## Não lançado — 19/10/2026 · Radar lateral da Visão geral
+## 19/10/2026 · Radar lateral da Visão geral
 
 - Painel mais largo em desktop e radar à direita; em telas menores, o radar aparece após o conteúdo principal.
 - Ajuste de UX: lateral somente a partir de 1600 px, cards adaptados à largura efetiva do painel e radar sem rolagem interna; abaixo desse limite, o radar ocupa a largura disponível, com seções em colunas quando há espaço.
 - Eventos materiais de operações e notificações com sessão, módulo e empresa validados no servidor; atualização a cada 30 segundos e revelação explícita de novos eventos.
 - Posição de score reutiliza o cálculo existente, sem simular histórico. CDI e meta Selic usam exclusivamente o conector BCB autorizado, quando habilitado, com data e origem; notícias aguardam fonte editorial aprovada.
-- Sem migração, alteração de regra financeira ou publicação. Demonstração e simulação não consultam fontes reais pelo radar.
+- Publicado em produção no commit `dd8d4c8`, sem migração ou alteração de regra financeira. Demonstração e simulação não consultam fontes reais pelo radar.
 
 ## 19/10/2026 — Pendências e notificações de acesso
 

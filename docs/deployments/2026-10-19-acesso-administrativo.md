@@ -6,4 +6,4 @@ Administrador ativo recebe catálogo completo de permissões, inclusive no cadas
 
 Verificação: check aprovado (695 testes, 14 ignorados), build aprovado. Runner isolado: 39 migrações, 13 testes PostgreSQL e 2 documentos; restauração 74 tabelas/1.018 linhas e HTTP autenticado aprovados. Evidência local: C:/Users/henri/AppData/Local/Temp/strato-isolated-pg-MkmGyO.
 
-Publicação pendente. Teste autenticado pela interface com usuário real permanece para a sessão do usuário.
+Publicado código 4f96d0f em /srv/strato/app. Instalação e build remoto aprovados, serviço ativo, saúde interna e pública ok. Página inicial HTTP 200; diretório sem sessão HTTP 401. Revisão independente aprovada após corrigir o envio de perfis antigos: somente o usuário editado é enviado, sem restaurar concessões revogadas de terceiros. Teste autenticado pela interface com usuário real permanece para a sessão do usuário.

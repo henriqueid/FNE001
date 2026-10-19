@@ -4,4 +4,4 @@ Solicitação do usuário durante o teste produtivo: alteração própria entrou
 
 Corrigidos endpoint legado de solicitação (administrador vigente aplica direto), decisão de pedidos antigos (administrador pode decidir o próprio, com conferência do perfil original) e fila visual. Notificações projetam pendências existentes pelo tenant com IDs estáveis e visibilidade limitada a administradores e gestores solicitantes; deixam de existir quando resolvidas. Nenhuma migração e nenhuma aprovação real automática.
 
-Verificação: check 700 testes aprovados/14 ignorados, build aprovado, revisão independente sem bloqueios. Publicação pendente.
+Verificação: check 700 testes aprovados/14 ignorados, build aprovado, revisão independente sem bloqueios. Publicado b110080 em /srv/strato/app. Build remoto aprovado, serviço ativo, saúde interna e pública ok, página inicial HTTP 200 e notificações sem sessão HTTP 401. Solicitação real preservada para decisão do usuário; jornada autenticada produtiva ainda depende dessa conferência.

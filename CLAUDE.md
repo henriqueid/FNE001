@@ -2,7 +2,7 @@
 
 ## Complemento de pendências de acesso · 19/10/2026
 
-Relato humano confirmou pedido próprio de Henrique pendente: o lote anterior não havia coberto POST/PUT legado nem notificação. Administrador vigente agora decide solicitação própria preservando conferência do perfil original; POST legado aplica diretamente a alteração administrativa. Solicitações pendentes projetadas na Central por tenant, inclusive as antigas, com resolução automática do aviso. Check 700 testes aprovados/14 ignorados; build aprovado e revisão independente sem bloqueios. Publicação em preparação.
+Relato humano confirmou pedido próprio de Henrique pendente: o lote anterior não havia coberto POST/PUT legado nem notificação. Administrador vigente agora decide solicitação própria preservando conferência do perfil original; POST legado aplica diretamente a alteração administrativa. Solicitações pendentes projetadas na Central por tenant, inclusive as antigas, com resolução automática do aviso. Check 700 testes aprovados/14 ignorados; build aprovado e revisão independente sem bloqueios. Publicado b110080, serviço ativo e saúde pública ok; solicitação real preservada para decisão do usuário.
 
 ## Correção administrativa · 19/10/2026
 

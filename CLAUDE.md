@@ -17,7 +17,7 @@ Preparador autorizado pode enviar a OP ao financeiro sem segunda pessoa obrigat�
 
 ## Onde paramos
 
-Última atualização: **19/10/2026**. Publicação integral das correções operacionais autorizada pelo usuário e em preparação. Integração preserva o Copiloto já publicado; resultado final em `docs/deployments/2026-10-19-operacional.md`.
+Última atualização: **19/10/2026**. Publicação integral das correções operacionais concluída, código 7a8af46, serviço e saúde pública verificados. Integração preserva o Copiloto já publicado; resultado final em `docs/deployments/2026-10-19-operacional.md`.
 
 ## Melhoria local após auditoria
 

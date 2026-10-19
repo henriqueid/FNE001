@@ -1,3 +1,4 @@
+/** Consolida referências internas e estados de consulta sem presumir evidência externa. */
 import { type Cedent, type Debtor, type Operation } from "@/src/domain/core/types";
 import { type IntegrationProviderId, type IntegrationState } from "./model";
 
@@ -63,7 +64,6 @@ function externalCheck({
   subjectId,
   label,
   demoValue,
-  officialValue,
   observedAt,
 }: {
   state: IntegrationState;
@@ -73,7 +73,6 @@ function externalCheck({
   subjectId: string;
   label: string;
   demoValue: string;
-  officialValue?: string;
   observedAt: string;
 }): EnrichmentCheck {
   const provider = state.providers.find(item => item.id === providerId);
@@ -90,20 +89,6 @@ function externalCheck({
       provenance: "DEMONSTRACAO",
       result: "ATENCAO",
       evidence: "Dado de demonstração. Não representa consulta oficial ao provedor.",
-      observedAt,
-    };
-  if (provider?.mode === "ATIVA")
-    return {
-      id,
-      providerId,
-      source,
-      subject,
-      subjectId,
-      label,
-      value: officialValue ?? demoValue,
-      provenance: "OFICIAL",
-      result: "CONFIRMADO",
-      evidence: `Retorno da integração ${source} configurada.`,
       observedAt,
     };
   if (provider?.mode === "INDISPONIVEL")
@@ -130,7 +115,10 @@ function externalCheck({
     value: "Consulta pendente",
     provenance: "PENDENTE",
     result: "PENDENTE",
-    evidence: "Credenciais e homologação do provedor ainda não foram configuradas.",
+    evidence:
+      provider?.mode === "ATIVA"
+        ? "Integração ativa, mas sem evidência de consulta externa disponível nesta fotografia."
+        : "Credenciais e homologação do provedor ainda não foram configuradas.",
     observedAt,
   };
 }

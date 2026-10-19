@@ -22,9 +22,10 @@ import { createAuthorityGrant, decisionFingerprint } from "@/src/domain/decision
 import { emptyDecisionLedger, type DecisionEventDraft } from "@/src/domain/decisions/model";
 import { canUseGenerativeAI, type IntelligenceState } from "@/src/domain/intelligence/model";
 import { loadDecisionLedger, persistDecisionEvent } from "./decision-ledger-client";
-import { askConfiguredCopilot } from "@/src/app/intelligence-client";
+import { askConfiguredCopilot, loadCopilotHistory } from "@/src/app/intelligence-client";
 import { type Debtor, type EntryIntake, type EntryIntakeIssue, type ManualEntryData } from "@/src/domain/core/types";
 import { buildOfflineDeskContext } from "@/src/domain/copilot/offline-analysis";
+import { isDeskQuestion } from "@/src/domain/copilot/routing";
 
 export type DeskStage = "idle" | "recebida" | "validando" | "extraindo" | "calculando" | "concluida";
 export type DeskDecision = "pending" | "approved" | "rejected" | null;
@@ -55,7 +56,7 @@ export function useCopilotDesk(
   defaultCedentId = "",
   demoMode = false,
   debtors: Debtor[] = [],
-  onUsage?: (tokens: number) => void,
+  onUsage?: (tokens: number, serverUsedTokens?: number) => void,
 ) {
   const [cedent, setCedent] = useState(defaultCedentId);
   const [files, setFiles] = useState<DeskFile[]>([]);
@@ -85,6 +86,8 @@ export function useCopilotDesk(
   const latestPersistedEventId = useRef<string | undefined>(undefined);
   const persistenceQueue = useRef<Promise<void>>(Promise.resolve());
   const linkedSnapshotRecorded = useRef<string | undefined>(undefined);
+  const lastReportId = useRef<string | undefined>(undefined);
+  const askingRef = useRef(false);
 
   useEffect(() => {
     alive.current = true;
@@ -323,7 +326,7 @@ export function useCopilotDesk(
     );
     await wait(300);
     if (stale()) return;
-    if (offline.context.titles.some(title => title.newDebtor)) {
+    if (demoMode && offline.context.titles.some(title => title.newDebtor)) {
       setWaitingAuth(true);
       setUnread(true);
     } else await completeAnalysis(false, offline.context, token);
@@ -382,6 +385,11 @@ export function useCopilotDesk(
   }
 
   const authorize = async (allowed: boolean) => {
+    if (!demoMode) {
+      setWaitingAuth(false);
+      await completeAnalysis(false, context);
+      return;
+    }
     const token = run.current;
     setWaitingAuth(false);
     setBureauChecked(allowed);
@@ -396,9 +404,10 @@ export function useCopilotDesk(
 
   /** Pergunta livre: primeiro sobre o cenário em análise (se houver); senão, consulta a base e a política. */
   const ask = async (text: string) => {
+    if (askingRef.current) return;
     push({ role: "me", text });
     try {
-      if (scenarios.length && !locked) {
+      if (scenarios.length && !locked && (demoMode || isDeskQuestion(text))) {
         const answer = answerDesk(text, context, scenarios);
         if (!answer.fallback) {
           if (answer.scenario) setScenarios(list => [...list, answer.scenario as DeskScenario]);
@@ -406,17 +415,17 @@ export function useCopilotDesk(
           return;
         }
       }
-      const localAnswer = answerSystemQuestion(text, knowledge);
-      if (localAnswer.tool) {
+      const localAnswer = demoMode ? answerSystemQuestion(text, knowledge) : undefined;
+      if (localAnswer?.tool) {
         push({ role: "ai", reply: localAnswer });
         return;
       }
-      if (!aiAvailable) {
+      if (demoMode && !aiAvailable) {
         push({
           role: "ai",
           reply: {
             paragraphs: [
-              ...localAnswer.paragraphs,
+              ...(localAnswer?.paragraphs ?? []),
               "Estou em modo offline: consigo consultar dados, explicar a política e modelar cenários; perguntas livres e insights generativos exigem a conexão com IA.",
             ],
           },
@@ -436,12 +445,20 @@ export function useCopilotDesk(
       });
       return;
     }
+    const requestRun = run.current;
+    askingRef.current = true;
     setAsking(true);
     try {
-      const result = await askConfiguredCopilot(text, knowledge);
+      const result = await askConfiguredCopilot(text, knowledge, {
+        allowInterpretation: aiAvailable,
+        previousReportId: lastReportId.current,
+      });
+      if (!alive.current || run.current !== requestRun) return;
+      lastReportId.current = result.reply.report?.id;
       push({ role: "ai", reply: result.reply });
-      if (result.usage.totalTokens > 0) onUsage?.(result.usage.totalTokens);
+      if (result.usage.totalTokens > 0) onUsage?.(result.usage.totalTokens, result.usedTokens);
     } catch (error) {
+      if (!alive.current || run.current !== requestRun) return;
       push({
         role: "ai",
         reply: {
@@ -455,7 +472,8 @@ export function useCopilotDesk(
         },
       });
     } finally {
-      setAsking(false);
+      askingRef.current = false;
+      if (alive.current) setAsking(false);
     }
   };
 
@@ -584,6 +602,34 @@ export function useCopilotDesk(
     setLinkedOperationId(undefined);
     linkedSnapshotRecorded.current = undefined;
     setBureauChecked(false);
+    lastReportId.current = undefined;
+  };
+
+  const restoreHistory = async () => {
+    if (askingRef.current) return;
+    const requestRun = run.current;
+    askingRef.current = true;
+    setAsking(true);
+    try {
+      const history = await loadCopilotHistory();
+      if (!alive.current || requestRun !== run.current) return;
+      if (!history.length)
+        push({ role: "ai", reply: { paragraphs: ["Nenhuma consulta salva está disponível no seu acesso atual."] } });
+      history.forEach(item => {
+        push({ role: "me", text: item.question });
+        push({ role: "ai", reply: item.reply });
+      });
+      lastReportId.current = history.at(-1)?.reply.report?.id;
+    } catch (error) {
+      if (alive.current && requestRun === run.current)
+        push({
+          role: "ai",
+          reply: { paragraphs: [error instanceof Error ? error.message : "Não foi possível carregar o histórico."] },
+        });
+    } finally {
+      askingRef.current = false;
+      if (alive.current) setAsking(false);
+    }
   };
 
   return {
@@ -624,6 +670,7 @@ export function useCopilotDesk(
     sendToAuthority,
     authorityDecides,
     reset,
+    restoreHistory,
   };
 }
 

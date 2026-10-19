@@ -43,14 +43,14 @@ export const sourceOptions: { source: OperationSource; label: string; descriptio
   {
     source: "CNAB",
     label: "Importar CNAB",
-    description: "Arquivo bancário, carteira de títulos ou borderô",
+    description: "Campos comuns de remessa CNAB 240/400; revisar o leiaute do banco",
     tag: "CNAB",
   },
   {
     source: "Planilha",
     label: "Importar planilha",
-    description: "Arquivo CSV ou XLSX no leiaute da empresa",
-    tag: "XLSX",
+    description: "Arquivo CSV UTF-8 no modelo de importação",
+    tag: "CSV",
   },
   {
     source: "Digitação manual",
@@ -230,7 +230,7 @@ export function NewOperationModal({
                     {source === "XML NF-e"
                       ? "Selecione um arquivo .xml com NF-e e duplicatas"
                       : source === "CNAB"
-                        ? "Selecione o CNAB; o leiaute precisa estar configurado"
+                        ? "Campos comuns de remessa 240/400; esta leitura não processa liquidação bancária"
                         : "CSV é processado agora; XLSX exige conversão para CSV nesta implantação"}
                   </small>
                 </div>
@@ -248,8 +248,8 @@ export function NewOperationModal({
                         source === "XML NF-e"
                           ? ".xml,text/xml"
                           : source === "Planilha"
-                            ? ".csv,.xlsx,text/csv"
-                            : ".rem,.ret,.cnab,.txt,.csv"
+                            ? ".csv,text/csv"
+                            : ".rem,.ret,.cnab,.txt"
                       }
                       disabled={readingFile}
                       onChange={event => void analyzeFile(event.target.files?.[0])}

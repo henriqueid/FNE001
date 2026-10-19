@@ -36,7 +36,7 @@ export function TitlesTab({
   scope: string;
   onAction: (a: NonNullable<Action>) => void;
   onNew: () => void;
-  onApply: (r: Result) => boolean;
+  onApply: (r: Result) => boolean | Promise<boolean>;
 }) {
   const today = todayIso();
   const [kind, setKind] = useState<"todos" | "Pagar" | "Receber">("todos");
@@ -115,8 +115,8 @@ export function TitlesTab({
       : openPicked.length && openPicked.every(t => t.kind === "Receber")
         ? "Receber"
         : "Baixar";
-  const done = (r: Result) => {
-    if (onApply(r)) {
+  const done = async (r: Result) => {
+    if (await onApply(r)) {
       setBulk(null);
       setEditing(null);
       setDuplicating(null);

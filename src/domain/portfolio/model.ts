@@ -38,6 +38,15 @@ export type PortfolioPayment = {
   reference?: string;
   createdAt: string;
   createdBy: string;
+  financeTitleId?: string;
+  accountId?: string;
+  principalAmount?: number;
+  interestAmount?: number;
+  discountAmount?: number;
+  reversalOf?: string;
+  reversedBy?: string;
+  previousStatus?: PortfolioTitleStatus;
+  previousBankStatus?: PortfolioBankStatus;
 };
 
 export type CollectionChannel = "WhatsApp" | "Telefone" | "E-mail" | "Presencial" | "Outro";
@@ -75,6 +84,8 @@ export type PortfolioConfirmation = {
 };
 
 export type PortfolioTitleRecord = {
+  sourcePosition?: { id: string; date: string; openAmount: number; paidAmount: number; discountAmount: number };
+  positionReviewRequired?: string;
   id: string;
   receivableId?: string;
   status: PortfolioTitleStatus;

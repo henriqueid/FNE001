@@ -11,40 +11,6 @@ export class OperationGovernanceError extends Error {}
 
 const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
 
-function financialSettlementChanged(previous: ReleaseReview, next: ReleaseReview) {
-  const { payables: previousPayables = [], audit: previousAudit = [], ...previousHeader } = previous;
-  const { payables: nextPayables = [], audit: nextAudit = [], ...nextHeader } = next;
-  if (!same(previousHeader, nextHeader) || previousPayables.length !== nextPayables.length) return false;
-  let changes = 0;
-  for (const payable of previousPayables) {
-    const candidate = nextPayables.find(item => item.id === payable.id);
-    if (!candidate) return false;
-    const { status: oldStatus, paidAt: oldPaidAt, ...oldIdentity } = payable;
-    const { status: newStatus, paidAt: newPaidAt, ...newIdentity } = candidate;
-    if (!same(oldIdentity, newIdentity)) return false;
-    if (oldStatus === newStatus && oldPaidAt === newPaidAt) continue;
-    const paid = oldStatus === "Pendente de pagamento" && newStatus === "Pago" && Boolean(newPaidAt);
-    const reversed = oldStatus === "Pago" && newStatus === "Pendente de pagamento" && !newPaidAt;
-    if (!paid && !reversed) return false;
-    changes += 1;
-  }
-  if (!changes || nextAudit.length !== previousAudit.length + changes) return false;
-  if (!same(nextAudit.slice(0, previousAudit.length), previousAudit)) return false;
-  return nextAudit
-    .slice(previousAudit.length)
-    .every(event => ["Pagamento realizado", "Pagamento estornado"].includes(event.action));
-}
-
-function financialSettlementOperationChanged(current: Operation, requested: Operation) {
-  if (!current.releaseReview || !requested.releaseReview) return false;
-  const { releaseReview: _currentRelease, persistenceVersion: _currentVersion, ...currentOperation } = current;
-  const { releaseReview: _requestedRelease, persistenceVersion: _requestedVersion, ...requestedOperation } = requested;
-  return (
-    same(currentOperation, requestedOperation) &&
-    financialSettlementChanged(current.releaseReview, requested.releaseReview)
-  );
-}
-
 export function releaseReviewChanged(current: Operation | null, requested: Operation) {
   return !same(current?.releaseReview, requested.releaseReview);
 }
@@ -60,7 +26,7 @@ export function governReleaseTransition(
   const previous = current?.releaseReview;
 
   if (previous?.status === "Enviada ao financeiro") {
-    if (!same(previous, next) && !financialSettlementChanged(previous, next))
+    if (!same(previous, next))
       throw new OperationGovernanceError("Uma liberação aprovada não pode ser reescrita; use estorno ou cancelamento.");
     return requested;
   }
@@ -104,11 +70,7 @@ export function governReleaseTransition(
   }
 
   if (!previous?.preparedById)
-    throw new OperationGovernanceError(
-      "A liberação precisa ser preparada e salva antes de ser aprovada por uma segunda pessoa.",
-    );
-  if (previous.preparedById === actor.id)
-    throw new OperationGovernanceError("Quem preparou a liberação não pode aprovar o próprio pagamento.");
+    throw new OperationGovernanceError("A liberação precisa ser preparada e salva antes de ser enviada ao financeiro.");
   if (approvalChangedPreparedRelease(previous, next))
     throw new OperationGovernanceError(
       "Favorecidos, contas, valores e data não podem mudar durante a aprovação; devolva para nova preparação.",
@@ -148,12 +110,22 @@ export function governReleaseTransition(
 
 /** Invariantes mínimas que não podem depender apenas da interface do navegador. */
 export function assertOperationTransition(current: Operation | null, requested: Operation) {
+  if (!current && requested.stage !== 1)
+    throw new OperationGovernanceError("Uma operação nova deve começar na etapa Entrada.");
   if (
-    current &&
-    ["Cancelada", "Liberada ao financeiro"].includes(current.status) &&
-    !same(current, requested) &&
-    !(current.status === "Liberada ao financeiro" && financialSettlementOperationChanged(current, requested))
+    !current &&
+    (requested.riskReview ||
+      requested.eligibilityReview ||
+      requested.approvalReview ||
+      requested.releaseReview ||
+      requested.stageCompletions?.length)
   )
+    throw new OperationGovernanceError(
+      "Uma operação nova não pode trazer decisões ou conclusões de etapas posteriores.",
+    );
+  if (current && requested.stage < current.stage)
+    throw new OperationGovernanceError("O retorno de etapa exige o fluxo explícito de devolução.");
+  if (current && ["Cancelada", "Liberada ao financeiro"].includes(current.status) && !same(current, requested))
     throw new OperationGovernanceError("Uma operação encerrada é somente para consulta e não pode ser reescrita.");
   if (requested.stage > 1 && requested.titleCount <= 0)
     throw new OperationGovernanceError("A operação precisa ter ao menos um título antes de avançar da entrada.");
@@ -165,11 +137,7 @@ export function assertOperationTransition(current: Operation | null, requested: 
   )
     throw new OperationGovernanceError("A liberação financeira exige a etapa 6 e uma autorização concluída.");
   if (current && requested.stage > current.stage + 1) {
-    const completed = new Set((requested.stageCompletions ?? []).map(item => item.stageId));
-    for (let stage = current.stage; stage < requested.stage; stage++) {
-      if (!completed.has(stage))
-        throw new OperationGovernanceError("O avanço precisa preservar a conclusão de cada etapa intermediária.");
-    }
+    throw new OperationGovernanceError("O avanço precisa validar cada etapa intermediária no servidor.");
   }
   if (current?.stage !== 6 && requested.stage === 6) {
     const review = requested.approvalReview;

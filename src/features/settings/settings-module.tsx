@@ -23,6 +23,7 @@ import {
 } from "@/src/domain/company/destination";
 import { formatDocument } from "@/src/domain/registry/parties";
 import { LocalizedNumberInput } from "@/src/ui/localized-number-input";
+import { PolicyApprovalPanel } from "./policy-approval-panel";
 
 const goalPeriods: Array<{ id: HomePeriod; label: string }> = [
   { id: "dia", label: "Dia" },
@@ -414,15 +415,22 @@ export default function SettingsModule({
           )}
 
           {section === "policies" && (
-            <PoliciesModule
-              state={policies}
-              persistedState={persistedPolicies}
-              onState={onPolicies}
-              onSave={onSavePolicies}
-              approvalActor={policyApprovalActor}
-              demoMode={demoMode}
-              embedded
-            />
+            <>
+              <PolicyApprovalPanel
+                companies={destinations.map(destination => destination.name)}
+                actorId={policyApprovalActor.id}
+                demoMode={demoMode}
+              />
+              <PoliciesModule
+                state={policies}
+                persistedState={persistedPolicies}
+                onState={onPolicies}
+                onSave={onSavePolicies}
+                approvalActor={policyApprovalActor}
+                demoMode={demoMode}
+                embedded
+              />
+            </>
           )}
 
           {section === "access" && <UsersAccessPanel state={access} onState={onAccess} demoMode={demoMode} />}

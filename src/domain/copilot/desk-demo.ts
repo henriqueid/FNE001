@@ -18,7 +18,7 @@ export const deskDemoPolicy: DeskPolicy = {
 export const deskDemoFiles: DeskFile[] = [
   { name: "lote_nfe_outubro.xml", format: "XML", detail: "NF-e com duplicatas" },
   { name: "remessa_cnab400.rem", format: "CNAB", detail: "CNAB 400" },
-  { name: "extrato_padrao.xlsx", format: "XLS", detail: "Layout padrão de extrato" },
+  { name: "extrato_padrao.csv", format: "XLS", detail: "CSV no modelo de importação" },
 ];
 
 export const DESK_NEW_DEBTOR = "Mercantil Boa Vista";
@@ -72,11 +72,11 @@ export const deskDemoTitles: DeskTitle[] = [
   },
 ];
 
-/** Formato reconhecido pela extensão do arquivo (a leitura real do conteúdo fica para o backend). */
+/** Formato de entrada reconhecido pela extensão; o normalizador valida o conteúdo. */
 export function deskFileFormat(fileName: string): Pick<DeskFile, "format" | "detail"> {
   const extension = fileName.split(".").at(-1)?.toLocaleLowerCase() ?? "";
   if (extension === "xml") return { format: "XML", detail: "NF-e" };
   if (["rem", "ret", "txt", "cnab"].includes(extension)) return { format: "CNAB", detail: "CNAB 240/400" };
-  if (["xls", "xlsx", "csv"].includes(extension)) return { format: "XLS", detail: "Layout padrão de extrato" };
+  if (extension === "csv") return { format: "XLS", detail: "Layout padrão de extrato" };
   return { format: "OUTRO", detail: "Formato não reconhecido" };
 }

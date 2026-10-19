@@ -47,7 +47,9 @@ describe("Mesa Inteligente · motor", () => {
   it("reconhece o formato pela extensão", () => {
     expect(deskFileFormat("lote.XML").format).toBe("XML");
     expect(deskFileFormat("remessa.rem").format).toBe("CNAB");
-    expect(deskFileFormat("extrato.xlsx").format).toBe("XLS");
+    expect(deskFileFormat("extrato.xlsx").format).toBe("OUTRO");
+    expect(deskFileFormat("extrato.xls").format).toBe("OUTRO");
+    expect(deskFileFormat("extrato.csv").format).toBe("XLS");
     expect(deskFileFormat("foto.png").format).toBe("OUTRO");
   });
 });

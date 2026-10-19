@@ -28,7 +28,7 @@ export function VisitModal({
   prospect?: Prospect;
   defaultRep: string;
   onClose: () => void;
-  onApply: (r: CResult) => boolean;
+  onApply: (r: CResult) => boolean | Promise<boolean>;
 }) {
   const targets = [...state.links.map(l => l.clientName), ...state.prospects.filter(p => !p.lost).map(p => p.name)];
   const [form, setForm] = useState({
@@ -59,8 +59,8 @@ export function VisitModal({
             </button>
             <button
               className="fn-btn primary"
-              onClick={() => {
-                if (onApply(recordVisit(state, visit.id, result))) onClose();
+              onClick={async () => {
+                if (await onApply(recordVisit(state, visit.id, result))) onClose();
               }}
             >
               Salvar
@@ -117,9 +117,9 @@ export function VisitModal({
           </button>
           <button
             className="fn-btn primary"
-            onClick={() => {
+            onClick={async () => {
               if (
-                onApply(
+                await onApply(
                   scheduleVisit(state, {
                     ...form,
                     prospectId: prospect?.id,

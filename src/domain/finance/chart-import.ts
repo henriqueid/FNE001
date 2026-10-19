@@ -1,6 +1,6 @@
 // Importação do plano de contas no leiaute padrão Strato (CSV).
 // Fluxo: ler o arquivo → validar a hierarquia → montar o de-para das contas em uso → aplicar.
-// Nada é apagado: ao substituir o plano, os lançamentos são reclassificados e guardam a conta original.
+// Lançamentos registrados são imutáveis: o de-para não pode reclassificar suas partidas históricas.
 
 import {
   ledgerRoles,
@@ -462,19 +462,10 @@ export function applyChartImport(
     const problems = mappingProblems(state, target, rows, input.mapping);
     if (problems.length) throw new Error(problems[0]);
     const map = (code: string) => input.mapping[code] ?? code;
-    let reclassified = 0;
-    const journal = state.journal.map(j => {
-      if (!j.lines.some(l => map(l.ledger) !== l.ledger)) return j;
-      reclassified++;
-      return {
-        ...j,
-        lines: j.lines.map(l =>
-          map(l.ledger) === l.ledger
-            ? l
-            : { ...l, ledger: map(l.ledger), originalLedger: l.originalLedger ?? l.ledger },
-        ),
-      };
-    });
+    if (state.journal.some(entry => entry.lines.some(line => map(line.ledger) !== line.ledger)))
+      throw new Error(
+        "O de-para não pode alterar contas de lançamentos já registrados. Preserve os códigos históricos ou use a opção de acrescentar contas.",
+      );
     const roles = Object.fromEntries(ledgerRoles.map(r => [r.key, map(roleLedger(state, r.key))])) as Record<
       LedgerRole,
       string
@@ -487,15 +478,15 @@ export function applyChartImport(
       accounts: state.accounts.map(a => ({ ...a, ledgerCode: map(a.ledgerCode) })),
       categories: state.categories.map(c => ({ ...c, ledgerCode: map(c.ledgerCode) })),
       titles: state.titles.map(t => ({ ...t, settlementLedger: map(t.settlementLedger) })),
-      journal,
+      journal: state.journal,
       chartImports: [
         ...(state.chartImports ?? []),
-        { at, by, file: input.file, mode: input.mode, accounts: target.length, reclassified },
+        { at, by, file: input.file, mode: input.mode, accounts: target.length, reclassified: 0 },
       ],
     };
     return {
       state: next,
-      message: `Plano importado: ${target.length} contas${reclassified ? ` · ${reclassified} lançamento(s) reclassificado(s) pelo de-para` : ""}.`,
+      message: `Plano importado: ${target.length} contas. Lançamentos históricos preservados.`,
     };
   } catch (e) {
     return { state, error: e instanceof Error ? e.message : String(e) };

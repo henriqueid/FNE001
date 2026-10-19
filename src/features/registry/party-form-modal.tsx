@@ -237,7 +237,14 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
     }
     setSaving(true);
     const safeDraft = !isDemo && bankAccountsChanged ? { ...draft, bankAccounts: party.bankAccounts } : draft;
-    const result = saveParty(safeDraft, changeReason);
+    let result: { error?: string; message?: string };
+    try {
+      result = await saveParty(safeDraft, changeReason);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível confirmar o cadastro.");
+      setSaving(false);
+      return;
+    }
     if (result.error) {
       setError(result.error);
       setSaving(false);

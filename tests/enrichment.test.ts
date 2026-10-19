@@ -51,7 +51,7 @@ describe("hub de enriquecimento", () => {
     });
 
     expect(
-      snapshot.checks.filter(check => check.providerId === "RECEITA").every(check => check.provenance === "OFICIAL"),
+      snapshot.checks.filter(check => check.providerId === "RECEITA").every(check => check.provenance === "PENDENTE"),
     ).toBe(true);
     expect(snapshot.configurationFingerprint).not.toBe(
       buildEnrichmentSnapshot({

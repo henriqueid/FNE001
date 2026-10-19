@@ -18,7 +18,7 @@ export function BanksTab({
 }: {
   state: FinanceState;
   scope: string;
-  onApply: (r: Result) => boolean;
+  onApply: (r: Result) => boolean | Promise<boolean>;
 }) {
   const destinations = useCompanyDestinations();
   const [editing, setEditing] = useState<CompanyBankAccount | null>(null);
@@ -119,8 +119,8 @@ export function BanksTab({
           isNew={!editing.id}
           hasMoves={state.movements.some(m => m.accountId === editing.id)}
           onClose={() => setEditing(null)}
-          onSave={a => {
-            if (onApply(saveAccount(state, a))) setEditing(null);
+          onSave={async a => {
+            if (await onApply(saveAccount(state, a))) setEditing(null);
           }}
         />
       )}
@@ -144,6 +144,12 @@ export function AccountModal({
   const destinations = useCompanyDestinations();
   const [a, setA] = useState<CompanyBankAccount>(account);
   const set = (change: Partial<CompanyBankAccount>) => setA(prev => ({ ...prev, ...change }));
+  const [interestMode, setInterestMode] = useState<"daily" | "monthly">(
+    account.collection?.monthlyInterestPercent !== undefined ? "monthly" : "daily",
+  );
+  const [monthlyInterest, setMonthlyInterest] = useState(account.collection?.monthlyInterestPercent?.toFixed(2) ?? "");
+  const [lateFine, setLateFine] = useState(account.collection?.lateFinePercent?.toFixed(2) ?? "");
+  const bankAssignsOurNumber = a.bankCode === "341" && a.collection?.wallet.trim() === "112";
   // Valores digitados ficam como texto até salvar (aceita "1.500,55").
   const [opening, setOpening] = useState(formatMoneyInput(account.openingBalance));
   const [minimum, setMinimum] = useState(formatMoneyInput(account.minimumBalance));
@@ -189,9 +195,23 @@ export function AccountModal({
         <Field label="Banco">
           <select
             value={a.bankCode}
-            onChange={e =>
-              set({ bankCode: e.target.value, bankName: bankList.find(b => b[0] === e.target.value)?.[1] ?? "" })
-            }
+            onChange={e => {
+              const bankCode = e.target.value;
+              if (bankCode !== "341") setLateFine("");
+              set({
+                bankCode,
+                bankName: bankList.find(b => b[0] === bankCode)?.[1] ?? "",
+                collection:
+                  a.collection && bankCode !== "341"
+                    ? {
+                        ...a.collection,
+                        lateFinePercent: undefined,
+                        lateFineDaysAfterDue: undefined,
+                        sendPayerEmail: undefined,
+                      }
+                    : a.collection,
+              });
+            }}
           >
             {bankList.map(([code, n]) => (
               <option key={code} value={code}>
@@ -203,7 +223,7 @@ export function AccountModal({
         <Field label="Agência">
           <input value={a.agency} onChange={e => set({ agency: e.target.value })} />
         </Field>
-        <Field label="Conta com dígito">
+        <Field label={a.collection?.layout === "CNAB 400" ? "Conta sem dígito (CNAB 400)" : "Conta com dígito"}>
           <input value={a.account} onChange={e => set({ account: e.target.value })} />
         </Field>
         <Field label="Apelido">
@@ -283,7 +303,7 @@ export function AccountModal({
               set({
                 usage: { ...a.usage, collection: e.target.checked },
                 collection: e.target.checked
-                  ? (a.collection ?? { agreement: "", wallet: "", layout: "CNAB 240", nextOurNumber: 1 })
+                  ? (a.collection ?? { agreement: "", wallet: "", layout: "CNAB 240", nextOurNumber: 0 })
                   : undefined,
               })
             }
@@ -319,13 +339,210 @@ export function AccountModal({
               <option>CNAB 400</option>
             </select>
           </Field>
-          <Field label="Próximo nosso número">
-            <input
-              inputMode="numeric"
-              value={String(a.collection.nextOurNumber)}
-              onChange={e => set({ collection: { ...a.collection!, nextOurNumber: Number(e.target.value) || 1 } })}
-            />
-          </Field>
+          {bankAssignsOurNumber ? (
+            <p className="fn-note fn-field wide">
+              Na carteira Itaú 112, o banco atribui o nosso número e o informa no retorno. A sequência de remessa abaixo
+              continua obrigatória.
+            </p>
+          ) : (
+            <Field label="Próximo nosso número (obrigatório)">
+              <input
+                required
+                type="number"
+                min={1}
+                step={1}
+                inputMode="numeric"
+                value={a.collection.nextOurNumber || ""}
+                onChange={e => set({ collection: { ...a.collection!, nextOurNumber: Number(e.target.value) } })}
+              />
+            </Field>
+          )}
+          {a.collection.layout === "CNAB 400" && (
+            <>
+              <Field label="Dígito da conta (obrigatório)">
+                <input
+                  required
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={a.collection.accountDigit ?? ""}
+                  onChange={e => set({ collection: { ...a.collection!, accountDigit: e.target.value } })}
+                />
+              </Field>
+              <Field label="CPF/CNPJ real do beneficiário da conta (obrigatório)">
+                <input
+                  required
+                  value={a.collection.beneficiaryDocument ?? ""}
+                  onChange={e => set({ collection: { ...a.collection!, beneficiaryDocument: e.target.value } })}
+                />
+              </Field>
+              <Field label="Nome/razão social do beneficiário (obrigatório)">
+                <input
+                  required
+                  value={a.collection.beneficiaryName ?? ""}
+                  onChange={e => set({ collection: { ...a.collection!, beneficiaryName: e.target.value } })}
+                />
+              </Field>
+              <Field label="Próxima sequência de remessa acordada com o banco (obrigatório)">
+                <input
+                  required
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={a.collection.nextRemittanceSequence ?? ""}
+                  onChange={e =>
+                    set({
+                      collection: {
+                        ...a.collection!,
+                        nextRemittanceSequence: e.target.value ? Number(e.target.value) : undefined,
+                      },
+                    })
+                  }
+                />
+              </Field>
+              <Field label="Modalidade de juros">
+                <select
+                  value={interestMode}
+                  onChange={e => {
+                    setInterestMode(e.target.value as "daily" | "monthly");
+                    setMonthlyInterest("");
+                    set({
+                      collection: {
+                        ...a.collection!,
+                        dailyInterestCents: undefined,
+                        monthlyInterestPercent: undefined,
+                      },
+                    });
+                  }}
+                >
+                  <option value="daily">Valor fixo diário em centavos</option>
+                  <option value="monthly">Percentual mensal (base de 30 dias)</option>
+                </select>
+              </Field>
+              {interestMode === "monthly" ? (
+                <Field
+                  label="Juros mensal (% a.m.)"
+                  hint="Informe a taxa contratada com até duas casas decimais. A remessa usa o equivalente diário em base de 30 dias."
+                >
+                  <input
+                    required
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    inputMode="decimal"
+                    max={100}
+                    value={monthlyInterest}
+                    onChange={e => {
+                      setMonthlyInterest(e.target.value);
+                      set({
+                        collection: {
+                          ...a.collection!,
+                          monthlyInterestPercent: e.target.value === "" ? undefined : Number(e.target.value),
+                          dailyInterestCents: undefined,
+                        },
+                      });
+                    }}
+                    onBlur={() => {
+                      if (/^\d+(?:\.\d{0,2})?$/.test(monthlyInterest))
+                        setMonthlyInterest(Number(monthlyInterest).toFixed(2));
+                    }}
+                  />
+                </Field>
+              ) : (
+                <Field label="Juros por dia em centavos (obrigatório; informe 0 sem juros)">
+                  <input
+                    required
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={a.collection.dailyInterestCents ?? ""}
+                    onChange={e =>
+                      set({
+                        collection: {
+                          ...a.collection!,
+                          dailyInterestCents: e.target.value === "" ? undefined : Number(e.target.value),
+                          monthlyInterestPercent: undefined,
+                        },
+                      })
+                    }
+                  />
+                </Field>
+              )}
+              {a.bankCode === "341" && (
+                <>
+                  <Field
+                    label="Multa (%)"
+                    hint="Informe o percentual contratado com até duas casas decimais; 0 significa sem multa."
+                  >
+                    <input
+                      type="number"
+                      min={0}
+                      max="99.99"
+                      step="0.01"
+                      inputMode="decimal"
+                      value={lateFine}
+                      onChange={e => {
+                        setLateFine(e.target.value);
+                        set({
+                          collection: {
+                            ...a.collection!,
+                            lateFinePercent: e.target.value === "" ? undefined : Number(e.target.value),
+                          },
+                        });
+                      }}
+                      onBlur={() => {
+                        if (/^\d+(?:\.\d{0,2})?$/.test(lateFine)) setLateFine(Number(lateFine).toFixed(2));
+                      }}
+                    />
+                  </Field>
+                  <Field
+                    label="Dias após o vencimento para cobrar multa"
+                    hint="Obrigatório quando há multa. Informe 0 para iniciar na data do vencimento; máximo de 365 dias."
+                  >
+                    <input
+                      required={(a.collection.lateFinePercent ?? 0) > 0}
+                      type="number"
+                      min={0}
+                      max={365}
+                      step={1}
+                      inputMode="numeric"
+                      value={a.collection.lateFineDaysAfterDue ?? ""}
+                      onChange={e =>
+                        set({
+                          collection: {
+                            ...a.collection!,
+                            lateFineDaysAfterDue: e.target.value === "" ? undefined : Number(e.target.value),
+                          },
+                        })
+                      }
+                    />
+                  </Field>
+                  <label className="fn-check">
+                    <input
+                      type="checkbox"
+                      checked={a.collection.sendPayerEmail === true}
+                      onChange={e => set({ collection: { ...a.collection!, sendPayerEmail: e.target.checked } })}
+                    />
+                    Incluir e-mail do sacado na remessa Itaú (registro 5)
+                  </label>
+                </>
+              )}
+              {a.bankCode === "237" && (
+                <label className="fn-check">
+                  <input
+                    type="checkbox"
+                    checked={a.collection.finalBeneficiaryEnabled === true}
+                    onChange={e => set({ collection: { ...a.collection!, finalBeneficiaryEnabled: e.target.checked } })}
+                  />
+                  Cadastro de beneficiário final habilitado pelo Bradesco para duplicatas adquiridas
+                </label>
+              )}
+              <p className="fn-note fn-field wide">
+                Informe a agência e a conta somente com números, sem dígito. Itaú: carteiras 109 e 112. Na 112, o nosso
+                número é atribuído pelo banco no retorno. Bradesco: carteiras 09 ou 19, com convênio real. A geração
+                exige cadastro completo do sacado e do cedente.
+              </p>
+            </>
+          )}
         </div>
       )}
     </Modal>

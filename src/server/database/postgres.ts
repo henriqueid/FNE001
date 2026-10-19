@@ -27,6 +27,9 @@ class PostgresStatement implements DecisionStatement {
   ) {}
 
   bind(...values: unknown[]) {
+    const missing = values.findIndex(value => value === undefined);
+    if (missing >= 0)
+      throw new Error(`Parâmetro SQL ausente na posição ${missing + 1} (${this.query.trim().slice(0, 90)}).`);
     this.values = values;
     return this;
   }

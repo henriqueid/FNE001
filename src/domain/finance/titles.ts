@@ -35,6 +35,7 @@ export type TitleInput = {
   operationId?: string;
   payableId?: string;
   linkedTitleId?: string;
+  portfolioTitleId?: string;
 };
 
 export function createTitleDraft(d: Draft, input: TitleInput, by: string) {
@@ -87,6 +88,7 @@ export function createTitleDraft(d: Draft, input: TitleInput, by: string) {
     operationId: input.operationId,
     payableId: input.payableId,
     linkedTitleId: input.linkedTitleId,
+    portfolioTitleId: input.portfolioTitleId,
     history: [
       hist(
         by,

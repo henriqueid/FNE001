@@ -9,10 +9,16 @@ import {
   assertOperationTransition,
   governReleaseTransition,
   OperationGovernanceError,
-  releaseReviewChanged,
 } from "@/src/server/operations/governance";
 import { loadOperationSnapshot, loadOperations, saveOperation } from "@/src/server/operations/repository";
 import { ReceivableDuplicateError } from "@/src/server/receivables/repository";
+import { assertFormalizationDocuments } from "@/src/server/operations/formalization-documents";
+import {
+  assertAuthoritativeOperation,
+  assertOperationTitleTotals,
+  loadOperationAuthorityContext,
+  operationRequiresAuthority,
+} from "@/src/server/operations/validation";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
@@ -51,30 +57,53 @@ export async function PUT(request: Request) {
     return json({ error: "Comando de persistência inválido." }, 400);
   const error = validatePersistedOperation(command.operation);
   if (error) return json({ error }, 400);
-  const current = await loadOperationSnapshot(access.db, access.tenantId, command.operation.id);
-  const currentCompany = current?.vehicle ?? (await operationCompany(access.db, access.tenantId, command.operation.id));
-  const scopeError = operationWriteScopeError(access.principal, currentCompany, command.operation.vehicle);
-  if (scopeError) return json({ error: scopeError }, 403);
+  const requested = command.operation;
+  const expectedVersion = Number(command.expectedVersion);
+  if (!access.db.transaction) return json({ error: "A gravação exige transação de banco." }, 503);
   try {
-    if (releaseReviewChanged(current, command.operation) && !access.principal.permissions.includes("finance:release"))
-      return json({ error: "Somente o Financeiro pode preparar ou aprovar uma liberação." }, 403);
-    const permissionError = operationMutationPermissionError(current, command.operation, access.principal.permissions);
-    if (permissionError) return json({ error: permissionError }, 403);
-    assertOperationTransition(current, command.operation);
-    const governed = governReleaseTransition(current, command.operation, access.principal);
-    const operation = await saveOperation(
-      access.db,
-      access.tenantId,
-      access.principal.id,
-      governed,
-      Number(command.expectedVersion),
-    );
-    if (!operation)
-      return json(
-        { error: "A operação foi alterada por outra pessoa. Atualize a tela antes de tentar novamente." },
-        409,
+    return await access.db.transaction(async transaction => {
+      await transaction
+        .prepare("select pg_advisory_xact_lock(hashtextextended(?, 0))")
+        .bind(`strato.finance:${access.tenantId}`)
+        .run();
+      const current = await loadOperationSnapshot(transaction, access.tenantId, requested.id);
+      const currentCompany = current?.vehicle ?? (await operationCompany(transaction, access.tenantId, requested.id));
+      const scopeError = operationWriteScopeError(access.principal, currentCompany, requested.vehicle);
+      if (scopeError) return json({ error: scopeError }, 403);
+      const permissionError = operationMutationPermissionError(current, requested, access.principal.permissions);
+      if (permissionError) return json({ error: permissionError }, 403);
+      for (const field of ["approvals", "finalDecision", "serverApproval"] as const) {
+        const previous = current?.approvalReview as Record<string, unknown> | undefined;
+        const next = requested.approvalReview as Record<string, unknown> | undefined;
+        if (JSON.stringify(previous?.[field]) !== JSON.stringify(next?.[field]))
+          throw new OperationGovernanceError("Decisões de aprovação exigem o comando dedicado de alçada.");
+      }
+      if (JSON.stringify(current?.eligibilityReview) !== JSON.stringify(requested.eligibilityReview))
+        throw new OperationGovernanceError(
+          "Execuções e exceções de elegibilidade exigem o comando dedicado do servidor.",
+        );
+      assertOperationTransition(current, requested);
+      assertOperationTitleTotals(requested);
+      await assertFormalizationDocuments(requested, access.tenantId, access.principal.id);
+      if (current && operationRequiresAuthority(current, requested)) {
+        const authority = await loadOperationAuthorityContext(transaction, access.tenantId, current);
+        assertAuthoritativeOperation(current, requested, authority);
+      }
+      const governed = governReleaseTransition(current, requested, access.principal);
+      const operation = await saveOperation(
+        transaction,
+        access.tenantId,
+        access.principal.id,
+        governed,
+        expectedVersion,
       );
-    return json({ operation });
+      if (!operation)
+        return json(
+          { error: "A operação foi alterada por outra pessoa. Atualize a tela antes de tentar novamente." },
+          409,
+        );
+      return json({ operation });
+    });
   } catch (reason) {
     if (reason instanceof OperationGovernanceError) return json({ error: reason.message }, 409);
     if (reason instanceof ReceivableDuplicateError)

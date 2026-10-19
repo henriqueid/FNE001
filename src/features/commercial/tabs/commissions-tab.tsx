@@ -32,8 +32,8 @@ export function CommissionsTab({
   repFilter: string;
   today: string;
   finance: FinanceState;
-  onFinance: (s: FinanceState) => void;
-  onApply: (r: CResult) => boolean;
+  onFinance: (s: FinanceState) => void | Promise<void>;
+  onApply: (r: CResult) => boolean | Promise<boolean>;
   onToast: (t: Toast) => void;
   onRules: () => void;
 }) {
@@ -49,7 +49,7 @@ export function CommissionsTab({
   const total = lines.reduce((s, l) => s + l.total, 0);
   const months = Array.from({ length: 12 }, (_, i) => shiftMonth(current, -i));
 
-  function sendToFinance() {
+  async function sendToFinance() {
     if (!closing) return;
     let s = finance;
     const step = (r: { state: FinanceState; error?: string }) => {
@@ -103,7 +103,7 @@ export function CommissionsTab({
           );
         });
       const ids = s.titles.filter(t => !before.has(t.id)).map(t => t.id);
-      onFinance(s);
+      await onFinance(s);
       onApply({
         state: {
           ...state,

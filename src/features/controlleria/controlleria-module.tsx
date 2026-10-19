@@ -1,5 +1,6 @@
 "use client";
 
+import type { StateCommit } from "@/src/ui/confirmed-state";
 import { useMemo, useState } from "react";
 import { type Operation } from "@/src/domain/core/types";
 import { todayIso } from "@/src/domain/finance/ledger";
@@ -12,6 +13,8 @@ import { type PortfolioGridRow } from "@/src/features/portfolio/portfolio-title-
 import { useRegistry } from "@/src/app/registry-context";
 import { repAt } from "@/src/domain/commercial/rules";
 import { ChartIcon, CheckIcon, ClockIcon, ListIcon, ReceiptIcon, ScaleIcon, ShieldIcon } from "@/src/ui/icons";
+import { ReportExport } from "@/src/ui/report-export";
+import { buildControlReport } from "@/src/domain/reports/controlleria";
 import { ModuleTabs } from "@/src/ui/module-tabs";
 
 type Tab = "painel" | "checagem" | "formalizacao" | "conciliacao" | "auditoria" | "relatorios";
@@ -25,7 +28,7 @@ export default function ControlleriaModule({
 }: {
   operations: Operation[];
   portfolio: PortfolioState;
-  onPortfolio: (state: PortfolioState) => void;
+  onPortfolio: StateCommit<PortfolioState>;
   companyScope: string;
   onOpenOperation: (operation: Operation) => void;
 }) {
@@ -332,38 +335,45 @@ export default function ControlleriaModule({
       )}
 
       {tab === "relatorios" && (
-        <div className="ct-report-grid">
-          <Report
-            title="Checagem por resultado"
-            rows={[
-              ["Confirmados", confirmed.length],
-              ["Pendentes", checks.filter(i => ["Não iniciada", "Pendente"].includes(i.status)).length],
-              ["Não localizados", checks.filter(i => i.status === "Não localizado").length],
-              ["Divergentes", divergent.length],
-            ]}
-          />
-          <Report
-            title="Formalização por progresso"
-            rows={[
-              ["Concluída", formalization.filter(i => i.progress === 100).length],
-              ["Acima de 75%", formalization.filter(i => i.progress >= 75 && i.progress < 100).length],
-              ["Entre 25% e 74%", formalization.filter(i => i.progress >= 25 && i.progress < 75).length],
-              ["Abaixo de 25%", formalization.filter(i => i.progress < 25).length],
-            ]}
-          />
-          <Report
-            title="Exposição dos controles"
-            rows={[
-              [
-                "Checagem pendente",
-                compact(checks.filter(i => i.status !== "Confirmado").reduce((s, i) => s + i.balance, 0)),
-              ],
-              ["Divergências", compact(divergent.reduce((s, i) => s + i.balance, 0))],
-              ["Conciliação", compact(reconciliation.reduce((s, i) => s + i.balance, 0))],
-              ["Títulos monitorados", titles.length],
-            ]}
-          />
-        </div>
+        <>
+          <div className="fn-toolbar">
+            <ReportExport
+              report={() => buildControlReport(companyScope, today, checks, formalization, reconciliation)}
+            />
+          </div>
+          <div className="ct-report-grid">
+            <Report
+              title="Checagem por resultado"
+              rows={[
+                ["Confirmados", confirmed.length],
+                ["Pendentes", checks.filter(i => ["Não iniciada", "Pendente"].includes(i.status)).length],
+                ["Não localizados", checks.filter(i => i.status === "Não localizado").length],
+                ["Divergentes", divergent.length],
+              ]}
+            />
+            <Report
+              title="Formalização por progresso"
+              rows={[
+                ["Concluída", formalization.filter(i => i.progress === 100).length],
+                ["Acima de 75%", formalization.filter(i => i.progress >= 75 && i.progress < 100).length],
+                ["Entre 25% e 74%", formalization.filter(i => i.progress >= 25 && i.progress < 75).length],
+                ["Abaixo de 25%", formalization.filter(i => i.progress < 25).length],
+              ]}
+            />
+            <Report
+              title="Exposição dos controles"
+              rows={[
+                [
+                  "Checagem pendente",
+                  compact(checks.filter(i => i.status !== "Confirmado").reduce((s, i) => s + i.balance, 0)),
+                ],
+                ["Divergências", compact(divergent.reduce((s, i) => s + i.balance, 0))],
+                ["Conciliação", compact(reconciliation.reduce((s, i) => s + i.balance, 0))],
+                ["Títulos monitorados", titles.length],
+              ]}
+            />
+          </div>
+        </>
       )}
 
       {detail && (

@@ -8,10 +8,11 @@ import { type Operation } from "@/src/domain/core/types";
 import { inScope } from "@/src/domain/finance/banking";
 import { todayIso, type Result } from "@/src/domain/finance/ledger";
 import { type FinanceState } from "@/src/domain/finance/model";
+import type { PortfolioState } from "@/src/domain/portfolio/model";
 import { confirmCollection, isOperationLocked, returnOperation, sendCollection } from "@/src/domain/finance/releases";
 import { BY, Field, Modal, StatusChip, br, money, type Action } from "@/src/features/finance/finance-ui";
 import { AlertIcon, ArrowIcon, BankIcon, CheckIcon, ClockIcon, LockIcon, UndoIcon } from "@/src/ui/icons";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export function ReleasesTab({
   state,
@@ -21,6 +22,8 @@ export function ReleasesTab({
   onApply,
   onOpenOperation,
   onReturn,
+  allowCollectionSimulation = true,
+  portfolio,
 }: {
   state: FinanceState;
   scope: string;
@@ -29,6 +32,8 @@ export function ReleasesTab({
   onApply: (r: Result) => void;
   onOpenOperation: (op: Operation) => void;
   onReturn: (op: Operation) => void;
+  allowCollectionSimulation?: boolean;
+  portfolio?: PortfolioState;
 }) {
   const today = todayIso();
   const released = operations.filter(
@@ -64,7 +69,12 @@ export function ReleasesTab({
         const titles = state.titles.filter(t => t.operationId === op.id && t.origin === "Liberação de operação");
         const active = titles.filter(t => t.status !== "Cancelado");
         const reg = state.registrations[op.id];
-        const locked = isOperationLocked(state, op.id);
+        const bankTitles =
+          portfolio?.titles.filter(title => title.operationId === op.id && title.status !== "Cancelado") ?? [];
+        const linkedTitles = bankTitles.filter(title =>
+          ["Registrado", "Pendente de integração", "Liquidado"].includes(title.bankStatus),
+        );
+        const locked = allowCollectionSimulation ? isOperationLocked(state, op.id) : linkedTitles.length > 0;
         const collectionAccounts = state.accounts.filter(
           a => a.active && a.usage.collection && a.company === op.vehicle,
         );
@@ -85,7 +95,10 @@ export function ReleasesTab({
               <div className="fn-release-status">
                 {locked ? (
                   <span className="fn-chip lock">
-                    <LockIcon /> Em cobrança · registro confirmado {reg?.confirmedAt}
+                    <LockIcon />{" "}
+                    {allowCollectionSimulation
+                      ? `Em cobrança · registro confirmado ${reg?.confirmedAt ?? ""}`
+                      : `${linkedTitles.length} título(s) com vínculo bancário`}
                   </span>
                 ) : reg ? (
                   <span className="fn-chip warn">
@@ -154,7 +167,7 @@ export function ReleasesTab({
               <button className="fn-btn ghost" onClick={() => onOpenOperation(op)}>
                 Abrir operação
               </button>
-              {!reg && op.status === "Liberada ao financeiro" && (
+              {allowCollectionSimulation && !reg && op.status === "Liberada ao financeiro" && (
                 <button
                   className="fn-btn ghost"
                   disabled={!collectionAccounts.length}
@@ -164,7 +177,7 @@ export function ReleasesTab({
                   Gerar remessa de cobrança · {collectionAccounts[0]?.nickname ?? "sem conta"}
                 </button>
               )}
-              {reg && !locked && (
+              {allowCollectionSimulation && reg && !locked && (
                 <button className="fn-btn action-confirm" onClick={() => onApply(confirmCollection(state, op.id))}>
                   <CheckIcon /> Confirmar retorno do banco
                 </button>
@@ -180,10 +193,16 @@ export function ReleasesTab({
                 </button>
               )}
             </div>
+            {!allowCollectionSimulation && (
+              <p className="fn-note">
+                Gere remessas e importe o retorno original em Financeiro → Bancos. O registro dos títulos depende da
+                resposta do banco.
+              </p>
+            )}
             {locked && (
               <p className="fn-note">
-                <LockIcon /> Os títulos foram enviados e confirmados pelo banco. A operação está em cobrança e não pode
-                mais ser devolvida nem estornada; ajustes seguem pela cobrança (baixa, prorrogação, recompra).
+                <LockIcon /> Há títulos com vínculo bancário ativo. Conclua a baixa bancária e confira o retorno antes
+                de devolver a operação.
               </p>
             )}
           </section>
@@ -198,11 +217,19 @@ export function ReturnModal({
   state,
   onClose,
   onDone,
+  onReturn,
 }: {
   op: Operation;
   state: FinanceState;
   onClose: () => void;
-  onDone: (r: ReturnType<typeof returnOperation>) => void;
+  onDone: (r: ReturnType<typeof returnOperation>) => void | Promise<void>;
+  onReturn?: (intent: {
+    targetStage: number;
+    reason: string;
+    cashMoved: boolean;
+    date: string;
+    commandId: string;
+  }) => Promise<void>;
 }) {
   const titles = state.titles.filter(
     t => t.operationId === op.id && t.origin === "Liberação de operação" && t.status !== "Cancelado",
@@ -213,6 +240,30 @@ export function ReturnModal({
   const [reason, setReason] = useState("");
   const [cash, setCash] = useState<"" | "sim" | "nao">(paid.length ? "" : "nao");
   const [sure, setSure] = useState(false);
+  const [date, setDate] = useState(todayIso());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const pending = useRef<{ key: string; id: string } | null>(null);
+  const lock = useRef(false);
+  async function submit() {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      if (onReturn) {
+        const key = JSON.stringify([target, reason, cash, date]);
+        if (pending.current?.key !== key) pending.current = { key, id: crypto.randomUUID() };
+        await onReturn({ targetStage: target, reason, cashMoved: cash === "sim", date, commandId: pending.current.id });
+      } else
+        await onDone(returnOperation(state, op, { targetStage: target, reason, cashMoved: cash === "sim", date }, BY));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "A devolução não foi confirmada.");
+    } finally {
+      lock.current = false;
+      setBusy(false);
+    }
+  }
   const reg = state.registrations[op.id];
   return (
     <Modal
@@ -227,10 +278,8 @@ export function ReturnModal({
           </button>
           <button
             className="fn-btn danger"
-            disabled={!reason.trim() || !cash || !sure || reconciled}
-            onClick={() =>
-              onDone(returnOperation(state, op, { targetStage: target, reason, cashMoved: cash === "sim" }, BY))
-            }
+            disabled={busy || !reason.trim() || !cash || !sure || reconciled}
+            onClick={() => void submit()}
           >
             <UndoIcon /> Devolver operação
           </button>
@@ -247,7 +296,7 @@ export function ReturnModal({
           )}
           <li>Cancelamento de {titles.length} lançamento(s) de liberação</li>
           <li>Estorno do lançamento contábil da compra {state.purchasePosted[op.id] ?? ""}</li>
-          {reg && <li>Remessa enviada e ainda não confirmada: instrução de baixa na próxima remessa</li>}
+          {reg && <li>Registro bancário preservado no histórico; vínculos ativos podem impedir a devolução</li>}
           <li>Assinaturas invalidadas e operação volta para a etapa escolhida</li>
         </ol>
       </div>
@@ -259,14 +308,25 @@ export function ReturnModal({
       <div className="fn-form">
         <Field label="Voltar para a etapa">
           <select value={target} onChange={e => setTarget(Number(e.target.value))}>
-            {stages.slice(1, 5).map(s => (
-              <option key={s.id} value={s.id}>
-                {s.id}. {s.title}
-              </option>
-            ))}
+            {stages
+              .filter(stage => stage.id >= 1 && stage.id <= 5)
+              .map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.id}. {s.title}
+                </option>
+              ))}
           </select>
         </Field>
+        <Field label="Data do estorno">
+          <input type="date" value={date} disabled={busy} onChange={event => setDate(event.target.value)} />
+        </Field>
       </div>
+      {error && (
+        <p role="alert" className="fn-warning">
+          {error}
+        </p>
+      )}
+      {busy && <p role="status">Confirmando devolução no servidor…</p>}
       {paid.length > 0 && (
         <fieldset className="fn-question">
           <legend>O pagamento ao cedente já saiu do caixa?</legend>

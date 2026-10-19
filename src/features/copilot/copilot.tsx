@@ -19,6 +19,8 @@ import { ShellContext } from "@/src/features/shell/shell-context";
 import { ArrowIcon, CloseIcon, ExpandIcon, SendIcon, SparkIcon, UndoIcon } from "@/src/ui/icons";
 import { type Dispatch, type SetStateAction, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { CopilotAnalysis } from "./copilot-analysis";
+import { CopilotReport } from "./copilot-report";
+import type { DeskReply } from "@/src/domain/copilot/desk-assistant";
 import { type CopilotSuggestion, ProgressCard, ReplyBubble, ResultCard, StartCard } from "./copilot-thread";
 import { useCopilotDesk } from "./use-copilot-desk";
 import { can, type AccessUser } from "@/src/domain/access/model";
@@ -69,17 +71,26 @@ export function Copilot({
     }),
     [operations, cedents, portfolioTitles, policies],
   );
-  const desk = useCopilotDesk(knowledge, currentUser, intelligence, cedents[0]?.id ?? "", demoMode, debtors, tokens =>
-    onIntelligence?.(current => ({
-      ...current,
-      usedTokens: current.usedTokens + tokens,
-      status: "AI_AVAILABLE",
-      updatedAt: new Date().toISOString(),
-    })),
+  const desk = useCopilotDesk(
+    knowledge,
+    currentUser,
+    intelligence,
+    cedents[0]?.id ?? "",
+    demoMode,
+    debtors,
+    (tokens, serverUsedTokens) =>
+      onIntelligence?.(current => ({
+        ...current,
+        usedTokens:
+          serverUsedTokens === undefined ? current.usedTokens + tokens : Math.max(current.usedTokens, serverUsedTokens),
+        status: "AI_AVAILABLE",
+        updatedAt: new Date().toISOString(),
+      })),
   );
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState("");
+  const [detailReply, setDetailReply] = useState<DeskReply>();
   const [generatedOperation, setGeneratedOperation] = useState<Operation>();
   const [operationError, setOperationError] = useState("");
   const threadRef = useRef<HTMLDivElement>(null);
@@ -201,7 +212,12 @@ export function Copilot({
             {message.text}
           </div>
         ) : message.role === "ai" ? (
-          <ReplyBubble key={message.id} reply={message.reply} />
+          <ReplyBubble
+            key={message.id}
+            reply={message.reply}
+            onViewMore={setDetailReply}
+            onAsk={text => void desk.ask(text)}
+          />
         ) : message.card === "progress" ? (
           <ProgressCard key={message.id} desk={desk} />
         ) : expanded ? null : (
@@ -285,6 +301,14 @@ export function Copilot({
 
   return (
     <>
+      {detailReply && (
+        <CopilotReport
+          key={detailReply.report?.id ?? "session"}
+          reply={detailReply}
+          currentUser={currentUser}
+          onClose={() => setDetailReply(undefined)}
+        />
+      )}
       {open && expanded && <div className="cpl-scrim" role="presentation" onClick={() => setExpanded(false)} />}
       {open && (
         <section
@@ -317,6 +341,7 @@ export function Copilot({
                 title="Limpar a conversa e começar de novo"
                 onClick={() => {
                   desk.reset();
+                  setDetailReply(undefined);
                   setExpanded(false);
                   setDraft("");
                 }}
@@ -340,6 +365,16 @@ export function Copilot({
               <CloseIcon />
             </button>
           </header>
+          {!demoMode && (
+            <button
+              type="button"
+              className="cpl-ghost"
+              disabled={desk.asking}
+              onClick={() => void desk.restoreHistory()}
+            >
+              Retomar últimas consultas salvas
+            </button>
+          )}
           <button type="button" className="cpl-live-day" onClick={() => onOpenAttention()}>
             <span className="cpl-live-day-icon">
               <SparkIcon />

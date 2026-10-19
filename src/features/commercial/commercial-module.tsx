@@ -4,6 +4,7 @@
  * Módulo Comercial: filtros de comercial e período, abas e painel com ranking, gráfico, alertas e funil.
  * O estado vive no app (vínculo com Cadastro, Operação e Carteira) e chega por props.
  */
+import { confirmStateCommit, type StateCommit } from "@/src/ui/confirmed-state";
 import { pressable } from "@/src/ui/a11y";
 import { CommissionsTab } from "@/src/features/commercial/tabs/commissions-tab";
 import { CommitteesTab } from "@/src/features/commercial/tabs/committees-tab";
@@ -86,11 +87,11 @@ export type Tab =
   "painel" | "equipe" | "comerciais" | "negocios" | "contas" | "visitas" | "funil" | "comites" | "comissoes";
 export type Props = {
   state: CommercialState;
-  onState: (s: CommercialState) => void;
+  onState: StateCommit<CommercialState>;
   operations: Operation[];
   financials: OpFinancials;
   finance: FinanceState;
-  onFinance: (s: FinanceState) => void;
+  onFinance: (s: FinanceState) => void | Promise<void>;
   onOpenOperation: (op: Operation) => void;
   onNavigate?: (view: AppView) => void;
   canDecideCommittee?: boolean;
@@ -134,12 +135,15 @@ export default function CommercialModule({
     | { type: "lost"; prospect: Prospect }
   >(null);
 
-  const apply = (r: CResult) => {
+  const apply = async (r: CResult) => {
     if (r.error) {
       setToast({ tone: "error", text: r.error });
       return false;
     }
-    setState(r.state);
+    if (!(await confirmStateCommit(() => setState(r.state)))) {
+      setToast({ tone: "error", text: "Não foi possível confirmar a alteração. Tente novamente." });
+      return false;
+    }
     if (r.message) setToast({ tone: "success", text: r.message });
     return true;
   };

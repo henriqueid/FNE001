@@ -51,6 +51,11 @@ export function operationMutationPermissionError(
 ): string | null {
   const has = (permission: Permission) => permissions.includes(permission);
   if (!current) return has("operations:edit") ? null : "Somente Operações pode cadastrar uma operação.";
+  if (requested.stage > current.stage) {
+    const permission: Permission =
+      current.stage === 2 ? "risk:decide" : current.stage === 5 ? "controlleria:formalize" : "operations:edit";
+    if (!has(permission)) return "Sem permissão da área responsável para concluir esta etapa da operação.";
+  }
 
   const riskChanged = changed(current, requested, riskFields);
   const approvalChanged = !same(current.approvalReview, requested.approvalReview);
@@ -69,24 +74,18 @@ export function operationMutationPermissionError(
   if (riskChanged && !has("risk:decide")) return "Somente Risco pode alterar decisões de risco e elegibilidade.";
   if (approvalChanged && !has("controlleria:formalize"))
     return "Somente Controladoria pode alterar aprovação e formalização.";
-  if (releaseChanged && !has("finance:release")) return "Somente o Financeiro pode preparar ou aprovar uma liberação.";
+  if (releaseChanged) {
+    if (current.releaseReview?.status === "Enviada ao financeiro" && !has("finance:release"))
+      return "Somente o Financeiro pode registrar ou estornar pagamentos.";
+    if (!has("operations:edit") && !has("finance:release"))
+      return "Somente Operações ou o Financeiro pode preparar e enviar uma liberação.";
+  }
 
-  // O motor pode salvar a condição padrão como efeito da decisão de Risco.
-  const automaticPricingFromRisk =
-    (riskChanged || riskWorkflowAdvance) &&
-    requested.pricingReview?.savedBy === "Motor de elegibilidade" &&
-    !same(current.pricingReview, requested.pricingReview);
-  const onlyRiskWorkflowOperationalChange =
-    riskWorkflowAdvance &&
-    operationsFields.every(
-      field => same(current[field], requested[field]) || (field === "pricingReview" && automaticPricingFromRisk),
-    );
-  if (operationalChanged && !automaticPricingFromRisk && !onlyRiskWorkflowOperationalChange && !has("operations:edit"))
+  if (operationalChanged && !has("operations:edit"))
     return "Somente Operações pode alterar entrada, lastro, preço ou cancelamento.";
 
   const changedBusinessField = (Object.keys(requested) as Array<keyof Operation>).some(field => {
     if (workflowFields.has(field) || specializedFields.has(field)) return false;
-    if (automaticPricingFromRisk && ["amount", "netAmount", "titleCount"].includes(field)) return false;
     return !same(current[field], requested[field]);
   });
   if (changedBusinessField && !has("operations:edit"))

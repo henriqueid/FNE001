@@ -112,6 +112,7 @@ import {
   persistIntelligenceState as persistServerIntelligence,
 } from "./intelligence-client";
 import type { PortfolioFocus } from "@/src/features/portfolio/portfolio-navigation";
+import { consumeOperationServerResult, newOperationAtEntry } from "./operation-server-result";
 import {
   approveCopilotOperation as approveCopilotOperationFlow,
   buildCopilotOperation,
@@ -300,16 +301,9 @@ export default function StratoApp() {
 
   const persistRealCommercial = useCallback(
     (candidate: CommercialState) => {
-      if (isDemo) return;
+      if (isDemo) return Promise.resolve(candidate);
       const prior = commercialSaveQueue.current ?? Promise.resolve(candidate);
-      const queued = prior
-        .catch(() => candidate)
-        .then(serverBase =>
-          persistServerCommercial({
-            ...candidate,
-            persistenceVersion: serverBase.persistenceVersion ?? candidate.persistenceVersion,
-          }),
-        );
+      const queued = prior.catch(() => candidate).then(() => persistServerCommercial(candidate));
       commercialSaveQueue.current = queued;
       void queued
         .then(saved => {
@@ -327,31 +321,30 @@ export default function StratoApp() {
         .finally(() => {
           if (commercialSaveQueue.current === queued) commercialSaveQueue.current = null;
         });
+      return queued;
     },
     [isDemo],
   );
 
   const applyCommercialState = useCallback(
-    (candidate: CommercialState) => {
-      commercialRef.current = candidate;
-      setCommercial(candidate);
-      persistRealCommercial(candidate);
+    async (candidate: CommercialState) => {
+      try {
+        const saved = await persistRealCommercial(candidate);
+        commercialRef.current = saved;
+        setCommercial(saved);
+        return true;
+      } catch {
+        return false;
+      }
     },
     [persistRealCommercial],
   );
 
   const persistRealPortfolio = useCallback(
     (candidate: typeof portfolio) => {
-      if (isDemo) return;
+      if (isDemo) return Promise.resolve(candidate);
       const prior = portfolioSaveQueue.current ?? Promise.resolve(candidate);
-      const queued = prior
-        .catch(() => candidate)
-        .then(serverBase =>
-          persistServerPortfolio({
-            ...candidate,
-            persistenceVersion: serverBase.persistenceVersion ?? candidate.persistenceVersion,
-          }),
-        );
+      const queued = prior.catch(() => candidate).then(() => persistServerPortfolio(candidate));
       portfolioSaveQueue.current = queued;
       void queued
         .then(saved => {
@@ -365,12 +358,13 @@ export default function StratoApp() {
         .finally(() => {
           if (portfolioSaveQueue.current === queued) portfolioSaveQueue.current = null;
         });
+      return queued;
     },
     [isDemo],
   );
 
   const applyPortfolioState = useCallback(
-    (candidate: typeof portfolio) => {
+    async (candidate: typeof portfolio) => {
       const previousById = new Map(portfolioRef.current.titles.map(title => [title.id, title]));
       const attributed = {
         ...candidate,
@@ -392,9 +386,14 @@ export default function StratoApp() {
           };
         }),
       };
-      portfolioRef.current = attributed;
-      setPortfolio(attributed);
-      persistRealPortfolio(attributed);
+      try {
+        const saved = await persistRealPortfolio(attributed);
+        portfolioRef.current = saved;
+        setPortfolio(saved);
+        return true;
+      } catch {
+        return false;
+      }
     },
     [persistRealPortfolio, sessionUser.name],
   );
@@ -416,12 +415,31 @@ export default function StratoApp() {
         setOperationPersistenceError(undefined);
         setOperations(current =>
           current.map(operation =>
-            operation.id === saved.id ? { ...operation, persistenceVersion: saved.persistenceVersion } : operation,
+            operation.id === saved.id && (operation.persistenceVersion ?? 0) <= (saved.persistenceVersion ?? 0)
+              ? { ...operation, persistenceVersion: saved.persistenceVersion }
+              : operation,
           ),
         );
         setSelected(current =>
-          current?.id === saved.id ? { ...current, persistenceVersion: saved.persistenceVersion } : current,
+          current?.id === saved.id && (current.persistenceVersion ?? 0) <= (saved.persistenceVersion ?? 0)
+            ? { ...current, persistenceVersion: saved.persistenceVersion }
+            : current,
         );
+        if (saved.status === "Liberada ao financeiro") {
+          void Promise.all([loadServerFinance(), loadCurrentPortfolio()])
+            .then(([serverFinance, serverPortfolio]) => {
+              if (serverFinance) setFinance(serverFinance);
+              portfolioRef.current = serverPortfolio;
+              setPortfolio(serverPortfolio);
+            })
+            .catch(reason =>
+              setFinancePersistenceError(
+                reason instanceof Error
+                  ? reason.message
+                  : "Operação gravada; não foi possível atualizar a posição financeira.",
+              ),
+            );
+        }
       })
       .catch(reason => {
         setOperationPersistenceError(
@@ -435,21 +453,14 @@ export default function StratoApp() {
 
   const persistRealFinance = useCallback(
     (candidate: FinanceState) => {
-      if (isDemo) return;
+      if (isDemo) return Promise.resolve(candidate);
       const prior = financeSaveQueue.current ?? Promise.resolve(candidate);
-      const queued = prior
-        .catch(() => candidate)
-        .then(serverBase =>
-          persistServerFinance({
-            ...candidate,
-            persistenceVersion: serverBase.persistenceVersion ?? candidate.persistenceVersion,
-          }),
-        );
+      const queued = prior.catch(() => candidate).then(() => persistServerFinance(candidate));
       financeSaveQueue.current = queued;
       void queued
         .then(saved => {
           setFinancePersistenceError(undefined);
-          setFinance(current => ({ ...current, persistenceVersion: saved.persistenceVersion }));
+          if (financeSaveQueue.current === queued) setFinance(saved);
         })
         .catch(reason => {
           setFinancePersistenceError(
@@ -459,13 +470,31 @@ export default function StratoApp() {
         .finally(() => {
           if (financeSaveQueue.current === queued) financeSaveQueue.current = null;
         });
+      return queued;
     },
     [isDemo],
   );
 
-  function applyFinanceState(candidate: FinanceState) {
-    setFinance(candidate);
-    persistRealFinance(candidate);
+  async function applyFinanceState(candidate: FinanceState) {
+    if (isDemo) {
+      setFinance(candidate);
+      return;
+    }
+    const saved = await persistRealFinance(candidate);
+    financeRef.current = saved;
+    setFinance(saved);
+    void loadServerOperations()
+      .then(serverOperations => {
+        setOperations(serverOperations);
+        setSelected(current =>
+          current ? (serverOperations.find(operation => operation.id === current.id) ?? current) : current,
+        );
+      })
+      .catch(reason =>
+        setOperationPersistenceError(
+          reason instanceof Error ? reason.message : "Financeiro gravado; não foi possível atualizar as operações.",
+        ),
+      );
   }
 
   const persistRealTasks = useCallback(
@@ -545,7 +574,7 @@ export default function StratoApp() {
   );
   // Liberações enviadas ao financeiro viram títulos a pagar e a compra é contabilizada.
   useEffect(() => {
-    if (!isDemo && !financeServerReady) return;
+    if (!isDemo) return;
     const current = financeRef.current;
     const next = syncReleases(current, operations, homeFinancials);
     if (next === current) return;
@@ -553,12 +582,13 @@ export default function StratoApp() {
     persistRealFinance(next);
   }, [operations, homeFinancials, financeServerReady, isDemo, persistRealFinance]);
   useEffect(() => {
-    if (!isDemo && !portfolioServerReady) return;
+    if (!isDemo) return;
     const current = portfolioRef.current;
     const next = syncPortfolio(current, operations);
     if (next !== current) applyPortfolioState(next);
   }, [operations, portfolioServerReady, isDemo, applyPortfolioState]);
   function applyFinanceEffects(effects: Effect[]) {
+    if (!isDemo) return;
     if (!can(currentUser, "finance:release")) return;
     const nextOperations = operations.map(operation => {
       const mine = effects.filter(effect => effect.operationId === operation.id);
@@ -1050,6 +1080,22 @@ export default function StratoApp() {
   }, [storageReady, operations]);
 
   function updateOperation(updated: Operation) {
+    if (!isDemo && consumeOperationServerResult(updated)) {
+      setOperationPersistenceError(undefined);
+      setOperations(current =>
+        current.map(operation =>
+          operation.id === updated.id && (operation.persistenceVersion ?? 0) <= (updated.persistenceVersion ?? 0)
+            ? updated
+            : operation,
+        ),
+      );
+      setSelected(current =>
+        current?.id === updated.id && (current.persistenceVersion ?? 0) <= (updated.persistenceVersion ?? 0)
+          ? updated
+          : current,
+      );
+      return;
+    }
     if (
       !can(currentUser, "operations:edit") &&
       !can(currentUser, "risk:decide") &&
@@ -1159,7 +1205,7 @@ export default function StratoApp() {
     const destination = destinations.find(item => item.name === companyScope) ?? destinations[0];
     if (!cedent || !destination) return undefined;
     const at = new Date().toISOString();
-    const next = buildCopilotOperation({
+    const copilotDraft = buildCopilotOperation({
       request,
       destination,
       cedent,
@@ -1170,6 +1216,7 @@ export default function StratoApp() {
       today: at.slice(0, 10),
       at,
     });
+    const next = isDemo ? copilotDraft : newOperationAtEntry(copilotDraft);
     const importedDebtors = next.entryIntake?.newDebtors ?? [];
     if (importedDebtors.length)
       setDebtors(current => {
@@ -1185,6 +1232,14 @@ export default function StratoApp() {
     if (!can(currentUser, "operations:edit") && !can(currentUser, "risk:decide")) return undefined;
     const current = operations.find(operation => operation.id === operationId);
     if (!current) return undefined;
+    if (!isDemo) {
+      setSelected(current);
+      setView("operations");
+      setOperationPersistenceError(
+        "Conclua as etapas e registre as alçadas no workspace da operação. A análise assistida não autoriza avanço ou aprovação.",
+      );
+      return current;
+    }
     const next = approveCopilotOperationFlow(current, {
       actor: currentUser.name,
       at: new Date().toISOString(),
@@ -1264,7 +1319,7 @@ export default function StratoApp() {
       refreshParties: async () => {
         if (!isDemo) setSavedParties(await loadRegistryParties());
       },
-      saveParty: (party, reason) => {
+      saveParty: async (party, reason) => {
         if (!can(currentUser, "registry:edit")) return { error: "Seu perfil não permite editar cadastros." };
         const result = savePartyRecord({
           party,
@@ -1273,22 +1328,28 @@ export default function StratoApp() {
           debtors,
           commercial,
           today,
-          by: "Henrique",
+          by: sessionUser.name,
           reason,
           source: "Cadastro",
         });
         if (!result.ok) return { error: result.error };
+        if (!isDemo) {
+          try {
+            await persistRegistryParty(result.saved.find(item => item.id === party.id) ?? party);
+          } catch (error) {
+            return { error: error instanceof Error ? error.message : "Não foi possível salvar o cadastro." };
+          }
+        }
         setSavedParties(result.saved);
         setDebtors(result.debtors);
         setCommercial(result.commercial);
-        if (!isDemo) void persistRegistryParty(result.saved.find(item => item.id === party.id) ?? party);
         return { message: result.message };
       },
-      onCommercial: next => {
-        if (!can(currentUser, "portfolio:manage")) return;
+      onCommercial: async next => {
+        if (!can(currentUser, "portfolio:manage")) return false;
         const { carteiraEvents: _drop, ...rest } = next;
         void _drop;
-        applyCommercialState(rest as CommercialState);
+        return applyCommercialState(rest as CommercialState);
       },
     }),
     [
@@ -1302,6 +1363,7 @@ export default function StratoApp() {
       operationalDefaults,
       today,
       currentUser,
+      sessionUser.name,
       applyCommercialState,
     ],
   );
@@ -1534,6 +1596,47 @@ export default function StratoApp() {
         carteira={carteiraFlows}
         companyScope={companyScope}
         onOpenOperation={setSelected}
+        portfolio={!isDemo ? portfolio : undefined}
+        onReturnOperation={
+          !isDemo
+            ? async (operation, intent) => {
+                const { returnReleasedOperation } = await import("./operation-return-client");
+                const result = await returnReleasedOperation({
+                  ...intent,
+                  operationId: operation.id,
+                  expectedVersion: operation.persistenceVersion ?? 0,
+                });
+                setOperations(current =>
+                  current.map(item => (item.id === result.operation.id ? result.operation : item)),
+                );
+                setSelected(current => (current?.id === result.operation.id ? result.operation : current));
+                try {
+                  const [confirmedFinance, confirmedPortfolio] = await Promise.all([
+                    loadServerFinance(),
+                    loadCurrentPortfolio(),
+                  ]);
+                  if (confirmedFinance) setFinance(confirmedFinance);
+                  setPortfolio(confirmedPortfolio);
+                } catch {
+                  setFinancePersistenceError(
+                    "Devolução confirmada. Atualize a página para consultar a posição financeira atual.",
+                  );
+                }
+              }
+            : undefined
+        }
+        onBankingCommitted={
+          !isDemo
+            ? async () => {
+                const [confirmedFinance, confirmedPortfolio] = await Promise.all([
+                  loadServerFinance(),
+                  loadCurrentPortfolio(),
+                ]);
+                if (confirmedFinance) setFinance(confirmedFinance);
+                setPortfolio(confirmedPortfolio);
+              }
+            : undefined
+        }
       />
     );
   else if (view === "commercial")
@@ -1601,6 +1704,17 @@ export default function StratoApp() {
         onNavigate={navigate}
         focus={portfolioFocus}
         debtors={scoredDebtors}
+        finance={!isDemo ? finance : undefined}
+        onSettlement={
+          !isDemo
+            ? async command => {
+                const { sendReceivableCommand } = await import("./receivable-client");
+                const saved = await sendReceivableCommand(command);
+                setFinance(saved.finance);
+                setPortfolio(saved.portfolio);
+              }
+            : undefined
+        }
       />
     );
   else if (view === "controlleria")

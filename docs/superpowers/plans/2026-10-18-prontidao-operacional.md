@@ -1,0 +1,56 @@
+# STRATO — conclusão das melhorias da auditoria
+
+## Objetivo e autoridade
+
+Pedido: concluir todas as tarefas da auditoria técnica/funcional e entregar um roteiro de validação. Este registro mantém o escopo integral, inclusive pendências que dependem de fornecedor, ambiente isolado ou homologação. Uma suíte verde não autoriza declarar o sistema pronto para produção.
+
+Base: auditoria da conversa sobre o commit `798022c`; primeiro lote local de imutabilidade contábil já implementado. Preservar as mudanças preexistentes em README.md, AGENTS.md e docs/TOKENOPS.md. Sem commit, publicação, banco remoto, comunicações ou movimentação real nesta execução.
+
+## Projeto técnico
+
+Preservar motores determinísticos e PostgreSQL privado. Executar transições que afetam operação, recebíveis, financeiro e carteira no servidor, com transação, escopo da sessão, versões e idempotência. O navegador envia intenção/resultado permitido e só apresenta sucesso confirmado. Reutilizar regras existentes, sem aceitar estado decisório ou financeiro arbitrário como autoridade.
+
+Reutilizar o checkout atual para preservar o primeiro lote e o trabalho do usuário. Tarefas independentes de IA, OFX e proveniência podem executar em paralelo, com arquivos exclusivos. Testes isolados antes da implementação, verificação dirigida e depois check/build. Integrações reais não serão substituídas por mocks rotulados como homologados.
+
+## Inventário de conclusão
+
+| ID | Prioridade | Entrega e critério verificável | Estado |
+| --- | --- | --- | --- |
+| T01 | P0 | Diário imutável, estornos íntegros, importação preserva histórico; testes do primeiro lote | Implementado e revalidado na suíte final; integração SQL de estorno e projeções também passou |
+| T02 | P0 | Liberação gera obrigações/compra no servidor sem depender da página; rollback conjunto | Implementado; coordenação em memória e PostgreSQL isolado verificada |
+| T03 | P0 | Pagamentos e estornos atualizam operação atomicamente; versões e replays sem duplicidade | Implementado; validação determinística ampliada após revisão adversarial |
+| T04 | P0 | Liquidação de recebível atualiza carteira, caixa, razão, exposição e atraso; estorno integral | Implementado; ciclos/replay/concorrência/rollback verificados em PostgreSQL. Nova posição divergente bloqueia movimentação sem presumir compensação |
+| T05 | P0 | Devolução persiste com trilha e contrapartidas, sem apagar fatos, sem sucesso parcial | Implementado; devolução, replay, reaquisição e rollback verificados em PostgreSQL |
+| T06 | P0 | Backend revalida preço, elegibilidade, avanços, alçadas e origem dos dados; testes adversariais | Implementado; concessão legítima por avaliação/autoridade/fatos e invalidação por mudança/retorno testadas. Homologação de jornada autenticada ainda necessária |
+| T07 | P1 | Tenant vazio inicializa financeiro por caminho autorizado e seguro | Implementado e testes de endpoint/repositório verdes |
+| T08 | P1 | Concorrência, conflito, repetição e falha pós-commit não perdem/duplicam fatos | Verificação local concluída: versões/replay/rollback/concorrência em PostgreSQL; perdas de resposta também exercitadas por adaptadores de aplicação |
+| T09 | P1 | Autoria vem da sessão; interface confirma persistência e recupera falhas | Financeiro, Carteira, Cadastro e Comercial aguardam confirmação; QA visual demo realizada |
+| T10 | P1 | Documentos anexados são preservados/recuperáveis e vinculados à operação com acesso seguro | Implementado e testes de bytes/hash/tenant/operação; restauração real ainda requer volume homologado |
+| T11 | P1 | Proveniência oficial exige evidência efetiva, não configuração ATIVA | Implementado e testes verdes |
+| T12 | P1 | OFX robusto, deduplicação segura, ambiguidades explícitas, testes de conciliação e reversão | Implementado e 19 testes direcionados verdes |
+| T13 | P1 | Licença, habilitação, orçamento e consumo da IA impostos no servidor, inclusive concorrência | Implementado; competência UTC/reservas/consumo/rollover/replay verificados também em PostgreSQL; reservas incertas conservadas |
+| T14 | P1 | Integração bancária mínima, remessa/retorno, bureau e assinatura conforme fornecedor contratado | Captura confirmou Itaú112 e usuário confirmou juros8%a.m.; suporte112/encargos/e-mail implementado e testado. Multa2% no dia seguinte ao vencimento confirmada pelo usuário; dados Bradesco, bureau, assinatura e homologação externa pendentes |
+| T15 | P1 | Documentação canônica, implantação, controles de homologação e recuperação alinhados ao código | Fontes atualizadas; dump/restauração local, volume e login HTTP restaurado verificados. Recuperação produtiva coordenada, TLS e RPO/RTO dependem de homologação |
+| T16 | P2 | Relatórios consolidados, PDF/Excel, resultados conciliados com as fontes | Implementado; PDF/XLSX abertos por leitores independentes e QA visual desktop/mobile |
+| T17 | P2 | Importações e conciliação sem formatos ficticiamente suportados | Oferta alinhada a XML/CSV/campos comuns CNAB; XLS/XLSX exigem conversão explícita |
+| T18 | P3 | Painel gerencial PWA e automações adicionais dentro do escopo auditado | PWA/aviso offline e worker opcional de notificações implementados; sem finanças offline. Instalação HTTPS e worker no ambiente do piloto por homologar |
+| T19 | Final | Roteiro de validação cobrindo T01–T18, perfis, dados, passos, resultados e bloqueios | Entregue em docs/ROTEIRO_VALIDACAO_PILOTO.md: V01–V26 e evidência local separada da campanha de aceite |
+
+## Execução e evidência
+
+Cada tarefa registra aqui arquivos, verificações e limitações. Não marcar uma tarefa concluída por mera existência de código ou testes que não exercitam o comportamento. Homologação em PostgreSQL isolado e com fornecedores deve ser distinguida de testes com adaptadores em memória.
+
+- 18/10/2026: estado inicial confirmado; alterações do primeiro lote preservadas. Objetivo ativo, sem redução de escopo. Consulta ao usuário sobre banco/layout, bureau e assinatura enviada sem bloquear trabalho independente.
+- Verificação final local: `npm run check` passou (657 testes, 12 ignorados), `npm run build` passou. Runner isolado aplicou 39 migrações, passou 11 testes PostgreSQL + 2 de restauração de documentos e restaurou 74 tabelas/872 linhas com hashes/metadados iguais. Cluster encerrado; evidência em `C:/Users/henri/AppData/Local/Temp/strato-isolated-pg-bAFf1c`.
+- Revisão adversarial encontrou e corrigiu baixa de obrigação sem caixa, CR duplicado após estorno/novo recebimento e ponteiro normalizado de compra antiga após reaquisição; regressões reproduziram as falhas antes das correções.
+- QA de PDF/XLSX em leitores independentes e painéis demonstrativos desktop/mobile registrada. Rotas/servidores temporários de QA removidos/encerrados. Não equivale a jornada autenticada completa nem homologação em HTTPS.
+- Dependências externas remanescentes: carteira/convênio efetivos Itaú/Bradesco CNAB400, homologação bancária, definição/contratação de bureau e assinatura eletrônica, instalação/backup/recuperação e aceite operacional no ambiente do piloto. A implementação local não pode substituir essas evidências.
+- Reauditoria na continuação seguinte: o turno anterior foi **progresso**, com implementação, roteiro e verificações. Estado corrente conferido. Acrescentado `tests/postgres-approval-evidence.test.ts`: corte de aprovações e exceções por versão de devolução, isolamento entre tenants/operações e histórico preservado agora comprovados também pelo SQL real. Runner completo passou 12 testes PostgreSQL + 2 de documentos e restauração de 74 tabelas/881 linhas, com cluster encerrado; tipos/lint do acréscimo passaram. Evidência: `C:/Users/henri/AppData/Local/Temp/strato-isolated-pg-CVigV1`.
+- As mesmas dependências externas continuam presentes após esta reauditoria. Não há credenciais/contratos/homologação de fornecedores nem ambiente de aceite autorizado disponíveis que permitam concluir esses itens. Nenhuma transmissão, implantação ou substituição por dados presumidos foi feita. Objetivo integral ainda não declarado concluído.
+- Terceira constatação consecutiva do mesmo bloqueio externo: revalidados inventário, roteiro e presença das evidências de recuperação. O turno anterior foi progresso (prova adicional de SQL); nesta constatação não há próxima ação local que conclua contratos/homologação ausentes. Solicitados carteira/convênio Itaú/Bradesco, bureau e assinatura, sem segredos. Objetivo bloqueado nessas dependências, não concluído. Retomar quando os parâmetros/fornecedores e o ambiente de homologação estiverem identificados.
+- Retomada posterior: objetivo reativado sem novos parâmetros de fornecedores. O turno anterior de bloqueio foi sem progresso funcional. Identificada e fechada uma lacuna local adicional T15: runner prepara credencial aleatória somente no cluster novo antes do dump; após restauração, sobe build de produção em loopback apontando explicitamente à base restaurada, sem ler `.env`, e verifica login/cookie, leituras autenticadas, recusa sem sessão/tenant alheio e logout. Passaram 12 testes PostgreSQL, 2 de documentos e restauração de 74 tabelas/896 linhas, com servidor/cluster encerrados. Evidência: `C:/Users/henri/AppData/Local/Temp/strato-isolated-pg-wECHxU/restored-http-evidence.json`. Homologação externa permanece sem evidência nova; objetivo integral não concluído.
+- Segunda constatação no ciclo retomado: turno anterior classificado como progresso pela prova HTTP restaurada. Revalidados artefato HTTP e encerramento do cluster (sem `postmaster.pid`). Não chegaram parâmetros/fornecedores ou evidências de homologação. Nesta constatação, apenas revisão de estado: sem progresso funcional e sem processo vivo a aguardar. Os itens externos T14/aceite de implantação continuam impedindo a conclusão integral.
+- Terceira constatação no ciclo retomado: turno anterior sem progresso, revalidado contra o inventário e o roteiro atuais. Persistem os mesmos fornecedores/parâmetros/ambiente externos ausentes; não há processo em execução ou próxima ação local que produza o aceite faltante. Objetivo novamente bloqueado, não concluído. Retomada depende de informação do usuário ou alteração externa verificável.
+- Nova informação humana: captura das propriedades Itaú identifica carteira112; juros8%a.m. confirmados expressamente. Adaptação local implementou modalidade escritural, numeração pelo banco no02, encargos mensais determinísticos, multa/reg2 e e-mail/reg5. Prazo de início da multa perguntado, sem assumir resposta. Testes RED→GREEN de layout/encargos e serviço, validação PostgreSQL com múltiplos títulos112 e replay passaram. Check682 testes/14 ignorados e build passaram. Runner completo39migrações/13PG/2documentos, restauração74tabelas/1.018linhas e HTTP autenticado aprovados; cluster encerrado, evidência `C:/Users/henri/AppData/Local/Temp/strato-isolated-pg-YyK1Lp`. Sem alteração de dados ou transmissão bancária em produção nesta execução.
+
+- Confirmação humana posterior: multa de2% começa no dia seguinte ao vencimento (`lateFineDaysAfterDue: 1`). Roteiro e documentação atualizados; 44 testes direcionados de encargos e CNAB400 passaram. Configuração produtiva e homologação bancária continuam externas.

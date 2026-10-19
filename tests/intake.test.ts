@@ -210,3 +210,30 @@ describe("entrada e normalização de operações", () => {
     expect(operation.pricingReview).toBeUndefined();
   });
 });
+it.each(["operacao.xls", "operacao.pdf", "operacao.exe"])(
+  "bloqueia formato não implementado mesmo se o conteúdo parece CSV: %s",
+  fileName => {
+    const text = `${header}\nNF-100/01;1000;30/11/2026;04/10/2026;${debtor.document};Teste;;;;;`;
+    const result = normalizeOperationIntake({
+      source: "Planilha",
+      fileName,
+      text,
+      debtors: initialDebtors,
+      importedAt: "2026-10-18T12:00:00Z",
+    });
+    expect(result.intake.status).toBe("BLOQUEADO");
+    expect(result.data.entries).toHaveLength(0);
+  },
+);
+it("não trata CSV como CNAB configurado", () => {
+  const text = `${header}\nNF-100/01;1000;30/11/2026;04/10/2026;${debtor.document};Teste;;;;;`;
+  expect(
+    normalizeOperationIntake({
+      source: "CNAB",
+      fileName: "lote.rem",
+      text,
+      debtors: initialDebtors,
+      importedAt: "2026-10-18T12:00:00Z",
+    }).intake.status,
+  ).toBe("BLOQUEADO");
+});

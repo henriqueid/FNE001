@@ -5,6 +5,7 @@
  * da carteira por cedente e comercial. Ponte entre Operação (origem dos títulos), Cadastro (cedente e limite),
  * Comercial (carteira por comercial e estorno de recompra) e Tesouraria (liquidação, próxima fase).
  */
+import type { StateCommit } from "@/src/ui/confirmed-state";
 import { useRegistry } from "@/src/app/registry-context";
 import { digits } from "@/src/domain/commercial/calendar";
 import { type Debtor } from "@/src/domain/core/types";
@@ -35,17 +36,31 @@ import { useQualityPolicy } from "@/src/features/risk/use-quality-policy";
 import { CollectionCenter } from "./collection-center";
 import type { PortfolioFocus, PortfolioSituation, PortfolioTab } from "./portfolio-navigation";
 import { scoreChipTone, scoreClassification } from "@/src/features/registry/registry-format";
+import { SettlementPanel } from "./settlement-panel";
+import type { FinanceState } from "@/src/domain/finance/model";
+import type { ReceivableCommand } from "@/src/server/portfolio/financial-commands";
 
 type Props = {
   portfolio: PortfolioState;
-  onPortfolio: (state: PortfolioState) => void;
+  onPortfolio: StateCommit<PortfolioState>;
   companyScope: string;
   onNavigate: (view: AppView) => void;
   focus?: PortfolioFocus;
   debtors: Debtor[];
+  finance?: FinanceState;
+  onSettlement?: (command: ReceivableCommand) => Promise<void>;
 };
 
-export default function PortfolioModule({ portfolio, onPortfolio, companyScope, onNavigate, focus, debtors }: Props) {
+export default function PortfolioModule({
+  portfolio,
+  onPortfolio,
+  companyScope,
+  onNavigate,
+  focus,
+  debtors,
+  finance,
+  onSettlement,
+}: Props) {
   const { commercial, cedents } = useRegistry();
   const { policy } = useQualityPolicy();
   const today = todayIso();
@@ -142,6 +157,22 @@ export default function PortfolioModule({ portfolio, onPortfolio, companyScope, 
 
   return (
     <div className="page-wrap fn-page pf-page">
+      {all.some(title => title.positionReviewRequired) && (
+        <p role="alert" className="fn-warning">
+          Há títulos com divergência entre a posição importada e os recebimentos locais. Valores anteriores foram
+          preservados; novas movimentações desses títulos ficam bloqueadas até a conciliação do arquivo de origem.
+        </p>
+      )}
+      {finance && onSettlement && (
+        <SettlementPanel
+          portfolio={{
+            ...portfolio,
+            titles: portfolio.titles.filter(title => companyScope === "Consolidado" || title.company === companyScope),
+          }}
+          finance={finance}
+          onCommand={onSettlement}
+        />
+      )}
       <div className="fn-heading">
         <div>
           <span className="hd-eyebrow">

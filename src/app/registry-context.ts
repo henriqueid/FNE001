@@ -9,6 +9,7 @@ import { type Cedent } from "@/src/domain/core/types";
 import { type Party } from "@/src/domain/registry/parties";
 import { type ClientRecord } from "@/src/domain/registry/registry";
 import { type OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
+import type { StateCommit } from "@/src/ui/confirmed-state";
 import { createContext, useContext } from "react";
 
 export type RegistryValue = {
@@ -19,13 +20,16 @@ export type RegistryValue = {
   repOf: (document: string, date?: string) => SalesRep | undefined;
   managerOf: (document: string) => SalesRep | undefined;
   operationalDefaults: OperationalDefaultsState;
-  onCommercial: (next: CommercialState) => void;
+  onCommercial: StateCommit<CommercialState>;
   /** Pessoas do Cadastro (salvas + derivadas dos módulos), uma por documento. */
   parties: Party[];
   /** Recarrega do backend após comandos aprovados fora do formulário principal. */
   refreshParties: () => Promise<void>;
   /** Valida, grava e propaga para Operação, Comercial e sacados. */
-  saveParty: (party: Party, reason?: string) => { error?: string; message?: string };
+  saveParty: (
+    party: Party,
+    reason?: string,
+  ) => { error?: string; message?: string } | Promise<{ error?: string; message?: string }>;
 };
 
 export const RegistryContext = createContext<RegistryValue | null>(null);

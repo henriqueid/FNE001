@@ -7,12 +7,16 @@
  * `approval-model.ts`.
  */
 import { useCedents } from "@/src/app/registry-context";
+import { useStratoAuth } from "@/src/features/auth/auth-context";
+import { decideOperationApproval, loadOperationApproval } from "@/src/app/operation-approval-client";
+import type { ApprovalSlot } from "@/src/server/operations/approval-evidence";
 import { preciseMoney } from "@/src/domain/core/format";
 import { type Debtor, type Operation } from "@/src/domain/core/types";
 import { localDateISO } from "@/src/domain/operations/dates";
 import { formatBrazilianDate } from "@/src/domain/operations/format";
 import { lastroAssessmentFor } from "@/src/domain/operations/lastro";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { uploadOperationDocument, type UploadedDocument } from "@/src/app/documents-client";
 import { ApprovalAuthorities } from "./approval-authorities";
 import { ApprovalDocuments } from "./approval-documents";
 import { ApprovalDecisionSummary } from "./approval-decision-summary";
@@ -49,6 +53,15 @@ export function ApprovalPanel({
   debtors: Debtor[];
   onChange: (operation: Operation) => void;
 }) {
+  const isDemo = useStratoAuth()?.mode === "demo";
+  const [serverSlots, setServerSlots] = useState<ApprovalSlot[]>([]);
+  const [decisionBusy, setDecisionBusy] = useState(false);
+  const currentOperationId = useRef(operation.id);
+  useEffect(() => {
+    currentOperationId.current = operation.id;
+  }, [operation.id]);
+  const [attachmentFile, setAttachmentFile] = useState<{ file: File; operationId: string } | null>(null);
+  const [attachmentBusy, setAttachmentBusy] = useState(false);
   const registryCedents = useCedents();
   const figures = buildFinancialFigures(operation, registryCedents);
   const { finalNet } = figures;
@@ -56,7 +69,14 @@ export function ApprovalPanel({
   const checklist = buildReadinessChecklist(operation, lastro);
   const prerequisitesReady = checklist.every(item => item.ok);
   const lastroConcerns = ["Favorável com ressalvas", "Desfavorável"].includes(lastro.status) ? 1 : 0;
-  const defaultApprovals = buildDefaultApprovals(operation, prerequisitesReady, lastroConcerns);
+  const defaultApprovals: NonNullable<ApprovalReview["approvals"]> = isDemo
+    ? buildDefaultApprovals(operation, prerequisitesReady, lastroConcerns)
+    : serverSlots.map(slot => ({
+        id: slot.id,
+        role: slot.authorityId,
+        approver: "Aguardando alçada",
+        status: "Pendente" as const,
+      }));
   const defaultDocuments = buildDefaultDocuments(operation, lastro);
   const defaultSignatures = buildDefaultSignatures(operation);
   const review: ApprovalReview = operation.approvalReview ?? {
@@ -79,6 +99,45 @@ export function ApprovalPanel({
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [manualSignatureId, setManualSignatureId] = useState<string | null>(null);
   const [manualDraft, setManualDraft] = useState(() => emptyManualDraft(localDateISO()));
+  useEffect(() => {
+    if (isDemo) return;
+    let active = true;
+    loadOperationApproval(operation.id)
+      .then(result => {
+        if (active) setServerSlots(result.slots);
+      })
+      .catch(error => {
+        if (active) setFeedback(error instanceof Error ? error.message : "Não foi possível carregar as alçadas.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [isDemo, operation.id]);
+
+  async function decideServerApproval(id: string, decision: "Aprovado" | "Reprovado") {
+    if (decisionBusy) return;
+    if (observation.trim().length < 10) {
+      setFeedback("Registre a justificativa da alçada com pelo menos dez caracteres.");
+      return;
+    }
+    setDecisionBusy(true);
+    try {
+      const saved = await decideOperationApproval({
+        operationId: operation.id,
+        expectedVersion: operation.persistenceVersion ?? 0,
+        slotId: id,
+        decision: decision === "Aprovado" ? "APROVAR" : "REPROVAR",
+        reason: observation.trim(),
+      });
+      if (currentOperationId.current !== saved.id) return;
+      onChange(saved);
+      setFeedback("Decisão da alçada registrada pelo servidor.");
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Não foi possível registrar a alçada.");
+    } finally {
+      setDecisionBusy(false);
+    }
+  }
 
   /** Props de recolher/expandir para a seção informada. */
   function sectionToggle(section: CollapsibleSection) {
@@ -89,7 +148,7 @@ export function ApprovalPanel({
   }
 
   function saveReview(change: Partial<ApprovalReview>, action: string, detail: string, tryAvailability = false) {
-    const next = {
+    const next: ApprovalReview = {
       ...review,
       ...change,
       approvals: change.approvals ?? approvals,
@@ -97,6 +156,7 @@ export function ApprovalPanel({
       signatures: change.signatures ?? signatures,
       audit: [...(review.audit ?? []), { at: nowLabel(), by: "Henrique", action, detail }],
     };
+    if (!isDemo) next.approvals = operation.approvalReview?.approvals;
     onChange(tryAvailability ? withFormalizationCompleted(operation, next) : { ...operation, approvalReview: next });
   }
 
@@ -114,6 +174,10 @@ export function ApprovalPanel({
   }
 
   function decideApproval(id: string, decision: "Aprovado" | "Reprovado") {
+    if (!isDemo) {
+      void decideServerApproval(id, decision);
+      return;
+    }
     const nextApprovals = approvals.map(item =>
       item.id === id
         ? { ...item, status: decision, decidedAt: nowLabel(), note: observation.trim() || item.note }
@@ -137,6 +201,12 @@ export function ApprovalPanel({
   }
 
   function approveOperation() {
+    if (!isDemo) {
+      setFeedback(
+        "Registre cada decisão nas alçadas. A aprovação final é concluída pelo servidor quando todas estiverem aprovadas.",
+      );
+      return;
+    }
     if (approvals.some(item => item.status !== "Aprovado")) {
       setFeedback("Ainda existem alçadas pendentes ou reprovadas.");
       return;
@@ -167,6 +237,10 @@ export function ApprovalPanel({
   }
 
   function rejectOperation() {
+    if (!isDemo) {
+      setFeedback("Registre a reprovação no item da alçada responsável para preservar autoridade e trilha.");
+      return;
+    }
     if (observation.trim().length < 8) {
       setFeedback("Registre uma justificativa com pelo menos oito caracteres antes de reprovar a operação.");
       return;
@@ -213,6 +287,10 @@ export function ApprovalPanel({
   }
 
   function registerSignature(id: string) {
+    if (!isDemo) {
+      openManualSignature(id);
+      return;
+    }
     const nextSignatures = signatures.map(item =>
       item.id === id
         ? { ...item, status: "Assinado" as const, signedAt: nowLabel(), sentAt: item.sentAt ?? nowLabel() }
@@ -232,16 +310,18 @@ export function ApprovalPanel({
   }
 
   function openManualSignature(id: string) {
+    if (attachmentBusy) return;
     if (review.status !== "Aprovada" && review.status !== "Em formalização") {
       setFeedback("A operação precisa estar aprovada antes do registro de assinaturas.");
       return;
     }
+    setAttachmentFile(null);
     setManualDraft(emptyManualDraft(localDateISO()));
     setManualSignatureId(id);
   }
 
-  function confirmManualSignature() {
-    if (!manualSignatureId) return;
+  async function confirmManualSignature() {
+    if (!manualSignatureId || attachmentBusy) return;
     if (!manualDraft.signedDate) {
       setFeedback("Informe a data da assinatura manual.");
       return;
@@ -254,6 +334,23 @@ export function ApprovalPanel({
       manualDraft.reason === "Outro"
         ? manualDraft.notes.trim()
         : [manualDraft.reason, manualDraft.notes.trim()].filter(Boolean).join(" · ");
+    let attachment: UploadedDocument | undefined;
+    if (attachmentFile) {
+      if (attachmentFile.operationId !== operation.id) {
+        setFeedback("Selecione novamente o anexo nesta operação.");
+        return;
+      }
+      setAttachmentBusy(true);
+      try {
+        attachment = await uploadOperationDocument(operation.id, attachmentFile.file);
+      } catch (error) {
+        setFeedback(error instanceof Error ? error.message : "Falha ao preservar anexo.");
+        return;
+      } finally {
+        setAttachmentBusy(false);
+      }
+      if (currentOperationId.current !== operation.id) return;
+    }
     const nextSignatures = signatures.map(item =>
       item.id === manualSignatureId
         ? {
@@ -263,7 +360,11 @@ export function ApprovalPanel({
             signedAt: nowLabel(),
             manualSignedDate: manualDraft.signedDate,
             manualReason: reason,
-            attachmentName: manualDraft.attachmentName || undefined,
+            attachmentName: attachment?.name,
+            attachmentId: attachment?.id,
+            attachmentHash: attachment?.sha256,
+            attachmentMime: attachment?.mime,
+            attachmentSize: attachment?.size,
             registeredBy: "Henrique",
           }
         : item,
@@ -294,6 +395,10 @@ export function ApprovalPanel({
             manualSignedDate: undefined,
             manualReason: undefined,
             attachmentName: undefined,
+            attachmentId: undefined,
+            attachmentHash: undefined,
+            attachmentMime: undefined,
+            attachmentSize: undefined,
             registeredBy: undefined,
           }
         : item,
@@ -369,6 +474,9 @@ export function ApprovalPanel({
             {...sectionToggle("documents")}
           />
           <ApprovalSignatures
+            operationId={operation.id}
+            onAttachmentChange={file => setAttachmentFile(file ? { file, operationId: operation.id } : null)}
+            busy={attachmentBusy}
             signatures={signatures}
             signedCount={signedCount}
             canUndoManual={operation.stage === 5}
@@ -380,7 +488,9 @@ export function ApprovalPanel({
             }
             onRegisterSignature={registerSignature}
             onOpenManual={openManualSignature}
-            onCancelManual={() => setManualSignatureId(null)}
+            onCancelManual={() => {
+              if (!attachmentBusy) setManualSignatureId(null);
+            }}
             onConfirmManual={confirmManualSignature}
             onUndoManual={undoManualSignature}
             onSendForSignatures={sendForSignatures}

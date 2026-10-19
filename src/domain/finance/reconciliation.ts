@@ -5,6 +5,37 @@
 import { DAY, type Draft, type Result, hist, nextId, patchMovement, round2, run } from "./ledger";
 import { nowStamp, roleLedger, type FinanceState } from "./model";
 import { createTitleDraft, settleDraft } from "./titles";
+import { assertDateOpen } from "./closing";
+
+function validateLine(line: { date: string; amount: number }) {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(line.date) ||
+    !Number.isFinite(Date.parse(line.date)) ||
+    new Date(line.date).toISOString().slice(0, 10) !== line.date
+  )
+    throw new Error("Data inválida no extrato ou movimento.");
+  if (!Number.isFinite(line.amount) || Math.abs(round2(line.amount)) < 0.005)
+    throw new Error("Valor inválido no extrato ou movimento.");
+}
+
+function selectedItems(d: Draft, lineIds: string[], movementIds: string[]) {
+  const lines = (d.statement ?? []).filter(l => lineIds.includes(l.id));
+  const moves = d.movements.filter(m => movementIds.includes(m.id));
+  if (lines.length !== lineIds.length || moves.length !== movementIds.length)
+    throw new Error("Item selecionado não encontrado ou repetido.");
+  if (!lines.length && !moves.length) throw new Error("Selecione linhas do extrato e lançamentos do sistema.");
+  if (lines.some(l => l.status !== "Pendente") || moves.some(m => m.reconciled))
+    throw new Error("Algum item selecionado já está conciliado.");
+  const accounts = new Set([...lines.map(l => l.accountId), ...moves.map(m => m.accountId)]);
+  if (accounts.size !== 1) throw new Error("Os itens precisam ser da mesma conta.");
+  const account = d.accounts.find(a => accounts.has(a.id));
+  if (!account) throw new Error("Conta não encontrada.");
+  [...lines, ...moves].forEach(item => {
+    validateLine(item);
+    assertDateOpen(d, account.company, item.date);
+  });
+  return { lines, moves, account };
+}
 
 export function toggleReconcile(state: FinanceState, movementId: string, by: string): Result {
   return run(state, d => {
@@ -29,19 +60,29 @@ export function parseOfx(text: string): {
   ledgerBalance?: number;
 } {
   const tag = (block: string, name: string) => block.match(new RegExp(`<${name}>([^<\r\n]*)`, "i"))?.[1]?.trim();
+  for (const name of ["ACCTID", "BANKID"]) {
+    const values = [...text.matchAll(new RegExp(`<${name}>([^<\\r\\n]*)`, "gi"))].map(match => match[1].trim());
+    if (new Set(values).size > 1)
+      throw new Error("O OFX contém mais de uma conta ou banco. Importe um extrato por conta.");
+  }
   const toIso = (v?: string) => (v && v.length >= 8 ? `${v.slice(0, 4)}-${v.slice(4, 6)}-${v.slice(6, 8)}` : "");
   const blocks = text
     .split(/<STMTTRN>/i)
     .slice(1)
     .map(b => b.split(/<\/STMTTRN>/i)[0]);
-  const lines = blocks
-    .map((b, i) => ({
-      fitid: tag(b, "FITID") || `SEM-ID-${i + 1}`,
-      date: toIso(tag(b, "DTPOSTED")),
-      amount: round2(Number((tag(b, "TRNAMT") ?? "0").replace(",", "."))),
-      memo: [tag(b, "NAME"), tag(b, "MEMO")].filter(Boolean).join(" · ") || "Sem histórico",
-    }))
-    .filter(l => l.date && l.amount);
+  const occurrences = new Map<string, number>();
+  const lines = blocks.map(b => {
+    const raw = tag(b, "TRNAMT") ?? "";
+    if (!/^[+-]?\d+(?:[.,]\d{1,2})?$/.test(raw)) throw new Error("Valor inválido no OFX.");
+    const date = toIso(tag(b, "DTPOSTED"));
+    const amount = round2(Number(raw.replace(",", ".")));
+    const memo = [tag(b, "NAME"), tag(b, "MEMO")].filter(Boolean).join(" · ") || "Sem histórico";
+    validateLine({ date, amount });
+    const content = JSON.stringify([date, amount, memo]);
+    const occurrence = (occurrences.get(content) ?? 0) + 1;
+    occurrences.set(content, occurrence);
+    return { fitid: tag(b, "FITID") || `SEM-ID:${content}:${occurrence}`, date, amount, memo };
+  });
   const bal = tag(text, "BALAMT");
   return {
     lines,
@@ -57,15 +98,30 @@ export function importStatement(
   lines: StatementInput[],
   file: string,
   by: string,
+  source?: { bankId?: string; accountId?: string },
 ): Result {
   return run(state, d => {
     const account = d.accounts.find(a => a.id === accountId);
     if (!account) throw new Error("Escolha a conta do extrato.");
+    const normalize = (value: string) => value.replace(/[^a-z0-9]/gi, "").toUpperCase();
+    if (
+      (source?.accountId && normalize(source.accountId) !== normalize(account.account)) ||
+      (source?.bankId && normalize(source.bankId) !== normalize(account.bankCode))
+    )
+      throw new Error("A conta ou banco do OFX não corresponde à conta selecionada.");
+    if (!lines.length) throw new Error("Nenhuma linha encontrada no extrato.");
+    lines.forEach(l => {
+      validateLine(l);
+      if (!l.fitid.trim()) throw new Error("Identificação da linha ausente.");
+    });
     d.statement = [...(d.statement ?? [])];
     let added = 0,
       dup = 0;
     lines.forEach(l => {
-      if (d.statement.some(x => x.accountId === accountId && x.fitid === l.fitid)) {
+      const existing = d.statement.find(x => x.accountId === accountId && x.fitid === l.fitid);
+      if (existing) {
+        if (existing.date !== l.date || existing.amount !== round2(l.amount) || existing.memo !== l.memo)
+          throw new Error("FITID repetido com conteúdo divergente. Confira o extrato.");
         dup++;
         return;
       }
@@ -112,12 +168,13 @@ export function autoReconcile(
 ): Result {
   const tol = opts.toleranceDays ?? 3;
   return run(state, d => {
+    if (!Number.isInteger(tol) || tol < 0 || tol > 31) throw new Error("Tolerância de data inválida.");
     d.statement = [...(d.statement ?? [])];
     let pairs = 0;
     const lines = d.statement
       .filter(l => l.accountId === accountId && l.status === "Pendente" && (!opts.upTo || l.date <= opts.upTo))
       .sort((a, b) => a.date.localeCompare(b.date));
-    lines.forEach(line => {
+    const matches = lines.map(line => {
       const candidates = d.movements.filter(
         m =>
           m.accountId === accountId &&
@@ -125,10 +182,18 @@ export function autoReconcile(
           Math.abs(m.amount - line.amount) < 0.005 &&
           Math.abs(daysBetweenIso(m.date, line.date)) <= tol,
       );
-      if (!candidates.length) return;
-      const best = candidates.sort(
-        (a, b) => Math.abs(daysBetweenIso(a.date, line.date)) - Math.abs(daysBetweenIso(b.date, line.date)),
-      )[0];
+      return { line, candidates };
+    });
+    matches.forEach(({ line, candidates }) => {
+      if (candidates.length !== 1) return;
+      const best = candidates[0];
+      if (matches.filter(match => match.candidates.some(m => m.id === best.id)).length !== 1) return;
+      const account = d.accounts.find(a => a.id === accountId);
+      if (!account) throw new Error("Conta não encontrada.");
+      [line, best].forEach(item => {
+        validateLine(item);
+        assertDateOpen(d, account.company, item.date);
+      });
       markGroup(d, [line.id], [best.id], by, "Conciliação automática (valor e data)");
       pairs++;
     });
@@ -143,13 +208,7 @@ export function autoReconcile(
 export function reconcileManual(state: FinanceState, lineIds: string[], movementIds: string[], by: string): Result {
   return run(state, d => {
     d.statement = [...(d.statement ?? [])];
-    const lines = d.statement.filter(l => lineIds.includes(l.id));
-    const moves = d.movements.filter(m => movementIds.includes(m.id));
-    if (!lines.length && !moves.length) throw new Error("Selecione linhas do extrato e lançamentos do sistema.");
-    if (lines.some(l => l.status !== "Pendente") || moves.some(m => m.reconciled))
-      throw new Error("Algum item selecionado já está conciliado.");
-    const accounts = new Set([...lines.map(l => l.accountId), ...moves.map(m => m.accountId)]);
-    if (accounts.size > 1) throw new Error("Os itens precisam ser da mesma conta.");
+    const { lines, moves } = selectedItems(d, lineIds, movementIds);
     const bank = round2(lines.reduce((s, l) => s + l.amount, 0)),
       system = round2(moves.reduce((s, m) => s + m.amount, 0));
     if (Math.abs(bank - system) > 0.005)
@@ -196,7 +255,10 @@ export function launchFromStatement(
   return run(state, d => {
     const line = (d.statement ?? []).find(l => l.id === lineId);
     if (!line || line.status !== "Pendente") throw new Error("Linha do extrato não encontrada ou já conciliada.");
-    const account = d.accounts.find(a => a.id === line.accountId)!;
+    validateLine(line);
+    const account = d.accounts.find(a => a.id === line.accountId);
+    if (!account) throw new Error("Conta não encontrada.");
+    assertDateOpen(d, account.company, line.date);
     const kind = line.amount < 0 ? ("Pagar" as const) : ("Receber" as const);
     const unidentified = input.mode === "identificar";
     const id = createTitleDraft(
@@ -249,11 +311,7 @@ export function launchDifference(
   by: string,
 ): Result {
   return run(state, d => {
-    const lines = (d.statement ?? []).filter(l => lineIds.includes(l.id));
-    const moves = d.movements.filter(m => movementIds.includes(m.id));
-    const accountId = lines[0]?.accountId ?? moves[0]?.accountId;
-    const account = d.accounts.find(a => a.id === accountId);
-    if (!account) throw new Error("Selecione itens de uma conta.");
+    const { lines, moves, account } = selectedItems(d, lineIds, movementIds);
     const diff = round2(lines.reduce((s, l) => s + l.amount, 0) - moves.reduce((s, m) => s + m.amount, 0));
     if (Math.abs(diff) < 0.005) throw new Error("Não há diferença para lançar.");
     const date = (lines[0] ?? moves[0]).date;

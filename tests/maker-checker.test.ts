@@ -9,11 +9,7 @@ import {
   stripReceivablesFromOperation,
 } from "@/src/domain/receivables/model";
 import { assertExceptionMakerChecker } from "@/src/server/decisions/governance";
-import {
-  assertOperationTransition,
-  governReleaseTransition,
-  OperationGovernanceError,
-} from "@/src/server/operations/governance";
+import { assertOperationTransition, governReleaseTransition } from "@/src/server/operations/governance";
 import { operationMutationPermissionError } from "@/src/domain/operations/mutation-permissions";
 
 const request = (actorId: string, eventType: DecisionEvent["eventType"] = "EXCEPTION_REQUESTED") =>
@@ -38,7 +34,7 @@ describe("maker-checker de decisões materiais", () => {
     ).toThrow("já recebeu");
   });
 
-  it("registra o preparador no servidor e exige outro usuário para aprovar a liberação", () => {
+  it("registra o preparador e permite que ele envie a operação ao financeiro", () => {
     const base = {
       ...initialOperations[0],
       stage: 6,
@@ -68,9 +64,13 @@ describe("maker-checker de decisões materiais", () => {
       ...prepared,
       releaseReview: { ...prepared.releaseReview!, status: "Enviada ao financeiro" as const, releasedBy: "forjado" },
     };
-    expect(() => governReleaseTransition(prepared, release, { id: "maker", name: "Preparador" })).toThrow(
-      OperationGovernanceError,
-    );
+    const selfReleased = governReleaseTransition(prepared, release, { id: "maker", name: "Preparador" });
+    expect(selfReleased.releaseReview).toMatchObject({
+      preparedById: "maker",
+      approvedById: "maker",
+      status: "Enviada ao financeiro",
+    });
+    expect(selfReleased.releaseReview?.payables?.every(item => item.status === "Pendente de pagamento")).toBe(true);
     const approved = governReleaseTransition(
       prepared,
       release,
@@ -119,7 +119,8 @@ describe("maker-checker de decisões materiais", () => {
     expect(operationMutationPermissionError(base, riskChange, ["risk:decide"])).toBeNull();
     expect(operationMutationPermissionError(base, approvalChange, ["operations:edit"])).toContain("Controladoria");
     expect(operationMutationPermissionError(base, approvalChange, ["controlleria:formalize"])).toBeNull();
-    expect(operationMutationPermissionError(base, releaseChange, ["controlleria:formalize"])).toContain("Financeiro");
+    expect(operationMutationPermissionError(base, releaseChange, ["controlleria:formalize"])).toContain("Operações");
+    expect(operationMutationPermissionError(base, releaseChange, ["operations:edit"])).toBeNull();
     expect(operationMutationPermissionError(base, releaseChange, ["finance:release"])).toBeNull();
   });
 
@@ -172,9 +173,9 @@ describe("maker-checker de decisões materiais", () => {
         status: "Liberada ao financeiro",
         releaseReview: { status: "Em preparação" },
       }),
-    ).toThrow("autorização concluída");
+    ).toThrow("Entrada");
     expect(() => assertOperationTransition(null, { ...initialOperations[0], stage: 2, titleCount: 0 })).toThrow(
-      "ao menos um título",
+      "Entrada",
     );
     expect(() =>
       assertOperationTransition(initialOperations[0], {
@@ -217,8 +218,12 @@ describe("maker-checker de decisões materiais", () => {
         audit: [{ at: "13/10/2026, 12:00", by: "Financeiro", action: "Pagamento realizado", detail: "pay-1" }],
       },
     };
-    expect(() => assertOperationTransition(released, paid)).not.toThrow();
-    expect(() => governReleaseTransition(released, paid, { id: "finance", name: "Financeiro" })).not.toThrow();
+    expect(operationMutationPermissionError(released, paid, ["operations:edit"])).toContain("Financeiro");
+    expect(operationMutationPermissionError(released, paid, ["finance:release"])).toBeNull();
+    expect(() => assertOperationTransition(released, paid)).toThrow("somente para consulta");
+    expect(() => governReleaseTransition(released, paid, { id: "finance", name: "Financeiro" })).toThrow(
+      "não pode ser reescrita",
+    );
 
     const reversed = {
       ...paid,
@@ -231,7 +236,9 @@ describe("maker-checker de decisões materiais", () => {
         ],
       },
     };
-    expect(() => assertOperationTransition(paid, reversed)).not.toThrow();
-    expect(() => governReleaseTransition(paid, reversed, { id: "finance", name: "Financeiro" })).not.toThrow();
+    expect(() => assertOperationTransition(paid, reversed)).toThrow("somente para consulta");
+    expect(() => governReleaseTransition(paid, reversed, { id: "finance", name: "Financeiro" })).toThrow(
+      "não pode ser reescrita",
+    );
   });
 });

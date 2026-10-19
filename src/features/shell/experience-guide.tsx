@@ -194,6 +194,7 @@ export function ExperienceGuide({
       )}
 
       <Copilot
+        key={`${intelligence.tenantId}:${currentUser.id}:${currentUser.companyScopes.join(",")}:${currentUser.permissions.join(",")}`}
         dailyBriefing={dailyBriefing}
         attentionItems={attentionItems}
         onOpenAttention={onOpenAttention}

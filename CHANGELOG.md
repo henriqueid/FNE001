@@ -1,5 +1,45 @@
 # Changelog
 
+## Não lançado — 18/10/2026 · Itaú112 e encargos de cobrança
+
+- Carteira112 escritural: remessa com nosso número zerado, controle exclusivo por título e atribuição bancária validada no retorno02. Liquidação depende da confirmação; colisões, reatribuições e divergências de valor/vencimento são recusadas.
+- Encargos explícitos por conta: juros mensais convertidos em centavos/dia com mês comercial de30dias, multa percentual com início configurável em registro2 e e-mail do sacado em registro5, combinado aos dados do sacador.
+- Configuração e testes usam os parâmetros como entradas; nenhuma conta real ou taxa do usuário é gravada como padrão nas fixtures. Dados de produção não foram alterados nesta execução.
+- Check passou com682 testes, build aprovado e13 testes PostgreSQL, incluindo112, passaram no cluster isolado. Homologação bancária continua externa.
+
+## Publicado — 18/10/2026 · Camadas do Copiloto
+
+- Consultas oficiais no servidor para concentração, rankings de vencidos por quantidade/valor e resumo; agrupamento por documento, carteira completa e critérios explícitos. Consultas históricas não são substituídas por posição atual.
+- Financeiro, visitas/comitês e tarefas usam fontes persistidas e os filtros de acesso dos módulos. Zeros cadastrais de inicialização não são apresentados como histórico ou uso de limite confirmado.
+- Respostas com indicadores, fontes e botão “Ver mais”; snapshots privados permitem retomada e preservam o recorte ao continuar, atualizar ou trocar filtros.
+- Camada comportamental integra registros existentes e ledger, com novas anotações, avaliações, correções e orientações privadas por padrão. Aprendizado revisável mantém evidências, validade, conflitos e revogação, sem alterar regras ou alçadas.
+- Bloqueado enriquecimento externo; conector opcional restrito a CDI e meta Selic do BCB. Interpretação generativa mantém o orçamento server-side e pede confirmação quando propõe uma nova consulta.
+- Migração de memória preparada e validada em PostgreSQL isolado; aplicação remota e publicação permanecem pendentes.
+
+## Não lançado — 18/10/2026 · Prontidão operacional após auditoria
+
+- Liberação, pagamentos, recebimentos da carteira, estornos e devolução coordenados no servidor, com transação, versões, idempotência e trilha. Reaquisição mantém o histórico e atualiza a referência da nova compra.
+- Validação determinística das baixas e decisões impede snapshots que simulem pagamento, registro bancário ou origem oficial. A interface aguarda persistência em Financeiro, Carteira, Cadastro e Comercial.
+- Aprovação por alçadas configuradas no servidor, documentos privados recuperáveis com hash e inicialização financeira autorizada para tenant vazio.
+- CNAB400 Itaú/Bradesco com geração, recuperação dos mesmos bytes, retorno e deduplicação. Homologação, carteira/convênio e componentes bloqueados continuam explícitos.
+- OFX com validação de conta/conteúdo, deduplicação e tratamento de ambiguidades. Divergências entre novas posições importadas e recebimentos locais exigem reconciliação, sem sobrescrever caixa silenciosamente.
+- Relatórios PDF/XLSX, oferta honesta de formatos de importação, PWA com aviso offline e processamento opcional de notificações no Node.
+- Verificação adicional em PostgreSQL temporário novo, sem acessar produção. Publicação e homologação externa não fazem parte desta entrega local.
+
+## Não lançado — 18/10/2026 · Conclusão individual da OP
+
+- O preparador pode enviar a OP ao financeiro sem segundo aprovador obrigatório, usando permissão de edição operacional.
+- O criador pode decidir a própria aprovação quando possui as permissões e alçadas exigidas.
+- Pagamentos e estornos continuam restritos à permissão financeira; a liberação gera obrigações pendentes e preserva a autoria no servidor.
+
+## Não lançado — 18/10/2026 · Integridade do diário financeiro
+
+- A persistência financeira passa a recusar edição e remoção de lançamentos anteriores também em períodos abertos, impedindo divergência entre snapshot e partidas contábeis normalizadas.
+- Estornos exigem contrapartida integral na mesma empresa e vínculos recíprocos; vínculos já registrados não podem ser apagados ou substituídos.
+- A comparação dos fatos ignora a ordem das propriedades JSON, preservando compatibilidade com a leitura pelo PostgreSQL JSONB.
+- A importação do plano recusa de-para que reescreva partidas históricas e orienta a preservar os códigos ou acrescentar contas.
+- Adicionados testes de regressão do diário, dos estornos, da importação e da recusa pelo repositório antes de qualquer escrita.
+
 ## Não lançado — 15/10/2026 · Persistência da IA e consolidação operacional
 
 - Licença, ativação, disponibilidade, orçamento e consumo da IA passam a ser persistidos por organização no PostgreSQL privado.

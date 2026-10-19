@@ -186,7 +186,22 @@ export type CompanyBankAccount = {
   nickname: string;
   usage: { payments: boolean; receipts: boolean; collection: boolean };
   pixKey?: string;
-  collection?: { agreement: string; wallet: string; layout: "CNAB 240" | "CNAB 400"; nextOurNumber: number };
+  collection?: {
+    agreement: string;
+    wallet: string;
+    layout: "CNAB 240" | "CNAB 400";
+    nextOurNumber: number;
+    accountDigit?: string;
+    beneficiaryDocument?: string;
+    beneficiaryName?: string;
+    nextRemittanceSequence?: number;
+    dailyInterestCents?: number;
+    monthlyInterestPercent?: number;
+    lateFinePercent?: number;
+    lateFineDaysAfterDue?: number;
+    sendPayerEmail?: boolean;
+    finalBeneficiaryEnabled?: boolean;
+  };
   openingBalance: number;
   openingDate: string;
   minimumBalance: number;
@@ -223,6 +238,8 @@ export type FinanceTitle = {
   operationId?: string;
   payableId?: string;
   linkedTitleId?: string;
+  /** Referência controlada pelos comandos de liquidação da Carteira no servidor. */
+  portfolioTitleId?: string;
   history: HistoryEntry[];
 };
 

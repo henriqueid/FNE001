@@ -22,7 +22,9 @@ export async function GET(request: Request) {
     !access.principal.permissions.includes("settings:manage")
   )
     return json({ error: "Sem permissão para consultar a configuração de IA." }, 403);
-  const state = (await loadIntelligenceState(access.db, access.tenantId)) ?? emptyIntelligenceState(access.tenantId);
+  const state =
+    (await loadIntelligenceState(access.db, access.tenantId, access.principal.id)) ??
+    emptyIntelligenceState(access.tenantId);
   return json({ state });
 }
 

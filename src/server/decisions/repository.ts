@@ -114,6 +114,22 @@ export async function listDecisionEvents(db: DecisionDatabase, tenantId: string,
   return result.results.map(eventFromRow);
 }
 
+/** Projeção do ledger somente para operações previamente autorizadas pelo chamador. */
+export async function listOperationDecisionEvents(db: DecisionDatabase, tenantId: string, operationIds: string[]) {
+  const events: DecisionEvent[] = [];
+  for (let index = 0; index < operationIds.length; index += 500) {
+    const batch = operationIds.slice(index, index + 500);
+    const result = await db
+      .prepare(
+        `SELECT ${decisionColumns} FROM private.decision_events WHERE tenant_id = ? AND operation_id IN (${batch.map(() => "?").join(",")}) ORDER BY created_at, event_version`,
+      )
+      .bind(tenantId, ...batch)
+      .all<DecisionRow>();
+    events.push(...result.results.map(eventFromRow));
+  }
+  return events;
+}
+
 const stable = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(stable);
   if (value && typeof value === "object")

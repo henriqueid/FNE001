@@ -339,9 +339,34 @@ export function normalizeOperationIntake({
 }): { data: ManualEntryData; intake: EntryIntake } {
   const extension = fileName.split(".").at(-1)?.toLocaleLowerCase();
   const format: EntryIntake["format"] =
-    extension === "xml" ? "XML" : extension === "xlsx" ? "XLSX" : source === "CNAB" ? "CNAB" : "CSV";
+    extension === "xml"
+      ? "XML"
+      : extension === "xlsx" || extension === "xls"
+        ? "XLSX"
+        : source === "CNAB"
+          ? "CNAB"
+          : "CSV";
   let parsed: { rows: RawTitle[]; issues: EntryIntakeIssue[] };
-  if (format === "XML") parsed = xmlRows(text);
+  const supported =
+    source === "XML NF-e"
+      ? extension === "xml"
+      : source === "CNAB"
+        ? ["rem", "ret", "cnab", "txt"].includes(extension ?? "")
+        : source === "Planilha" && extension === "csv";
+  if (format !== "XLSX" && !supported)
+    parsed = {
+      rows: [],
+      issues: [
+        {
+          id: "file:unsupported",
+          severity: "BLOQUEIO",
+          code: "FORMATO_NAO_SUPORTADO",
+          message:
+            "Escolha XML de NF-e, CSV UTF-8 no modelo ou remessa CNAB com campos comuns 240/400, conforme a origem selecionada.",
+        },
+      ],
+    };
+  else if (format === "XML") parsed = xmlRows(text);
   else if (format === "XLSX")
     parsed = {
       rows: [],
@@ -354,7 +379,7 @@ export function normalizeOperationIntake({
         },
       ],
     };
-  else if (format === "CNAB" && !/[;\t,]/.test(text.split(/\r?\n/)[0] ?? "")) parsed = cnabRows(text);
+  else if (format === "CNAB") parsed = cnabRows(text);
   else parsed = csvRows(text);
 
   const issues = [...parsed.issues];

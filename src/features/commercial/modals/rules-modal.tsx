@@ -15,7 +15,7 @@ export function RulesModal({
 }: {
   state: CommercialState;
   onClose: () => void;
-  onApply: (r: CResult) => boolean;
+  onApply: (r: CResult) => boolean | Promise<boolean>;
 }) {
   const [rules, setRules] = useState(state.rules);
   const setTier = (i: number, k: "from" | "rate", v: string) =>
@@ -33,14 +33,17 @@ export function RulesModal({
           </button>
           <button
             className="fn-btn primary"
-            onClick={() => {
+            onClick={async () => {
               const tiers = [...rules.tiers].filter(t => t.rate > 0 || t.from === 0).sort((a, b) => a.from - b.from);
               if (!tiers.length || tiers[0].from !== 0) {
-                onApply({ state, error: "A primeira faixa precisa começar em 0% da meta." });
+                await onApply({ state, error: "A primeira faixa precisa começar em 0% da meta." });
                 return;
               }
               if (
-                onApply({ state: { ...state, rules: { ...rules, tiers } }, message: "Regras de comissão atualizadas." })
+                await onApply({
+                  state: { ...state, rules: { ...rules, tiers } },
+                  message: "Regras de comissão atualizadas.",
+                })
               )
                 onClose();
             }}
@@ -116,7 +119,7 @@ export function RulesModal({
       </table>
       <button
         className="fn-btn link"
-        onClick={() =>
+        onClick={async () =>
           setRules({
             ...rules,
             tiers: [

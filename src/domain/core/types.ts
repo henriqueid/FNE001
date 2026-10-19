@@ -490,6 +490,10 @@ export type Operation = {
       manualReason?: string;
       manualSignedDate?: string;
       attachmentName?: string;
+      attachmentId?: string;
+      attachmentHash?: string;
+      attachmentMime?: string;
+      attachmentSize?: number;
       registeredBy?: string;
     }>;
     audit?: Array<{

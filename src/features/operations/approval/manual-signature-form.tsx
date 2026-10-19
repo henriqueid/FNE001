@@ -13,11 +13,15 @@ export function ManualSignatureForm({
   onDraftChange,
   onCancel,
   onConfirm,
+  onAttachmentChange,
+  busy,
 }: {
   draft: ManualSignatureDraft;
   onDraftChange: Dispatch<SetStateAction<ManualSignatureDraft>>;
   onCancel: () => void;
   onConfirm: () => void;
+  onAttachmentChange: (file: File | null) => void;
+  busy: boolean;
 }) {
   return (
     <div className="manual-signature-form">
@@ -26,6 +30,7 @@ export function ManualSignatureForm({
       <label>
         <span>Data da assinatura</span>
         <input
+          disabled={busy}
           type="date"
           value={draft.signedDate}
           max={localDateISO()}
@@ -34,7 +39,11 @@ export function ManualSignatureForm({
       </label>
       <label>
         <span>Motivo</span>
-        <select value={draft.reason} onChange={e => onDraftChange(d => ({ ...d, reason: e.target.value }))}>
+        <select
+          disabled={busy}
+          value={draft.reason}
+          onChange={e => onDraftChange(d => ({ ...d, reason: e.target.value }))}
+        >
           {manualReasons.map(reason => (
             <option key={reason}>{reason}</option>
           ))}
@@ -43,6 +52,7 @@ export function ManualSignatureForm({
       <label className="wide">
         <span>{draft.reason === "Outro" ? "Descreva o motivo (obrigatório)" : "Observação (opcional)"}</span>
         <input
+          disabled={busy}
           value={draft.notes}
           onChange={e => onDraftChange(d => ({ ...d, notes: e.target.value }))}
           placeholder="Ex.: via original arquivada na pasta física do cedente"
@@ -51,15 +61,22 @@ export function ManualSignatureForm({
       <label className="wide">
         <span>Contrato digitalizado (opcional)</span>
         <input
+          disabled={busy}
           type="file"
           accept=".pdf,.jpg,.jpeg,.png"
-          onChange={e => onDraftChange(d => ({ ...d, attachmentName: e.target.files?.[0]?.name ?? "" }))}
+          onChange={e => {
+            const file = e.target.files?.[0] ?? null;
+            onAttachmentChange(file);
+            onDraftChange(d => ({ ...d, attachmentName: file?.name ?? "" }));
+          }}
         />
       </label>
       <div className="manual-signature-actions">
-        <button onClick={onCancel}>Cancelar</button>
-        <button className="confirm" onClick={onConfirm}>
-          Confirmar assinatura manual
+        <button disabled={busy} onClick={onCancel}>
+          Cancelar
+        </button>
+        <button disabled={busy} className="confirm" onClick={onConfirm}>
+          {busy ? "Preservando anexo…" : "Confirmar assinatura manual"}
         </button>
       </div>
     </div>

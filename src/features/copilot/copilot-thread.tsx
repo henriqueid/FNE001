@@ -76,7 +76,7 @@ export function StartCard({
           <FolderIcon />
           <span>
             <b>Analisar um lote de recebíveis</b>
-            <small>XML de NF-e, CNAB 240/400 ou XLS padrão de extrato</small>
+            <small>XML de NF-e, CSV no modelo ou campos comuns de remessa CNAB 240/400</small>
           </span>
           <ArrowIcon />
         </button>
@@ -103,7 +103,7 @@ export function StartCard({
             onDrop={onDrop}
           >
             <FolderIcon />
-            <span>Arraste XML de NF-e, CNAB 240/400 ou XLS no layout padrão de extrato</span>
+            <span>Arraste XML de NF-e, CSV no modelo ou remessa CNAB 240/400 para revisão</span>
             <div className="cpl-drop-actions">
               <label className="cpl-ghost">
                 Escolher arquivos
@@ -111,7 +111,7 @@ export function StartCard({
                   type="file"
                   multiple
                   className="cpl-sr"
-                  accept=".xml,.rem,.ret,.txt,.cnab,.xls,.xlsx,.csv"
+                  accept=".xml,.rem,.ret,.txt,.cnab,.csv"
                   onChange={event => event.target.files && void desk.addFiles(event.target.files)}
                 />
               </label>
@@ -126,7 +126,7 @@ export function StartCard({
             <ul className="cpl-files">
               {desk.files.map((file, index) => (
                 <li key={`${file.name}-${index}`}>
-                  <i data-format={file.format}>{file.format}</i>
+                  <i data-format={file.format}>{file.format === "XLS" ? "CSV" : file.format}</i>
                   <span>{file.name}</span>
                   <small>{file.detail}</small>
                 </li>
@@ -278,6 +278,11 @@ const SOURCE: Record<string, string> = {
   consultar_carteira: "Carteira",
   consultar_politica: "Política",
   consultar_operacoes: "Operações",
+  consultar_comportamento: "Histórico autorizado do cliente",
+  consultar_sistema: "Controles do ambiente",
+  consultar_financeiro: "Financeiro",
+  consultar_comercial: "Comercial",
+  consultar_tarefas: "Tarefas atribuídas",
   simular_cenario: "Simulação no motor",
   explicar_apontamento: "Regra da política",
   comparar_cenarios: "Comparação de cenários",
@@ -287,7 +292,15 @@ const SOURCE: Record<string, string> = {
   copilot_error: "Falha na consulta",
 };
 
-export function ReplyBubble({ reply }: { reply: DeskReply }) {
+export function ReplyBubble({
+  reply,
+  onViewMore,
+  onAsk,
+}: {
+  reply: DeskReply;
+  onViewMore?: (reply: DeskReply) => void;
+  onAsk?: (question: string) => void;
+}) {
   const source = reply.tool ? SOURCE[reply.tool.split("(")[0]] : undefined;
   return (
     <div className={`cpl-bubble is-ai${reply.tool?.startsWith("copilot_error") ? " is-error" : ""}`}>
@@ -297,6 +310,10 @@ export function ReplyBubble({ reply }: { reply: DeskReply }) {
         </i>
         STRATO
       </span>
+      {reply.report && <strong className="cpl-report-title">{reply.report.title}</strong>}
+      {reply.report && (
+        <small>Posição de referência: {reply.report.referenceDate.split("-").reverse().join("/")}</small>
+      )}
       {source && (
         <span className="cpl-tool" title={reply.tool}>
           Fonte: {source}
@@ -305,6 +322,16 @@ export function ReplyBubble({ reply }: { reply: DeskReply }) {
       {reply.paragraphs.map(text => (
         <p key={text}>{text}</p>
       ))}
+      {reply.report && (
+        <dl className="cpl-report-metrics">
+          {reply.report.metrics.map(metric => (
+            <div key={metric.label}>
+              <dt>{metric.label}</dt>
+              <dd>{metric.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
       {reply.table && (
         <div className="cpl-table is-mini">
           <table>
@@ -316,8 +343,8 @@ export function ReplyBubble({ reply }: { reply: DeskReply }) {
               </tr>
             </thead>
             <tbody>
-              {reply.table.rows.map(row => (
-                <tr key={row[0]}>
+              {reply.table.rows.map((row, rowIndex) => (
+                <tr key={`${row[0]}-${rowIndex}`}>
                   {row.map((cell, index) => (
                     <td key={`${row[0]}-${index}`}>{cell}</td>
                   ))}
@@ -327,6 +354,17 @@ export function ReplyBubble({ reply }: { reply: DeskReply }) {
           </table>
         </div>
       )}
+      {onViewMore && (
+        <button type="button" className="cpl-ghost" onClick={() => onViewMore(reply)}>
+          <ExpandIcon /> Ver mais
+        </button>
+      )}
+      {onAsk &&
+        reply.suggestedQuestions?.map(question => (
+          <button key={question} type="button" className="cpl-ghost" onClick={() => onAsk(question)}>
+            Consultar: {question}
+          </button>
+        ))}
     </div>
   );
 }

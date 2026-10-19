@@ -2,6 +2,11 @@ import type { FinanceState } from "@/src/domain/finance/model";
 import { validateFinanceTransition } from "@/src/domain/finance/persistence";
 import { jsonParameter } from "@/src/server/database/postgres";
 import type { DecisionDatabase, DecisionStatement } from "@/src/server/decisions/repository";
+import { inTenantFinanceTransaction } from "@/src/server/database/transactions";
+import { syncOperationPaymentStatuses } from "./operation-effects";
+import { attributeFinanceChanges } from "./attribution";
+import { releasePaymentIntegrityError, type ReleaseIntegrityOptions } from "./release-integrity";
+import { settlementIntegrityError } from "./settlement-integrity";
 
 type FinanceRow = { payload: FinanceState; aggregate_version: number; event_id?: string };
 type FinanceCommandRow = { request_hash: string; result_payload: FinanceState; result_version: number };
@@ -39,7 +44,12 @@ export async function financeRequestHash(input: {
   return hex(new Uint8Array(digest));
 }
 
-async function replayedFinanceCommand(db: DecisionDatabase, tenantId: string, commandId: string, requestHash: string) {
+export async function replayedFinanceCommand(
+  db: DecisionDatabase,
+  tenantId: string,
+  commandId: string,
+  requestHash: string,
+) {
   const row = await db
     .prepare(
       `select request_hash, result_payload, result_version
@@ -351,7 +361,23 @@ function projectionStatements(db: DecisionDatabase, tenantId: string, actorId: s
     commands.push(
       db
         .prepare(
-          `insert into private.finance_purchase_postings (tenant_id, operation_id, journal_entry_id) values (?, ?, ?) on conflict (tenant_id, operation_id) do nothing`,
+          `insert into private.finance_purchase_postings (tenant_id, operation_id, journal_entry_id)
+           values (?, ?, ?)
+           on conflict (tenant_id, operation_id) do update set journal_entry_id = excluded.journal_entry_id
+           where exists (
+             select 1 from private.finance_journal_entries original
+             join private.finance_journal_entries replacement
+               on replacement.tenant_id = original.tenant_id
+              and replacement.journal_entry_id = excluded.journal_entry_id
+             where original.tenant_id = private.finance_purchase_postings.tenant_id
+               and original.journal_entry_id = private.finance_purchase_postings.journal_entry_id
+               and original.reversed_by is not null
+               and original.origin_type = 'Operação'
+               and original.origin_id = private.finance_purchase_postings.operation_id
+               and replacement.origin_type = 'Operação'
+               and replacement.origin_id = original.origin_id
+               and replacement.reversed_by is null
+           )`,
         )
         .bind(tenantId, operationId, journalEntryId),
     );
@@ -386,19 +412,25 @@ export async function saveFinanceState(
   expectedVersion: number,
   commandId: string,
   requestHash: string,
+  options: ReleaseIntegrityOptions = {},
 ): Promise<FinanceState | null> {
   const work = async (transaction: DecisionDatabase) => {
     const replay = await replayedFinanceCommand(transaction, tenantId, commandId, requestHash);
     if (replay) return replay;
     const previous = await loadFinanceState(transaction, tenantId);
-    if ((previous?.persistenceVersion ?? 0) === expectedVersion) {
-      const transitionError = validateFinanceTransition(previous, state);
-      if (transitionError) throw new FinanceTransitionError(transitionError);
-    }
+    if ((previous?.persistenceVersion ?? 0) !== expectedVersion) return null;
+    state = attributeFinanceChanges(previous, state, actorId);
+    const transitionError = validateFinanceTransition(previous, state);
+    if (transitionError) throw new FinanceTransitionError(transitionError);
+    const releaseError = releasePaymentIntegrityError(previous, state, options);
+    if (releaseError) throw new FinanceTransitionError(releaseError);
+    const settlementError = settlementIntegrityError(previous, state);
+    if (settlementError) throw new FinanceTransitionError(settlementError);
     const row = await saveEnvelope(transaction, tenantId, actorId, state, expectedVersion);
     if (!row) return replayedFinanceCommand(transaction, tenantId, commandId, requestHash);
     const commands = projectionStatements(transaction, tenantId, actorId, state);
     if (commands.length) await transaction.batch(commands);
+    await syncOperationPaymentStatuses(transaction, tenantId, actorId, previous, state, options.returningOperationId);
     if (!row.event_id) throw new Error("Evento do comando financeiro não foi registrado.");
     await transaction
       .prepare(
@@ -420,5 +452,5 @@ export async function saveFinanceState(
       .run();
     return { ...row.payload, persistenceVersion: row.aggregate_version };
   };
-  return db.transaction ? db.transaction(work) : work(db);
+  return inTenantFinanceTransaction(db, tenantId, work);
 }

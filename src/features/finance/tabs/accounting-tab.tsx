@@ -12,6 +12,8 @@ import { incomeStatement, trialBalance } from "@/src/domain/finance/reports";
 import { addCategory, addChartAccount } from "@/src/domain/finance/setup";
 import { ChartImportModal, downloadCsv } from "@/src/features/finance/chart-import-modal";
 import { Field, br, money } from "@/src/features/finance/finance-ui";
+import { ReportExport } from "@/src/ui/report-export";
+import { buildAccountingReport } from "@/src/domain/reports/accounting";
 import { useMemo, useState } from "react";
 
 export function AccountingTab({
@@ -75,6 +77,17 @@ export function AccountingTab({
       </header>
       {view !== "plano" && view !== "fechamento" && (
         <div className="fn-toolbar">
+          <ReportExport
+            report={() =>
+              buildAccountingReport(
+                state,
+                scope,
+                from,
+                to,
+                view === "dre" ? "dre" : view === "diario" ? "diario" : "balancete",
+              )
+            }
+          />
           <Field label="De">
             <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
           </Field>

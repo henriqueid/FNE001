@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmStateCommit, type StateCommit } from "@/src/ui/confirmed-state";
 import { type FormEvent, type ReactNode, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRegistry } from "@/src/app/registry-context";
@@ -93,13 +94,14 @@ export function PortfolioTitleDetails({
   title: PortfolioGridRow;
   repName: (id?: string) => string;
   portfolio: PortfolioState;
-  onPortfolio: (state: PortfolioState) => void;
+  onPortfolio: StateCommit<PortfolioState>;
   onClose: () => void;
   initialTab?: DetailTab;
 }) {
   const { parties } = useRegistry();
   const [tab, setTab] = useState<DetailTab>(initialTab);
   const [notice, setNotice] = useState("");
+  const [saving, setSaving] = useState(false);
   const cedent = parties.find(party => digits(party.document) === digits(title.ownerDocument));
   const debtor = parties.find(party => digits(party.document) === digits(title.debtorDocument));
   const payments = title.payments ?? [];
@@ -144,48 +146,66 @@ export function PortfolioTitleDetails({
     setNextContactAt(suggestedReturn(value, promiseDate));
   }
 
-  function saveOccurrence(event: FormEvent) {
+  async function saveOccurrence(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     if (!notes.trim() || !nextContactAt) {
       setNotice("Informe o resumo da conversa e a data do próximo contato.");
       return;
     }
-    onPortfolio(
-      addCollectionOccurrence(portfolio, title.id, {
-        chargedAt,
-        channel,
-        contactPerson: contactPerson.trim() || "Contato financeiro",
-        outcome,
-        notes: notes.trim(),
-        nextContactAt,
-        promiseDate: promiseDate || undefined,
-        createdAt: new Date().toISOString(),
-        createdBy: "Henrique",
-      }),
+    setSaving(true);
+    const confirmed = await confirmStateCommit(() =>
+      onPortfolio(
+        addCollectionOccurrence(portfolio, title.id, {
+          chargedAt,
+          channel,
+          contactPerson: contactPerson.trim() || "Contato financeiro",
+          outcome,
+          notes: notes.trim(),
+          nextContactAt,
+          promiseDate: promiseDate || undefined,
+          createdAt: new Date().toISOString(),
+          createdBy: "Henrique",
+        }),
+      ),
     );
+    setSaving(false);
+    if (!confirmed) {
+      setNotice("Não foi possível confirmar a gravação. Os campos foram mantidos para tentar novamente.");
+      return;
+    }
     setNotice("Cobrança registrada no histórico e no GRID.");
     setNotes("");
     setContactPerson("");
     setChargedAt(localDateTime());
   }
 
-  function saveConfirmation(event: FormEvent) {
+  async function saveConfirmation(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     if (!confirmationNotes.trim()) {
       setNotice("Registre a conclusão ou divergência encontrada pela Controladoria.");
       return;
     }
-    onPortfolio(
-      updatePortfolioConfirmation(portfolio, title.id, {
-        status: confirmationStatus,
-        contactedAt: confirmationAt,
-        channel: confirmationChannel,
-        contactPerson: confirmationContact.trim() || "Contato do cliente",
-        notes: confirmationNotes.trim(),
-        updatedAt: new Date().toISOString(),
-        updatedBy: "Henrique",
-      }),
+    setSaving(true);
+    const confirmed = await confirmStateCommit(() =>
+      onPortfolio(
+        updatePortfolioConfirmation(portfolio, title.id, {
+          status: confirmationStatus,
+          contactedAt: confirmationAt,
+          channel: confirmationChannel,
+          contactPerson: confirmationContact.trim() || "Contato do cliente",
+          notes: confirmationNotes.trim(),
+          updatedAt: new Date().toISOString(),
+          updatedBy: "Henrique",
+        }),
+      ),
     );
+    setSaving(false);
+    if (!confirmed) {
+      setNotice("Não foi possível confirmar a gravação. Os campos foram mantidos para tentar novamente.");
+      return;
+    }
     setNotice("Confirmação da Controladoria atualizada e incluída no histórico.");
   }
 
@@ -535,7 +555,7 @@ export function PortfolioTitleDetails({
                     <span>{returnRule}</span>
                   </div>
                   <footer>
-                    <button type="submit" className="fn-btn action-save">
+                    <button type="submit" disabled={saving} className="fn-btn action-save">
                       Salvar ocorrência
                     </button>
                   </footer>
@@ -682,7 +702,7 @@ export function PortfolioTitleDetails({
                   </label>
                 </div>
                 <footer>
-                  <button type="submit" className="fn-btn action-save">
+                  <button type="submit" disabled={saving} className="fn-btn action-save">
                     Salvar confirmação
                   </button>
                 </footer>

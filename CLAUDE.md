@@ -1,10 +1,34 @@
 # STRATO — contexto de continuidade
 
+## Copiloto publicado · 18/10/2026
+
+- O usuário aprovou as três camadas (dados, comportamento, aprendizado), respostas verificáveis e “Ver mais”. Implementação em `src/server/copilot/`, `src/domain/copilot/` e componentes de relatório/memória da feature.
+- A rota de chat passa a consultar fatos completos autorizados e a usar o modelo somente como interpretador restrito de intenção, com confirmação para sugestões novas. A reserva de orçamento server-side de outro lote foi preservada.
+- Memória, revisões e snapshots exigem `20261018054805_copilot_evidence_memory.sql`. Migração validada com PostgreSQL isolado de teste; **aplicada e registrada em produção**. Sem as tabelas novas, a API informa indisponibilidade.
+- O conector de mercado fica desativado por padrão; `STRATO_MARKET_INDICATORS_ENABLED=true` libera somente CDI diário/SGS 12 e meta Selic/SGS 432, sem dados do cliente na requisição. Outras bases externas são bloqueadas no Copiloto.
+- Contrato e limites canônicos: seção 10 de `docs/ARCHITECTURE.md`. Não confundir histórico comportamental com regra de crédito ou treinamento de modelo.
+- Verificação deste lote: `npm run check` aprovado com 657 testes passando e 12 ignorados; build aprovado. Persistência/imutabilidade/RLS verificadas em PostgreSQL isolado e interface conferida com fixture local em navegador. Publicação autorizada concluída com código `2696f34`: lote isolado aprovado com 427 testes, build remoto e saúde pública confirmados. Registro em `docs/deployments/2026-10-18-copilot.md`. As demais melhorias operacionais locais continuam fora desse lote.
+
 Este arquivo é o ponto de retomada para Claude Code e outros agentes. Antes de alterar o projeto, leia também `README.md`, `docs/ARCHITECTURE.md`, `docs/CONVENTIONS.md` e `docs/DEPLOY_HOSTINGER.md`.
 
 ## Onde paramos
 
-Última atualização: **15/10/2026**, após a correção da persistência e da estabilidade da IA e a publicação integral do estado de trabalho acumulado na branch `main`.
+Última atualização: **18/10/2026**, com melhorias locais de prontidão, ainda sem commit ou publicação. O último estado publicado descrito neste arquivo continua sendo o de **15/10/2026**. O inventário de implementação/verificação está em `docs/superpowers/plans/2026-10-18-prontidao-operacional.md`; use esse registro para pendências, sem inferir prontidão produtiva pela existência de telas ou testes.
+
+## Melhoria local após auditoria
+
+- Ajuste local de condução individual da OP: criador autorizado pode aprovar e preparador pode enviar ao financeiro sem segunda pessoa obrigatória. Permissões e alçadas de aprovação permanecem; pagamento e estorno exigem `finance:release`. Ainda sem publicação.
+
+- `src/domain/finance/persistence.ts` preserva lançamentos anteriores em períodos abertos e fechados, permitindo apenas acrescentar um vínculo de estorno válido e imutável após o registro.
+- Estornos precisam ter referências recíprocas, mesma empresa e partidas integralmente opostas. A comparação dos fatos tolera reordenação das chaves pelo JSONB.
+- `src/domain/finance/chart-import.ts` recusa reclassificação de partidas históricas; o plano pode preservar os códigos existentes ou receber novas contas.
+- Regressões em `tests/finance-journal-integrity.test.ts` e `tests/finance-repository-integrity.test.ts` cobrem alterações indevidas, estornos legítimos e bloqueio antes da escrita no banco.
+- O lote foi ampliado: liberação, pagamento, liquidação de ativo e devolução usam coordenação transacional no servidor, versões e idempotência. Reaquisição preserva ciclos anteriores; snapshots genéricos não podem forjar compra, registro bancário, baixa ou autoria.
+- Há inicialização autorizada do Financeiro, aprovação por alçada/evidência no servidor, documentos privados com hash, OFX com ambiguidades explícitas e proveniência que não considera configuração ativa como evidência oficial.
+- CNAB400 Itaú109/112 e Bradesco09/19 têm comandos próprios e arquivos auditados, sem transmissão ao banco nesta execução. Usuário informou carteira112 em captura e confirmou juros8%a.m.; a112 usa numeração atribuída no retorno02, juros mensal com base30, multa percentual/reg2 e e-mail/reg5. Usuário confirmou multa de2% a partir do dia seguinte ao vencimento (`lateFineDaysAfterDue: 1`). Dados Bradesco e homologação bancária permanecem externos; bureau e provedor de assinatura não foram informados.
+- PDF/XLSX foram abertos por leitores independentes e revisados visualmente. Importação anuncia somente formatos processados. PWA oferece aviso offline, sem finanças offline. Worker de notificações é opcional e desabilitado por padrão.
+- `scripts/test-postgres-isolated.mjs` cria um cluster local novo, aplica migrações e verifica coordenação/concorrência/rollback. Nunca usa a `DATABASE_URL` existente. Supabase gerenciado, deploy, volume privado produtivo e homologação externa não foram testados por esse comando.
+- Alterações externas concorrentes do Copiloto e suas migrações foram preservadas. As verificações finais precisam incluir o estado conjunto antes de qualquer publicação.
 
 O STRATO é uma aplicação operacional de recebíveis em React 19 + Vite/vinext, com APIs no mesmo processo Node e PostgreSQL privado no Supabase. O tenant produtivo padrão é `strato-demo`. O navegador nunca deve receber `DATABASE_URL`, `OPENAI_API_KEY` ou credenciais administrativas.
 

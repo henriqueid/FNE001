@@ -214,7 +214,15 @@ export async function publishDecisionOutbox(
   limit = 25,
   now = new Date(),
   companyScopes?: string[],
-) {
+): Promise<{ processed: number; published: number; retried: number; failed: number }> {
+  if (db.transaction)
+    return db.transaction(async scoped => {
+      await scoped
+        .prepare("select pg_advisory_xact_lock(hashtextextended(?, 0))")
+        .bind(`strato.outbox:${tenantId}`)
+        .run();
+      return publishDecisionOutbox(scoped, tenantId, limit, now, companyScopes);
+    });
   await ensurePublisherSchema(db);
   const scope = scopedOperationJoin(companyScopes);
   const pending = await db

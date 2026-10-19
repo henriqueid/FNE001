@@ -15,7 +15,31 @@ function validTitle(title: PortfolioTitleRecord) {
   if (!title.id.trim() || !title.documentNumber.trim() || !title.ownerDocument.trim() || !title.debtorDocument.trim())
     return false;
   if (!title.ownerName.trim() || !title.debtorName.trim() || !title.dueDate || title.originalAmount <= 0) return false;
-  if ([title.paidAmount, title.repurchasedAmount, title.discountAmount, title.abatementAmount].some(value => value < 0))
+  if (
+    [
+      title.originalAmount,
+      title.openAmount ?? 0,
+      title.paidAmount,
+      title.repurchasedAmount,
+      title.discountAmount,
+      title.abatementAmount,
+    ].some(value => !Number.isFinite(value) || value < 0)
+  )
+    return false;
+  if (!Array.isArray(title.payments) || !unique(title.payments.map(payment => payment.id))) return false;
+  if (
+    title.payments.some(
+      payment =>
+        !payment.id.trim() ||
+        !Number.isFinite(payment.amount) ||
+        !validInstant(payment.createdAt) ||
+        !validInstant(payment.date) ||
+        !payment.createdBy.trim() ||
+        [payment.principalAmount, payment.interestAmount, payment.discountAmount].some(
+          value => value !== undefined && (!Number.isFinite(value) || value < 0),
+        ),
+    )
+  )
     return false;
   if (!unique(title.events.map(event => event.id)) || !title.events.every(validEvent)) return false;
   if (!unique(title.collectionOccurrences.map(item => item.id))) return false;
@@ -64,6 +88,7 @@ export function validatePortfolioTransition(
   previous: PortfolioState,
   next: PortfolioState,
   actorName: string,
+  options: { financialCommand?: boolean } = {},
 ): string | null {
   const previousIds = new Set(previous.titles.map(title => title.id));
   const injected = next.titles.find(title => !previousIds.has(title.id));
@@ -74,6 +99,48 @@ export function validatePortfolioTransition(
     if (!candidate) return `O título ${prior.documentNumber} não pode ser removido da Carteira.`;
     if (!same(immutableSource(prior), immutableSource(candidate)))
       return `A origem do título ${prior.documentNumber} é imutável.`;
+    if (
+      candidate.payments.length < prior.payments.length ||
+      prior.payments.some((payment, index) => {
+        const saved = candidate.payments[index];
+        return (
+          !saved ||
+          !same({ ...payment, reversedBy: undefined }, { ...saved, reversedBy: undefined }) ||
+          (!!payment.reversedBy && payment.reversedBy !== saved.reversedBy) ||
+          (!!saved.reversedBy &&
+            !candidate.payments.some(reversal => reversal.id === saved.reversedBy && reversal.reversalOf === saved.id))
+        );
+      })
+    )
+      return `Os pagamentos do título ${prior.documentNumber} são imutáveis; use estorno vinculado.`;
+    if (candidate.payments.slice(prior.payments.length).some(payment => payment.createdBy !== actorName))
+      return `A autoria do pagamento do título ${prior.documentNumber} não corresponde à sessão.`;
+    const financial = (title: PortfolioTitleRecord) => ({
+      openAmount: title.openAmount,
+      sourcePosition: title.sourcePosition,
+      positionReviewRequired: title.positionReviewRequired,
+      paidAmount: title.paidAmount,
+      repurchasedAmount: title.repurchasedAmount,
+      discountAmount: title.discountAmount,
+      abatementAmount: title.abatementAmount,
+      payments: title.payments,
+      bankStatus: title.bankStatus,
+      ourNumber: title.ourNumber,
+      bank: title.bank,
+      agency: title.agency,
+      account: title.account,
+      wallet: title.wallet,
+      agreement: title.agreement,
+    });
+    if (
+      !options.financialCommand &&
+      (!same(financial(prior), financial(candidate)) ||
+        (prior.status !== candidate.status &&
+          [prior.status, candidate.status].some(status =>
+            ["Pago", "Liquidado parcial", "Recomprado", "Recomprado parcial", "Cancelado", "Abatido"].includes(status),
+          )))
+    )
+      return `Saldos, pagamentos e registro bancário do título ${prior.documentNumber} exigem um comando financeiro no servidor.`;
     if (
       candidate.events.length < prior.events.length ||
       prior.events.some((event, index) => !same(event, candidate.events[index]))

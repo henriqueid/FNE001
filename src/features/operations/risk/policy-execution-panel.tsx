@@ -11,6 +11,8 @@ import { type EligibilityOutcome, type EligibilityOverrideDecision } from "@/src
 import { useEffect, useMemo, useState } from "react";
 import { saveFile } from "@/src/ui/download";
 import { clearSyntheticOperationalPolicy, hasSyntheticOperationalPolicy } from "@/src/domain/copilot/operation-handoff";
+import { useStratoAuth } from "@/src/features/auth/auth-context";
+import { ServerPolicyExecutionPanel } from "./server-policy-execution-panel";
 
 const outcomeLabel: Record<EligibilityOutcome, string> = {
   APROVADO: "Aprovado",
@@ -29,7 +31,20 @@ const actionLabel = {
 
 const operatorLabel = { EQ: "=", NE: "≠", GT: ">", GTE: "≥", LT: "<", LTE: "≤", IN: "está em", NOT_IN: "não está em" };
 
-export function PolicyExecutionPanel({
+export function PolicyExecutionPanel(props: {
+  operation: Operation;
+  debtors: Debtor[];
+  cedent?: Cedent;
+  onChange: (operation: Operation) => void;
+}) {
+  return useStratoAuth()?.mode === "demo" ? (
+    <DemoPolicyExecutionPanel {...props} />
+  ) : (
+    <ServerPolicyExecutionPanel operation={props.operation} onChange={props.onChange} />
+  );
+}
+
+function DemoPolicyExecutionPanel({
   operation,
   debtors,
   cedent,

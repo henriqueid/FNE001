@@ -10,10 +10,15 @@ import { AlertIcon, ArrowIcon } from "@/src/ui/icons";
 import type { Dispatch, SetStateAction } from "react";
 import { ApprovalCardHead, type SectionToggle } from "./approval-card-head";
 import { type ApprovalSignature, type ManualSignatureDraft } from "./approval-model";
+import { downloadOperationDocument } from "@/src/app/documents-client";
+import { useState } from "react";
 import { ManualSignatureForm } from "./manual-signature-form";
 
 export function ApprovalSignatures({
   signatures,
+  operationId,
+  onAttachmentChange,
+  busy,
   signedCount,
   canUndoManual,
   manualSignatureId,
@@ -30,6 +35,9 @@ export function ApprovalSignatures({
   onToggle,
 }: SectionToggle & {
   signatures: ApprovalSignature[];
+  operationId: string;
+  onAttachmentChange: (file: File | null) => void;
+  busy: boolean;
   signedCount: number;
   /** Desfazer registro manual só é permitido enquanto a operação está na etapa 5. */
   canUndoManual: boolean;
@@ -44,6 +52,21 @@ export function ApprovalSignatures({
   onUndoManual: (id: string) => void;
   onSendForSignatures: () => void;
 }) {
+  const [downloadError, setDownloadError] = useState("");
+  async function download(id: string, name: string) {
+    try {
+      setDownloadError("");
+      const blob = await downloadOperationDocument(operationId, id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setDownloadError(error instanceof Error ? error.message : "Falha ao recuperar anexo.");
+    }
+  }
   return (
     <section className={`approval-card signature-panel${collapsed ? " is-collapsed" : ""}`}>
       <ApprovalCardHead
@@ -73,6 +96,7 @@ export function ApprovalSignatures({
             </div>
             <button onClick={onConfigureProvider}>Configurar</button>
           </div>
+          {downloadError && <p role="alert">{downloadError}</p>}
           <div className="signature-list">
             {signatures.map(item => (
               <div key={item.id}>
@@ -93,6 +117,11 @@ export function ApprovalSignatures({
                     {item.signedAt}
                   </small>
                 )}
+                {item.attachmentId && (
+                  <button onClick={() => download(item.attachmentId!, item.attachmentName ?? "documento")}>
+                    Baixar contrato digitalizado
+                  </button>
+                )}
                 {item.status !== "Assinado" && manualSignatureId !== item.id && (
                   <div className="signature-row-actions">
                     {item.status === "Enviado" && (
@@ -110,6 +139,8 @@ export function ApprovalSignatures({
                 )}
                 {manualSignatureId === item.id && (
                   <ManualSignatureForm
+                    busy={busy}
+                    onAttachmentChange={onAttachmentChange}
                     draft={manualDraft}
                     onDraftChange={onManualDraftChange}
                     onCancel={onCancelManual}

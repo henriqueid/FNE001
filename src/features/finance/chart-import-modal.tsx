@@ -286,8 +286,8 @@ export function ChartImportModal({
                 <div>
                   <b>Substituir o plano atual</b>
                   <small>
-                    O plano do arquivo passa a ser o oficial. As contas em uso são reclassificadas pelo de-para abaixo;
-                    cada lançamento guarda a conta original.
+                    O plano do arquivo passa a ser o oficial. Contas de lançamentos já registrados precisam manter seus
+                    códigos. Para incluir novas contas sem trocar o plano, use a opção de acrescentar.
                   </small>
                 </div>
               </label>

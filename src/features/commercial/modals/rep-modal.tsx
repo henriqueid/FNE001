@@ -21,7 +21,7 @@ export function RepModal({
   rep?: SalesRep;
   defaultCompany?: string;
   onClose: () => void;
-  onApply: (r: CResult) => boolean;
+  onApply: (r: CResult) => boolean | Promise<boolean>;
 }) {
   const [form, setForm] = useState<SalesRep>(
     rep ?? {
@@ -53,8 +53,12 @@ export function RepModal({
           </button>
           <button
             className="fn-btn primary"
-            onClick={() => {
-              if (onApply(saveRep(state, { ...form, monthlyGoal: num(goal), flatRate: flat ? num(flat) : undefined })))
+            onClick={async () => {
+              if (
+                await onApply(
+                  saveRep(state, { ...form, monthlyGoal: num(goal), flatRate: flat ? num(flat) : undefined }),
+                )
+              )
                 onClose();
             }}
           >

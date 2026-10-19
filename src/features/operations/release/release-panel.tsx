@@ -233,13 +233,12 @@ export function ReleasePanel({
         preparedAt: new Date().toISOString(),
         observation,
       },
-      { action: "Preparação concluída", detail: "Liberação pronta para conferência independente." },
+      { action: "Preparação concluída", detail: "Liberação pronta para envio ao financeiro." },
     );
-    setFeedback({ tone: "success", message: "Preparação salva. Outra pessoa do Financeiro deve aprovar a liberação." });
+    setFeedback({ tone: "success", message: "Preparação salva. Você já pode liberar a operação para o financeiro." });
   }
 
   const demo = isDemoOperation(operation);
-  const preparedByCurrentUser = !demo && review.preparedById === actor.id;
   const waitingForPreparation = !demo && !review.preparedById;
 
   return (
@@ -289,10 +288,8 @@ export function ReleasePanel({
         <div className="release-feedback warning">
           <AlertIcon />
           <span>
-            Preparada por {review.preparedBy}.{" "}
-            {preparedByCurrentUser
-              ? "A aprovação exige outra pessoa."
-              : "Você pode realizar a conferência independente."}
+            Preparada por {review.preparedBy}. Confira os dados e envie ao financeiro. O pagamento exige permissão
+            financeira.
           </span>
         </div>
       )}
@@ -516,15 +513,10 @@ export function ReleasePanel({
             {!released ? (
               <button
                 className="primary-action action-confirm release-submit"
-                disabled={!readyToRelease || preparedByCurrentUser}
+                disabled={!readyToRelease}
                 onClick={waitingForPreparation ? prepare : release}
               >
-                {waitingForPreparation
-                  ? "Concluir preparação"
-                  : preparedByCurrentUser
-                    ? "Aguardando segundo aprovador"
-                    : "Aprovar e liberar para o financeiro"}{" "}
-                <ArrowIcon />
+                {waitingForPreparation ? "Concluir preparação" : "Liberar para o financeiro"} <ArrowIcon />
               </button>
             ) : (
               <div className="release-done">

@@ -1,5 +1,6 @@
 "use client";
 
+import type { StateCommit } from "@/src/ui/confirmed-state";
 import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -486,7 +487,7 @@ export function PortfolioTitleGrid({
   rows: PortfolioGridRow[];
   repName: (id?: string) => string;
   portfolio: PortfolioState;
-  onPortfolio: (state: PortfolioState) => void;
+  onPortfolio: StateCommit<PortfolioState>;
 }) {
   const [detailId, setDetailId] = useState<string | null>(null);
   const detail = detailId ? (rows.find(row => row.id === detailId) ?? null) : null;

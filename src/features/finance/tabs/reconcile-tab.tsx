@@ -185,7 +185,7 @@ export function ReconcileTab({
   scope: string;
   accountId: string;
   setAccountId: (id: string) => void;
-  onApply: (r: Result) => boolean;
+  onApply: (r: Result) => boolean | Promise<boolean>;
 }) {
   const accounts = scopedAccounts(state, scope);
   const account = accounts.find(a => a.id === accountId) ?? accounts[0];
@@ -223,8 +223,8 @@ export function ReconcileTab({
     setBankSel(new Set());
     setSysSel(new Set());
   };
-  const apply = (r: Result) => {
-    if (onApply(r)) {
+  const apply = async (r: Result) => {
+    if (await onApply(r)) {
       clear();
       setLaunching(null);
       setDiffOpen(false);
@@ -238,21 +238,13 @@ export function ReconcileTab({
   };
 
   async function onFile(file: File) {
-    const text = await file.text();
-    const parsed = parseOfx(text);
-    if (!parsed.lines.length) {
-      onApply({ state, error: "Não encontrei lançamentos neste arquivo. Confira se é um OFX do banco." });
-      return;
+    try {
+      const parsed = parseOfx(await file.text());
+      if (await onApply(importStatement(state, account.id, parsed.lines, file.name, BY, parsed)))
+        setImportInfo(`${file.name}: ${parsed.lines.length} lançamento(s) importado(s).`);
+    } catch (error) {
+      onApply({ state, error: error instanceof Error ? error.message : "Não foi possível ler o OFX." });
     }
-    const guess = accounts.find(
-      a => parsed.accountId && a.account.replace(/\D/g, "").endsWith(parsed.accountId.replace(/\D/g, "").slice(-5)),
-    );
-    const target = guess ?? account;
-    if (guess && guess.id !== account.id) setAccountId(guess.id);
-    if (onApply(importStatement(state, target.id, parsed.lines, file.name, BY)))
-      setImportInfo(
-        `${file.name}: ${parsed.lines.length} lançamento(s) de ${br(parsed.lines[0].date)} a ${br(parsed.lines[parsed.lines.length - 1].date)}${parsed.ledgerBalance !== undefined ? ` · saldo informado pelo banco ${money(parsed.ledgerBalance)} × sistema ${money(accountBalance(state, target.id))}` : ""}`,
-      );
   }
 
   const groupOf = (g?: string) =>

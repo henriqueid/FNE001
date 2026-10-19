@@ -27,7 +27,7 @@ export function CommitteeModal({
   committee?: Committee;
   preset?: Partial<Committee>;
   onClose: () => void;
-  onApply: (r: CResult) => boolean;
+  onApply: (r: CResult) => boolean | Promise<boolean>;
 }) {
   const [form, setForm] = useState({
     prospectId: preset?.prospectId,
@@ -62,9 +62,9 @@ export function CommitteeModal({
             </button>
             <button
               className="fn-btn primary"
-              onClick={() => {
+              onClick={async () => {
                 if (
-                  onApply(
+                  await onApply(
                     decideCommittee(
                       state,
                       committee.id,
@@ -192,9 +192,9 @@ export function CommitteeModal({
           </button>
           <button
             className="fn-btn primary"
-            onClick={() => {
+            onClick={async () => {
               if (
-                onApply(
+                await onApply(
                   submitCommittee(
                     state,
                     {

@@ -25,7 +25,7 @@ export function ProspectDossierModal({
   state: CommercialState;
   prospect: Prospect;
   onClose: () => void;
-  onApply: (result: CResult) => boolean;
+  onApply: (result: CResult) => boolean | Promise<boolean>;
   onCommittee: (prospect: Prospect) => void;
 }) {
   const initial = prospect.dossier ?? { ...emptyProspectDossier(), document: prospect.document ?? "" };
@@ -45,9 +45,9 @@ export function ProspectDossierModal({
   );
   const readiness = dossierReadiness({ ...prospect, dossier: candidate });
 
-  const save = () => {
+  const save = async () => {
     const result = saveProspectDossier(state, prospect.id, candidate, BY);
-    return { ok: onApply(result), result };
+    return { ok: await onApply(result), result };
   };
 
   return (
@@ -63,8 +63,8 @@ export function ProspectDossierModal({
           </button>
           <button
             className="fn-btn ghost"
-            onClick={() => {
-              if (save().ok) onClose();
+            onClick={async () => {
+              if ((await save()).ok) onClose();
             }}
           >
             Salvar proposta e dossiê
@@ -73,8 +73,8 @@ export function ProspectDossierModal({
             className="fn-btn primary"
             disabled={!readiness.ready}
             title={readiness.ready ? "Levar o dossiê ao comitê" : "Conclua os itens obrigatórios"}
-            onClick={() => {
-              const saved = save();
+            onClick={async () => {
+              const saved = await save();
               const updated = saved.result.state.prospects.find(item => item.id === prospect.id);
               if (saved.ok && updated) onCommittee(updated);
             }}
@@ -156,7 +156,7 @@ export function ProspectDossierModal({
                 type="button"
                 className="fn-btn ghost small"
                 disabled={lookup.loading}
-                onClick={() => {
+                onClick={async () => {
                   setLookup({ loading: true });
                   void consultLeadCnpj(dossier.document)
                     .then(evidence => {

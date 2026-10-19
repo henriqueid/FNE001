@@ -1,6 +1,7 @@
 "use client";
 
 /** Central de Cobrança: agenda, promessas, acordos e escalonamento derivados da carteira viva. */
+import type { StateCommit } from "@/src/ui/confirmed-state";
 import { useMemo, useState } from "react";
 import {
   buildCollectionQueue,
@@ -34,7 +35,7 @@ export function CollectionCenter({
   rows: PortfolioGridRow[];
   today: string;
   portfolio: PortfolioState;
-  onPortfolio: (state: PortfolioState) => void;
+  onPortfolio: StateCommit<PortfolioState>;
   repName: (id?: string) => string;
 }) {
   const [view, setView] = useState<View>("painel");

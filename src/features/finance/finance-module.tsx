@@ -29,7 +29,10 @@ import {
   SwapIcon,
 } from "@/src/ui/icons";
 import { ModuleTabs } from "@/src/ui/module-tabs";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { BankingPanel } from "./banking-panel";
+import type { PortfolioState } from "@/src/domain/portfolio/model";
+import type { OperationReturnCommand } from "@/src/server/operations/return";
 import { TitleActionModal, type Action } from "./finance-ui";
 import { ReconcileTab } from "@/src/features/finance/tabs/reconcile-tab";
 import { TitlesTab } from "@/src/features/finance/tabs/titles-tab";
@@ -39,13 +42,19 @@ export type Toast = { tone: "success" | "error"; text: string } | null;
 
 export type Props = {
   state: FinanceState;
-  onState: (s: FinanceState) => void;
+  onState: (s: FinanceState) => void | Promise<void>;
   onEffects: (effects: Effect[]) => void;
   onPatchOperation: (id: string, patch: Partial<Operation>) => void;
   operations: Operation[];
   carteira: CarteiraFlow[];
   companyScope: string;
   onOpenOperation: (op: Operation) => void;
+  portfolio?: PortfolioState;
+  onBankingCommitted?: () => Promise<void>;
+  onReturnOperation?: (
+    operation: Operation,
+    intent: Omit<OperationReturnCommand, "operationId" | "expectedVersion">,
+  ) => Promise<void>;
 };
 
 export default function FinanceModule({
@@ -57,6 +66,9 @@ export default function FinanceModule({
   carteira,
   companyScope,
   onOpenOperation,
+  portfolio,
+  onBankingCommitted,
+  onReturnOperation,
 }: Props) {
   const [tab, setTab] = useState<Tab>("caixa");
   const [toast, setToast] = useState<Toast>(null);
@@ -64,15 +76,31 @@ export default function FinanceModule({
   const [newTitle, setNewTitle] = useState(false);
   const [returning, setReturning] = useState<Operation | null>(null);
   const [extractAccount, setExtractAccount] = useState("");
-  const apply = (r: Result) => {
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const apply = async (r: Result) => {
+    if (savingRef.current) return false;
     if (r.error) {
       setToast({ tone: "error", text: r.error });
       return false;
     }
-    onState(r.state);
-    if (r.effects?.length) onEffects(r.effects);
-    if (r.message) setToast({ tone: "success", text: r.message });
-    return true;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      await onState(r.state);
+      if (r.effects?.length) onEffects(r.effects);
+      if (r.message) setToast({ tone: "success", text: r.message });
+      return true;
+    } catch (error) {
+      setToast({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Não foi possível gravar a alteração financeira.",
+      });
+      return false;
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   };
   const today = todayIso();
   const openPay = state.titles.filter(
@@ -110,7 +138,11 @@ export default function FinanceModule({
     bancos: <BankIcon />,
   };
   return (
-    <div className="page-wrap fn-page">
+    <div className="page-wrap fn-page" aria-busy={saving}>
+      {tab === "bancos" && portfolio && onBankingCommitted && (
+        <BankingPanel state={state} portfolio={portfolio} scope={companyScope} onCommitted={onBankingCommitted} />
+      )}
+      {saving && <p role="status">Gravando alteração financeira…</p>}
       <div className="fn-heading">
         <div>
           <span className="hd-eyebrow">
@@ -178,6 +210,8 @@ export default function FinanceModule({
           onApply={apply}
           onOpenOperation={onOpenOperation}
           onReturn={setReturning}
+          allowCollectionSimulation={!onBankingCommitted}
+          portfolio={portfolio}
         />
       )}
       {tab === "extrato" && (
@@ -206,8 +240,8 @@ export default function FinanceModule({
           action={action}
           state={state}
           onClose={() => setAction(null)}
-          onApply={r => {
-            if (apply(r)) setAction(null);
+          onApply={async r => {
+            if (await apply(r)) setAction(null);
           }}
         />
       )}
@@ -216,8 +250,8 @@ export default function FinanceModule({
           state={state}
           defaultCompany={companyScope}
           onClose={() => setNewTitle(false)}
-          onApply={r => {
-            if (apply(r)) setNewTitle(false);
+          onApply={async r => {
+            if (await apply(r)) setNewTitle(false);
           }}
         />
       )}
@@ -226,8 +260,17 @@ export default function FinanceModule({
           op={returning}
           state={state}
           onClose={() => setReturning(null)}
-          onDone={r => {
-            if (apply(r)) {
+          onReturn={
+            onReturnOperation
+              ? async intent => {
+                  await onReturnOperation(returning, intent);
+                  setToast({ tone: "success", text: "Operação devolvida com histórico e contrapartidas preservados." });
+                  setReturning(null);
+                }
+              : undefined
+          }
+          onDone={async r => {
+            if (await apply(r)) {
               if (r.operationPatch) onPatchOperation(returning.id, r.operationPatch);
               setReturning(null);
             }

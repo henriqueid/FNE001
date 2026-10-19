@@ -21,10 +21,16 @@ export function syncReleases(
     const review = op.releaseReview;
     if (op.status !== "Liberada ao financeiro" || review?.status !== "Enviada ao financeiro") return;
     const payables = (review.payables ?? []).filter(p => p.status !== "Cancelado");
-    const date = review.releasedAt?.match(/(\d{2})\/(\d{2})\/(\d{4})/)
-      ? review.releasedAt.replace(/.*?(\d{2})\/(\d{2})\/(\d{4}).*/, "$3-$2-$1")
-      : todayIso();
-    if (!d.purchasePosted[op.id] && payables.length) {
+    const priorPurchase = d.journal.find(entry => entry.id === d.purchasePosted[op.id]);
+    const newCycle = Boolean(priorPurchase?.reversedBy);
+    if (newCycle && payables.some(payable => d.titles.some(title => title.payableId === payableKey(payable))))
+      throw new Error("A reaquisição exige novos identificadores de favorecidos para preservar o ciclo anterior.");
+    const date = /^\d{4}-\d{2}-\d{2}T/.test(review.releasedAt ?? "")
+      ? review.releasedAt!.slice(0, 10)
+      : review.releasedAt?.match(/(\d{2})\/(\d{2})\/(\d{4})/)
+        ? review.releasedAt.replace(/.*?(\d{2})\/(\d{2})\/(\d{4}).*/, "$3-$2-$1")
+        : todayIso();
+    if ((!d.purchasePosted[op.id] || newCycle) && payables.length) {
       const f = fin[op.id];
       const face = f?.face || op.amount;
       const toPay = round2(payables.reduce((s, p) => s + p.amount, 0));
@@ -111,9 +117,14 @@ export function confirmCollection(state: FinanceState, operationId: string): Res
 export function returnOperation(
   state: FinanceState,
   operation: Operation,
-  opts: { targetStage: number; reason: string; cashMoved: boolean },
+  opts: { targetStage: number; reason: string; cashMoved: boolean; date?: string },
   by: string,
 ): Result & { operationPatch?: Partial<Operation> } {
+  if (!Number.isInteger(opts.targetStage) || opts.targetStage < 1 || opts.targetStage > 5)
+    return { state, error: "Escolha uma etapa de destino entre Entrada e Aprovação." };
+  if (operation.status !== "Liberada ao financeiro" || operation.releaseReview?.status !== "Enviada ao financeiro")
+    return { state, error: "Somente uma operação liberada ao financeiro pode ser devolvida." };
+  if (typeof opts.cashMoved !== "boolean") return { state, error: "Informe a situação do caixa." };
   if (isOperationLocked(state, operation.id))
     return {
       state,
@@ -121,7 +132,13 @@ export function returnOperation(
         "Os títulos desta operação já foram enviados e confirmados pelo banco. A operação está em cobrança e não pode ser devolvida nem estornada.",
     };
   if (!opts.reason.trim()) return { state, error: "Informe o motivo da devolução." };
-  const date = todayIso();
+  const date = opts.date ?? todayIso();
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+    !Number.isFinite(Date.parse(date + "T00:00:00Z")) ||
+    new Date(date + "T00:00:00Z").toISOString().slice(0, 10) !== date
+  )
+    return { state, error: "Informe uma data válida para a devolução." };
   const result = run(state, d => {
     const titles = d.titles.filter(
       t => t.operationId === operation.id && t.origin === "Liberação de operação" && t.status !== "Cancelado",
@@ -134,12 +151,10 @@ export function returnOperation(
     const purchase = d.purchasePosted[operation.id];
     if (purchase) {
       reverseEntry(d, purchase, date, `Devolução da operação ${operation.aditivoNumber}: ${opts.reason}`, by);
-      delete d.purchasePosted[operation.id];
     }
     const pendingRegistration = d.registrations[operation.id];
-    if (pendingRegistration) delete d.registrations[operation.id];
     return {
-      message: `Operação devolvida para ${["", "Entrada", "Risco", "Lastro", "Preço", "Aprovação", "Liberação"][opts.targetStage]}. ${titles.length} lançamento(s) estornado(s)${pendingRegistration ? " e instrução de baixa da remessa pendente" : ""}.`,
+      message: `Operação devolvida para ${["", "Entrada", "Risco", "Lastro", "Preço", "Aprovação", "Liberação"][opts.targetStage]}. ${titles.length} lançamento(s) estornado(s)${pendingRegistration ? "; o registro bancário anterior permanece no histórico" : ""}.`,
     };
   });
   if (result.error) return result;

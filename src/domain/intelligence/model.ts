@@ -8,6 +8,8 @@ export type IntelligenceState = {
   status: AIStatus;
   monthlyTokenBudget: number;
   usedTokens: number;
+  /** Competência do contador autoritativo, sempre AAAA-MM em UTC. */
+  budgetPeriod?: string;
   persistenceVersion?: number;
   updatedAt: string;
 };

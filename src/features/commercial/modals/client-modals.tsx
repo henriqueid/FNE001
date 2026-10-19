@@ -32,7 +32,7 @@ export function TransferModal({
   state: CommercialState;
   link: ClientLink;
   onClose: () => void;
-  onApply: (r: CResult) => boolean;
+  onApply: (r: CResult) => boolean | Promise<boolean>;
 }) {
   const [to, setTo] = useState(state.reps.find(r => r.id !== link.repId && r.active && !isAccountManager(r))?.id ?? "");
   const [reason, setReason] = useState("");
@@ -48,8 +48,8 @@ export function TransferModal({
           </button>
           <button
             className="fn-btn primary"
-            onClick={() => {
-              if (onApply(transferClient(state, link.id, to, reason, BY))) onClose();
+            onClick={async () => {
+              if (await onApply(transferClient(state, link.id, to, reason, BY))) onClose();
             }}
           >
             Transferir
@@ -94,7 +94,7 @@ export function ProspectModal({
   state: CommercialState;
   defaultRep: string;
   onClose: () => void;
-  onApply: (r: CResult) => boolean;
+  onApply: (r: CResult) => boolean | Promise<boolean>;
 }) {
   const [form, setForm] = useState({
     name: "",
@@ -147,9 +147,9 @@ export function ProspectModal({
           </button>
           <button
             className="fn-btn primary"
-            onClick={() => {
+            onClick={async () => {
               if (
-                onApply(
+                await onApply(
                   addProspect(state, {
                     name: form.name,
                     document: form.document,
@@ -304,7 +304,7 @@ export function ConvertModal({
   state: CommercialState;
   prospect: Prospect;
   onClose: () => void;
-  onApply: (r: CResult) => boolean;
+  onApply: (r: CResult) => boolean | Promise<boolean>;
 }) {
   const approved = state.committees.find(c => c.clientName === prospect.name && c.approved);
   const [form, setForm] = useState({
@@ -345,9 +345,9 @@ export function ConvertModal({
           </button>
           <button
             className="fn-btn primary"
-            onClick={() => {
+            onClick={async () => {
               if (
-                onApply(
+                await onApply(
                   convertProspect(state, prospect.id, {
                     document: form.document,
                     approvedLimit: num(form.limit),
@@ -433,7 +433,7 @@ export function LostModal({
   state: CommercialState;
   prospect: Prospect;
   onClose: () => void;
-  onApply: (r: CResult) => boolean;
+  onApply: (r: CResult) => boolean | Promise<boolean>;
 }) {
   const [reason, setReason] = useState("");
   return (
@@ -448,8 +448,8 @@ export function LostModal({
           </button>
           <button
             className="fn-btn danger"
-            onClick={() => {
-              if (onApply(moveProspect(state, prospect.id, "Perdido", reason))) onClose();
+            onClick={async () => {
+              if (await onApply(moveProspect(state, prospect.id, "Perdido", reason))) onClose();
             }}
           >
             Marcar como perdida

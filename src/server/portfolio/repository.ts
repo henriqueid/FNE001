@@ -5,9 +5,11 @@ import {
   type PortfolioTitleRecord,
 } from "@/src/domain/portfolio/model";
 import { validatePortfolioTransition } from "@/src/domain/portfolio/persistence";
+import { overlayPortfolioPosition } from "@/src/domain/portfolio/positions";
 import { jsonParameter } from "@/src/server/database/postgres";
 import type { DecisionDatabase, DecisionStatement } from "@/src/server/decisions/repository";
 import { loadReceivables } from "@/src/server/receivables/repository";
+import { inTenantFinanceTransaction } from "@/src/server/database/transactions";
 
 type ImportedPortfolioRow = {
   title_id: string;
@@ -21,6 +23,8 @@ type ImportedPortfolioRow = {
   internal_wallet: string;
   title_payload: Record<string, unknown>;
   position_date: string;
+  import_batch_id: string;
+  lifecycle_status: string;
   open_amount: number;
   present_amount: number;
   paid_amount: number;
@@ -44,7 +48,8 @@ function importedTitle(row: ImportedPortfolioRow): PortfolioTitleRecord {
   const source = String(row.title_payload.sourceSystem ?? "Importação de carteira");
   return {
     id: row.title_id,
-    status: "Em aberto",
+    status:
+      row.lifecycle_status === "CANCELLED" ? "Cancelado" : numberValue(row.open_amount) === 0 ? "Pago" : "Em aberto",
     bankStatus: row.wallet_code ? "Registrado" : "Sem boleto",
     source: "Carteira anterior",
     importSource: "Planilha",
@@ -65,6 +70,13 @@ function importedTitle(row: ImportedPortfolioRow): PortfolioTitleRecord {
     dueDate: row.current_due_date,
     originalAmount: numberValue(row.original_amount),
     openAmount: numberValue(row.open_amount),
+    sourcePosition: {
+      id: row.import_batch_id,
+      date: row.position_date,
+      openAmount: numberValue(row.open_amount),
+      paidAmount: numberValue(row.paid_amount),
+      discountAmount: numberValue(row.discount_amount),
+    },
     paidAmount: numberValue(row.paid_amount),
     repurchasedAmount: 0,
     discountAmount: numberValue(row.discount_amount),
@@ -94,11 +106,11 @@ async function loadSourcePortfolio(db: DecisionDatabase, tenantId: string): Prom
          from private.portfolio_title_positions
          where tenant_id = ?
        )
-       select t.title_id, t.document_number, t.receivable_type,
+       select distinct on (t.title_id) t.title_id, t.document_number, t.receivable_type,
               t.negotiation_date::text, t.original_due_date::text, t.current_due_date::text,
               t.original_amount::float8, t.wallet_code, t.internal_wallet,
               t.payload as title_payload,
-              p.position_date::text, p.open_amount::float8, p.present_amount::float8,
+              p.position_date::text, p.import_batch_id, p.lifecycle_status, p.open_amount::float8, p.present_amount::float8,
               p.paid_amount::float8, p.discount_amount::float8, p.discount_income::float8,
               p.late_fee_amount::float8, p.monetary_correction_amount::float8,
               p.collection_agreement, p.collection_status, p.payload as position_payload,
@@ -114,8 +126,8 @@ async function loadSourcePortfolio(db: DecisionDatabase, tenantId: string): Prom
        join private.registry_parties debtor
          on debtor.tenant_id = t.tenant_id and debtor.party_id = t.debtor_party_id
        left join private.company_profiles company on company.tenant_id = t.tenant_id
-       where t.tenant_id = ? and p.lifecycle_status = 'OPEN' and p.open_amount > 0
-       order by p.computed_days_past_due desc, t.current_due_date, t.title_id`,
+       where t.tenant_id = ?
+       order by t.title_id, p.created_at desc, p.import_batch_id desc`,
     )
     .bind(tenantId, tenantId)
     .all<ImportedPortfolioRow>();
@@ -180,21 +192,6 @@ async function loadStoredPortfolio(db: DecisionDatabase, tenantId: string) {
   return row ? { ...row.payload, persistenceVersion: row.aggregate_version } : null;
 }
 
-function overlayTitle(source: PortfolioTitleRecord, stored: PortfolioTitleRecord): PortfolioTitleRecord {
-  return {
-    ...source,
-    status: stored.status,
-    bankStatus: stored.bankStatus,
-    dueDate: stored.dueDate,
-    protestOffice: stored.protestOffice,
-    collectionInstruction: stored.collectionInstruction,
-    payments: stored.payments,
-    collectionOccurrences: stored.collectionOccurrences,
-    confirmation: stored.confirmation,
-    events: stored.events,
-  };
-}
-
 export async function loadCurrentPortfolio(db: DecisionDatabase, tenantId: string): Promise<PortfolioState> {
   const [source, stored] = await Promise.all([loadSourcePortfolio(db, tenantId), loadStoredPortfolio(db, tenantId)]);
   if (!stored) return { ...source, persistenceVersion: 0 };
@@ -204,9 +201,19 @@ export async function loadCurrentPortfolio(db: DecisionDatabase, tenantId: strin
     version: 3,
     titles: [
       ...source.titles.map(title =>
-        storedById.has(title.id) ? overlayTitle(title, storedById.get(title.id)!) : title,
+        storedById.has(title.id) ? overlayPortfolioPosition(title, storedById.get(title.id)!) : title,
       ),
-      ...stored.titles.filter(title => !sourceIds.has(title.id)),
+      ...stored.titles
+        .filter(title => !sourceIds.has(title.id))
+        .map(title =>
+          title.source === "Carteira anterior" && source.positionDate && source.positionDate !== stored.positionDate
+            ? {
+                ...title,
+                positionReviewRequired:
+                  "Título ausente da nova posição importada. Confira a origem antes de efetuar movimentações.",
+              }
+            : title,
+        ),
     ],
     positionDate: source.positionDate ?? stored.positionDate,
     historicalTitleCount: Math.max(source.historicalTitleCount ?? 0, stored.historicalTitleCount ?? 0),
@@ -367,6 +374,7 @@ export async function savePortfolioState(
   expectedVersion: number,
   commandId: string,
   requestHash: string,
+  options: { financialCommand?: boolean } = {},
 ): Promise<PortfolioState | null> {
   const replay = await replayedCommand(db, tenantId, commandId, requestHash);
   if (replay) return replay;
@@ -380,7 +388,7 @@ export async function savePortfolioState(
       ...requested,
       titles: [...requested.titles, ...previous.titles.filter(title => !requestedIds.has(title.id))],
     };
-    const transitionError = validatePortfolioTransition(previous, state, actor.name);
+    const transitionError = validatePortfolioTransition(previous, state, actor.name, options);
     if (transitionError) throw new PortfolioTransitionError(transitionError);
     const saved = await saveEnvelope(transaction, tenantId, actor.id, state, expectedVersion);
     if (!saved) return replayedCommand(transaction, tenantId, commandId, requestHash);
@@ -405,5 +413,5 @@ export async function savePortfolioState(
       .run();
     return { ...saved.payload, persistenceVersion: saved.aggregate_version };
   };
-  return db.transaction ? db.transaction(work) : work(db);
+  return inTenantFinanceTransaction(db, tenantId, work);
 }

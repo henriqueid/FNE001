@@ -23,7 +23,7 @@ export function FunnelTab({
   state: CommercialState;
   repFilter: string;
   today: string;
-  onApply: (r: CResult) => boolean;
+  onApply: (r: CResult) => boolean | Promise<boolean>;
   onNew: () => void;
   onLost: (p: Prospect) => void;
   onOpenDossier: (p: Prospect) => void;
@@ -83,7 +83,7 @@ export function FunnelTab({
                 </header>
                 {list.map(p => (
                   <article key={p.id} className="cm-lead-card">
-                    <button className="cm-lead-title" onClick={() => onOpenDossier(p)}>
+                    <button className="cm-lead-title" onClick={async () => onOpenDossier(p)}>
                       <b>{p.name}</b>
                       <span>{p.document || p.dossier?.document || "CNPJ pendente"}</span>
                     </button>
@@ -117,28 +117,28 @@ export function FunnelTab({
                       );
                     })()}
                     <div className="cm-card-actions">
-                      <button className="fn-btn small ghost" onClick={() => onOpenDossier(p)}>
+                      <button className="fn-btn small ghost" onClick={async () => onOpenDossier(p)}>
                         Proposta e dossiê
                       </button>
                       {si > 0 && (
                         <button
                           className="fn-btn small ghost"
-                          onClick={() => onApply(moveProspect(state, p.id, funnelStages[si - 1]))}
+                          onClick={async () => await onApply(moveProspect(state, p.id, funnelStages[si - 1]))}
                           aria-label="Voltar etapa"
                         >
                           ←
                         </button>
                       )}
                       {s === "Lead" ? (
-                        <button className="fn-btn small primary" onClick={() => onVisit(p)}>
+                        <button className="fn-btn small primary" onClick={async () => onVisit(p)}>
                           Agendar visita
                         </button>
                       ) : s === "Visita" ? (
                         <button
                           className="fn-btn small primary"
-                          onClick={() => {
+                          onClick={async () => {
                             const result = moveProspect(state, p.id, "Proposta");
-                            if (onApply(result)) {
+                            if (await onApply(result)) {
                               const updated = result.state.prospects.find(item => item.id === p.id);
                               if (updated) onOpenDossier(updated);
                             }
@@ -150,7 +150,7 @@ export function FunnelTab({
                         <button
                           className="fn-btn small primary"
                           disabled={!dossierReadiness(p).ready}
-                          onClick={() => onCommittee(p)}
+                          onClick={async () => onCommittee(p)}
                         >
                           Enviar ao comitê
                         </button>
@@ -161,7 +161,7 @@ export function FunnelTab({
                           {p.convertedAt ? "Cedente criado" : "Cadastro pendente"}
                         </span>
                       ) : null}
-                      <button className="fn-btn small link" onClick={() => onLost(p)}>
+                      <button className="fn-btn small link" onClick={async () => onLost(p)}>
                         Perdido
                       </button>
                     </div>
@@ -183,7 +183,7 @@ export function FunnelTab({
         {lost.length ? (
           <div className="cm-history-grid">
             {lost.map(prospect => (
-              <button key={prospect.id} onClick={() => onOpenDossier(prospect)}>
+              <button key={prospect.id} onClick={async () => onOpenDossier(prospect)}>
                 <span>
                   <b>{prospect.name}</b>
                   <small>{prospect.rejectedAt ? "Reprovado pelo comitê" : "Oportunidade encerrada"}</small>

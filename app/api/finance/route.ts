@@ -1,5 +1,7 @@
 import type { FinanceState } from "@/src/domain/finance/model";
 import { validateFinanceState } from "@/src/domain/finance/persistence";
+import { emptyFinance } from "@/src/domain/finance/setup";
+import { genericFinanceCommandError } from "@/src/server/finance/command-boundaries";
 import { sessionPrincipal } from "@/src/server/access/session";
 import { operationCompanyMap } from "@/src/server/access/scope";
 import { getDatabase } from "@/src/server/database/postgres";
@@ -25,7 +27,7 @@ async function context(request: Request) {
 
 export async function GET(request: Request) {
   const access = await context(request);
-  if ("error" in access) return access.error;
+  if ("error" in access) return access.error!;
   if (!access.principal.permissions.includes("finance:view"))
     return json({ error: "Sem permissão para consultar o Financeiro." }, 403);
   const [finance, operationCompanies] = await Promise.all([
@@ -35,9 +37,9 @@ export async function GET(request: Request) {
   return json({ finance: filterFinanceState(finance, access.principal, operationCompanies) });
 }
 
-export async function PUT(request: Request) {
+export async function PUT(request: Request): Promise<Response> {
   const access = await context(request);
-  if ("error" in access) return access.error;
+  if ("error" in access) return access.error!;
   if (!access.principal.permissions.includes("finance:release"))
     return json({ error: "Sem permissão para alterar o Financeiro." }, 403);
   const command = (await request.json().catch(() => null)) as {
@@ -61,9 +63,18 @@ export async function PUT(request: Request) {
       loadFinanceState(access.db, access.tenantId),
       operationCompanyMap(access.db, access.tenantId),
     ]);
-    if (!current) return json({ error: "O Financeiro ainda precisa ser inicializado." }, 409);
-    const merged = mergeFinanceState(current, command.finance, access.principal, operationCompanies);
+    if (!current && expectedVersion !== 0)
+      return json({ error: "A inicialização financeira exige a versão inicial zero." }, 409);
+    if (!current && !access.principal.permissions.includes("settings:manage"))
+      return json({ error: "A inicialização financeira exige permissão para administrar configurações." }, 403);
+    const merged = mergeFinanceState(current ?? emptyFinance(), command.finance, access.principal, operationCompanies);
     if (!merged.state) return json({ error: merged.error }, 403);
+    const boundaryError = genericFinanceCommandError(
+      current ?? emptyFinance(),
+      merged.state,
+      access.principal.permissions,
+    );
+    if (boundaryError) return json({ error: boundaryError }, 403);
     const mergedError = validateFinanceState(merged.state);
     if (mergedError) return json({ error: mergedError }, 400);
     const requestHash = await financeRequestHash({

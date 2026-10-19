@@ -410,6 +410,8 @@ try {
     process.exitCode = 0;
   } else {
     const result = await sql.begin(async transaction => {
+      // A posição importada não pode mudar entre a leitura do saldo e uma liquidação no servidor.
+      await transaction`select pg_advisory_xact_lock(hashtextextended(${`strato.finance:${tenantId}`}, 0))`;
       const actors = await transaction`
         select u.user_id
         from private.access_users u

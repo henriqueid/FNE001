@@ -1,8 +1,8 @@
 # STRATO — contexto de continuidade
 
-## Pagamentos e cobrança · 20/10/2026 · melhoria local
+## Pagamentos e cobrança · 20/10/2026 · publicado
 
-Desenho aprovado: orientar ausência de conta pagadora habilitada, explicitar saldo e reunir cobrança no Financeiro. `finance-ui.tsx` mostra opção explícita quando não há conta ativa da empresa e atalho para Bancos; saldo projetado avisa insuficiência/mínimo sem mudar a regra de registro com saldo negativo. `tabs/collection-tab.tsx` reúne BankingPanel existente e posição bancária da carteira filtrada por empresa; aba Cobrança e atalho nas liberações. Sem migração, alteração de autorização ou transmissão bancária. Regressões de interface em `tests/finance-payment-view.test.ts` e `tests/finance-collection-view.test.ts`. Publicação pendente.
+Desenho aprovado: orientar ausência de conta pagadora habilitada, explicitar saldo e reunir cobrança no Financeiro. `finance-ui.tsx` mostra opção explícita quando não há conta ativa da empresa e atalho para Bancos; saldo projetado avisa insuficiência/mínimo sem mudar a regra de registro com saldo negativo. `tabs/collection-tab.tsx` reúne BankingPanel existente e posição bancária da carteira filtrada por empresa; aba Cobrança e atalho nas liberações. Sem migração, alteração de autorização ou transmissão bancária. Regressões de interface em `tests/finance-payment-view.test.ts` e `tests/finance-collection-view.test.ts`. Publicado código `b4fe8f5`; check integrado com 727 testes aprovados/14 ignorados, build local/remoto aprovados e saúde pública OK. Evidência em `docs/deployments/2026-10-20-financeiro-cobranca.md`.
 
 ## Radar e score · 20/10/2026 · publicado
 

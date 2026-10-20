@@ -1,6 +1,6 @@
 # Changelog
 
-## Não publicado · 20/10/2026 · Pagamentos e cobrança
+## 20/10/2026 · Pagamentos e cobrança
 
 - Conta pagadora indisponível exibe orientação e atalho para Bancos na empresa do lançamento, sem seletor vazio.
 - Registro de pagamento mostra saldo atual e projetado, com avisos de insuficiência e saldo mínimo; saldo negativo continua permitido pela regra vigente.

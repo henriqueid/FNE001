@@ -30,14 +30,14 @@ import {
 } from "@/src/ui/icons";
 import { ModuleTabs } from "@/src/ui/module-tabs";
 import { useRef, useState } from "react";
-import { BankingPanel } from "./banking-panel";
+import { CollectionTab } from "@/src/features/finance/tabs/collection-tab";
 import type { PortfolioState } from "@/src/domain/portfolio/model";
 import type { OperationReturnCommand } from "@/src/server/operations/return";
 import { TitleActionModal, type Action } from "./finance-ui";
 import { ReconcileTab } from "@/src/features/finance/tabs/reconcile-tab";
 import { TitlesTab } from "@/src/features/finance/tabs/titles-tab";
 
-export type Tab = "caixa" | "titulos" | "liberacoes" | "extrato" | "conciliacao" | "contabil" | "bancos";
+export type Tab = "caixa" | "titulos" | "liberacoes" | "cobranca" | "extrato" | "conciliacao" | "contabil" | "bancos";
 export type Toast = { tone: "success" | "error"; text: string } | null;
 
 export type Props = {
@@ -76,6 +76,7 @@ export default function FinanceModule({
   const [newTitle, setNewTitle] = useState(false);
   const [returning, setReturning] = useState<Operation | null>(null);
   const [extractAccount, setExtractAccount] = useState("");
+  const [bankCompany, setBankCompany] = useState("");
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const apply = async (r: Result) => {
@@ -117,6 +118,7 @@ export default function FinanceModule({
       openPay.filter(t => t.origin !== "Liberação de operação" && t.dueDate <= today).length,
     ],
     ["liberacoes", "Liberações de operações", releasesPending],
+    ["cobranca", "Cobrança"],
     ["extrato", "Extrato bancário"],
     [
       "conciliacao",
@@ -132,6 +134,7 @@ export default function FinanceModule({
     caixa: <ActivityIcon />,
     titulos: <SwapIcon />,
     liberacoes: <SendIcon />,
+    cobranca: <ReceiptIcon />,
     extrato: <ReceiptIcon />,
     conciliacao: <ScaleIcon />,
     contabil: <BookIcon />,
@@ -139,9 +142,6 @@ export default function FinanceModule({
   };
   return (
     <div className="page-wrap fn-page" aria-busy={saving}>
-      {tab === "bancos" && portfolio && onBankingCommitted && (
-        <BankingPanel state={state} portfolio={portfolio} scope={companyScope} onCommitted={onBankingCommitted} />
-      )}
       {saving && <p role="status">Gravando alteração financeira…</p>}
       <div className="fn-heading">
         <div>
@@ -160,7 +160,10 @@ export default function FinanceModule({
       <ModuleTabs
         label="Seções do financeiro"
         value={tab}
-        onChange={setTab}
+        onChange={value => {
+          setBankCompany("");
+          setTab(value);
+        }}
         tabs={tabs.map(([id, label, badge]) => ({
           id,
           label,
@@ -212,6 +215,19 @@ export default function FinanceModule({
           onReturn={setReturning}
           allowCollectionSimulation={!onBankingCommitted}
           portfolio={portfolio}
+          onGoCollection={() => setTab("cobranca")}
+        />
+      )}
+      {tab === "cobranca" && (
+        <CollectionTab
+          state={state}
+          portfolio={portfolio}
+          scope={companyScope}
+          onCommitted={onBankingCommitted}
+          onConfigureBanks={() => {
+            setBankCompany("");
+            setTab("bancos");
+          }}
         />
       )}
       {tab === "extrato" && (
@@ -234,12 +250,24 @@ export default function FinanceModule({
         />
       )}
       {tab === "contabil" && <AccountingTab state={state} scope={companyScope} onApply={apply} />}
-      {tab === "bancos" && <BanksTab state={state} scope={companyScope} onApply={apply} />}
+      {tab === "bancos" && (
+        <BanksTab
+          key={bankCompany && inScope(bankCompany, companyScope) ? bankCompany : companyScope}
+          state={state}
+          scope={bankCompany && inScope(bankCompany, companyScope) ? bankCompany : companyScope}
+          onApply={apply}
+        />
+      )}
       {action && (
         <TitleActionModal
           action={action}
           state={state}
           onClose={() => setAction(null)}
+          onConfigureAccount={company => {
+            setAction(null);
+            setBankCompany(company);
+            setTab("bancos");
+          }}
           onApply={async r => {
             if (await apply(r)) setAction(null);
           }}

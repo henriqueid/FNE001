@@ -6,7 +6,7 @@
 import { accountBalance } from "@/src/domain/finance/banking";
 import { cancelTitle, reverseSettlement, settleTitle } from "@/src/domain/finance/titles";
 import { useState } from "react";
-import { todayIso, type Result } from "@/src/domain/finance/ledger";
+import { round2, todayIso, type Result } from "@/src/domain/finance/ledger";
 import type { FinanceState, FinanceTitle } from "@/src/domain/finance/model";
 import { AlertIcon, CloseIcon, UndoIcon } from "@/src/ui/icons";
 
@@ -123,11 +123,13 @@ export function TitleActionModal({
   state,
   onClose,
   onApply,
+  onConfigureAccount,
 }: {
   action: NonNullable<Action>;
   state: FinanceState;
   onClose: () => void;
   onApply: (r: Result) => void;
+  onConfigureAccount?: (company: string) => void;
 }) {
   const { title } = action;
   const accounts = state.accounts.filter(
@@ -143,9 +145,11 @@ export function TitleActionModal({
   const [interest, setInterest] = useState("");
   const [discount, setDiscount] = useState("");
   const num = parseMoneyBR;
-  const netValue = num(principal) + num(interest) - num(discount);
+  const netValue = round2(num(principal) + num(interest) - num(discount));
   const verbPast = title.kind === "Pagar" ? "saiu do" : "entrou no";
   const balance = accountId ? accountBalance(state, accountId) : 0;
+  const selectedAccount = accounts.find(a => a.id === accountId);
+  const projectedBalance = round2(title.kind === "Pagar" ? balance - netValue : balance + netValue);
 
   if (action.type === "settle")
     return (
@@ -160,7 +164,7 @@ export function TitleActionModal({
             </button>
             <button
               className="fn-btn primary action-confirm"
-              disabled={!accountId}
+              disabled={!selectedAccount}
               onClick={() =>
                 onApply(
                   settleTitle(
@@ -185,14 +189,31 @@ export function TitleActionModal({
         }
       >
         {accounts.length === 0 && (
-          <p className="fn-warning">
-            <AlertIcon /> Nenhuma conta de {title.company} habilitada para{" "}
-            {title.kind === "Pagar" ? "pagamentos" : "recebimentos"}. Configure na aba Bancos.
-          </p>
+          <div className="fn-warning" role="alert">
+            <p>
+              <AlertIcon /> Nenhuma conta de {title.company} habilitada para{" "}
+              {title.kind === "Pagar" ? "pagamentos" : "recebimentos"}. Cadastre ou habilite uma conta ativa dessa
+              empresa na aba Bancos.
+              {title.kind === "Pagar" &&
+                " Os dados do favorecido identificam o destino do pagamento, não a conta de saída."}
+            </p>
+            {onConfigureAccount && (
+              <button className="fn-btn" onClick={() => onConfigureAccount(title.company)}>
+                Configurar conta bancária
+              </button>
+            )}
+          </div>
         )}
         <div className="fn-form">
           <Field label="Conta bancária">
-            <select value={accountId} onChange={e => setAccountId(e.target.value)}>
+            <select
+              value={selectedAccount?.id ?? ""}
+              disabled={!accounts.length}
+              onChange={e => setAccountId(e.target.value)}
+            >
+              {!selectedAccount && (
+                <option value="">{accounts.length ? "Selecione uma conta" : "Nenhuma conta habilitada"}</option>
+              )}
               {accounts.map(a => (
                 <option key={a.id} value={a.id}>
                   {a.nickname} · {a.bankCode} ag {a.agency} cc {a.account}
@@ -245,16 +266,27 @@ export function TitleActionModal({
           <span>Valor efetivo {title.kind === "Pagar" ? "pago" : "recebido"}</span>
           <b>{money(netValue)}</b>
         </div>
-        {accountId && (
+        {selectedAccount && (
           <div className="fn-impact">
             <span>Saldo da conta</span>
             <b>{money(balance)}</b>
-            <span>Após a baixa</span>
-            <b className={title.kind === "Pagar" && balance - netValue < 0 ? "bad" : ""}>
-              {money(title.kind === "Pagar" ? balance - netValue : balance + netValue)}
-            </b>
+            <span>{title.kind === "Pagar" ? "Saldo após pagamento" : "Saldo após recebimento"}</span>
+            <b className={projectedBalance < 0 ? "bad" : ""}>{money(projectedBalance)}</b>
           </div>
         )}
+        {selectedAccount && title.kind === "Pagar" && projectedBalance < 0 && (
+          <p className="fn-warning" role="status">
+            Saldo insuficiente: faltam {money(-projectedBalance)}. O registro será permitido e deixará saldo negativo.
+          </p>
+        )}
+        {selectedAccount &&
+          title.kind === "Pagar" &&
+          projectedBalance >= 0 &&
+          projectedBalance < selectedAccount.minimumBalance && (
+            <p className="fn-warning" role="status">
+              Saldo após pagamento abaixo do mínimo de {money(selectedAccount.minimumBalance)} definido para essa conta.
+            </p>
+          )}
         <p className="fn-note">
           Gera o movimento no extrato da conta e o lançamento contábil: débito em{" "}
           {title.kind === "Pagar" ? title.settlementLedger : "banco"}, crédito em{" "}

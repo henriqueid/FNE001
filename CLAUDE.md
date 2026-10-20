@@ -1,5 +1,9 @@
 # STRATO — contexto de continuidade
 
+## Pagamentos e cobrança · 20/10/2026 · melhoria local
+
+Desenho aprovado: orientar ausência de conta pagadora habilitada, explicitar saldo e reunir cobrança no Financeiro. `finance-ui.tsx` mostra opção explícita quando não há conta ativa da empresa e atalho para Bancos; saldo projetado avisa insuficiência/mínimo sem mudar a regra de registro com saldo negativo. `tabs/collection-tab.tsx` reúne BankingPanel existente e posição bancária da carteira filtrada por empresa; aba Cobrança e atalho nas liberações. Sem migração, alteração de autorização ou transmissão bancária. Regressões de interface em `tests/finance-payment-view.test.ts` e `tests/finance-collection-view.test.ts`. Publicação pendente.
+
 ## Radar e score · 20/10/2026 · melhoria local
 
 Usuário aprovou cards compactos e fontes oficiais BCB, CVM e Agência Brasil. Corrigida união por CNPJ formatado em `use-home-metrics` via `qualityHistoriesForExposure`, preservando contrato de `cedentExposure`; regressão reproduziu score ausente e passou após correção. Radar usa abas Interno/Score/Mercado, média ponderada por exposição, alertas de carteira e componentes da nota. `src/server/home/market-news.ts` lê somente três feeds oficiais fixos com cache público de dez minutos, timeout, limite de bytes, validação de links e datas. Fontes reais consultadas e parser validado com RSS/Atom; relevância é classificação temática determinística, sem IA nem envio de dados internos. Sem nova migração. Check isolado: 718 aprovados/14 ignorados; build aprovado. Revisão independente sem bloqueios após restringir normalização à união de histórico/exposição. Publicação deste lote ainda pendente.

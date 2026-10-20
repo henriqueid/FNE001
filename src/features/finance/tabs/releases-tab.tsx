@@ -24,6 +24,7 @@ export function ReleasesTab({
   onReturn,
   allowCollectionSimulation = true,
   portfolio,
+  onGoCollection,
 }: {
   state: FinanceState;
   scope: string;
@@ -34,6 +35,7 @@ export function ReleasesTab({
   onReturn: (op: Operation) => void;
   allowCollectionSimulation?: boolean;
   portfolio?: PortfolioState;
+  onGoCollection?: () => void;
 }) {
   const today = todayIso();
   const released = operations.filter(
@@ -167,6 +169,11 @@ export function ReleasesTab({
               <button className="fn-btn ghost" onClick={() => onOpenOperation(op)}>
                 Abrir operação
               </button>
+              {onGoCollection && (
+                <button className="fn-btn ghost" onClick={onGoCollection}>
+                  Cobrança · remessa e retorno
+                </button>
+              )}
               {allowCollectionSimulation && !reg && op.status === "Liberada ao financeiro" && (
                 <button
                   className="fn-btn ghost"
@@ -195,7 +202,7 @@ export function ReleasesTab({
             </div>
             {!allowCollectionSimulation && (
               <p className="fn-note">
-                Gere remessas e importe o retorno original em Financeiro → Bancos. O registro dos títulos depende da
+                Gere remessas e importe o retorno original em Financeiro → Cobrança. O registro dos títulos depende da
                 resposta do banco.
               </p>
             )}

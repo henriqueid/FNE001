@@ -1,5 +1,11 @@
 # Changelog
 
+## Não publicado · 20/10/2026 · Pagamentos e cobrança
+
+- Conta pagadora indisponível exibe orientação e atalho para Bancos na empresa do lançamento, sem seletor vazio.
+- Registro de pagamento mostra saldo atual e projetado, com avisos de insuficiência e saldo mínimo; saldo negativo continua permitido pela regra vigente.
+- Nova aba Financeiro → Cobrança reúne remessa, retorno CNAB400 e situação bancária dos títulos por empresa. Liberações oferecem atalho; Bancos mantém configuração das contas.
+
 ## 20/10/2026 · Radar e score da carteira
 
 - Corrigido vínculo entre CNPJ formatado da carteira e chave normalizada dos históricos: notas calculadas voltam a compor o radar e indicadores da Visão geral.

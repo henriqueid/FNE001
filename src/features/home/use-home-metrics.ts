@@ -42,6 +42,7 @@ import { homeSettings, periodLabels, type HomePeriod, type HomeProfile } from "@
 import { demoCedentHistories, demoDebtorHistories } from "@/src/domain/core/demo/quality-history";
 import { collectionMonth, concentration, rollRates, vintages } from "@/src/domain/risk/portfolio-dynamics";
 import { qualityRankings } from "@/src/domain/risk/quality";
+import { qualityHistoriesForExposure } from "@/src/domain/risk/quality-scores";
 import { type QualityPolicy, provisionRate } from "@/src/domain/risk/quality-policy";
 import { originationIndicators } from "@/src/domain/indicators/origination";
 import { buildRevenuePace } from "@/src/domain/home/revenue-pace";
@@ -322,11 +323,7 @@ export function useHomeMetrics({
     [shared, registryCedents, today],
   );
   const scopedCedentHistories = useMemo(
-    () =>
-      cedExp.flatMap(exposure => {
-        const history = cedentHistories.find(item => item.document === exposure.document);
-        return history ? [{ ...history, exposure: exposure.exposure }] : [];
-      }),
+    () => qualityHistoriesForExposure(cedentHistories, cedExp),
     [cedentHistories, cedExp],
   );
   const debtorHistories = useMemo(() => {

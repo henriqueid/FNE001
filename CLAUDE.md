@@ -1,5 +1,9 @@
 # STRATO — contexto de continuidade
 
+## Radar e score · 20/10/2026 · melhoria local
+
+Usuário aprovou cards compactos e fontes oficiais BCB, CVM e Agência Brasil. Corrigida união por CNPJ formatado em `use-home-metrics` via `qualityHistoriesForExposure`, preservando contrato de `cedentExposure`; regressão reproduziu score ausente e passou após correção. Radar usa abas Interno/Score/Mercado, média ponderada por exposição, alertas de carteira e componentes da nota. `src/server/home/market-news.ts` lê somente três feeds oficiais fixos com cache público de dez minutos, timeout, limite de bytes, validação de links e datas. Fontes reais consultadas e parser validado com RSS/Atom; relevância é classificação temática determinística, sem IA nem envio de dados internos. Sem nova migração. Check isolado: 718 aprovados/14 ignorados; build aprovado. Revisão independente sem bloqueios após restringir normalização à união de histórico/exposição. Publicação deste lote ainda pendente.
+
 ## Decisões administrativas · 20/10/2026
 
 Logs produtivos confirmaram `23514` nas constraints legadas `access_change_requests_check1/check2`, incompatíveis com decisão própria do ADMIN já autorizada no servidor. Migração `20261020115441_allow_admin_access_change_decisions.sql` aplicada e registrada em produção; substitui ambas por trigger que confere ADMIN ativo e vínculo ao tenant. Decisão é registrada antes de aplicar perfil, na mesma transação, permitindo validar privilégios vigentes. Cliente trata respostas vazias/inválidas sem erro cru de JSON. Regressão SQL em `tests/access-admin-decisions.sql` usa apenas tabela temporária, sem decidir pedidos reais. Check: 711 aprovados/14 ignorados; build aprovado; regressão SQL aprovada antes e depois da aplicação.

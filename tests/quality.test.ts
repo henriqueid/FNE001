@@ -11,11 +11,17 @@ import {
   type QualityMonth,
 } from "@/src/domain/risk/quality";
 import { demoQualityPolicy, type QualityComponentRule } from "@/src/domain/risk/quality-policy";
-import { qualityByDocument, scoredCedent, scoredDebtor } from "@/src/domain/risk/quality-scores";
+import {
+  qualityByDocument,
+  qualityHistoriesForExposure,
+  scoredCedent,
+  scoredDebtor,
+} from "@/src/domain/risk/quality-scores";
 import { initialDebtors } from "@/src/domain/core/demo/debtors";
 import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
 import { portfolioQualityHistories } from "@/src/domain/risk/portfolio-quality-history";
-import type { PortfolioState, PortfolioTitleRecord } from "@/src/domain/portfolio/model";
+import { portfolioHomeTitles, type PortfolioState, type PortfolioTitleRecord } from "@/src/domain/portfolio/model";
+import { cedentExposure } from "@/src/domain/home/metrics";
 
 const month = (m: string, over: Partial<QualityMonth> = {}): QualityMonth => ({
   month: m,
@@ -226,6 +232,17 @@ describe("score único 0–1000", () => {
 
     expect(histories.cedentHistories).toHaveLength(1);
     expect(histories.debtorHistories).toHaveLength(1);
+    const exposures = cedentExposure(portfolioHomeTitles(portfolio), [], [cedent], 100_000, "2026-10-15");
+    const radarHistories = qualityHistoriesForExposure(histories.cedentHistories, exposures);
+    expect(qualityRankings(radarHistories, demoQualityPolicy).trends).toHaveLength(1);
+    expect(exposures[0].limit).toBe(cedent.creditLimit);
+    expect(exposures[0].document).toBe(cedent.document);
+    const combined = qualityHistoriesForExposure(histories.cedentHistories, [
+      ...exposures,
+      { ...exposures[0], document: digits(cedent.document) },
+    ]);
+    expect(combined).toHaveLength(1);
+    expect(combined[0].exposure).toBe(200_000);
     expect(scoredCedent(cedent, trends.get(digits(cedent.document))).score).toBeGreaterThan(0);
     expect(scoredDebtor(debtor, trends.get(digits(debtor.document))).score).toBeGreaterThan(0);
   });

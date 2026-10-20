@@ -4,6 +4,7 @@ import { loadRadar } from "@/src/server/home/radar";
 import { listPublishedNotifications } from "@/src/server/outbox/publisher";
 import { listAccessChangeNotifications } from "@/src/server/access/notifications";
 import { readMarketIndicator } from "@/src/server/copilot/market";
+import { readMarketNews } from "@/src/server/home/market-news";
 import { seedAccessState } from "@/src/domain/access/model";
 import type { ServerPrincipal } from "@/src/server/access/repository";
 import type { DecisionDatabase } from "@/src/server/decisions/repository";
@@ -12,6 +13,7 @@ import type { PublishedNotification } from "@/src/domain/notifications/model";
 vi.mock("@/src/server/outbox/publisher", () => ({ listPublishedNotifications: vi.fn() }));
 vi.mock("@/src/server/access/notifications", () => ({ listAccessChangeNotifications: vi.fn() }));
 vi.mock("@/src/server/copilot/market", () => ({ readMarketIndicator: vi.fn() }));
+vi.mock("@/src/server/home/market-news", () => ({ readMarketNews: vi.fn() }));
 const principal = {
   ...seedAccessState().users[0],
   tenantId: "tenant-a",
@@ -29,6 +31,7 @@ const rows = [
     cedent: "Cliente A",
     stage: 2,
     status: "Em análise",
+    amount: 125000,
   },
   {
     event_id: "event-b",
@@ -55,6 +58,7 @@ describe("Radar da visão geral", () => {
     vi.mocked(listPublishedNotifications).mockResolvedValue([]);
     vi.mocked(listAccessChangeNotifications).mockResolvedValue([]);
     vi.mocked(readMarketIndicator).mockResolvedValue({ available: false, reason: "Fonte não habilitada." });
+    vi.mocked(readMarketNews).mockResolvedValue({ items: [], unavailable: [], checkedAt: "2026-10-20T12:00:00Z" });
   });
   it("nega a leitura sem dashboard antes de consultar fontes", async () => {
     await expect(loadRadar(db, { ...principal, permissions: [] })).rejects.toThrow("Sem acesso");
@@ -74,6 +78,9 @@ describe("Radar da visão geral", () => {
     expect(prepare.mock.calls[0][0]).toContain("event.tenant_id = ?");
     expect(result.events).toHaveLength(1);
     expect(result.events[0]).toMatchObject({ id: "event-a", operationId: "op-a", at: rows[0].created_at });
+    expect(result.events[0].title).toContain("Cliente A");
+    expect(result.events[0].summary).toContain("125.000");
+    expect(result.events[0].summary).not.toContain("etapa 2");
     expect(JSON.stringify(result)).not.toContain("Segredo B");
   });
   it("limita o feed e não transforma indisponibilidade do mercado em cotação", async () => {
@@ -94,6 +101,22 @@ describe("Radar da visão geral", () => {
     ]);
     const result = await loadRadar(db, { ...principal, access: "operator", permissions: ["dashboard:view"] });
     expect(result.events).toEqual([]);
+  });
+  it("prioriza pendência acionável sobre movimentação recente", async () => {
+    vi.mocked(listPublishedNotifications).mockResolvedValue([
+      {
+        id: "older-pending",
+        title: "Aprovação pendente",
+        summary: "Conferir operação",
+        impact: "Valor aguardando decisão",
+        nextAction: "Revisar aprovação",
+        tone: "critical",
+        view: "operations",
+        createdAt: "2026-10-18T12:00:00Z",
+      } as PublishedNotification,
+    ]);
+    const result = await loadRadar(db, principal);
+    expect(result.events[0]).toMatchObject({ id: "older-pending", priority: "attention", action: "Revisar aprovação" });
   });
   it("mantém data de referência e fonte oficial sem anualizar ou estimar valores", async () => {
     const point = {

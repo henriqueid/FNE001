@@ -14,6 +14,23 @@ import { type QualityPolicy } from "./quality-policy";
 
 const digits = (v: string) => v.replace(/\D/g, "");
 
+/** Une histórico e exposição sem alterar o formato de documento dos demais indicadores. */
+export function qualityHistoriesForExposure(
+  histories: QualityHistory[],
+  exposures: { document: string; exposure: number }[],
+) {
+  const known = new Map(histories.map(history => [digits(history.document), history]));
+  const amounts = new Map<string, number>();
+  for (const item of exposures) {
+    const document = digits(item.document);
+    if (document) amounts.set(document, (amounts.get(document) ?? 0) + item.exposure);
+  }
+  return [...amounts].flatMap(([document, exposure]) => {
+    const history = known.get(document);
+    return history ? [{ ...history, exposure }] : [];
+  });
+}
+
 /** Tendência de qualidade por documento (só dígitos). */
 export function qualityByDocument(histories: QualityHistory[], policy: QualityPolicy) {
   return new Map(histories.map(h => [digits(h.document), qualityTrend(h, policy)] as const));

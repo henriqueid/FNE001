@@ -1,5 +1,12 @@
 # Changelog
 
+## 20/10/2026 · Radar e score da carteira
+
+- Corrigido vínculo entre CNPJ formatado da carteira e chave normalizada dos históricos: notas calculadas voltam a compor o radar e indicadores da Visão geral.
+- Radar dividido em Interno, Score e Mercado, com nota ponderada por exposição, saldos vencidos há mais de 30 dias, motivos da nota e primeira posição identificada sem variação inventada.
+- Movimentos internos exibem cliente, valor atual, etapa legível e próxima ação, priorizando pendências.
+- Notícias oficiais BCB, CVM e Agência Brasil com fonte, publicação, trecho e relevância temática explícita. Cache público, limite de tamanho, timeout, links permitidos e falha isolada por fonte; nenhum dado de cliente enviado às fontes.
+
 ## 20/10/2026 · Decisões administrativas de acesso
 
 - Corrigidas restrições legadas que impediam administrador ativo de aprovar/rejeitar solicitações próprias. Guard no banco valida vínculo ao tenant e perfil vigente; histórico continua imutável.

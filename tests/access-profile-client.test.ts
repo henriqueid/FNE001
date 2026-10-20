@@ -1,11 +1,21 @@
 import { seedAccessState } from "@/src/domain/access/model";
-import { saveAccessUser } from "@/src/app/access-directory-client";
+import { decideAccessChangeRequest, saveAccessUser } from "@/src/app/access-directory-client";
 import { authenticatedFetch } from "@/src/app/session-client";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/src/app/session-client", () => ({ authenticatedFetch: vi.fn() }));
 
 describe("salvamento de perfil administrativo", () => {
+  it.each(["", "<html>Bad Gateway</html>"])(
+    "expõe erro útil para resposta inválida de aprovação: %s",
+    async content => {
+      vi.mocked(authenticatedFetch).mockResolvedValueOnce(new Response(content, { status: 502 }));
+      await expect(decideAccessChangeRequest("strato-demo", "pending-self", "APPROVED", "Conferido")).rejects.toThrow(
+        "Não foi possível acessar as aprovações de acesso.",
+      );
+    },
+  );
+
   it("envia somente o usuário editado, sem restaurar acessos antigos de outros usuários", async () => {
     const state = seedAccessState();
     const selected = { ...state.users[1], role: "Analista sênior" };

@@ -45,13 +45,13 @@ export async function saveAccessUser(tenantId: string, state: AccessState, user:
 }
 
 async function accessChangesBody(response: Response) {
-  const body = (await response.json()) as {
+  const body = (await response.json().catch(() => null)) as {
     applied?: boolean;
     requests?: AccessChangeRequest[];
     state?: AccessState;
     error?: string;
-  };
-  if (!response.ok) throw new Error(body.error ?? "Não foi possível acessar as aprovações de acesso.");
+  } | null;
+  if (!response.ok || !body) throw new Error(body?.error ?? "Não foi possível acessar as aprovações de acesso.");
   return body;
 }
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 20/10/2026 · Decisões administrativas de acesso
+
+- Corrigidas restrições legadas que impediam administrador ativo de aprovar/rejeitar solicitações próprias. Guard no banco valida vínculo ao tenant e perfil vigente; histórico continua imutável.
+- Resposta vazia ou inválida da API exibe erro compreensível, preservando falha sem sucesso local.
+
 ## 19/10/2026 · Radar lateral da Visão geral
 
 - Painel mais largo em desktop e radar à direita; em telas menores, o radar aparece após o conteúdo principal.

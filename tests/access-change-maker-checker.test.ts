@@ -154,6 +154,9 @@ describe("maker-checker de privilégios", () => {
       ),
     ).resolves.toBeUndefined();
     expect(db.runs.some(item => item.values.includes("ACCESS_CRITICAL_CHANGE_APPROVED"))).toBe(true);
+    expect(db.runs.findIndex(item => item.query.includes("update private.access_change_requests"))).toBeLessThan(
+      db.runs.findIndex(item => item.query.includes("INSERT INTO private.access_users")),
+    );
     expect(directory.users[0].access).toBe("operator");
   });
 

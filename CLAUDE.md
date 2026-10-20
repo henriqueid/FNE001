@@ -1,5 +1,9 @@
 # STRATO — contexto de continuidade
 
+## Decisões administrativas · 20/10/2026
+
+Logs produtivos confirmaram `23514` nas constraints legadas `access_change_requests_check1/check2`, incompatíveis com decisão própria do ADMIN já autorizada no servidor. Migração `20261020115441_allow_admin_access_change_decisions.sql` aplicada e registrada em produção; substitui ambas por trigger que confere ADMIN ativo e vínculo ao tenant. Decisão é registrada antes de aplicar perfil, na mesma transação, permitindo validar privilégios vigentes. Cliente trata respostas vazias/inválidas sem erro cru de JSON. Regressão SQL em `tests/access-admin-decisions.sql` usa apenas tabela temporária, sem decidir pedidos reais. Check: 711 aprovados/14 ignorados; build aprovado; regressão SQL aprovada antes e depois da aplicação.
+
 ## Complemento de pendências de acesso · 19/10/2026
 
 Relato humano confirmou pedido próprio de Henrique pendente: o lote anterior não havia coberto POST/PUT legado nem notificação. Administrador vigente agora decide solicitação própria preservando conferência do perfil original; POST legado aplica diretamente a alteração administrativa. Solicitações pendentes projetadas na Central por tenant, inclusive as antigas, com resolução automática do aviso. Check 700 testes aprovados/14 ignorados; build aprovado e revisão independente sem bloqueios. Publicado b110080, serviço ativo e saúde pública ok; solicitação real preservada para decisão do usuário.

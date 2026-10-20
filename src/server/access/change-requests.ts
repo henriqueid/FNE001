@@ -150,13 +150,6 @@ export async function decideAccessChange(
         );
       if (!criticalAccessChanges(current, row.proposed_profile).length)
         throw new AccessChangeConflictError("A proposta deixou de representar uma alteração crítica.");
-      await applyAccessUserProfile(
-        transaction,
-        tenantId,
-        actor.id,
-        row.proposed_profile,
-        "ACCESS_CRITICAL_CHANGE_APPROVED",
-      );
     }
     await transaction
       .prepare(
@@ -176,6 +169,15 @@ export async function decideAccessChange(
         changeId,
       )
       .run();
+    // Confere o administrador vigente antes de aplicar eventual redução do próprio acesso.
+    if (decision === "APPROVED")
+      await applyAccessUserProfile(
+        transaction,
+        tenantId,
+        actor.id,
+        row.proposed_profile,
+        "ACCESS_CRITICAL_CHANGE_APPROVED",
+      );
   };
   if (db.transaction) await db.transaction(work);
   else await work(db);

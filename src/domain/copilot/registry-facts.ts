@@ -7,6 +7,15 @@ export function registryFacts(
   knowledge: SystemKnowledge,
   availability: { portfolio: boolean; operations: boolean },
 ): DeskReply {
+  if (reply.tool?.startsWith("consultar_cadastro(metrica="))
+    return {
+      tool: reply.tool,
+      paragraphs: [
+        reply.tool.includes("metrica=score")
+          ? "Não consigo identificar o cliente com esse score: o cadastro persistido não fornece score calculado e validado nesta consulta. Não vou inventar um vencedor."
+          : "Não consigo identificar o cedente com esse índice de liquidez: esta fonte não fornece valores históricos de liquidações pontuais e atrasadas para comparar. Não vou substituir esse índice pelo saldo da carteira.",
+      ],
+    };
   if (reply.tool === "consultar_cadastro(ordenar=uso_do_limite)")
     return {
       tool: reply.tool,

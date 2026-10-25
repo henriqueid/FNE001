@@ -26,7 +26,7 @@ export function CollectionTab({
   portfolio?: PortfolioState;
   scope: string;
   onCommitted?: () => Promise<void>;
-  onConfigureBanks: () => void;
+  onConfigureBanks?: () => void;
 }) {
   const titles = portfolio?.titles.filter(t => t.status !== "Cancelado" && inScope(t.company ?? "", scope)) ?? [];
   return (
@@ -37,9 +37,11 @@ export function CollectionTab({
             <h2>Cobrança</h2>
             <p>Gere remessas, importe retornos e acompanhe o registro e a liquidação dos títulos.</p>
           </div>
-          <button className="fn-btn" onClick={onConfigureBanks}>
-            Configurar contas de cobrança
-          </button>
+          {onConfigureBanks && (
+            <button className="fn-btn" onClick={onConfigureBanks}>
+              Configurar contas de cobrança
+            </button>
+          )}
         </header>
       </section>
       {portfolio && onCommitted ? (

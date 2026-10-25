@@ -193,7 +193,7 @@ export function TitleActionModal({
             <p>
               <AlertIcon /> Nenhuma conta de {title.company} habilitada para{" "}
               {title.kind === "Pagar" ? "pagamentos" : "recebimentos"}. Cadastre ou habilite uma conta ativa dessa
-              empresa na aba Bancos.
+              empresa em Configurações → Bancos e remessas.
               {title.kind === "Pagar" &&
                 " Os dados do favorecido identificam o destino do pagamento, não a conta de saída."}
             </p>

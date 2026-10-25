@@ -3,9 +3,9 @@
   gap: 1rem;
   margin-block: 1rem 1.5rem;
   padding: 1rem;
-  border: 1px solid var(--border-subtle, #dbe4e1);
+  border: 1px solid var(--ds-border);
   border-radius: 1rem;
-  background: var(--surface-raised, #fff);
+  background: var(--ds-surface);
 }
 
 .panel header,
@@ -32,27 +32,27 @@
 }
 
 .success {
-  color: #155e46;
-  background: #ecfdf5;
+  color: var(--ds-success);
+  background: color-mix(in srgb, var(--ds-success) 8%, var(--ds-surface));
 }
 
 .error {
-  color: #991b1b;
-  background: #fef2f2;
+  color: var(--ds-danger);
+  background: color-mix(in srgb, var(--ds-danger) 8%, var(--ds-surface));
 }
 
 .queue article,
 .capabilities fieldset {
   margin: 0;
   padding: 1rem;
-  border: 1px solid var(--border-subtle, #dbe4e1);
+  border: 1px solid var(--ds-border);
   border-radius: 0.8rem;
 }
 
 .queue small,
 .provider small {
   display: block;
-  color: var(--text-muted, #64748b);
+  color: var(--ds-text-3);
 }
 
 .queue ul {
@@ -102,4 +102,32 @@
   .actions {
     flex-direction: column-reverse;
   }
+}
+
+:global(.st-refined) .panel,
+:global(.st-refined) .queue article,
+:global(.st-refined) .capabilities fieldset {
+  border-radius: 12px;
+  color: var(--ds-text);
+}
+:global(.st-refined) .panel :is(input, select, textarea) {
+  border: 1px solid var(--ds-border-strong);
+  border-radius: 8px;
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  padding: 8px 10px;
+  font: inherit;
+}
+:global(.st-refined) .panel button {
+  min-height: 40px;
+  border: 1px solid var(--ds-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: none;
+}
+:global(.st-refined) .panel button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

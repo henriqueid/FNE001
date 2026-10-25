@@ -1,5 +1,9 @@
 # STRATO — contexto de continuidade
 
+## Refinamento, bancos e copiloto · 25/10/2026
+
+Lote autorizado para publicação: acabamento visual compartilhado, bancos/remessas em Configurações e consultas pontuais de score/liquidez com empates e ausência de métrica explícitos. Copiloto preserva degradê original no cabeçalho e no botão ativo/hover. Sem migração ou alteração de cálculo financeiro. Correção paralela da Agenda Inteligente excluída deste lote. Verificação e resultado remoto em `docs/deployments/2026-10-25-refinamento-bancos-copiloto.md`.
+
 ## Pagamentos e cobrança · 20/10/2026 · publicado
 
 Desenho aprovado: orientar ausência de conta pagadora habilitada, explicitar saldo e reunir cobrança no Financeiro. `finance-ui.tsx` mostra opção explícita quando não há conta ativa da empresa e atalho para Bancos; saldo projetado avisa insuficiência/mínimo sem mudar a regra de registro com saldo negativo. `tabs/collection-tab.tsx` reúne BankingPanel existente e posição bancária da carteira filtrada por empresa; aba Cobrança e atalho nas liberações. Sem migração, alteração de autorização ou transmissão bancária. Regressões de interface em `tests/finance-payment-view.test.ts` e `tests/finance-collection-view.test.ts`. Publicado código `b4fe8f5`; check integrado com 727 testes aprovados/14 ignorados, build local/remoto aprovados e saúde pública OK. Evidência em `docs/deployments/2026-10-20-financeiro-cobranca.md`.

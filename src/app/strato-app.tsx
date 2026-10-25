@@ -189,10 +189,12 @@ export default function StratoApp() {
     companyScope,
     `${currentUser.id}:${currentUser.permissions.join(",")}:${currentUser.companyScopes.join(",")}`,
   );
+  const [bankSettingsCompany, setBankSettingsCompany] = useState<string>();
   const [portfolioFocus, setPortfolioFocus] = useState<PortfolioFocus>();
   const navigate = (target: AppView) => {
     if (!canAccessView(currentUser, target)) return;
     setSelected(null);
+    setBankSettingsCompany(undefined);
     if (target === "portfolio") setPortfolioFocus(undefined);
     setView(target);
   };
@@ -1587,6 +1589,14 @@ export default function StratoApp() {
   else if (view === "finance")
     page = (
       <FinanceModule
+        onConfigureBanks={
+          canAccessView(currentUser, "settings")
+            ? company => {
+                navigate("settings");
+                setBankSettingsCompany(company ?? companyScope);
+              }
+            : undefined
+        }
         state={finance}
         onState={applyFinanceState}
         onEffects={applyFinanceEffects}
@@ -1746,6 +1756,11 @@ export default function StratoApp() {
   else if (view === "settings" || view === "policies")
     page = (
       <SettingsModule
+        key={bankSettingsCompany ?? "settings"}
+        finance={finance}
+        onFinance={applyFinanceState}
+        companyScope={companyScope}
+        bankSettingsCompany={bankSettingsCompany}
         policies={policies}
         persistedPolicies={persistedPolicies}
         onPolicies={applyPoliciesState}

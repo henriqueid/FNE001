@@ -62,7 +62,7 @@ export function analyzePortfolioQuestion(
 ): PortfolioAnalysis | null {
   const q = normalizedQuestion(question);
   if (!/carteira|sacad|cedent|devedor|titulo|concentr|vencid|atrasad|inadimpl/.test(q)) return null;
-  if (/politic|regra|piso|alcada|score|limite/.test(q)) return null;
+  if (/politic|regra|piso|alcada|score|limite|liquidez/.test(q)) return null;
   const overdue = /vencid|atrasad|inadimpl/.test(q);
   const upcoming = !overdue && /a vencer|vencimento|vence/.test(q);
   const group = /cedent/.test(q)

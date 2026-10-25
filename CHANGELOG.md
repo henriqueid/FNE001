@@ -1,5 +1,28 @@
 # Changelog
 
+## Publicação · 25/10/2026 · Respostas pontuais do copiloto
+
+- Perguntas sobre menor/maior score ou melhor/pior liquidez retornam nome, valor e base da comparação, sem lista geral; rankings explícitos continuam disponíveis.
+- Empates e métricas ausentes ficam explícitos. Liquidez considera valores históricos liquidados; saldo de carteira não substitui índice.
+- Períodos sem histórico e fontes reais sem métrica validada retornam indisponibilidade, sem presumir um vencedor.
+
+## Publicação · 25/10/2026 · Bancos em Configurações
+
+- Cadastro de contas e configuração de remessas centralizados em Configurações → Bancos e remessas; Financeiro → Bancos apresenta consulta, sem cadastro ou edição.
+- Atalhos de cobrança e conta pagadora abrem a nova seção com a empresa correspondente, respeitando permissão de configurações.
+- Formulário separa dados essenciais, saldos complementares e remessas; multa e instruções opcionais ficam recolhidas. Validações, numerações e persistência existentes preservadas.
+
+## Publicação · 21/10/2026 · Refinamento visual
+
+- Cabeçalho do copiloto mantém ícone e identificação lado a lado; seletor legado de grid não empilha a marca.
+
+- Aplicado acabamento validado ao tema compartilhado: superfícies, menu compacto, títulos, KPIs, filtros, controles e painéis dos módulos, preservando composição e regras existentes.
+- Ações primárias sem brilho; confirmação, atenção e exclusão mantêm cores semânticas. Tokens alternativos preservados; produto continua com tema claro fixo e foco visível.
+- Prévia local Original/Refinado agora usa o aplicativo completo e estilos canônicos; dados fictícios persistem somente no navegador.
+- Cobertura ampliada às famílias próprias de operações, cadastros, acesso, integrações e copiloto; inventário e evidências em `docs/COBERTURA_VISUAL.md`.
+- Lista de empresas mantém referência estável, evitando ciclo de restauração do estado na demonstração completa.
+- Copiloto recupera degradê original no cabeçalho e no botão durante interação/estado aberto; repouso permanece neutro.
+
 ## 20/10/2026 · Pagamentos e cobrança
 
 - Conta pagadora indisponível exibe orientação e atalho para Bancos na empresa do lançamento, sem seletor vazio.

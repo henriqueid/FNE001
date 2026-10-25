@@ -50,6 +50,7 @@ export type Props = {
   companyScope: string;
   onOpenOperation: (op: Operation) => void;
   portfolio?: PortfolioState;
+  onConfigureBanks?: (company?: string) => void;
   onBankingCommitted?: () => Promise<void>;
   onReturnOperation?: (
     operation: Operation,
@@ -68,6 +69,7 @@ export default function FinanceModule({
   onOpenOperation,
   portfolio,
   onBankingCommitted,
+  onConfigureBanks,
   onReturnOperation,
 }: Props) {
   const [tab, setTab] = useState<Tab>("caixa");
@@ -76,7 +78,6 @@ export default function FinanceModule({
   const [newTitle, setNewTitle] = useState(false);
   const [returning, setReturning] = useState<Operation | null>(null);
   const [extractAccount, setExtractAccount] = useState("");
-  const [bankCompany, setBankCompany] = useState("");
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const apply = async (r: Result) => {
@@ -161,7 +162,6 @@ export default function FinanceModule({
         label="Seções do financeiro"
         value={tab}
         onChange={value => {
-          setBankCompany("");
           setTab(value);
         }}
         tabs={tabs.map(([id, label, badge]) => ({
@@ -224,10 +224,7 @@ export default function FinanceModule({
           portfolio={portfolio}
           scope={companyScope}
           onCommitted={onBankingCommitted}
-          onConfigureBanks={() => {
-            setBankCompany("");
-            setTab("bancos");
-          }}
+          onConfigureBanks={onConfigureBanks ? () => onConfigureBanks(companyScope) : undefined}
         />
       )}
       {tab === "extrato" && (
@@ -252,10 +249,9 @@ export default function FinanceModule({
       {tab === "contabil" && <AccountingTab state={state} scope={companyScope} onApply={apply} />}
       {tab === "bancos" && (
         <BanksTab
-          key={bankCompany && inScope(bankCompany, companyScope) ? bankCompany : companyScope}
           state={state}
-          scope={bankCompany && inScope(bankCompany, companyScope) ? bankCompany : companyScope}
-          onApply={apply}
+          scope={companyScope}
+          onConfigure={onConfigureBanks ? () => onConfigureBanks(companyScope) : undefined}
         />
       )}
       {action && (
@@ -263,11 +259,14 @@ export default function FinanceModule({
           action={action}
           state={state}
           onClose={() => setAction(null)}
-          onConfigureAccount={company => {
-            setAction(null);
-            setBankCompany(company);
-            setTab("bancos");
-          }}
+          onConfigureAccount={
+            onConfigureBanks
+              ? company => {
+                  setAction(null);
+                  onConfigureBanks(company);
+                }
+              : undefined
+          }
           onApply={async r => {
             if (await apply(r)) setAction(null);
           }}

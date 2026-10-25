@@ -106,8 +106,7 @@
 .form select {
   appearance: none;
   background-image:
-    linear-gradient(45deg, transparent 50%, #525866 50%),
-    linear-gradient(135deg, #525866 50%, transparent 50%);
+    linear-gradient(45deg, transparent 50%, #525866 50%), linear-gradient(135deg, #525866 50%, transparent 50%);
   background-position:
     calc(100% - 19px) 24px,
     calc(100% - 14px) 24px;
@@ -492,11 +491,22 @@
   border-radius: 4px;
 }
 
-.sparkline i:nth-child(2) { height: 58%; }
-.sparkline i:nth-child(3) { height: 43%; }
-.sparkline i:nth-child(4) { height: 72%; }
-.sparkline i:nth-child(5) { height: 64%; }
-.sparkline i:nth-child(6) { height: 100%; background: #3b82f6; }
+.sparkline i:nth-child(2) {
+  height: 58%;
+}
+.sparkline i:nth-child(3) {
+  height: 43%;
+}
+.sparkline i:nth-child(4) {
+  height: 72%;
+}
+.sparkline i:nth-child(5) {
+  height: 64%;
+}
+.sparkline i:nth-child(6) {
+  height: 100%;
+  background: #3b82f6;
+}
 
 .progress {
   height: 3px;
@@ -575,11 +585,15 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes float {
-  50% { transform: translate(var(--float-x), var(--float-y)); }
+  50% {
+    transform: translate(var(--float-x), var(--float-y));
+  }
 }
 
 @keyframes load {
@@ -615,12 +629,18 @@
 
   .portfolioCard,
   .tasksCard,
-  .riskCard { left: 2%; }
+  .riskCard {
+    left: 2%;
+  }
 
   .decisionCard,
-  .targetCard { right: 2%; }
+  .targetCard {
+    right: 2%;
+  }
 
-  .core { transform: scale(0.86); }
+  .core {
+    transform: scale(0.86);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -658,4 +678,81 @@
   .card footer i {
     display: none;
   }
+}
+
+/* Mesma linguagem do sistema autenticado, sem alterar a composição de acesso. */
+:global(.st-refined) .stage {
+  --auth-accent: var(--ds-primary);
+  --auth-accent-soft: var(--ds-surface-2);
+  --auth-ink: var(--ds-text);
+  background: var(--ds-canvas);
+}
+:global(.st-refined) .card {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  border-color: var(--ds-border);
+}
+:global(.st-refined) .intro h1 {
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 550;
+  line-height: 1.1;
+}
+:global(.st-refined) .intro p,
+:global(.st-refined) .form label > span,
+:global(.st-refined) .brand span {
+  color: var(--ds-text-2);
+}
+:global(.st-refined) .form input,
+:global(.st-refined) .form select {
+  min-height: 44px;
+  border-radius: 8px;
+  border-color: var(--ds-border-strong);
+  color: var(--ds-text);
+  background-color: var(--ds-surface-2);
+}
+:global(.st-refined) .submit {
+  min-height: 44px;
+  border-radius: 8px;
+  color: var(--ds-primary-ink);
+  background: var(--ds-primary);
+  box-shadow: none;
+  font-weight: 600;
+}
+:global(.st-refined) .submit:hover:not(:disabled) {
+  background: var(--ds-primary-hover);
+  box-shadow: none;
+  transform: none;
+}
+:global(.st-refined) .error {
+  color: var(--ds-danger);
+  background: color-mix(in srgb, var(--ds-danger) 8%, var(--ds-surface));
+  border-color: color-mix(in srgb, var(--ds-danger) 28%, var(--ds-border));
+  border-radius: 8px;
+}
+:global(.st-refined) .success {
+  color: var(--ds-success);
+  background: color-mix(in srgb, var(--ds-success) 8%, var(--ds-surface));
+  border-color: color-mix(in srgb, var(--ds-success) 28%, var(--ds-border));
+  border-radius: 8px;
+}
+:global(.st-refined) .visual {
+  background: #101318;
+}
+:global(.st-refined) .scanner::after {
+  background: var(--ds-primary);
+  box-shadow: none;
+}
+:global(.st-refined) .floatCard {
+  background: #1b2027;
+  border-radius: 12px;
+  box-shadow: none;
+}
+:global(.st-refined) .core {
+  background: #171c23;
+  box-shadow: none;
+}
+:global(.st-refined) .form :is(input, select):focus-visible,
+:global(.st-refined) .card button:focus-visible {
+  outline: 2px solid var(--ds-primary);
+  outline-offset: 2px;
 }

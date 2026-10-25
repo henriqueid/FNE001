@@ -90,22 +90,26 @@ export function useCompanyDestinations(): Destination[] {
   const company = useCompany();
   const directory = useCompanyDirectory();
   const auth = useStratoAuth();
-  return directory?.entries.length
-    ? directory.entries.filter(destination => destination.status === "ACTIVE")
-    : company
-      ? [
-          {
-            name: company.tradeName,
-            institution:
-              company.institutionType === "Empresa de fomento" || company.institutionType === "Outro"
-                ? "Factoring"
-                : company.institutionType,
-            detail: company.document
-              .replace(/\D/g, "")
-              .replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5"),
-          },
-        ]
-      : auth?.mode === "demo"
-        ? demoDestinations
-        : [];
+  return useMemo(
+    () =>
+      directory?.entries.length
+        ? directory.entries.filter(destination => destination.status === "ACTIVE")
+        : company
+          ? [
+              {
+                name: company.tradeName,
+                institution:
+                  company.institutionType === "Empresa de fomento" || company.institutionType === "Outro"
+                    ? "Factoring"
+                    : company.institutionType,
+                detail: company.document
+                  .replace(/\D/g, "")
+                  .replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5"),
+              },
+            ]
+          : auth?.mode === "demo"
+            ? demoDestinations
+            : [],
+    [directory, company, auth?.mode],
+  );
 }

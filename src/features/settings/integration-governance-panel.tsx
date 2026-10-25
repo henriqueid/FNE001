@@ -154,10 +154,20 @@ export default function IntegrationGovernancePanel({
                 />
               </label>
               <div className={styles.actions}>
-                <button type="button" onClick={() => void decide(request.id, "REJECTED")} disabled={busy !== undefined}>
+                <button
+                  type="button"
+                  className="action-danger"
+                  onClick={() => void decide(request.id, "REJECTED")}
+                  disabled={busy !== undefined}
+                >
                   Rejeitar
                 </button>
-                <button type="button" onClick={() => void decide(request.id, "APPROVED")} disabled={busy !== undefined}>
+                <button
+                  type="button"
+                  className="action-confirm"
+                  onClick={() => void decide(request.id, "APPROVED")}
+                  disabled={busy !== undefined}
+                >
                   Aprovar e aplicar
                 </button>
               </div>
@@ -228,6 +238,7 @@ export default function IntegrationGovernancePanel({
                 </label>
                 <button
                   type="button"
+                  className="action-save"
                   onClick={() => void propose(capability)}
                   disabled={busy !== undefined || hasPending}
                 >

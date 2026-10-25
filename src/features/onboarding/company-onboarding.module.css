@@ -149,3 +149,70 @@
     width: 100%;
   }
 }
+
+:global(.st-refined) .stage {
+  font-family: var(--ds-font);
+  background: var(--ds-canvas);
+  color: var(--ds-text);
+}
+:global(.st-refined) .card {
+  background: var(--ds-surface);
+  border-color: var(--ds-border);
+  border-radius: var(--ds-radius);
+  box-shadow: none;
+}
+:global(.st-refined) .card header > span {
+  color: var(--ds-text-3);
+}
+:global(.st-refined) .card h1 {
+  font-weight: 550;
+}
+:global(.st-refined) .card header p,
+:global(.st-refined) .card footer small,
+:global(.st-refined) .loading {
+  color: var(--ds-text-3);
+}
+:global(.st-refined) .grid span {
+  color: var(--ds-text-2);
+  font-weight: 600;
+}
+:global(.st-refined) .grid :is(input, select) {
+  min-height: 44px;
+  border-radius: var(--ds-radius-sm);
+  border-color: var(--ds-border-strong);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+}
+:global(.st-refined) .grid :is(input, select):focus {
+  border-color: var(--ds-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-primary) 18%, transparent);
+}
+:global(.st-refined) .card footer {
+  border-color: var(--ds-border);
+}
+:global(.st-refined) .card button {
+  min-height: 44px;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-primary);
+  color: var(--ds-primary-ink);
+  font-weight: 600;
+}
+:global(.st-refined) .card .lookupButton {
+  background: var(--ds-surface-2);
+  color: var(--ds-text);
+  border-color: var(--ds-border);
+}
+:global(.st-refined) .card button:focus-visible {
+  outline: 2px solid var(--ds-primary);
+  outline-offset: 3px;
+}
+:global(.st-refined) .error {
+  color: var(--ds-danger);
+  background: color-mix(in srgb, var(--ds-danger) 8%, var(--ds-surface));
+  border-radius: var(--ds-radius-sm);
+}
+:global(.st-refined) .success {
+  color: var(--ds-success);
+  background: color-mix(in srgb, var(--ds-success) 8%, var(--ds-surface));
+  border-radius: var(--ds-radius-sm);
+}

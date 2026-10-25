@@ -191,6 +191,8 @@ A preparação e o envio da OP ao financeiro podem ser feitos pelo mesmo usuári
 
 Estilos novos usam os tokens `--ds-*`, que já têm valor claro e escuro. O tema é `data-theme="light|dark"` no `<html>`, com a preferência do usuário (claro, escuro ou sistema) salva em `strato-theme`.
 
+O refinamento visual aprovado em 21/10/2026 é ativado por `st-refined` no `<html>` do layout. Paleta, superfícies, raios e foco ficam em `design-system.css`; acabamento de navegação, títulos, indicadores, controles e painéis fica em `ledger.css`. Preserva composição, navegação e cores semânticas de confirmação, atenção e exclusão. O menu mantém seleção preta e ações primárias usam `--ds-primary*`, com valores próprios por tema. A prévia em `tools/design-preview` reutiliza essas mesmas fontes; seu CSS contém apenas controles da comparação, sem cópia dos estilos do produto.
+
 ## 7. Testes e qualidade
 
 ```

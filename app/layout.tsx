@@ -15,7 +15,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="pt-BR" className="st-refined" suppressHydrationWarning>
       <head>
         {/* Aplica o tema salvo (claro/escuro/sistema) antes da primeira pintura. */}
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />

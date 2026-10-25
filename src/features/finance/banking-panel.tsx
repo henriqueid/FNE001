@@ -205,8 +205,9 @@ export function BankingPanel({
       )}
       {!accounts.length && (
         <p>
-          Configure uma conta ativa CNAB 400 em Bancos com dados reais do beneficiário, carteira e sequência. Escolha
-          juros diários em centavos ou percentual mensal em base de 30 dias, sem taxas presumidas.
+          Configure uma conta ativa CNAB 400 em Configurações → Bancos e remessas com dados reais do beneficiário,
+          carteira e sequência. Escolha juros diários em centavos ou percentual mensal em base de 30 dias, sem taxas
+          presumidas.
         </p>
       )}
       {busy && <p role="status">Processando arquivo e atualização da carteira…</p>}

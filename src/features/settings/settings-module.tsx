@@ -23,6 +23,8 @@ import {
 } from "@/src/domain/company/destination";
 import { formatDocument } from "@/src/domain/registry/parties";
 import { LocalizedNumberInput } from "@/src/ui/localized-number-input";
+import { BankSettingsPanel } from "./bank-settings-panel";
+import type { FinanceState } from "@/src/domain/finance/model";
 import { PolicyApprovalPanel } from "./policy-approval-panel";
 
 const goalPeriods: Array<{ id: HomePeriod; label: string }> = [
@@ -32,7 +34,15 @@ const goalPeriods: Array<{ id: HomePeriod; label: string }> = [
 ];
 
 type SettingsSection =
-  "overview" | "access" | "operational" | "policies" | "companies" | "integrations" | "intelligence" | "interface";
+  | "overview"
+  | "banks"
+  | "access"
+  | "operational"
+  | "policies"
+  | "companies"
+  | "integrations"
+  | "intelligence"
+  | "interface";
 
 type SettingsItem = {
   id: SettingsSection;
@@ -51,6 +61,7 @@ const menuGroups: Array<{ label: string; items: SettingsItem[] }> = [
     items: [
       { id: "access", label: "Usuários e acesso", description: "Perfis, carteiras e permissões", marker: "02" },
       { id: "companies", label: "Empresas e veículos", description: "Ambiente multiempresa", marker: "03" },
+      { id: "banks", label: "Bancos e remessas", description: "Contas, convênios e cobrança", marker: "04" },
     ],
   },
   {
@@ -60,21 +71,21 @@ const menuGroups: Array<{ label: string; items: SettingsItem[] }> = [
         id: "operational",
         label: "Padrões operacionais",
         description: "Taxas, tarifas, limites e lastro",
-        marker: "04",
+        marker: "05",
       },
-      { id: "policies", label: "Políticas e motor", description: "Regras, alçadas e vigências", marker: "05" },
+      { id: "policies", label: "Políticas e motor", description: "Regras, alçadas e vigências", marker: "06" },
     ],
   },
   {
     label: "CONEXÕES",
     items: [
-      { id: "integrations", label: "Integrações", description: "Fontes de dados externas", marker: "06" },
-      { id: "intelligence", label: "Inteligência e IA", description: "Licença, estado e orçamento", marker: "07" },
+      { id: "integrations", label: "Integrações", description: "Fontes de dados externas", marker: "07" },
+      { id: "intelligence", label: "Inteligência e IA", description: "Licença, estado e orçamento", marker: "08" },
     ],
   },
   {
     label: "PREFERÊNCIAS",
-    items: [{ id: "interface", label: "Interface", description: "Orientação e visualização", marker: "08" }],
+    items: [{ id: "interface", label: "Interface", description: "Orientação e visualização", marker: "09" }],
   },
 ];
 
@@ -85,6 +96,14 @@ const shortcuts: Array<{
   description: string;
   action: string;
 }> = [
+  {
+    section: "banks",
+    eyebrow: "BANCÁRIO",
+    title: "Bancos e remessas",
+    description: "Configure contas bancárias, finalidades e remessas de cobrança.",
+    action: "Gerenciar bancos",
+  },
+
   {
     section: "access",
     eyebrow: "IA-0 · FUNDAÇÃO",
@@ -155,7 +174,15 @@ export default function SettingsModule({
   onIntelligence,
   policyApprovalActor,
   demoMode = false,
+  finance,
+  onFinance,
+  companyScope,
+  bankSettingsCompany,
 }: {
+  finance: FinanceState;
+  onFinance: (state: FinanceState) => void | Promise<void>;
+  companyScope: string;
+  bankSettingsCompany?: string;
   policies: EligibilityPolicyState;
   persistedPolicies: EligibilityPolicyState;
   onPolicies: (state: EligibilityPolicyState) => void;
@@ -177,7 +204,7 @@ export default function SettingsModule({
 }) {
   const destinations = useCompanyDestinations();
   const companyDirectory = useCompanyDirectory();
-  const [section, setSection] = useState<SettingsSection>("overview");
+  const [section, setSection] = useState<SettingsSection>(bankSettingsCompany ? "banks" : "overview");
   const activePolicies = policies.policies.filter(policy => policy.status === "ATIVA").length;
   const executableRules = masterRuleCatalog.filter(
     rule => rule.readiness !== "REQUER_DADO" && rule.readiness !== "REQUER_INTEGRACAO",
@@ -431,6 +458,10 @@ export default function SettingsModule({
                 embedded
               />
             </>
+          )}
+
+          {section === "banks" && (
+            <BankSettingsPanel state={finance} onState={onFinance} initialScope={bankSettingsCompany ?? companyScope} />
           )}
 
           {section === "access" && <UsersAccessPanel state={access} onState={onAccess} demoMode={demoMode} />}

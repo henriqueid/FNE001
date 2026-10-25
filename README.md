@@ -38,9 +38,9 @@ Para publicação externa, siga [docs/DEPLOY_HOSTINGER.md](docs/DEPLOY_HOSTINGER
 | Operações     | Central, nova operação e workspace com 6 etapas (Entrada, Risco, Lastro, Preço, Aprovação, Liberação)                                       | `src/features/operations` |
 | Carteira      | Títulos adquiridos, atraso, por cedente e por comercial                                                                                     | `src/features/portfolio`  |
 | Comercial     | Metas, carteira, negócios, visitas, funil, comitês e comissões                                                                              | `src/features/commercial` |
-| Financeiro    | Caixa e fluxo, a pagar e a receber, liberações, cobrança (remessa, retorno e situação bancária), extrato, conciliação OFX, contábil, bancos | `src/features/finance`    |
+| Financeiro    | Caixa e fluxo, a pagar e a receber, liberações, cobrança (remessa, retorno e situação bancária), extrato, conciliação OFX, contábil e consulta de bancos | `src/features/finance`    |
 | Cadastros     | Pessoas PF/PJ com papéis: cedente, sacado, fornecedor, representante, debenturista, cotista, avalista, prestador                            | `src/features/registry`   |
-| Configurações | Usuários, acessos, empresas, padrões operacionais, políticas, integrações e interface                                                       | `src/features/settings`   |
+| Configurações | Usuários, acessos, empresas, bancos e remessas, padrões operacionais, políticas, integrações e interface                                                       | `src/features/settings`   |
 | Copiloto      | Resumo diário, Central do Dia, consultas e Mesa Inteligente demonstrativa                                                                   | `src/features/copilot`    |
 
 ## Documentação

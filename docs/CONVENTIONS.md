@@ -37,6 +37,7 @@
 
 - Tokens em `app/styles/design-system.css` (`--ds-*`, valem nos dois temas); componentes e telas no padrão visual atual em `app/styles/ledger.css` (prefixo `lx-` para peças novas: abas de texto, quadrados, gauge, bloco de caixa).
 - Visual Ledger: preto/branco para ação e seleção, cinzas para estrutura, verde-menta só para destaque positivo, verde/âmbar/vermelho só para estado. Sem gradientes, brilhos ou sombras decorativas. Cor literal nova em CSS legado: rode `python3 tools/ledger_palette.py <arquivo>`.
+- Refinamento aprovado (`st-refined` no layout): navegação preta, superfícies neutras, azul `--ds-primary*` para ação primária/foco, raios de 12 px em painéis e 8 px em controles. Preservar cores de confirmação, atenção e exclusão; não aplicar conversão monocromática aos tokens semânticos aprovados. Manter tokens em `design-system.css` e regras em `ledger.css`, sem duplicação na prévia. Exceção aprovada: cabeçalho do Copiloto e botão no hover/foco/estado aberto mantêm o degradê escuro original com iluminação azul.
 - Prefixo por área: `sx-` shell, `ds-` componentes base, `vg-` Visão geral, `fn-` Financeiro, `cm-` Comercial, `rg-` Cadastros, `pf-` Carteira.
 - Não escreva cores literais em CSS legado; se precisar, gere o par claro/escuro com `tools/theme_tokens.py` (uso no cabeçalho do script).
 

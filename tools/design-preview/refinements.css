@@ -1,0 +1,74 @@
+/* Controles exclusivos da comparação visual; estilos do produto vêm das fontes canônicas. */
+.preview-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 26px;
+  color: var(--ds-text);
+  background: var(--ds-elev);
+  border-bottom: 1px solid var(--ds-border);
+  font: 500 12px/1.4 var(--ds-font);
+}
+.preview-controls small {
+  color: var(--ds-text-3);
+  font-size: 11px;
+}
+.preview-controls > div {
+  display: flex;
+  gap: 4px;
+}
+.preview-controls button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ds-text-2);
+  font: inherit;
+  cursor: pointer;
+}
+.preview-controls button[aria-pressed="true"] {
+  background: var(--ds-text);
+  color: var(--ds-elev);
+}
+.preview-notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border: 1px solid var(--ds-border);
+  background: var(--ds-surface);
+  font-size: 13px;
+}
+.preview-notice button {
+  background: transparent;
+  border: 0;
+  color: var(--ds-text);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (max-width: 767px) {
+  .preview-controls {
+    padding: 8px 16px;
+    font-size: 11px;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .preview-controls > span {
+    width: 100%;
+  }
+  .preview-controls > div {
+    flex-wrap: wrap;
+  }
+  .preview-controls small {
+    display: none;
+  }
+}
+@media (pointer: coarse) {
+  .preview-controls button {
+    min-height: 44px;
+  }
+}

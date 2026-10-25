@@ -24,6 +24,7 @@ import { type PortfolioTitle } from "@/src/domain/home/metrics";
 import { pendingDecisionsFor } from "@/src/domain/eligibility/authority-queue";
 import { type DeskReply } from "./desk-assistant";
 import { analyzePortfolioQuestion } from "./analytics";
+import { specificAnswer } from "./specific-answer";
 
 const CLOSED: Operation["status"][] = ["Cancelada", "Liberada ao financeiro"];
 
@@ -228,6 +229,8 @@ function policyAnswer(question: string, kb: SystemKnowledge): DeskReply {
 }
 
 export function answerSystemQuestion(text: string, kb: SystemKnowledge): DeskReply {
+  const specific = specificAnswer(text, kb);
+  if (specific) return specific;
   const q = plain(text);
   const numbers = digits(text);
   const analysis = /(maior|mais|ranking|vencid|resumo.*carteira|quant.*titulo)/.test(q)

@@ -8127,3 +8127,41 @@ a.fn-btn:not([href]) {
     align-items: stretch;
   }
 }
+
+/* Refinamento aprovado: paleta, superfícies e foco comuns a todos os módulos. */
+.st-refined {
+  --ds-canvas: #f0f1f2;
+  --ds-surface: #ffffff;
+  --ds-elev: #ffffff;
+  --ds-surface-2: #f7f8f9;
+  --ds-surface-3: #e9ebed;
+  --ds-border: #e0e3e6;
+  --ds-border-strong: #a1a7af;
+  --ds-text: #15191f;
+  --ds-text-2: #454d58;
+  --ds-text-3: #626b78;
+  --ds-radius: 12px;
+  --ds-radius-sm: 8px;
+  --ds-primary: #005cfd;
+  --ds-primary-hover: #004bd1;
+  --ds-primary-ink: #ffffff;
+  --ds-focus: 0 0 0 2px var(--ds-surface), 0 0 0 4px var(--ds-primary);
+  color: var(--ds-text);
+  background: var(--ds-canvas);
+}
+:root[data-theme="dark"].st-refined,
+:root[data-theme="dark"] .st-refined {
+  --ds-canvas: #0e1013;
+  --ds-surface: #171a1f;
+  --ds-elev: #1d2127;
+  --ds-surface-2: #12151a;
+  --ds-surface-3: #272d35;
+  --ds-border: #303740;
+  --ds-border-strong: #707d8d;
+  --ds-text: #f1f3f5;
+  --ds-text-2: #c0c6cf;
+  --ds-text-3: #a1abb9;
+  --ds-primary: #82aaff;
+  --ds-primary-hover: #adc7ff;
+  --ds-primary-ink: #0e1013;
+}

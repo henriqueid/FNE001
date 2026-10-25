@@ -225,7 +225,7 @@ export const StratoPromo: React.FC<StratoPromoProps> = ({
           <EndCard
             slogan={slogan}
             sloganAccent={sloganAccent}
-            segments="FACTORING · FIDC · SECURITIZADORA · ESC"
+            segments="FACTORING · FIDC · SECURITIZADORA"
             cta={cta}
             contact={contact}
           />

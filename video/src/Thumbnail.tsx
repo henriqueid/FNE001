@@ -18,7 +18,7 @@ export const Thumbnail: React.FC = () => (
         </span>
       </div>
       <div style={{ marginTop: 40, color: colors.textSoft, fontSize: 24, fontWeight: 600, letterSpacing: "0.2em", whiteSpace: "nowrap" }}>
-        FACTORING · FIDC · SECURITIZADORA · ESC
+        FACTORING · FIDC · SECURITIZADORA
       </div>
     </div>
     <div

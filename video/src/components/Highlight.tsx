@@ -11,7 +11,9 @@ export const Highlight: React.FC<{
   end?: number;
   color?: string;
   radius?: number;
-}> = ({ x, y, w, h, delay, end, color = colors.accentStrong, radius = 18 }) => {
+  // Fator para manter espessura e brilho constantes na tela quando a câmera aproxima.
+  unit?: number;
+}> = ({ x, y, w, h, delay, end, color = colors.accentStrong, radius = 18, unit = 1 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const start = delay * fps;
@@ -21,13 +23,13 @@ export const Highlight: React.FC<{
     <div
       style={{
         position: "absolute",
-        left: x,
-        top: y,
-        width: w,
-        height: h,
-        borderRadius: radius,
-        border: `3px solid ${color}`,
-        boxShadow: `0 0 0 6px ${color}22, 0 0 ${36 * pulse}px ${color}88`,
+        left: x - 6 * unit,
+        top: y - 6 * unit,
+        width: w + 12 * unit,
+        height: h + 12 * unit,
+        borderRadius: radius * unit,
+        border: `${3 * unit}px solid ${color}`,
+        boxShadow: `0 0 0 ${6 * unit}px ${color}22, 0 0 ${36 * pulse * unit}px ${color}88`,
         opacity:
           interpolate(frame, [start, start + 0.3 * fps], [0, 1], clamp) *
           (end === undefined ? 1 : interpolate(frame, [end * fps, end * fps + 0.3 * fps], [1, 0], clamp)),

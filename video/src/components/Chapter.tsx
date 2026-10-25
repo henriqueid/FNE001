@@ -12,7 +12,7 @@ export const Chapter: React.FC<{ index: number; total: number; label: string }> 
     <div
       style={{
         position: "absolute",
-        top: vertical ? u(120) : u(56),
+        top: vertical ? u(120) : u(34),
         left: vertical ? u(64) : u(110),
         display: "flex",
         alignItems: "center",

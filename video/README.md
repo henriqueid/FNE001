@@ -20,10 +20,14 @@ Derivado do vídeo de referência de 13/10/2026 e revisado:
 | Fundo | Navy profundo, brilho azul no canto superior que deriva devagar, grade técnica discreta (`components/Background.tsx`) |
 | Tipografia | Urbanist (mesma do app); títulos 700–800, dores e apoio 300–500 |
 | Cores | `src/brand/tokens.ts`: azul de destaque, verde só para "decide"/aprovação, vermelho para risco/riscado |
-| Estrutura | Dores riscadas → promessa → logo → 7 cenas de produto → manifesto → assinatura com CTA |
-| Cena de produto | Janela do app nítida sobre o app desfocado, câmera que aproxima do foco, anel de destaque, legenda de vidro (rótulo + título curto + apoio), indicador de etapa no topo |
+| Estrutura | Dores riscadas → promessa → logo → módulos → 8 cenas de produto → manifesto → assinatura com CTA |
+| Cena de produto | Print real do sistema numa moldura, câmera que enquadra cada área (`camera`), anel de destaque (`marks`), legenda de vidro (rótulo + título curto + apoio) e indicador de etapa no topo |
 | Movimento | Uma curva de entrada (`ease.out`), palavras reveladas inteiras (sem máquina de escrever), transições em fade de 0,4 s |
 
-Melhorias em relação à referência: resolução 1080p (antes 1024×576), versão vertical, interface desenhada em vetor (nítida e editável), textos de apoio legíveis em celular, indicador de progresso e chamada final para ação.
+Melhorias em relação à referência: resolução 1080p (antes 1024×576), versão vertical, prints em 2× de densidade, legendas reveladas por palavra, textos de apoio legíveis em celular, indicador de progresso, cena de módulos e chamada final para ação.
 
-Textos editáveis pelas props das composições em `src/Root.tsx`; telas em `src/ui/screens.tsx`.
+Textos da abertura e do fechamento são props das composições em `src/Root.tsx`; roteiro das cenas em `src/StratoPromo.tsx`.
+
+## Prints
+
+`public/screens/` guarda prints do **modo demonstração** (dados fictícios), em coordenadas de tela 1600 × 1000: retângulos de `camera` e `marks` usam essa escala. Para recapturar, rode o app localmente contra um PostgreSQL descartável (com as migrações aplicadas) e execute `node scripts/capture-screens.cjs`. Nunca capture dados reais de clientes.

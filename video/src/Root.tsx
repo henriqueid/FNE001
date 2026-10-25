@@ -13,11 +13,13 @@ export const RemotionRoot: React.FC = () => {
         width={1920}
         height={1080}
         defaultProps={{
-          pains: ["Operações complexas.", "Sistemas que não conversam.", "Planilha para fechar o dia.", "Nenhuma visão do negócio."],
-          answer: "O STRATO junta tudo",
-          answerAccent: "em uma operação só.",
+          pains: ["Sistemas complexos.", "Telas demais.", "Informação espalhada.", "Nenhuma visão do negócio."],
+          answer: "Uma plataforma.",
+          answerAccent: "A operação inteira à vista.",
+          slogan: "Menos planilha.",
+          sloganAccent: "Mais decisão.",
           cta: "Agende uma demonstração",
-          contact: "strato.com.br",
+          contact: "",
         }}
       />
       <Composition
@@ -28,11 +30,13 @@ export const RemotionRoot: React.FC = () => {
         width={1080}
         height={1920}
         defaultProps={{
-          pains: ["Operações complexas.", "Sistemas que não conversam.", "Planilha para fechar o dia.", "Nenhuma visão do negócio."],
-          answer: "O STRATO junta tudo",
-          answerAccent: "em uma operação só.",
+          pains: ["Sistemas complexos.", "Telas demais.", "Informação espalhada.", "Nenhuma visão do negócio."],
+          answer: "Uma plataforma.",
+          answerAccent: "A operação inteira à vista.",
+          slogan: "Menos planilha.",
+          sloganAccent: "Mais decisão.",
           cta: "Agende uma demonstração",
-          contact: "strato.com.br",
+          contact: "",
         }}
       />
       <Still id="StratoThumbnail" component={Thumbnail} width={1920} height={1080} />

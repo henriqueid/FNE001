@@ -4,7 +4,13 @@ import { useLayout } from "../brand/layout";
 import { Background } from "../components/Background";
 
 // Assinatura com chamada para ação; o vídeo original terminava sem próximo passo.
-export const EndCard: React.FC<{ segments: string; cta: string; contact: string }> = ({ segments, cta, contact }) => {
+export const EndCard: React.FC<{
+  slogan: string;
+  sloganAccent: string;
+  segments: string;
+  cta: string;
+  contact: string;
+}> = ({ slogan, sloganAccent, segments, cta, contact }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { u, vertical } = useLayout();
@@ -19,7 +25,7 @@ export const EndCard: React.FC<{ segments: string; cta: string; contact: string 
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", textAlign: "center", padding: `0 ${u(60)}px` }}>
         <Img src={staticFile("strato-logo.png")} style={{ width: vertical ? u(720) : u(700), ...appear(0.1) }} />
         <div style={{ marginTop: u(44), fontSize: vertical ? u(76) : u(72), fontWeight: 700, color: colors.white, letterSpacing: "-0.02em", ...appear(0.4) }}>
-          Menos planilha. <span style={{ color: colors.accent }}>Mais decisão.</span>
+          {slogan} <span style={{ color: colors.accent, display: "inline-block", whiteSpace: "nowrap" }}>{sloganAccent}</span>
         </div>
         <div style={{ marginTop: u(22), fontSize: vertical ? u(30) : u(26), letterSpacing: "0.3em", color: colors.textFaint, fontWeight: 600, ...appear(0.7) }}>
           {segments}
@@ -38,9 +44,11 @@ export const EndCard: React.FC<{ segments: string; cta: string; contact: string 
         >
           {cta}
         </div>
-        <div style={{ marginTop: u(22), fontSize: vertical ? u(34) : u(28), color: colors.textSoft, fontWeight: 500, ...appear(1.2) }}>
-          {contact}
-        </div>
+        {contact ? (
+          <div style={{ marginTop: u(22), fontSize: vertical ? u(34) : u(28), color: colors.textSoft, fontWeight: 500, ...appear(1.2) }}>
+            {contact}
+          </div>
+        ) : null}
       </AbsoluteFill>
     </AbsoluteFill>
   );

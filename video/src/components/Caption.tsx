@@ -23,7 +23,7 @@ export const Caption: React.FC<{
         position: "absolute",
         left: vertical ? u(64) : u(110),
         right: vertical ? u(64) : undefined,
-        bottom: vertical ? u(220) : u(96),
+        bottom: vertical ? u(150) : u(96),
         width: vertical ? undefined : u(760),
         padding: vertical ? `${u(44)}px ${u(48)}px` : `${u(36)}px ${u(44)}px`,
         borderRadius: u(28),

@@ -7,7 +7,8 @@ export const Cursor: React.FC<{
   to: [number, number];
   start: number;
   click: number;
-}> = ({ from, to, start, click }) => {
+  unit?: number;
+}> = ({ from, to, start, click, unit = 1 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const t = interpolate(frame, [start * fps, click * fps], [0, 1], { ...clamp, easing: ease.inOut });
@@ -21,17 +22,17 @@ export const Cursor: React.FC<{
       <div
         style={{
           position: "absolute",
-          left: -28,
-          top: -28,
-          width: 56,
-          height: 56,
+          left: -28 * unit,
+          top: -28 * unit,
+          width: 56 * unit,
+          height: 56 * unit,
           borderRadius: "50%",
-          border: "3px solid rgba(59,107,255,0.8)",
+          border: `${3 * unit}px solid rgba(59,107,255,0.8)`,
           opacity: ring > 0 && ring < 1 ? 1 - ring : 0,
           scale: 0.4 + ring * 1.2,
         }}
       />
-      <svg width="34" height="40" viewBox="0 0 17 20" style={{ scale: press, transformOrigin: "0 0" }}>
+      <svg width={34 * unit} height={40 * unit} viewBox="0 0 17 20" style={{ scale: press, transformOrigin: "0 0" }}>
         <path d="M1 1 L1 16 L5 12 L8 19 L11 18 L8 11 L14 11 Z" fill="#0F172A" stroke="white" strokeWidth="1.2" strokeLinejoin="round" />
       </svg>
     </div>

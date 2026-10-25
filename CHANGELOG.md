@@ -3,7 +3,8 @@
 ## 25/10/2026 · Vídeos da marca (Remotion)
 
 - Skills oficiais do Remotion instaladas em `.claude/skills/` (v4.0.538).
-- Novo projeto isolado `video/` com o padrão visual dos vídeos STRATO (tokens, cenas, telas vetoriais) e composições horizontal, vertical e capa. Texto de abertura ainda em definição.
+- Novo projeto isolado `video/` com o padrão visual dos vídeos STRATO e o vídeo institucional (horizontal 1080p, vertical 1080×1920 e capa). Abertura aprovada: "Sistemas complexos. Telas demais. Informação espalhada. Nenhuma visão do negócio." → "Uma plataforma. A operação inteira à vista."
+- Cenas usam prints reais do modo demonstração (dados fictícios); `video/scripts/capture-screens.cjs` recaptura as telas.
 
 ## 20/10/2026 · Pagamentos e cobrança
 

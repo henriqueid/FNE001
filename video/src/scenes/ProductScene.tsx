@@ -1,24 +1,25 @@
 import { AbsoluteFill } from "remotion";
 import { Caption } from "../components/Caption";
 import { Chapter } from "../components/Chapter";
-import { ProductStage } from "../components/ProductStage";
+import { type CameraKey, type Mark, ProductShot, type ShotImage } from "../components/ProductShot";
 
-// Cena de produto padrão: indicador de etapa, janela com câmera e legenda.
+// Cena de produto padrão: indicador de etapa, print com câmera e destaques, legenda.
 export const ProductScene: React.FC<{
   chapter: number;
   totalChapters: number;
   chapterLabel: string;
-  windowTitle: string;
-  focus: [number, number];
+  images: ShotImage[];
+  camera: CameraKey[];
+  marks?: Mark[];
   eyebrow: string;
   title: string;
   body?: string;
-  children: React.ReactNode;
-}> = ({ chapter, totalChapters, chapterLabel, windowTitle, focus, eyebrow, title, body, children }) => (
+  children?: React.ReactNode;
+}> = ({ chapter, totalChapters, chapterLabel, images, camera, marks, eyebrow, title, body, children }) => (
   <AbsoluteFill>
-    <ProductStage title={windowTitle} focus={focus}>
+    <ProductShot images={images} camera={camera} marks={marks}>
       {children}
-    </ProductStage>
+    </ProductShot>
     <Chapter index={chapter} total={totalChapters} label={chapterLabel} />
     <Caption eyebrow={eyebrow} title={title} body={body} />
   </AbsoluteFill>

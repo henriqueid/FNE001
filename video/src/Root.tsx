@@ -16,8 +16,8 @@ export const RemotionRoot: React.FC = () => {
           pains: ["Sistemas complexos.", "Telas demais.", "Informação espalhada.", "Nenhuma visão do negócio."],
           answer: "Uma plataforma.",
           answerAccent: "A operação inteira à vista.",
-          slogan: "Menos planilha.",
-          sloganAccent: "Mais decisão.",
+          slogan: "Veja o todo.",
+          sloganAccent: "Decida com precisão.",
           cta: "Agende uma demonstração",
           contact: "",
         }}
@@ -33,8 +33,8 @@ export const RemotionRoot: React.FC = () => {
           pains: ["Sistemas complexos.", "Telas demais.", "Informação espalhada.", "Nenhuma visão do negócio."],
           answer: "Uma plataforma.",
           answerAccent: "A operação inteira à vista.",
-          slogan: "Menos planilha.",
-          sloganAccent: "Mais decisão.",
+          slogan: "Veja o todo.",
+          sloganAccent: "Decida com precisão.",
           cta: "Agende uma demonstração",
           contact: "",
         }}

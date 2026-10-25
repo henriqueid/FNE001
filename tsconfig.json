@@ -41,6 +41,7 @@
     ".preview/dist",
     ".preview/dist-artifact",
     "worker",
-    "vite.config.ts"
+    "vite.config.ts",
+    "video"
   ]
 }

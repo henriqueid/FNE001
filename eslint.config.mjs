@@ -22,6 +22,7 @@ const eslintConfig = defineConfig([
     "tools/**",
     "worker/**",
     ".preview/dist/**",
+    "video/**",
   ]),
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

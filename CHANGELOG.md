@@ -1,5 +1,10 @@
 # Changelog
 
+## 25/10/2026 · Vídeos da marca (Remotion)
+
+- Skills oficiais do Remotion instaladas em `.claude/skills/` (v4.0.538).
+- Novo projeto isolado `video/` com o padrão visual dos vídeos STRATO (tokens, cenas, telas vetoriais) e composições horizontal, vertical e capa. Texto de abertura ainda em definição.
+
 ## 20/10/2026 · Pagamentos e cobrança
 
 - Conta pagadora indisponível exibe orientação e atalho para Bancos na empresa do lançamento, sem seletor vazio.

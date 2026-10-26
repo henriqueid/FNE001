@@ -1,77 +1,86 @@
-# STRATO × Financia — roteiro do vídeo de proposta (rascunho para aprovação)
+# STRATO — vídeo de proposta de parceria para estruturas de FIDC e securitização (rascunho para aprovação)
 
-**Para:** Silvio — Financia (FIDC e securitizadora)
-**De:** Henrique Moura — STRATO
-**Objetivo:** propor uma parceria em três fases (homologação → piloto → escala) e abrir dois caminhos ao final: sócio-investidor ou cliente piloto com condição comercial especial.
-**Duração-alvo:** 8 a 9 minutos · **Tom:** conversa entre parceiros: direto, pessoal e transparente sobre o estágio do produto.
-**Formato:** mesmo padrão visual do vídeo proScore (telas reais do modo demonstração, cursor em ação, selos de veracidade, legendas).
+**Público:** gestores de FIDC e securitizadora convidados a serem parceiros de homologação e piloto
+**Voz:** institucional da STRATO (“nós”), sem citar pessoas
+**Objetivo:** apresentar o produto, a estratégia de parcerias do ecossistema e a proposta em três fases (homologação → piloto → escala), com dois caminhos ao final (sócio-investidor ou cliente piloto com condição comercial especial)
+**Duração-alvo:** 8 a 9 minutos · mesmo padrão visual do vídeo proScore (telas reais em ação, selos de veracidade, legendas)
 
-> Itens entre [colchetes] são decisões suas antes da produção.
+> Itens entre [colchetes] são decisões antes da produção.
 
 ---
 
-## Cena 1 — Por que este vídeo · 0:00–0:40
-**Visual:** tela escura, nome “Silvio” surge; transição para o logo STRATO.
+## Cena 1 — Abertura · 0:00–0:35
+**Visual:** linhas de processos soltos convergindo para o logo STRATO.
 **Narração:**
-“Silvio, gravei este vídeo para te apresentar com calma uma ideia que venho amadurecendo há algum tempo. Não é uma apresentação de vendas. É uma proposta de construção conjunta, e você é a primeira pessoa em quem pensei para ela, porque conhece por dentro a operação de um FIDC e de uma securitizadora.”
+“O mercado de crédito estruturado está mudando. As operações ficaram mais rápidas, mais reguladas e mais dependentes de dados. Na STRATO, estamos construindo a plataforma que essa nova operação exige — e estamos buscando parceiros para chegar lá mais rápido.”
 
-## Cena 2 — O problema que você conhece · 0:40–1:30
-**Visual:** dores animadas (planilhas, telas soltas, conferência manual, cobrança tardia) sendo riscadas.
+## Cena 2 — O problema · 0:35–1:20
+**Visual:** dores animadas sendo riscadas (planilhas, telas soltas, conferência manual, cobrança tardia).
 **Narração:**
-“Você sabe melhor do que eu quanto esforço a operação consome: cadastro, análise, lastro, formalização, liberação, carteira, cobrança, conciliação. Boa parte disso ainda depende de sistemas que não conversam, de planilhas paralelas e de conferência manual. O resultado é tempo da equipe gasto em tarefa repetitiva e decisões tomadas sem a visão completa da carteira.”
+“Quem opera FIDC e securitização conhece o esforço do dia a dia: cadastro, análise, lastro, formalização, liberação, carteira, cobrança e conciliação. Grande parte disso ainda depende de sistemas que não conversam, planilhas paralelas e conferência manual. É tempo da equipe gasto em tarefa repetitiva e decisão tomada sem a visão completa da carteira.”
 
-## Cena 3 — O que é o STRATO · 1:30–2:40
+## Cena 3 — O que é o STRATO · 1:20–2:30
 **Visual:** telas reais em ação — Visão geral, esteira de 6 etapas, motor de elegibilidade, carteira e cobrança, Copiloto respondendo com fontes.
 **Narração:**
-“O STRATO é a plataforma que estou construindo para resolver isso: uma única operação, do cadastro ao encerramento. A operação percorre etapas definidas, as políticas de crédito rodam em um motor determinístico, com versão e trilha de auditoria, e as exceções chegam para quem decide, com o contexto pronto. A carteira, a cobrança e o financeiro ficam no mesmo lugar. E um Copiloto de IA ajuda a encontrar a informação — sem decidir no lugar de ninguém.”
+“O STRATO reúne a operação inteira em uma única plataforma, do cadastro ao encerramento. Cada operação percorre etapas definidas, as políticas de crédito rodam em um motor determinístico, com versão e trilha de auditoria, e as exceções chegam para quem decide, com o contexto pronto. Carteira, cobrança e financeiro ficam no mesmo lugar. E um Copiloto de inteligência artificial ajuda a encontrar a informação, sem decidir no lugar de ninguém.”
 
-## Cena 4 — Onde estamos, com transparência · 2:40–3:30
+## Cena 4 — Onde estamos · 2:30–3:15
 **Visual:** painel “Existente · Parcial · Planejado” com o estado real de cada módulo.
 **Narração:**
-“Quero ser transparente sobre o estágio. A base está construída e funcionando: cadastros, operações, motor de políticas, carteira, financeiro, controladoria e Copiloto. O que falta é exatamente o que só se resolve dentro de uma operação real: homologar as rotinas com quem opera todo dia, validar integrações bancárias e de dados, fechar módulos como encerramento e substituição de títulos, e ajustar cada tela à forma como uma estrutura de verdade trabalha.”
+“A base está construída e funcionando: cadastros, operações, motor de políticas, carteira, financeiro, controladoria e Copiloto. O que falta é o que só se resolve dentro de uma operação real: homologar as rotinas com quem opera todos os dias, validar integrações bancárias e de dados, concluir módulos como encerramento e substituição de títulos e ajustar cada fluxo à forma como uma estrutura de verdade trabalha.”
 
-## Cena 5 — Por que a Financia · 3:30–4:10
-**Visual:** “Financia” em texto (sem logo) conectada ao STRATO.
+## Cena 5 — A estratégia: um ecossistema de parceiros · 3:15–4:15
+**Visual:** STRATO no centro; parceiros entram ao redor, cada um com seu papel. Todos com o selo “parceria em construção”.
+- **Operação:** FIDCs e securitizadoras parceiras — homologação, piloto e referência
+- **Dados e crédito:** bureaus como a proScore — cadastro, crédito, risco e compliance
+- **Formalização:** assinatura eletrônica [Clicksign?]
+- **Infraestrutura:** bancos, registradoras e custodiantes
+
 **Narração:**
-“É aí que entra a Financia. Você tem a operação, a equipe que vive o dia a dia de FIDC e securitizadora e a credibilidade no mercado. Nenhum ambiente de teste substitui isso. Construir com vocês é a forma mais rápida e segura de transformar o STRATO em um produto pronto para escala.”
+“Nossa estratégia é crescer em ecossistema. Estamos buscando parcerias com empresas de referência em cada etapa da operação: provedores de dados e crédito, como a proScore; assinatura eletrônica, como a [Clicksign]; e outros players de infraestrutura do mercado. E, no centro disso, estruturas que operam FIDC e securitização no dia a dia. Com os parceiros certos, nosso objetivo é ambicioso: levar o STRATO a ser a plataforma número um do mercado de recebíveis em pouco tempo.”
 
-## Cena 6 — A proposta em três fases · 4:10–6:10
-**Visual:** linha do tempo animada com três marcos; cada fase abre seus entregáveis.
+## Cena 6 — Por que parceiros como vocês · 4:15–4:55
+**Visual:** três pilares animados: Expertise · Referência de mercado · Estratégia comercial.
+**Narração:**
+“Procuramos parceiros como vocês por três motivos. A expertise de quem conhece a operação por dentro. A referência de mercado que vocês já são. E a visão comercial para levar o produto a outras estruturas. Nenhum ambiente de teste substitui isso.”
+
+## Cena 7 — A proposta em três fases · 4:55–6:40
+**Visual:** linha do tempo com três marcos; cada fase abre seus entregáveis.
 **Narração:**
 “A proposta tem três fases.
-**Fase um, homologação conjunta.** Usamos o espaço e a equipe da Financia para validar o sistema com operações reais em paralelo à rotina atual, sem substituir nada do que funciona hoje. Vocês apontam o que precisa mudar; nós ajustamos e finalizamos a construção. [Duração sugerida: 60 a 90 dias.]
-**Fase dois, piloto de implantação.** Validado, o STRATO entra em produção na Financia, com acompanhamento próximo, metas claras e indicadores de tempo, retrabalho e controle.
-**Fase três, escala.** Com o piloto rodando, a Financia se torna nosso caso de referência. Sua experiência e sua influência no mercado ajudam a apresentar o STRATO a outras estruturas.”
+**Fase um, homologação conjunta.** Usamos o ambiente e a equipe do parceiro para validar o sistema com operações reais, em paralelo à rotina atual, sem substituir o que já funciona. A equipe aponta o que precisa mudar; nós ajustamos e concluímos a construção. [Duração sugerida: 60 a 90 dias.]
+**Fase dois, piloto de implantação.** Validado, o STRATO entra em produção, com acompanhamento próximo e indicadores claros de tempo, retrabalho e controle.
+**Fase três, escala.** Com o piloto rodando, o parceiro se torna nosso caso de referência, e sua experiência e influência ajudam a levar o STRATO a outras estruturas.”
 
-## Cena 7 — Dois caminhos ao final · 6:10–7:10
-**Visual:** bifurcação animada: Caminho A (sócio) e Caminho B (cliente piloto).
+## Cena 8 — Dois caminhos ao final · 6:40–7:30
+**Visual:** bifurcação animada: Caminho A (sócio-investidor) e Caminho B (cliente piloto).
 **Narração:**
-“Ao final, se fizer sentido para você, existem dois caminhos.
-**O primeiro é se tornar sócio do projeto**, investindo e participando do negócio que ajudou a construir. [Participação e valores: definidos juntos.]
-**O segundo é seguir como cliente piloto**, com uma condição comercial diferenciada de uso, estrutura e evolução do produto. [Ex.: licença com desconto permanente ou período de carência.]
-Nenhum dos dois é compromisso agora. A decisão vem depois que você tiver visto o sistema funcionando na sua própria operação.”
+“Ao final da jornada, existem dois caminhos.
+**O primeiro é se tornar sócio**, investindo e participando do negócio que ajudou a construir. [Participação e valores: a definir em conjunto.]
+**O segundo é seguir como cliente piloto**, com condição comercial diferenciada de uso, estrutura e evolução do produto. [Benefício a definir.]
+A decisão vem depois de ver o sistema funcionando na própria operação.”
 
-## Cena 8 — O que propomos de cada lado · 7:10–7:50
+## Cena 9 — O que cada lado oferece · 7:30–8:05
 **Visual:** dois cartões lado a lado.
-- **STRATO oferece:** o sistema adaptado à operação da Financia; implantação, treinamento e suporte; [sem custo de licença na homologação]; prioridade nas melhorias pedidas pela equipe.
-- **Financia oferece:** espaço e acesso à equipe operacional; casos reais para validação; feedback estruturado; [após validado] ser referência e apoiar a apresentação a outras estruturas.
+- **STRATO oferece:** o sistema adaptado à operação; implantação, treinamento e suporte; [sem custo de licença na homologação]; prioridade nas melhorias pedidas pela equipe.
+- **Parceiro oferece:** ambiente e acesso à equipe operacional; casos reais para validação; feedback estruturado; [após validado] referência e apoio comercial.
 
-## Cena 9 — Cuidado com a operação · 7:50–8:20
-**Visual:** selos de segurança: dados privados, permissões, trilha de auditoria, nada com efeito real sem aprovação.
+## Cena 10 — Cuidado com a operação · 8:05–8:30
+**Visual:** selos: confidencialidade, dados protegidos, permissões, trilha de auditoria, nenhuma ação com efeito real sem aprovação.
 **Narração:**
-“Tudo isso com cuidado com a sua operação: acordo de confidencialidade, dados protegidos e restritos a quem precisa, trilha de auditoria completa e nenhuma movimentação com efeito real durante a homologação sem a aprovação da sua equipe.”
+“Tudo com cuidado com a operação do parceiro: acordo de confidencialidade, dados protegidos e restritos a quem precisa, trilha de auditoria completa e nenhuma movimentação com efeito real sem a aprovação da equipe.”
 
-## Cena 10 — Próximo passo · 8:20–8:50
-**Visual:** retorno ao dashboard real; câmera se afasta; assinatura “STRATO × Financia — construindo juntos”.
+## Cena 11 — Próximo passo · 8:30–8:55
+**Visual:** dashboard real; câmera se afasta; assinatura “STRATO — construindo com quem opera”.
 **Narração:**
-“Se a ideia fizer sentido, o próximo passo é simples: uma conversa para definirmos o escopo da primeira fase, as pessoas envolvidas e os critérios de sucesso. Obrigado pelo tempo, Silvio. Vai ser um prazer construir isso com você.”
+“Se essa visão fizer sentido para vocês, o próximo passo é uma conversa para definirmos o escopo da primeira fase, as pessoas envolvidas e os critérios de sucesso. Será um prazer construir isso juntos.”
 
 ---
 
 ## Decisões antes de produzir
-1. Citar “Financia” e “Silvio” nominalmente no vídeo? (Sem usar logotipo da Financia.)
-2. Prazo da Fase 1 (sugestão 60–90 dias) e se a homologação será sem custo de licença.
-3. Caminho A: mencionar ordem de grandeza da participação ou deixar “a definir juntos”?
-4. Caminho B: qual benefício citar (desconto permanente, carência, preço de fundador)?
-5. Voz: a mesma narração sintética do vídeo proScore ou sua própria voz?
-6. Operações reais na Fase 1: em paralelo (recomendado) ou já substituindo rotinas?
+1. Assinatura eletrônica: o parceiro citado é a **Clicksign**? (“flixsign” na mensagem.)
+2. Citar proScore e a empresa de assinatura nominalmente como “parcerias que estamos buscando”? (Sem logotipos.)
+3. Prazo da Fase 1 (60–90 dias) e homologação sem custo de licença?
+4. Caminho A: ordem de grandeza da participação ou “a definir em conjunto”?
+5. Caminho B: benefício a citar (desconto permanente, carência, preço de fundador)?
+6. Voz: mesma narração sintética ou gravação própria?

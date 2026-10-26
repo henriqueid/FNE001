@@ -1,5 +1,11 @@
 # Changelog
 
+## 26/10/2026 · Vídeo STRATO × Financia
+
+- Nova composição Remotion `StratoFinancia` (~5 min, 1080p): proposta de parceria em 11 cenas — problema, produto em telas reais, onde estamos, ecossistema de parceiros buscados (proScore, Flixsign, infraestrutura), por que a Financia, três fases (homologação de ~90 dias com licença gratuita e acesso completo, piloto, escala) e dois caminhos (sócio-investidor, com valores em segundo momento, ou cliente piloto sem custo de uso para sempre).
+- Mesma voz, trilha, legendas e componentes do vídeo proScore; scripts de narração, legendas, SRT e roteiro aceitam `VIDEO=financia`.
+- Roteiro aprovado e roteiro narrado em `video/docs/financia/`.
+
 ## 26/10/2026 · Vídeo STRATO × proScore
 
 - Nova composição Remotion `StratoProScore` (~11 min, 1080p): 14 cenas com narração ElevenLabs, trilha instrumental com ducking, legendas sincronizadas (SRT) e prints reais do modo demonstração com selos de veracidade (existente, parcial, visão de evolução, integração proposta, simulação).

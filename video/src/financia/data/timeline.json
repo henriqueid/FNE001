@@ -1,0 +1,378 @@
+[
+  {
+    "id": "f01",
+    "duration": 15.647,
+    "sentences": [
+      {
+        "text": "O mercado de crédito estruturado está mudando.",
+        "start": 0,
+        "end": 2.56
+      },
+      {
+        "text": "As operações ficaram mais rápidas, mais reguladas e mais dependentes de dados.",
+        "start": 3.2,
+        "end": 7.84
+      },
+      {
+        "text": "Na STRATO, estamos construindo a plataforma que essa nova operação exige.",
+        "start": 8.24,
+        "end": 12.23
+      },
+      {
+        "text": "E estamos buscando parceiros para chegar lá mais rápido.",
+        "start": 12.6,
+        "end": 15.65
+      }
+    ]
+  },
+  {
+    "id": "f02",
+    "duration": 23.406,
+    "sentences": [
+      {
+        "text": "Quem opera FIDC e securitização conhece o esforço do dia a dia.",
+        "start": 0,
+        "end": 3.91
+      },
+      {
+        "text": "Cadastro, análise, lastro, formalização, liberação, carteira, cobrança e conciliação.",
+        "start": 4.51,
+        "end": 11.27
+      },
+      {
+        "text": "Grande parte disso ainda depende de sistemas que não conversam, planilhas paralelas e conferência manual.",
+        "start": 11.77,
+        "end": 17.52
+      },
+      {
+        "text": "É tempo da equipe gasto em tarefa repetitiva e decisão tomada sem a visão completa da carteira.",
+        "start": 17.97,
+        "end": 23.41
+      }
+    ]
+  },
+  {
+    "id": "f03",
+    "duration": 28.447,
+    "sentences": [
+      {
+        "text": "O STRATO reúne a operação inteira em uma única plataforma, do cadastro ao encerramento.",
+        "start": 0,
+        "end": 5.4
+      },
+      {
+        "text": "Cada operação percorre etapas definidas.",
+        "start": 5.96,
+        "end": 8.46
+      },
+      {
+        "text": "As políticas de crédito rodam em um motor determinístico, com versão e trilha de auditoria.",
+        "start": 8.98,
+        "end": 14.13
+      },
+      {
+        "text": "E as exceções chegam para quem decide, com o contexto pronto.",
+        "start": 14.64,
+        "end": 18.25
+      },
+      {
+        "text": "Carteira, cobrança e financeiro ficam no mesmo lugar.",
+        "start": 18.72,
+        "end": 22.07
+      },
+      {
+        "text": "E um Copiloto de inteligência artificial ajuda a encontrar a informação, sem decidir no lugar de ninguém.",
+        "start": 22.56,
+        "end": 28.45
+      }
+    ]
+  },
+  {
+    "id": "f04",
+    "duration": 27.167,
+    "sentences": [
+      {
+        "text": "A base está construída e funcionando: cadastros, operações, motor de políticas, carteira, financeiro, controladoria e Copiloto.",
+        "start": 0,
+        "end": 2.14
+      },
+      {
+        "text": "O que falta é o que só se resolve dentro de uma operação real.",
+        "start": 2.53,
+        "end": 8.85
+      },
+      {
+        "text": "Homologar as rotinas com quem opera todos os dias e validar integrações bancárias e de dados.",
+        "start": 9.41,
+        "end": 12.85
+      },
+      {
+        "text": "Concluir módulos como encerramento e substituição de títulos.",
+        "start": 13.4,
+        "end": 18.72
+      },
+      {
+        "text": "E ajustar cada fluxo à forma como uma estrutura de verdade trabalha.",
+        "start": 19.07,
+        "end": 27.17
+      }
+    ]
+  },
+  {
+    "id": "f05",
+    "duration": 29.571,
+    "sentences": [
+      {
+        "text": "Nossa estratégia é crescer em ecossistema.",
+        "start": 0,
+        "end": 2.56
+      },
+      {
+        "text": "Estamos buscando parcerias com empresas de referência em cada etapa da operação.",
+        "start": 3.37,
+        "end": 7.61
+      },
+      {
+        "text": "Dados e crédito, com a proScore.",
+        "start": 8.15,
+        "end": 10.1
+      },
+      {
+        "text": "Formalização e assinatura, com a Flixsign.",
+        "start": 10.54,
+        "end": 13.3
+      },
+      {
+        "text": "E outros players de infraestrutura do mercado.",
+        "start": 13.72,
+        "end": 15.86
+      },
+      {
+        "text": "No centro disso, estruturas que operam FIDC e securitização no dia a dia.",
+        "start": 16.37,
+        "end": 20.77
+      },
+      {
+        "text": "Com os parceiros certos, nosso objetivo é ambicioso: levar o STRATO a ser a plataforma número um do mercado de recebíveis em pouco tempo.",
+        "start": 21.26,
+        "end": 29.57
+      }
+    ]
+  },
+  {
+    "id": "f06",
+    "duration": 33.071,
+    "sentences": [
+      {
+        "text": "E é aqui que entra a Financia.",
+        "start": 0,
+        "end": 1.78
+      },
+      {
+        "text": "Entendemos a Financia como parceira estratégica.",
+        "start": 2.86,
+        "end": 5.59
+      },
+      {
+        "text": "Já estivemos dentro da operação de vocês e sabemos que é uma equipe experiente, que pode agregar muito ao nosso produto.",
+        "start": 6.23,
+        "end": 12.25
+      },
+      {
+        "text": "Buscamos parceiros como vocês por três motivos.",
+        "start": 12.75,
+        "end": 15.56
+      },
+      {
+        "text": "A expertise de quem conhece a operação por dentro.",
+        "start": 16.11,
+        "end": 18.71
+      },
+      {
+        "text": "A referência de mercado que vocês já são.",
+        "start": 19.17,
+        "end": 21.27
+      },
+      {
+        "text": "E a visão comercial para levar o produto a outras estruturas.",
+        "start": 21.72,
+        "end": 24.98
+      },
+      {
+        "text": "Vocês também têm parceiros estratégicos que fazem muito sentido para o nosso ecossistema.",
+        "start": 25.39,
+        "end": 29.91
+      },
+      {
+        "text": "Nenhum ambiente de teste substitui isso.",
+        "start": 30.33,
+        "end": 33.07
+      }
+    ]
+  },
+  {
+    "id": "f07",
+    "duration": 45.087,
+    "sentences": [
+      {
+        "text": "A proposta tem três fases.",
+        "start": 0,
+        "end": 1.86
+      },
+      {
+        "text": "Fase um: homologação conjunta.",
+        "start": 2.36,
+        "end": 2.93
+      },
+      {
+        "text": "Durante cerca de noventa dias, a Financia usa o STRATO com licença gratuita e acesso completo a todo o sistema, a qualquer momento, até chegarmos a uma homologação perfeita.",
+        "start": 3.26,
+        "end": 4.58
+      },
+      {
+        "text": "Tudo em paralelo à rotina atual, sem substituir o que já funciona.",
+        "start": 5.1,
+        "end": 15.35
+      },
+      {
+        "text": "A equipe aponta o que precisa mudar; nós ajustamos e concluímos a construção.",
+        "start": 15.82,
+        "end": 19.3
+      },
+      {
+        "text": "Fase dois: piloto de implantação.",
+        "start": 19.75,
+        "end": 24.06
+      },
+      {
+        "text": "Validado, o STRATO entra em produção, com acompanhamento próximo e indicadores claros de tempo, retrabalho e controle.",
+        "start": 24.54,
+        "end": 26.88
+      },
+      {
+        "text": "Fase três: escala.",
+        "start": 27.32,
+        "end": 34.22
+      },
+      {
+        "text": "Com o piloto rodando, a Financia se torna nosso caso de referência.",
+        "start": 34.68,
+        "end": 36.39
+      },
+      {
+        "text": "E sua experiência e influência ajudam a levar o STRATO a outras estruturas.",
+        "start": 36.77,
+        "end": 45.09
+      }
+    ]
+  },
+  {
+    "id": "f08",
+    "duration": 27.011,
+    "sentences": [
+      {
+        "text": "Ao final da jornada, existem dois caminhos.",
+        "start": 0,
+        "end": 2.75
+      },
+      {
+        "text": "O primeiro é se tornar sócio, investindo e participando do negócio que ajudou a construir.",
+        "start": 3.41,
+        "end": 8.8
+      },
+      {
+        "text": "Participação e valores ficam para uma conversa em um segundo momento.",
+        "start": 9.28,
+        "end": 12.85
+      },
+      {
+        "text": "O segundo é seguir como cliente piloto.",
+        "start": 13.35,
+        "end": 15.76
+      },
+      {
+        "text": "Nesse caso, a Financia fica isenta de qualquer custo de uso do STRATO, por todo o tempo.",
+        "start": 16.19,
+        "end": 21.43
+      },
+      {
+        "text": "Para sempre.",
+        "start": 21.86,
+        "end": 22.7
+      },
+      {
+        "text": "A decisão vem depois de ver o sistema funcionando na própria operação.",
+        "start": 23.15,
+        "end": 27.01
+      }
+    ]
+  },
+  {
+    "id": "f09",
+    "duration": 21.891,
+    "sentences": [
+      {
+        "text": "Do nosso lado: o sistema adaptado à operação, implantação, treinamento e suporte.",
+        "start": 0,
+        "end": 5.38
+      },
+      {
+        "text": "Licença gratuita durante a homologação e prioridade nas melhorias que a equipe pedir.",
+        "start": 5.98,
+        "end": 10.56
+      },
+      {
+        "text": "Do lado da Financia: o ambiente e a equipe operacional, casos reais para validação e feedback estruturado.",
+        "start": 11.1,
+        "end": 17.61
+      },
+      {
+        "text": "E, depois de validado, a referência e o apoio comercial.",
+        "start": 18.03,
+        "end": 21.89
+      }
+    ]
+  },
+  {
+    "id": "f10",
+    "duration": 12.591,
+    "sentences": [
+      {
+        "text": "Tudo com cuidado com a operação.",
+        "start": 0,
+        "end": 1.75
+      },
+      {
+        "text": "Acordo de confidencialidade, dados protegidos e restritos a quem precisa.",
+        "start": 2.39,
+        "end": 6.76
+      },
+      {
+        "text": "Trilha de auditoria completa e nenhuma movimentação com efeito real sem a aprovação da equipe.",
+        "start": 7.27,
+        "end": 12.59
+      }
+    ]
+  },
+  {
+    "id": "f11",
+    "duration": 13.009,
+    "sentences": [
+      {
+        "text": "Se essa visão fizer sentido para vocês, o próximo passo é uma conversa.",
+        "start": 0,
+        "end": 4.35
+      },
+      {
+        "text": "Para definirmos o escopo da primeira fase, as pessoas envolvidas e os critérios de sucesso.",
+        "start": 5.07,
+        "end": 10.18
+      },
+      {
+        "text": "Será um prazer construir isso juntos.",
+        "start": 10.74,
+        "end": 13.01
+      }
+    ]
+  }
+]

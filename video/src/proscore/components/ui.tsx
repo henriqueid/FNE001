@@ -1,7 +1,7 @@
 import { interpolate, useCurrentFrame } from "remotion";
 import { clamp, colors, ease } from "../../brand/tokens";
 
-// Peças visuais compartilhadas pelas cenas STRATO × proScore.
+// Peças visuais compartilhadas pelas cenas dos vídeos STRATO × proScore e STRATO × Financia.
 
 export const status = {
   real: { label: "Tela real · ambiente de demonstração", color: "#34D399" },
@@ -9,6 +9,8 @@ export const status = {
   vision: { label: "Visão de evolução", color: "#7AA7FF" },
   proposal: { label: "Integração proposta · sujeita a validação", color: "#C084FC" },
   simulation: { label: "Simulação ilustrativa · dados sintéticos", color: "#94A3B8" },
+  partners: { label: "Parcerias que estamos buscando · não firmadas", color: "#C084FC" },
+  offer: { label: "Proposta STRATO · condições desta parceria", color: "#38BDF8" },
 } as const;
 export type StatusKey = keyof typeof status;
 

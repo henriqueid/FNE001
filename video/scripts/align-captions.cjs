@@ -1,13 +1,13 @@
 /**
  * Alinha as frases do roteiro ao áudio de cada cena: detecta as pausas (silêncios) e usa as
- * N−1 mais longas como fronteiras entre as N frases. Gera src/proscore/data/timeline.json
+ * N−1 mais longas como fronteiras entre as N frases. Gera src/<VIDEO>/data/timeline.json
  * (durações por cena e início/fim de cada frase), usado pela composição e pelo SRT.
  */
 const { execFileSync, spawnSync } = require("node:child_process");
 const fs = require("node:fs");
-const { scenes } = require("./tts-text.cjs");
+const { scenes, video } = require("./tts-text.cjs");
 
-const AUDIO = "public/proscore/audio";
+const AUDIO = `public/${video}/audio`;
 const out = [];
 for (const scene of scenes) {
   const file = `${AUDIO}/${scene.id}.mp3`;
@@ -39,4 +39,4 @@ for (const scene of scenes) {
   console.log(`${scene.id} ${duration.toFixed(2)}s ${n} frases${warn} | menor pausa usada ${Math.min(...cuts.map(c => c.len)).toFixed(2)}s`);
   out.push({ id: scene.id, duration: Number(duration.toFixed(3)), sentences });
 }
-fs.writeFileSync("src/proscore/data/timeline.json", JSON.stringify(out, null, 2) + "\n");
+fs.writeFileSync(`src/${video}/data/timeline.json`, JSON.stringify(out, null, 2) + "\n");

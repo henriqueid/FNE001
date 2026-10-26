@@ -1,4 +1,7 @@
 import { Composition, Folder, Still } from "remotion";
+import { StratoFinancia } from "./financia/StratoFinancia";
+import { FinanciaThumbnail } from "./financia/Thumbnail";
+import { TOTAL_FRAMES as FINANCIA_FRAMES } from "./financia/data/scenes";
 import { StratoProScore } from "./proscore/StratoProScore";
 import { ProScoreThumbnail } from "./proscore/Thumbnail";
 import { TOTAL_FRAMES } from "./proscore/data/scenes";
@@ -19,6 +22,18 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{ subtitles: true, musicVolume: 0.5 }}
       />
       <Still id="StratoProScoreThumbnail" component={ProScoreThumbnail} width={1920} height={1080} />
+    </Folder>
+    <Folder name="STRATO-Financia">
+      <Composition
+        id="StratoFinancia"
+        component={StratoFinancia}
+        durationInFrames={FINANCIA_FRAMES}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={{ subtitles: true, musicVolume: 0.5 }}
+      />
+      <Still id="StratoFinanciaThumbnail" component={FinanciaThumbnail} width={1920} height={1080} />
     </Folder>
     <Folder name="STRATO">
       <Composition

@@ -5,7 +5,7 @@
  */
 import { accountBalance } from "@/src/domain/finance/banking";
 import { cancelTitle, reverseSettlement, settleTitle } from "@/src/domain/finance/titles";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { round2, todayIso, type Result } from "@/src/domain/finance/ledger";
 import type { FinanceState, FinanceTitle } from "@/src/domain/finance/model";
 import { AlertIcon, CloseIcon, UndoIcon } from "@/src/ui/icons";
@@ -72,6 +72,47 @@ export function Modal({
   footer: React.ReactNode;
   wide?: boolean;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const controls = () =>
+      Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter(element => element.tabIndex !== -1 && element.getClientRects().length > 0);
+    (controls()[0] ?? dialog).focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        closeRef.current();
+      } else if (event.key === "Tab") {
+        const items = controls();
+        const first = items[0] ?? dialog;
+        const last = items.at(-1) ?? dialog;
+        if (
+          !dialog.contains(document.activeElement) ||
+          (event.shiftKey ? document.activeElement === first : document.activeElement === last)
+        ) {
+          event.preventDefault();
+          (event.shiftKey ? last : first).focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      document.removeEventListener("keydown", onKey, true);
+      if (previous?.isConnected) previous.focus();
+    };
+  }, []);
   return (
     <div
       className="modal-backdrop fn-backdrop"
@@ -80,7 +121,14 @@ export function Modal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className={`fn-modal ${wide ? "wide" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className={`fn-modal ${wide ? "wide" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
         <header>
           <div>
             <h2>{title}</h2>

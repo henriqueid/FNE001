@@ -1,0 +1,207 @@
+Browser tab: 12, Title: "STRATO · Validação visual", URL: "http://127.0.0.1:5182/?design=refined&screen=app".
+0 AXWebArea STRATO · Validação visual, URL: 127.0.0.1:5182/?design=refined&screen=app
+	1 container root
+		2 text Demonstração completa  · dados fictícios · salvamento somente local
+		3 container Comparar aparência
+			4 checkbox Original, Value: 0
+			5 checkbox Refinado, Value: 1
+			6 checkbox Acesso, Value: 0
+			7 checkbox Empresa, Value: 0
+		8 container
+			9 image STRATO
+			10 container Módulos
+				11 button Description: Visão geral, Help: Visão geral · Resultado, carteira, caixa e pendências
+				12 button Description: Operações, Help: Operações · Central, esteira e workspace da operação
+					13 text 6
+					14 text Operações
+				15 button Description: Controladoria, Help: Controladoria · Checagem, formalização, conciliação, auditoria e relatórios
+				16 button Description: Carteira, Help: Carteira · Títulos, vencimentos, atraso e cobrança
+				17 button Description: Comercial, Help: Comercial · Metas, funil, comitês e comissões
+				18 button Description: Financeiro, Help: Financeiro · Caixa, contas, conciliação e contábil
+				19 button Description: Cadastros, Help: Cadastros · Cedentes, sacados, grupos e contas
+				20 button Description: Configurações, Help: Configurações · Políticas, empresas, integrações e preferências
+			21 button Buscar (Ctrl+K)
+			22 button (collapsed) Description: Alertas: 8, Secondary Actions: Expand
+				23 text 8
+			24 pop up button (collapsed) Description: Henrique, Consolidado. Abrir menu do usuário, Secondary Actions: Expand
+				25 text H
+				26 text Henrique
+				27 text Consolidado
+			28 button (collapsed) Description: Abrir Copiloto, Secondary Actions: Expand
+				29 container 8 tarefas pendentes
+					30 text 8
+			31 button 2 decisões aguardam você
+			32 container
+				33 text FINANCEIRO E CONTÁBIL
+				34 heading Financeiro, Value: 1
+					35 text Financeiro
+				36 text Caixa, contas a pagar e a receber, conta corrente, conciliação e contabilidade.
+				37 button Novo lançamento
+				38 container Seções do financeiro
+					39 tab group Seções do financeiro
+						40 tab (selectable, settable, boolean) Caixa e fluxo, Value: 0
+						41 tab (selectable, settable, boolean) A pagar e a receber 5, Value: 0
+						42 tab (selectable, settable, boolean) Liberações de operações, Value: 0
+						43 tab (selectable, settable, boolean) Cobrança, Value: 0
+						44 tab (selectable, settable, boolean) Extrato bancário, Value: 0
+						45 tab (selected, settable, boolean) Conciliação bancária 9, Value: 1
+						46 tab (selectable, settable, boolean) Contábil, Value: 0
+						47 tab (selectable, settable, boolean) Bancos, Value: 0
+				369 text 1 par(es) conciliado(s) automaticamente por valor e data (±3 dias).
+				370 button Fechar aviso
+				371 container
+					372 heading Conciliação bancária, Value: 2
+						373 text Conciliação bancária
+					374 text Esquerda: o que veio do banco (OFX). Direita: o que está no sistema. Case os pares e trate o que sobrar. Importar OFX
+					375 button Importar OFX
+					376 button Conciliar automaticamente
+				377 container
+					378 text Conta
+					379 pop up button (collapsed, settable) Conta, Value: Sicredi cobrança · Lastro Fomento Mercantil, Secondary Actions: Expand
+						380 menu
+							381 Itaú movimento · Lastro Fomento Mercantil
+							382 (selected) Sicredi cobrança · Lastro Fomento Mercantil
+							383 Bradesco movimento · Órbita Securitizadora S.A.
+							384 BTG conta do fundo · Lastro Prime FIDC
+							385 BB conta do fundo · Aurora Recebíveis FIDC
+				386 container
+					387 text Tolerância de data
+					388 pop up button (collapsed, settable) Tolerância de data, Value: ± 3 dia(s), Secondary Actions: Expand
+						389 menu
+							390 Mesmo dia
+							391 ± 1 dia(s)
+							392 ± 2 dia(s)
+							393 (selected) ± 3 dia(s)
+							394 ± 5 dia(s)
+							395 ± 7 dia(s)
+				396 button Pendentes
+				397 button Conciliados
+				398 button Todos
+				522 text CHURUME-etapa1.ofx: 1 lançamento(s) importado(s). EXTRATO PENDENTE
+				400 text 0
+				401 text R$ 0,00
+				402 text SISTEMA PENDENTE
+				403 text 0
+				404 text R$ 0,00
+				405 text CONCILIADOS
+				406 text 3
+				407 container
+					408 text de  3  linhas do extrato
+				409 text SALDO NO SISTEMA
+				410 text R$ 24.302,60
+				411 container
+					412 text Sicredi  · cc  88310-4
+				413 container
+					414 text Extrato  R$ 0,00 ( 0 ) Sistema  R$ 0,00 ( 0 ) Diferença  R$ 0,00
+					415 button (disabled) Conciliar selecionados
+					416 button (disabled) Lançar diferença e conciliar
+					417 button (disabled) Limpar
+				418 heading Extrato do banco (OFX) 3, Value: 3
+					419 text Extrato do banco (OFX)
+					420 text 3
+				421 table
+					422 row
+						423 cell
+							424 text DATA
+						425 cell
+							426 text HISTÓRICO DO BANCO
+						427 cell
+							428 text VALOR
+					523 row
+						524 cell
+							525 text 15/10/2026
+						526 cell
+							527 text JUROS DE MORA
+							528 container
+								529 text FITID  SEED0008  ·  extrato-748.ofx
+						530 cell
+							531 text R$ 2.318,60
+						532 cell
+							533 text CC-00085
+							534 button Desfazer
+					535 row
+						536 cell
+							537 text 23/10/2026
+						538 cell
+							539 text TRANSFERÊNCIA PARA ITAÚ MOVIMENT
+							540 container
+								541 text FITID  SEED0011  ·  extrato-748.ofx
+						542 cell
+							543 text -R$ 120.000,00
+						544 cell
+							545 text CC-00107
+							546 button Desfazer
+					547 row
+						548 cell
+							549 text 26/10/2026
+						550 cell
+							551 text CHURUME ETAPA1 transferência e tarifa
+							552 container
+								553 text FITID  CHURUME-ETAPA1-001  ·  CHURUME-etapa1.ofx
+						554 cell
+							555 text -R$ 16,00
+						556 cell
+							557 text CC-00106
+							558 button Desfazer
+				448 heading Lançamentos do sistema 4, Value: 3
+					449 text Lançamentos do sistema
+					450 text 4
+				451 table
+					452 row
+						453 cell
+							454 text DATA
+						455 cell
+							456 text LANÇAMENTO
+						457 cell
+							458 text VALOR
+					559 row
+						560 cell
+							561 text 15/10/2026
+						562 cell
+							563 text Juros de mora · liquidações em atraso · Diversos sacados
+							564 container
+								565 text MV-00036  ·  Entrada  · CR-00034
+						566 cell
+							567 text R$ 2.318,60
+						568 cell
+							569 text CC-00085
+							570 button Desfazer
+					571 row
+						572 cell
+							573 text 22/10/2026
+						574 cell
+							575 text Transferência para Itaú movimento · Resgate da conta cobrança
+							576 container
+								577 text MV-00062  ·  Transferência
+						578 cell
+							579 text -R$ 120.000,00
+						580 cell
+							581 text CC-00107
+							582 button Desfazer
+					583 row
+						584 cell
+							585 text 26/10/2026
+						586 cell
+							587 text Transferência para Itaú movimento · CHURUME ETAPA1 transferência
+							588 container
+								589 text MV-00097  ·  Transferência
+						590 cell
+							591 text -R$ 15,00
+						592 cell
+							593 text CC-00106
+							594 button Desfazer
+					595 row
+						596 cell
+							597 text 26/10/2026
+						598 cell
+							599 text Tarifa bancária cobrada na operaçãoCHURUME ETAPA1 tarifa · Sicredi
+							600 container
+								601 text MV-00104  ·  Saída  · CP-00102
+						602 cell
+							603 text -R$ 1,00
+						604 cell
+							605 text CC-00106
+							606 button Desfazer
+				485 text Dica: um movimento e o seu estorno que não chegaram ao banco podem ser conciliados juntos, sem linha do extrato, porque se anulam. Pagamentos agrupados pelo banco (1 linha × vários lançamentos) também fecham pela soma.
+
+The focused UI element is 397 button Conciliados

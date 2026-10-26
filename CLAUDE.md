@@ -1,5 +1,9 @@
 # STRATO — contexto de continuidade
 
+## Validação por etapas ·26/10/2026 · novo lote local
+
+Usuário autorizou seguir por etapas após publicação6bf67f8. Etapa1 executou jornadas principais do Financeiro em demonstração exclusiva5182, com dados CHURUME. Duas falhas novas corrigidas localmente: teclado/foco do Modal compartilhado e moeda da mensagem de diferença. Evidências e limites: `docs/testing/churume/2026-10-26-etapa1-financeiro/resultado.md`; sequência no plano `2026-10-26-validacao-por-etapas.md`. **Estas duas correções ainda não foram publicadas.** Próximo bloco: Carteira/cobrança; autenticação e permissões reais exigem servidor isolado, nunca certificar pela demo.
+
 ## Retomada Churume ·26/10/2026 · publicado
 
 Após publicação aa1aa8b, corrigidos novos defeitos reproduzidos em conciliação/OFX/transferência, cobrança/checagem/contatos e entradas financeiras. Datas civis usam calendário canônico; parcelas inteiras preservam total. Gravação pendente, mudança de contexto e reabertura de modal recebem regressões. Acordos históricos preservados. Relatório: `docs/testing/churume/2026-10-26-retomada/resultado.md`. Revisão independente realizada; check, build e PostgreSQL descartável registrados no relatório. **Lote publicado: `3b99d42`.** Check exato 1.177 aprovados/30 ignorados; build local/remoto, PostgreSQL/recuperação e saúde interna/pública aprovados. Registro `docs/deployments/2026-10-26-retomada-churume.md`; seções locais anteriores à publicação são históricas. Cobertura de handlers não certifica telas completas no navegador.

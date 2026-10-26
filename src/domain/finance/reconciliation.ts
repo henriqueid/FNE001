@@ -336,7 +336,9 @@ export function launchDifference(
     d.accounts[idx] = account;
     const movementId = d.titles.find(t => t.id === id)!.movementId!;
     markGroup(d, lineIds, [...movementIds, movementId], by, `Conciliação com diferença lançada em ${id}`);
-    return { message: `Diferença de ${Math.abs(diff).toFixed(2)} lançada em ${id} e itens conciliados.` };
+    return {
+      message: `Diferença de ${Math.abs(diff).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} lançada em ${id} e itens conciliados.`,
+    };
   });
 }
 

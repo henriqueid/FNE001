@@ -1,0 +1,39 @@
+
+ RUN  v5.0.3 /Users/henriquemoura/Documents/ChatGPT/STRATO
+
+ ❯ tests/finance-modal-keyboard.test.ts (3 tests | 3 failed) 7ms
+   × modal recebe foco e Escape fecha sem escapar para outros atalhos 4ms
+   × Tab e Shift+Tab circulam dentro do modal, inclusive foco externo 1ms
+   × desmontar devolve foco e remove atalhos 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/finance-modal-keyboard.test.ts > modal recebe foco e Escape fecha sem escapar para outros atalhos
+AssertionError: expected undefined to be defined
+ ❯ mounted tests/finance-modal-keyboard.test.ts:22:15
+
+ ❯ tests/finance-modal-keyboard.test.ts:28:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/finance-modal-keyboard.test.ts > Tab e Shift+Tab circulam dentro do modal, inclusive foco externo
+AssertionError: expected undefined to be defined
+ ❯ mounted tests/finance-modal-keyboard.test.ts:22:15
+
+ ❯ tests/finance-modal-keyboard.test.ts:32:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/finance-modal-keyboard.test.ts > desmontar devolve foco e remove atalhos
+AssertionError: expected undefined to be defined
+ ❯ mounted tests/finance-modal-keyboard.test.ts:22:15
+
+ ❯ tests/finance-modal-keyboard.test.ts:38:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  14:42:52
+   Duration  221ms (transform 56%, import 37%, tests 5%, worker 2%)

@@ -1,0 +1,8 @@
+
+ RUN  v5.0.3 /Users/henriquemoura/Documents/ChatGPT/STRATO
+
+
+ Test Files  2 passed (2)
+      Tests  23 passed (23)
+   Start at  14:44:57
+   Duration  379ms (transform 64%, import 21%, tests 13%, worker 2%)

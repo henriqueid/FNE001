@@ -1,0 +1,32 @@
+
+ RUN  v5.0.3 /Users/henriquemoura/Documents/ChatGPT/STRATO
+
+ ❯ tests/finance-reconciliation.test.ts (20 tests | 1 failed) 56ms
+   × mensagem da diferença usa moeda e separador brasileiros 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/finance-reconciliation.test.ts > mensagem da diferença usa moeda e separador brasileiros
+AssertionError: expected 'Diferença de 1.00 lançada em CR-00001…' to match /Diferença de R\$ 1,00 lançada/
+
+- Expected:
+/Diferença de R\$ 1,00 lançada/
+
++ Received:
+"Diferença de 1.00 lançada em CR-00001 e itens conciliados."
+
+ ❯ tests/finance-reconciliation.test.ts:147:51
+    145|   const result = launchDifference(s, ["E1"], ["M1"], { categoryId: s.c…
+    146|   expect(result.error).toBeUndefined();
+    147|   expect(result.message?.replace(/\u00a0/g, " ")).toMatch(/Diferença d…
+       |                                                   ^
+    148| });
+    149|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 19 passed (20)
+   Start at  14:44:47
+   Duration  456ms (transform 62%, tests 22%, import 14%, worker 2%)

@@ -139,3 +139,16 @@ it("rejeita OFX com múltiplas contas", () => {
     /conta/,
   );
 });
+it("mensagem da diferença usa moeda e separador brasileiros", () => {
+  const s = fixture();
+  s.movements[0].amount = 99;
+  const result = launchDifference(
+    s,
+    ["E1"],
+    ["M1"],
+    { categoryId: s.categories.find(category => category.kind === "Receita")!.id, description: "CHURUME diferença" },
+    "CHURUME",
+  );
+  expect(result.error).toBeUndefined();
+  expect(result.message?.replace(/\u00a0/g, " ")).toMatch(/Diferença de R\$ 1,00 lançada/);
+});

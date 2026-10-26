@@ -1,5 +1,11 @@
 # Changelog
 
+## Local · 26/10/2026 — Etapa1, validação financeira no navegador
+
+- Jornadas demonstrativas: lançamento, parcelas/centavos/fim de mês, importação mista, transferência, OFX, conciliação manual/automática/desfazer/diferença.
+- Modal financeiro recebe foco ao abrir, contém Tab/Shift+Tab, fecha por Escape e devolve foco ao acionador. Falha reproduzida no navegador e coberta por regressão.
+- Mensagem de diferença usa R$ e vírgula decimal. Sem alteração de cálculo. Lote local, sem publicação; evidências e limites em `docs/testing/churume/2026-10-26-etapa1-financeiro/resultado.md`.
+
 ## Publicação · 26/10/2026 — Retomada do dossiê Churume
 
 - Conciliação/transferência aguardam confirmação, bloqueiam envio duplicado e preservam rascunhos após recusa ou erro. Contexto de conta/empresa e sessão impedem respostas atrasadas de afetar novo preparo; OFX usa snapshot atual.

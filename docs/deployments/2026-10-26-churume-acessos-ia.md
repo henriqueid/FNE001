@@ -20,4 +20,8 @@ A cobertura visual individual total e homologações de fornecedores continuam d
 
 ## Produção
 
-Preparação validada; resultado remoto será registrado após instalação, build, reinício e conferência de saúde. Nenhuma credencial produtiva foi incluída no lote.
+Código publicado: `c132acda73718b2e03f2f760dcd8a209d97aa046`. Instalação e build remotos aprovados; serviço `strato.service` reiniciado em26/10/2026 às11:49:13 (America/Sao_Paulo), ativo. Checkout produtivo limpo no código conferido.
+
+Saúde interna/pública respondeu `status: ok`; página pública HTTP200 com `st-refined`. `/api/intelligence/budget`, `/api/tasks` e `/api/access/users` retornaram401 sem sessão. Tela pública de login conferida no navegador; entrada demonstrativa não oferecida. Nenhum login produtivo, alteração de usuário, pagamento, transmissão bancária, migração ou segredo alterado nesta conferência.
+
+URL: https://strato.2.25.193.82.sslip.io . Screenshot local: `docs/deployments/evidencias-2026-10-26/login-publico.png` (não versionado). Homologação externa e cobertura individual total permanecem delimitadas pelo dossiê; publicação não as declara concluídas.

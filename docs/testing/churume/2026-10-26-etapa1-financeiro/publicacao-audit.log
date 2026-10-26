@@ -1,0 +1,5 @@
+
+> strato-receivables-os@0.7.0 audit:production
+> npm audit --omit=dev --audit-level=high
+
+found 0 vulnerabilities

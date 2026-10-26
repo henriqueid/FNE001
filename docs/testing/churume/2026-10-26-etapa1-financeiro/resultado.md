@@ -1,6 +1,6 @@
 # Etapa1 — Financeiro: jornadas principais
 
-26/10/2026. Demonstração exclusiva em `http://127.0.0.1:5182/?design=refined&screen=app`, dados fictícios CHURUME, salvamento no navegador. Componentes reais; sem APIs ou dados produtivos. **Duas correções novas locais, não publicadas.** Produção permanece no lote6bf67f8.
+26/10/2026. Demonstração exclusiva em `http://127.0.0.1:5182/?design=refined&screen=app`, dados fictícios CHURUME, salvamento no navegador. Componentes reais; sem APIs ou dados produtivos. **Duas correções publicadas com autorização: código5515434.** Registro em `docs/deployments/2026-10-26-financeiro-etapa1.md`.
 
 ## Matriz executada no navegador
 
@@ -29,7 +29,7 @@
 - **F01/P2 — teclado/foco:** Modal compartilhado do Financeiro só expunha aria-modal, sem gerenciamento de foco ou Escape. `finance-ui.tsx` agora foca primeiro controle disponível, contém Tab/Shift+Tab, fecha por Escape, devolve foco ao acionador conectado e remove listener ao desmontar. Callback atualizado sem reposicionar foco a cada edição. Navegador confirmou retorno ao botão acionador após reabertura normal. Três regressões RED→GREEN.
 - **F02/P3 — mensagem monetária:** resultado de diferença exibia “Diferença de1.00”, sem moeda/pt-BR. `reconciliation.ts` formata R$1,00 apenas no texto; cálculo, lançamentos e histórico preservados. Uma regressão RED→GREEN; confirmação GREEN automatizada, sem novo lançamento no navegador para repetir só o aviso.
 
-Nenhuma alteração de regra financeira, schema, autorização ou dependência. Dois arquivos de produto e dois de regressões; demais alterações do checkout preservadas. Não executada publicação.
+Nenhuma alteração de regra financeira, schema, autorização ou dependência. Dois arquivos de produto e dois de regressões; demais alterações do checkout preservadas. Publicação autorizada após esta validação; check/build do pacote exato e saúde produtiva confirmados no registro de implantação.
 
 ## Evidências e verificações
 

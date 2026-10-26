@@ -1,9 +1,25 @@
 import { Composition, Folder, Still } from "remotion";
+import { StratoProScore } from "./proscore/StratoProScore";
+import { ProScoreThumbnail } from "./proscore/Thumbnail";
+import { TOTAL_FRAMES } from "./proscore/data/scenes";
 import { StratoPromo, totalFrames } from "./StratoPromo";
 import { Thumbnail } from "./Thumbnail";
 
 export const RemotionRoot: React.FC = () => {
   return (
+    <>
+    <Folder name="STRATO-proScore">
+      <Composition
+        id="StratoProScore"
+        component={StratoProScore}
+        durationInFrames={TOTAL_FRAMES}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={{ subtitles: true, musicVolume: 0.5 }}
+      />
+      <Still id="StratoProScoreThumbnail" component={ProScoreThumbnail} width={1920} height={1080} />
+    </Folder>
     <Folder name="STRATO">
       <Composition
         id="StratoPromo"
@@ -41,5 +57,6 @@ export const RemotionRoot: React.FC = () => {
       />
       <Still id="StratoThumbnail" component={Thumbnail} width={1920} height={1080} />
     </Folder>
+    </>
   );
 };

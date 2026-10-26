@@ -77,6 +77,7 @@ export const NARRATION: SceneNarration[] = [
       "Queremos analisar a recorrência de atrasos, o comportamento dos sacados, a evolução da exposição, os padrões de liquidação e o histórico operacional dos cedentes.",
       "A partir dessas informações, trabalhamos com uma camada interna de classificação e pontuação da carteira.",
       "Ela permite identificar alterações comportamentais e apoiar a revisão das condições de risco.",
+      "Esse índice já prevê componentes externos, como score de bureau e protestos, que hoje aguardam um provedor de dados.",
       "E aqui surge uma das oportunidades mais interessantes de integração com a proScore.",
     ],
   },
@@ -117,6 +118,7 @@ export const NARRATION: SceneNarration[] = [
       "Em vez de depender exclusivamente da navegação por relatórios e diferentes telas, o profissional pode interagir com a plataforma em linguagem natural.",
       "A proposta é que o Copiloto consiga interpretar solicitações, recuperar informações autorizadas, explicar indicadores e identificar situações que merecem atenção.",
       "Também poderá apoiar a investigação de exceções, organizar prioridades, preparar ações e orientar o usuário durante os processos.",
+      "No futuro, sínteses de inteligência externa poderiam entrar como evidência citada, sem que a decisão saia das regras do STRATO.",
       "Mas existe uma característica importante: o Copiloto não precisa decidir sozinho.",
       "Ele deve respeitar as regras do sistema, identificar a origem dos dados e solicitar a aprovação humana sempre que a atividade exigir.",
     ],
@@ -173,6 +175,7 @@ export const NARRATION: SceneNarration[] = [
       "E a terceira é comercial: avaliar, no futuro, se existe espaço para uma proposta de valor conjunta voltada a empresas do mercado de recebíveis.",
       "Não estamos apresentando um modelo fechado.",
       "Estamos compartilhando uma visão e convidando a proScore a contribuir com sua experiência para descobrir onde essa complementaridade realmente faz sentido.",
+      "Como próximo passo, propomos uma conversa técnica para mapear os serviços e APIs disponíveis e escolher um caso piloto, como a consulta de um sacado novo na entrada da operação.",
     ],
   },
   {

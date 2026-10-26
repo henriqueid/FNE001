@@ -1,0 +1,566 @@
+[
+  {
+    "id": "s01",
+    "duration": 32.758,
+    "sentences": [
+      {
+        "text": "O mercado de crédito e recebíveis evoluiu muito nos últimos anos.",
+        "start": 0,
+        "end": 3.88
+      },
+      {
+        "text": "As operações ficaram mais dinâmicas, as exigências de controle aumentaram e o acesso à informação se tornou cada vez mais importante.",
+        "start": 4.52,
+        "end": 12.34
+      },
+      {
+        "text": "Mas existe um desafio que continua presente em muitas estruturas financeiras: a tecnologia ainda exige esforço demais de quem precisa operar.",
+        "start": 12.82,
+        "end": 20.71
+      },
+      {
+        "text": "São diferentes telas, processos manuais, consultas isoladas e informações que nem sempre se conectam no momento da decisão.",
+        "start": 21.13,
+        "end": 28.49
+      },
+      {
+        "text": "Foi observando essa realidade que começamos a construir o STRATO.",
+        "start": 28.91,
+        "end": 32.76
+      }
+    ]
+  },
+  {
+    "id": "s02",
+    "duration": 32.287,
+    "sentences": [
+      {
+        "text": "O STRATO nasce com um direcionamento claro: tornar a gestão de operações financeiras mais inteligente, mais conectada e menos complexa.",
+        "start": 0,
+        "end": 8.29
+      },
+      {
+        "text": "Queremos entregar tecnologia de alto nível sem reproduzir toda a complexidade de utilização que costuma acompanhar sistemas desse segmento.",
+        "start": 9.01,
+        "end": 16.58
+      },
+      {
+        "text": "Nossa proposta não é retirar recursos ou simplificar controles essenciais.",
+        "start": 17.17,
+        "end": 21.64
+      },
+      {
+        "text": "É simplificar o caminho que o usuário percorre para executar o seu trabalho.",
+        "start": 22.05,
+        "end": 25.84
+      },
+      {
+        "text": "Para nós, a sofisticação precisa estar na engenharia da solução, não na dificuldade de utilizá-la.",
+        "start": 26.34,
+        "end": 32.29
+      }
+    ]
+  },
+  {
+    "id": "s03",
+    "duration": 42.031,
+    "sentences": [
+      {
+        "text": "O STRATO está sendo desenvolvido para conectar o ciclo completo de uma operação de recebíveis.",
+        "start": 0,
+        "end": 5.15
+      },
+      {
+        "text": "O processo começa no relacionamento com cedentes e sacados, passa pela análise de crédito, recepção e validação de títulos, aplicação de políticas operacionais, aprovação e formalização.",
+        "start": 5.81,
+        "end": 17.4
+      },
+      {
+        "text": "Depois do desembolso, a operação continua sendo acompanhada por processos de gestão de carteira, conciliação, cobrança, recompra e encerramento.",
+        "start": 17.99,
+        "end": 26.9
+      },
+      {
+        "text": "Tudo isso sustentado por registros históricos, regras de negócio e mecanismos de auditoria.",
+        "start": 27.43,
+        "end": 32.78
+      },
+      {
+        "text": "Nossa visão é reunir, em uma mesma plataforma, as atividades que hoje frequentemente dependem de diferentes ferramentas e intervenções humanas.",
+        "start": 33.41,
+        "end": 42.03
+      }
+    ]
+  },
+  {
+    "id": "s04",
+    "duration": 43.807,
+    "sentences": [
+      {
+        "text": "Um dos pilares do STRATO é a automação operacional.",
+        "start": 0,
+        "end": 3.05
+      },
+      {
+        "text": "Queremos que o sistema deixe de ser apenas um lugar onde o operador registra o que fez e passe a ser uma plataforma capaz de conduzir atividades recorrentes conforme regras previamente estabelecidas.",
+        "start": 3.8,
+        "end": 14.41
+      },
+      {
+        "text": "Imagine uma remessa de recebíveis chegando ao sistema.",
+        "start": 15.03,
+        "end": 17.75
+      },
+      {
+        "text": "Os dados são validados, as políticas aplicadas, os limites verificados e as divergências identificadas.",
+        "start": 18.3,
+        "end": 24.6
+      },
+      {
+        "text": "Aquilo que atende às condições operacionais pode seguir o fluxo configurado, respeitando as alçadas necessárias.",
+        "start": 25.07,
+        "end": 31.11
+      },
+      {
+        "text": "O que exige análise adicional é direcionado para uma fila de exceções.",
+        "start": 31.54,
+        "end": 35.37
+      },
+      {
+        "text": "A proposta é simples: reduzir a quantidade de trabalho repetitivo e direcionar o profissional para aquilo que realmente exige julgamento.",
+        "start": 35.88,
+        "end": 43.81
+      }
+    ]
+  },
+  {
+    "id": "s05",
+    "duration": 39.811,
+    "sentences": [
+      {
+        "text": "Por trás dessa dinâmica existe uma decisão arquitetural fundamental.",
+        "start": 0,
+        "end": 3.98
+      },
+      {
+        "text": "As regras financeiras objetivas não podem depender de uma interpretação probabilística.",
+        "start": 4.98,
+        "end": 10.08
+      },
+      {
+        "text": "No STRATO, cálculos, critérios de elegibilidade, limites, aprovações e movimentações financeiras seguem motores determinísticos e políticas configuradas.",
+        "start": 10.69,
+        "end": 20.61
+      },
+      {
+        "text": "Cada decisão precisa ter origem, justificativa, histórico e rastreabilidade.",
+        "start": 21.11,
+        "end": 26.35
+      },
+      {
+        "text": "A inteligência artificial amplia a capacidade de interpretação, mas não substitui a governança do processo financeiro.",
+        "start": 26.87,
+        "end": 33.35
+      },
+      {
+        "text": "Isso permite que o STRATO mantenha seu funcionamento operacional mesmo sem a utilização do Copiloto de IA.",
+        "start": 33.82,
+        "end": 39.81
+      }
+    ]
+  },
+  {
+    "id": "s06",
+    "duration": 49.946,
+    "sentences": [
+      {
+        "text": "Outro elemento central da nossa estratégia é a inteligência sobre o comportamento da própria carteira.",
+        "start": 0,
+        "end": 5.28
+      },
+      {
+        "text": "O STRATO busca transformar os dados gerados pela operação em informação útil para decisões futuras.",
+        "start": 6.29,
+        "end": 11.97
+      },
+      {
+        "text": "Não queremos observar apenas se um título foi pago ou não.",
+        "start": 12.68,
+        "end": 15.6
+      },
+      {
+        "text": "Queremos analisar a recorrência de atrasos, o comportamento dos sacados, a evolução da exposição, os padrões de liquidação e o histórico operacional dos cedentes.",
+        "start": 16.21,
+        "end": 25.34
+      },
+      {
+        "text": "A partir dessas informações, trabalhamos com uma camada interna de classificação e pontuação da carteira.",
+        "start": 25.95,
+        "end": 31.58
+      },
+      {
+        "text": "Ela permite identificar alterações comportamentais e apoiar a revisão das condições de risco.",
+        "start": 32.19,
+        "end": 37.2
+      },
+      {
+        "text": "Esse índice já prevê componentes externos, como score de bureau e protestos, que hoje aguardam um provedor de dados.",
+        "start": 37.79,
+        "end": 44.57
+      },
+      {
+        "text": "E aqui surge uma das oportunidades mais interessantes de integração com a proScore.",
+        "start": 45.12,
+        "end": 49.95
+      }
+    ]
+  },
+  {
+    "id": "s07",
+    "duration": 43.154,
+    "sentences": [
+      {
+        "text": "A proScore possui uma atuação consolidada em inteligência de dados, análise de crédito, score, prevenção à fraude, compliance e soluções de decisão.",
+        "start": 0,
+        "end": 9.19
+      },
+      {
+        "text": "O STRATO, por sua vez, está sendo concebido como a camada operacional em que muitas dessas informações podem gerar ações práticas.",
+        "start": 10.13,
+        "end": 17.67
+      },
+      {
+        "text": "É nessa complementaridade que enxergamos uma possível sinergia.",
+        "start": 18.51,
+        "end": 22.02
+      },
+      {
+        "text": "De um lado, a capacidade de enriquecer e qualificar informações externas.",
+        "start": 22.76,
+        "end": 27
+      },
+      {
+        "text": "Do outro, uma plataforma que conhece o contexto da operação, as políticas de cada cliente, seu histórico e suas necessidades de execução.",
+        "start": 27.52,
+        "end": 35.36
+      },
+      {
+        "text": "A oportunidade não está apenas em integrar consultas.",
+        "start": 36.05,
+        "end": 39.07
+      },
+      {
+        "text": "Está em conectar informação, decisão e operação.",
+        "start": 39.49,
+        "end": 43.15
+      }
+    ]
+  },
+  {
+    "id": "s08",
+    "duration": 77.401,
+    "sentences": [
+      {
+        "text": "Enxergamos oportunidades de integração em diferentes momentos da jornada financeira.",
+        "start": 0,
+        "end": 4.55
+      },
+      {
+        "text": "No cadastro de cedentes e sacados, a proScore poderia apoiar a validação e o enriquecimento cadastral, trazendo informações de identificação, situação das empresas, vínculos e dados relevantes para análise.",
+        "start": 5.09,
+        "end": 16.95
+      },
+      {
+        "text": "Na camada de compliance, poderíamos incorporar verificações relacionadas a pessoas politicamente expostas, grupos econômicos, relacionamentos societários e demais fatores de risco disponíveis.",
+        "start": 17.43,
+        "end": 28.13
+      },
+      {
+        "text": "No crédito, informações de score, restrições, protestos e indicadores externos poderiam alimentar a análise conduzida pelo STRATO, respeitando a política de cada estrutura.",
+        "start": 28.54,
+        "end": 38.59
+      },
+      {
+        "text": "Nas operações, esses dados poderiam contribuir para identificar situações que merecem revisão antes da formalização.",
+        "start": 39.03,
+        "end": 45.49
+      },
+      {
+        "text": "Na carteira, consultas e mecanismos de monitoramento poderiam ajudar a identificar mudanças no perfil de risco.",
+        "start": 45.91,
+        "end": 51.98
+      },
+      {
+        "text": "Na cobrança, informações atualizadas poderiam apoiar a localização, a segmentação e a priorização das ações.",
+        "start": 52.39,
+        "end": 59.42
+      },
+      {
+        "text": "E, em uma camada comercial, recursos de inteligência de mercado poderiam contribuir para a identificação de empresas com potencial de relacionamento.",
+        "start": 59.72,
+        "end": 67.63
+      },
+      {
+        "text": "Cada integração precisaria ser validada técnica e comercialmente, considerando disponibilidade, finalidade, custo e regras de utilização dos dados.",
+        "start": 68.05,
+        "end": 77.4
+      }
+    ]
+  },
+  {
+    "id": "s09",
+    "duration": 59.246,
+    "sentences": [
+      {
+        "text": "Além da automação, estamos construindo uma experiência assistida por inteligência artificial.",
+        "start": 0,
+        "end": 5.08
+      },
+      {
+        "text": "O Copiloto do STRATO foi pensado para aproximar o usuário das informações e dos processos da própria operação.",
+        "start": 5.73,
+        "end": 12.08
+      },
+      {
+        "text": "Em vez de depender exclusivamente da navegação por relatórios e diferentes telas, o profissional pode interagir com a plataforma em linguagem natural.",
+        "start": 12.6,
+        "end": 20.39
+      },
+      {
+        "text": "A proposta é que o Copiloto consiga interpretar solicitações, recuperar informações autorizadas, explicar indicadores e identificar situações que merecem atenção.",
+        "start": 20.87,
+        "end": 30.52
+      },
+      {
+        "text": "Também poderá apoiar a investigação de exceções, organizar prioridades, preparar ações e orientar o usuário durante os processos.",
+        "start": 30.93,
+        "end": 38.52
+      },
+      {
+        "text": "No futuro, sínteses de inteligência externa poderiam entrar como evidência citada, sem que a decisão saia das regras do STRATO.",
+        "start": 38.91,
+        "end": 45.91
+      },
+      {
+        "text": "Mas existe uma característica importante: o Copiloto não precisa decidir sozinho.",
+        "start": 46.3,
+        "end": 51.04
+      },
+      {
+        "text": "Ele deve respeitar as regras do sistema, identificar a origem dos dados e solicitar a aprovação humana sempre que a atividade exigir.",
+        "start": 51.46,
+        "end": 59.25
+      }
+    ]
+  },
+  {
+    "id": "s10",
+    "duration": 52.428,
+    "sentences": [
+      {
+        "text": "Nossa arquitetura busca organizar a inteligência em diferentes camadas.",
+        "start": 0,
+        "end": 4.13
+      },
+      {
+        "text": "Na base estão os dados operacionais: clientes, sacados, títulos, pagamentos, atrasos, negociações e histórico financeiro.",
+        "start": 4.75,
+        "end": 13.43
+      },
+      {
+        "text": "Sobre esses registros, criamos a memória factual da operação e os indicadores comportamentais.",
+        "start": 13.93,
+        "end": 19.32
+      },
+      {
+        "text": "As integrações externas podem acrescentar informações cadastrais, creditícias e sinais de risco.",
+        "start": 19.74,
+        "end": 25.28
+      },
+      {
+        "text": "Os motores determinísticos aplicam regras e critérios objetivos.",
+        "start": 25.68,
+        "end": 29.74
+      },
+      {
+        "text": "A inteligência artificial conecta contexto, interpreta informações e apoia a tomada de decisão.",
+        "start": 30.16,
+        "end": 35.77
+      },
+      {
+        "text": "Por fim, as ações são executadas dentro dos fluxos autorizados, com registros de origem, responsabilidade e auditoria.",
+        "start": 36.22,
+        "end": 43.26
+      },
+      {
+        "text": "É assim que pretendemos combinar automação, inteligência e controle sem transformar a IA em um componente obrigatório para o funcionamento da plataforma.",
+        "start": 43.65,
+        "end": 52.43
+      }
+    ]
+  },
+  {
+    "id": "s11",
+    "duration": 52.924,
+    "sentences": [
+      {
+        "text": "Para visualizar essa proposta, podemos imaginar uma situação prática.",
+        "start": 0,
+        "end": 3.63
+      },
+      {
+        "text": "Uma securitizadora recebe uma nova operação contendo dezenas de recebíveis.",
+        "start": 4.56,
+        "end": 9.08
+      },
+      {
+        "text": "O STRATO identifica os títulos, aplica as regras de elegibilidade e verifica a exposição da carteira.",
+        "start": 9.81,
+        "end": 15.67
+      },
+      {
+        "text": "Durante o processamento, uma condição previamente configurada exige uma análise complementar.",
+        "start": 16.36,
+        "end": 21.56
+      },
+      {
+        "text": "Nesse momento, uma eventual integração com a proScore poderia fornecer informações adicionais para apoiar a avaliação.",
+        "start": 22.13,
+        "end": 28.39
+      },
+      {
+        "text": "O STRATO relacionaria esses dados ao histórico interno, respeitando as regras e políticas definidas pela instituição.",
+        "start": 29,
+        "end": 35.26
+      },
+      {
+        "text": "O Copiloto poderia organizar as informações, explicar os pontos de atenção e preparar uma recomendação.",
+        "start": 35.83,
+        "end": 41.86
+      },
+      {
+        "text": "O analista teria condições de decidir com maior contexto, sem precisar reconstruir manualmente toda a investigação.",
+        "start": 42.37,
+        "end": 48.77
+      },
+      {
+        "text": "É essa experiência operacional conectada que queremos desenvolver.",
+        "start": 49.24,
+        "end": 52.92
+      }
+    ]
+  },
+  {
+    "id": "s12",
+    "duration": 42.188,
+    "sentences": [
+      {
+        "text": "Estamos construindo o STRATO para competir em um mercado que exige profundidade funcional, segurança e confiabilidade.",
+        "start": 0,
+        "end": 6.68
+      },
+      {
+        "text": "Sabemos que existem soluções consolidadas e que o nível de exigência desse segmento é elevado.",
+        "start": 7.46,
+        "end": 12.93
+      },
+      {
+        "text": "Nossa proposta é entrar nesse mercado com uma abordagem diferente.",
+        "start": 13.59,
+        "end": 17.24
+      },
+      {
+        "text": "Queremos combinar tecnologia moderna, automação e inteligência com uma experiência operacional mais simples.",
+        "start": 17.81,
+        "end": 23.83
+      },
+      {
+        "text": "Não buscamos competir apenas por preço ou pela quantidade de funcionalidades disponíveis.",
+        "start": 24.37,
+        "end": 29.24
+      },
+      {
+        "text": "Queremos competir pela capacidade de fazer uma operação trabalhar melhor.",
+        "start": 29.69,
+        "end": 33.6
+      },
+      {
+        "text": "Acreditamos que uma boa plataforma financeira deve conseguir crescer em complexidade técnica sem transferir esse peso integralmente ao usuário.",
+        "start": 34.11,
+        "end": 42.19
+      }
+    ]
+  },
+  {
+    "id": "s13",
+    "duration": 53.473,
+    "sentences": [
+      {
+        "text": "É por isso que gostaríamos de aprofundar uma conversa com a proScore.",
+        "start": 0,
+        "end": 3.4
+      },
+      {
+        "text": "A primeira oportunidade é tecnológica: compreender quais informações, serviços e APIs poderiam complementar os fluxos do STRATO.",
+        "start": 4.2,
+        "end": 12.38
+      },
+      {
+        "text": "A segunda é operacional: estudar casos de uso nos quais a combinação dos nossos dados e processos possa gerar ganhos mensuráveis de eficiência e qualidade de análise.",
+        "start": 12.84,
+        "end": 22.85
+      },
+      {
+        "text": "E a terceira é comercial: avaliar, no futuro, se existe espaço para uma proposta de valor conjunta voltada a empresas do mercado de recebíveis.",
+        "start": 23.28,
+        "end": 31.76
+      },
+      {
+        "text": "Não estamos apresentando um modelo fechado.",
+        "start": 32.13,
+        "end": 34.3
+      },
+      {
+        "text": "Estamos compartilhando uma visão e convidando a proScore a contribuir com sua experiência para descobrir onde essa complementaridade realmente faz sentido.",
+        "start": 34.69,
+        "end": 43.02
+      },
+      {
+        "text": "Como próximo passo, propomos uma conversa técnica para mapear os serviços e APIs disponíveis e escolher um caso piloto, como a consulta de um sacado novo na entrada da operação.",
+        "start": 43.41,
+        "end": 53.47
+      }
+    ]
+  },
+  {
+    "id": "s14",
+    "duration": 26.828,
+    "sentences": [
+      {
+        "text": "O STRATO está nascendo de uma convicção: a tecnologia financeira pode ser sofisticada sem ser complicada.",
+        "start": 0,
+        "end": 6.53
+      },
+      {
+        "text": "Queremos construir uma plataforma que conecte operações, inteligência e decisões de uma forma verdadeiramente útil para o mercado.",
+        "start": 7.09,
+        "end": 14.66
+      },
+      {
+        "text": "E acreditamos que boas parcerias podem ampliar muito essa capacidade.",
+        "start": 15.12,
+        "end": 19.01
+      },
+      {
+        "text": "Obrigado pela oportunidade de compartilhar um pouco da nossa visão.",
+        "start": 19.44,
+        "end": 22.58
+      },
+      {
+        "text": "Será um prazer explorar com vocês os próximos passos dessa conversa.",
+        "start": 23,
+        "end": 26.83
+      }
+    ]
+  }
+]

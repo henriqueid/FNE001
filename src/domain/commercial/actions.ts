@@ -292,6 +292,8 @@ export function decideCommittee(
       state,
       error: d.status === "Aprovado com ressalvas" ? "Descreva as ressalvas." : "Registre o motivo da decisão.",
     };
+  if ((d.status === "Aprovado" || d.status === "Aprovado com ressalvas") && !(d.riskOpinion || c.riskOpinion)?.trim())
+    return { state, error: "Registre o parecer de risco para aprovar o comitê." };
   const at = todayIso();
   const approvedFlow = d.status === "Aprovado" || d.status === "Aprovado com ressalvas";
   let s: CommercialState = {

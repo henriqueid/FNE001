@@ -43,13 +43,23 @@ export function ImportModal({
       const category = state.categories.find(
         cat => cat.name.toLowerCase() === (c[3] ?? "").toLowerCase() || cat.id === c[3],
       );
-      const company =
-        destinations.find(d => d.name.toLowerCase().startsWith((c[4] || "").toLowerCase()) && c[4])?.name ??
-        fallbackCompany;
+      const companyQuery = (c[4] ?? "").toLocaleLowerCase();
+      const exact = destinations.filter(item => item.name.toLocaleLowerCase() === companyQuery);
+      const matches = exact.length
+        ? exact
+        : destinations.filter(item => item.name.toLocaleLowerCase().startsWith(companyQuery));
+      const company = companyQuery
+        ? matches.length === 1
+          ? matches[0].name
+          : ""
+        : (destinations.find(item => item.name === fallbackCompany)?.name ?? "");
+      const companyError =
+        !company && (companyQuery && matches.length > 1 ? "empresa ambígua" : "empresa não encontrada");
       const due = toIso(c[6] ?? ""),
         competence = toIso(c[5] ?? "") || due || today;
       const amount = num(c[7] ?? "");
       const errors = [
+        companyError,
         !kind && "tipo",
         !c[1] && "descrição",
         !c[2] && "favorecido",
@@ -146,7 +156,7 @@ export function ImportModal({
                   <td>
                     <b>{p.description || "—"}</b>
                     <small>
-                      {p.counterparty} · {p.company}
+                      {p.counterparty} · {p.company || "Empresa não resolvida"}
                     </small>
                   </td>
                   <td>{p.category?.name ?? "—"}</td>

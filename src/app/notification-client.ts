@@ -9,24 +9,41 @@ type NotificationResponse = {
   error?: string;
 };
 
+function errorMessage(body: unknown, fallback: string) {
+  const error = body && typeof body === "object" && "error" in body ? body.error : undefined;
+  if (typeof error !== "string") return fallback;
+  const message = error.trim();
+  return message && message.length <= 300 && !/^[{[]/.test(message) && !/<[^>]*>/.test(message) ? message : fallback;
+}
+
+async function request(url: string, options: RequestInit, tenantId: string) {
+  try {
+    return await authenticatedFetch(url, options, tenantId);
+  } catch {
+    throw new Error("Não foi possível conectar à Central de Notificações.");
+  }
+}
+
 async function responseBody(response: Response) {
-  const body = (await response.json()) as NotificationResponse;
-  if (!response.ok) throw new Error(body.error ?? "Não foi possível atualizar a Central de Notificações.");
+  const body = (await response.json().catch(() => null)) as NotificationResponse | null;
+  if (!response.ok || !body || !Array.isArray(body.notifications))
+    throw new Error(errorMessage(body, "Não foi possível atualizar a Central de Notificações."));
   return body;
 }
 
 export async function syncPublishedNotifications(tenantId: string) {
-  const processed = await authenticatedFetch("/api/outbox/process", { method: "POST" }, tenantId);
+  const processed = await request("/api/outbox/process", { method: "POST" }, tenantId);
   if (!processed.ok) {
-    const body = (await processed.json()) as { error?: string };
-    throw new Error(body.error ?? "Não foi possível processar as notificações pendentes.");
+    const body: unknown = await processed.json().catch(() => null);
+    throw new Error(errorMessage(body, "Não foi possível processar as notificações pendentes."));
   }
-  return responseBody(await authenticatedFetch("/api/notifications", {}, tenantId));
+  return responseBody(await request("/api/notifications", {}, tenantId));
 }
 
 export async function retryFailedNotifications(tenantId: string) {
-  const response = await authenticatedFetch("/api/outbox/process", { method: "PUT" }, tenantId);
-  const body = (await response.json()) as { health?: OutboxHealth; error?: string };
-  if (!response.ok || !body.health) throw new Error(body.error ?? "Não foi possível reprocessar a fila de falhas.");
+  const response = await request("/api/outbox/process", { method: "PUT" }, tenantId);
+  const body = (await response.json().catch(() => null)) as { health?: OutboxHealth; error?: unknown } | null;
+  if (!response.ok || !body?.health)
+    throw new Error(errorMessage(body, "Não foi possível reprocessar a fila de falhas."));
   return body.health;
 }

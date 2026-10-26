@@ -1,7 +1,12 @@
-import { validateCommercialState } from "@/src/domain/commercial/persistence";
+import { sameCommercialValue, validateCommercialState } from "@/src/domain/commercial/persistence";
 import type { CommercialState } from "@/src/domain/commercial/types";
 import { sessionPrincipal } from "@/src/server/access/session";
-import { CommercialScopeError, filterCommercialState, mergeCommercialScope } from "@/src/server/commercial/access";
+import {
+  authorizeCommercialTransition,
+  CommercialScopeError,
+  filterCommercialState,
+  mergeCommercialScope,
+} from "@/src/server/commercial/access";
 import {
   commercialRequestHash,
   CommercialCommandConflictError,
@@ -58,18 +63,13 @@ export async function PUT(request: Request) {
   let merged: CommercialState;
   try {
     merged = mergeCommercialScope(previous, command.commercial, access.principal);
+    authorizeCommercialTransition(previous, merged, access.principal);
   } catch (reason) {
     if (reason instanceof CommercialScopeError) return json({ error: reason.message }, 403);
     throw reason;
   }
   const mergedValidationError = validateCommercialState(merged);
   if (mergedValidationError) return json({ error: mergedValidationError }, 400);
-  const registersDecision = merged.committees.some(committee => {
-    const prior = previous?.committees.find(item => item.id === committee.id);
-    return prior?.status === "Em pauta" && committee.status !== "Em pauta";
-  });
-  if (registersDecision && !access.principal.permissions.includes("risk:decide"))
-    return json({ error: "Somente um usuário com alçada de risco pode registrar a decisão do comitê." }, 403);
   const expectedVersion = Number(command.expectedVersion);
   const requestHash = await commercialRequestHash({
     tenantId: access.tenantId,
@@ -87,11 +87,20 @@ export async function PUT(request: Request) {
       expectedVersion,
       command.commandId,
       requestHash,
+      (current, next) => {
+        const scoped = mergeCommercialScope(current, command.commercial!, access.principal);
+        if (!sameCommercialValue(scoped, next))
+          throw new CommercialCommandConflictError(
+            "O Comercial foi alterado por outra pessoa. Atualize a tela antes de salvar.",
+          );
+        authorizeCommercialTransition(current, next, access.principal);
+      },
     );
     if (!commercial)
       return json({ error: "O Comercial foi alterado por outra pessoa. Atualize a tela antes de salvar." }, 409);
     return json({ commercial: filterCommercialState(commercial, access.principal) });
   } catch (reason) {
+    if (reason instanceof CommercialScopeError) return json({ error: reason.message }, 403);
     if (reason instanceof CommercialCommandConflictError || reason instanceof CommercialTransitionError)
       return json({ error: reason.message }, 409);
     console.error("commercial_save_failed", reason);

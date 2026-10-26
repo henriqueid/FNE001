@@ -25,19 +25,26 @@ async function context(request: Request) {
 
 export async function GET(request: Request) {
   const access = await context(request);
-  if ("error" in access) return access.error;
+  if ("error" in access) return access.error!;
   return json({ requests: await listPendingAccessChanges(access.db, access.tenantId) });
 }
 
 export async function POST(request: Request) {
   const access = await context(request);
-  if ("error" in access) return access.error;
+  if ("error" in access) return access.error!;
   const body = (await request.json().catch(() => null)) as {
     subjectUserId?: string;
     proposed?: AccessUser;
     reason?: string;
   } | null;
-  if (!body?.subjectUserId || !body.proposed) return json({ error: "Proposta de acesso inválida." }, 400);
+  if (
+    !body ||
+    typeof body.subjectUserId !== "string" ||
+    !body.subjectUserId ||
+    !body.proposed ||
+    (body.reason !== undefined && typeof body.reason !== "string")
+  )
+    return json({ error: "Proposta de acesso inválida." }, 400);
   const validationError = accessProfileError(body.proposed, allPermissions);
   if (validationError) return json({ error: validationError }, 400);
   try {
@@ -69,7 +76,7 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   const access = await context(request);
-  if ("error" in access) return access.error;
+  if ("error" in access) return access.error!;
   if (access.principal.access !== "admin")
     return json({ error: "Somente administrador pode decidir alterações críticas de acesso." }, 403);
   const body = (await request.json().catch(() => null)) as {
@@ -77,7 +84,13 @@ export async function PUT(request: Request) {
     decision?: "APPROVED" | "REJECTED";
     reason?: string;
   } | null;
-  if (!body?.changeId || !["APPROVED", "REJECTED"].includes(body.decision ?? ""))
+  if (
+    !body ||
+    typeof body.changeId !== "string" ||
+    !body.changeId ||
+    (body.reason !== undefined && typeof body.reason !== "string") ||
+    !["APPROVED", "REJECTED"].includes(body.decision ?? "")
+  )
     return json({ error: "Decisão de acesso inválida." }, 400);
   try {
     await decideAccessChange(

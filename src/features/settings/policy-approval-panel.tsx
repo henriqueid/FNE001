@@ -12,10 +12,12 @@ export function PolicyApprovalPanel({
   companies,
   actorId,
   demoMode,
+  canManage = false,
 }: {
   companies: string[];
   actorId: string;
   demoMode?: boolean;
+  canManage?: boolean;
 }) {
   const [company, setCompany] = useState(companies[0] ?? "");
   const selectedCompany = company || companies[0] || "";
@@ -43,7 +45,7 @@ export function PolicyApprovalPanel({
     };
   }, [selectedCompany, demoMode]);
   async function submit(action: "PROPOR" | "APROVAR" | "REJEITAR", proposalId?: string) {
-    if (!configuration || busy) return;
+    if (!canManage || !configuration || busy) return;
     setBusy(true);
     try {
       const common = { company: selectedCompany, expectedVersion: configuration.version, reason };
@@ -73,6 +75,7 @@ export function PolicyApprovalPanel({
     <section className="settings-panel">
       <h3>Alçadas de aprovação por empresa</h3>
       <p>Defina cada decisão obrigatória. A proposta só entra em vigor após conferência por outra pessoa.</p>
+      {!canManage && <p role="status">Somente consulta. Seu perfil não permite alterar regras de alçada.</p>}
       <label>
         Empresa
         <select
@@ -88,7 +91,7 @@ export function PolicyApprovalPanel({
         </select>
       </label>
       {configuration && (
-        <>
+        <fieldset className="settings-operational-fields" disabled={!canManage || busy}>
           <p>
             Versão {configuration.version} ·{" "}
             {configuration.policy ? `${configuration.policy.slots.length} alçada(s) vigente(s)` : "Sem regra vigente"}
@@ -217,7 +220,7 @@ export function PolicyApprovalPanel({
               )}
             </article>
           ))}
-        </>
+        </fieldset>
       )}
       {message && <p role="status">{message}</p>}
     </section>

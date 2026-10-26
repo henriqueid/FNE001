@@ -1,4 +1,5 @@
 /** Adaptador isolado para testar coordenação de repositórios, rollback e concorrência sem PostgreSQL real. */
+import type { CommercialState } from "@/src/domain/commercial/types";
 import type { Operation } from "@/src/domain/core/types";
 import type { FinanceState } from "@/src/domain/finance/model";
 import type { ReceivableRecord } from "@/src/domain/receivables/model";
@@ -10,6 +11,12 @@ type CommandRow = { request_hash: string; result_payload: FinanceState; result_v
 const key = (tenant: unknown, id: unknown) => `${tenant}:${id}`;
 
 export class OperationalDatabase implements DecisionDatabase {
+  commercial = new Map<string, Row<CommercialState>>();
+  commercialCommands = new Map<
+    string,
+    { request_hash: string; result_payload: CommercialState; result_version: number }
+  >();
+  failCommercial = false;
   operations = new Map<string, Row<Operation>>();
   finance = new Map<string, Row<FinanceState>>();
   receivables = new Map<string, Row<ReceivableRecord>>();
@@ -36,6 +43,23 @@ export class OperationalDatabase implements DecisionDatabase {
         return statement;
       },
       first: async <T>() => {
+        if (query.includes("from private.commercial_commands"))
+          return (this.commercialCommands.get(key(values[0], values[1])) as T) ?? null;
+        if (query.includes("select payload, aggregate_version from private.commercial_states"))
+          return (structuredClone(this.commercial.get(String(values[0]))) as T) ?? null;
+        if (query.includes("insert into private.commercial_states")) {
+          if (this.failCommercial) throw new Error("Falha simulada no armazenamento comercial");
+          const tenant = String(values[0]);
+          const previous = this.commercial.get(tenant);
+          if (previous && previous.aggregate_version !== values[4]) return null;
+          const row = {
+            payload: structuredClone(values[1]) as CommercialState,
+            aggregate_version: (previous?.aggregate_version ?? 0) + 1,
+          };
+          this.commercial.set(tenant, row);
+          this.events.push(`commercial:${tenant}:${row.aggregate_version}`);
+          return { ...structuredClone(row), event_id: String(values[6]) } as T;
+        }
         if (query.includes("from private.portfolio_commands"))
           return (this.portfolioCommands.get(key(values[0], values[1])) as T) ?? null;
         if (query.includes("select payload, aggregate_version from private.portfolio_states"))
@@ -125,6 +149,15 @@ export class OperationalDatabase implements DecisionDatabase {
         throw new Error(`Consulta all não implementada no adaptador: ${query.slice(0, 90)}`);
       },
       run: async () => {
+        if (query.includes("insert into private.commercial_commands")) {
+          this.commercialCommands.set(key(values[0], values[1]), {
+            request_hash: String(values[2]),
+            result_payload: structuredClone(values[5]) as CommercialState,
+            result_version: Number(values[4]),
+          });
+          return { success: true };
+        }
+        if (/insert into private\.commercial_/.test(query)) return { success: true };
         if (query.includes("insert into private.portfolio_commands")) {
           this.portfolioCommands.set(key(values[0], values[1]), {
             request_hash: String(values[2]),
@@ -169,6 +202,8 @@ export class OperationalDatabase implements DecisionDatabase {
     });
     await prior;
     const before = structuredClone({
+      commercial: this.commercial,
+      commercialCommands: this.commercialCommands,
       operations: this.operations,
       finance: this.finance,
       receivables: this.receivables,

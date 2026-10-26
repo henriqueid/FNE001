@@ -5,10 +5,31 @@ import {
   consumeOperationServerResult,
   newOperationAtEntry,
   operationSavedByServer,
+  mergeOperationAcknowledgement,
 } from "@/src/app/operation-server-result";
 import { decideOperationApproval } from "@/src/app/operation-approval-client";
 
 afterEach(() => vi.unstubAllGlobals());
+
+it("incorpora efeitos autoritativos sem apagar edição local posterior ao envio", () => {
+  const submitted = { ...initialOperations[0], persistenceVersion: 1 };
+  const current = { ...submitted, financialObservation: "Edição posterior" };
+  const saved = {
+    ...submitted,
+    persistenceVersion: 2,
+    repurchaseApplications: [{ id: "server-application" } as never],
+    repurchaseContext: { titles: [] },
+  };
+  expect(mergeOperationAcknowledgement(current, submitted, saved)).toMatchObject({
+    financialObservation: "Edição posterior",
+    persistenceVersion: 2,
+    repurchaseApplications: saved.repurchaseApplications,
+  });
+  expect(mergeOperationAcknowledgement(submitted, submitted, saved)).toBe(saved);
+  expect(
+    mergeOperationAcknowledgement({ ...current, persistenceVersion: 3 }, submitted, saved).persistenceVersion,
+  ).toBe(3);
+});
 
 describe("integração de operações persistidas", () => {
   it("identifica resposta do comando dedicado e reintenta transporte sem mudar a intenção", async () => {
@@ -41,6 +62,8 @@ describe("integração de operações persistidas", () => {
       ...initialOperations[0],
       stage: 5,
       persistenceVersion: 99,
+      repurchaseApplications: [{ id: "previous-cycle" } as never],
+      repurchaseContext: { titles: [] },
       copilotOrigin: {
         runId: "run-1",
         scenarioVersion: 2,
@@ -79,6 +102,8 @@ describe("integração de operações persistidas", () => {
       "approvalReview",
       "releaseReview",
       "cancellation",
+      "repurchaseApplications",
+      "repurchaseContext",
     ] as const)
       expect(normalized[field]).toBeUndefined();
     expect(source.stage).toBe(5);

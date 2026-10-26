@@ -4,17 +4,15 @@
  * Apuração de comissões por competência: prévia, fechamento, envio ao financeiro e situação do pagamento.
  */
 import { closeCommission, commercialToCsv, reopenCommission } from "@/src/domain/commercial/actions";
-import { monthEnd, monthLabel, monthOf, shiftMonth, stamp } from "@/src/domain/commercial/calendar";
+import { monthLabel, monthOf, shiftMonth } from "@/src/domain/commercial/calendar";
 import { commissionBaseLabel, commissionBaseValue, computeCommission, repAt } from "@/src/domain/commercial/rules";
 import { type CResult, type CommercialState, type CommissionLine, type Deal } from "@/src/domain/commercial/types";
 import type { FinanceState } from "@/src/domain/finance/model";
-import { addCategory, addChartAccount } from "@/src/domain/finance/setup";
-import { createTitle } from "@/src/domain/finance/titles";
 import { commissionPayments } from "@/src/domain/registry/registry";
 import { Avatar, Meter, type Toast, downloadCsv } from "@/src/features/commercial/commercial-ui";
 import { BY, br, compact, money } from "@/src/features/finance/finance-ui";
 import { CheckIcon, ClockIcon } from "@/src/ui/icons";
-import { Fragment, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 
 export function CommissionsTab({
   state,
@@ -22,7 +20,7 @@ export function CommissionsTab({
   repFilter,
   today,
   finance,
-  onFinance,
+  onSendCommission,
   onApply,
   onToast,
   onRules,
@@ -32,7 +30,7 @@ export function CommissionsTab({
   repFilter: string;
   today: string;
   finance: FinanceState;
-  onFinance: (s: FinanceState) => void | Promise<void>;
+  onSendCommission: (month: string) => Promise<void>;
   onApply: (r: CResult) => boolean | Promise<boolean>;
   onToast: (t: Toast) => void;
   onRules: () => void;
@@ -49,73 +47,20 @@ export function CommissionsTab({
   const total = lines.reduce((s, l) => s + l.total, 0);
   const months = Array.from({ length: 12 }, (_, i) => shiftMonth(current, -i));
 
+  const sendingRef = useRef(false);
+  const [sending, setSending] = useState(false);
   async function sendToFinance() {
-    if (!closing) return;
-    let s = finance;
-    const step = (r: { state: FinanceState; error?: string }) => {
-      if (r.error) throw new Error(r.error);
-      s = r.state;
-    };
+    if (!closing || sendingRef.current) return;
+    sendingRef.current = true;
+    setSending(true);
     try {
-      let cat = s.categories.find(c => /comiss/i.test(c.name) && c.kind === "Despesa");
-      if (!cat) {
-        let ledger = s.chart.find(c => c.analytic && c.nature === "Despesa" && /comiss/i.test(c.name));
-        if (!ledger && s.chartOrigin !== "importado" && !s.chart.some(c => c.code === "5.1.12")) {
-          step(addChartAccount(s, { code: "5.1.12", name: "Comissões comerciais", nature: "Despesa" }));
-          ledger = s.chart.find(c => c.code === "5.1.12");
-        }
-        ledger ??=
-          s.chart.find(c => c.analytic && c.nature === "Despesa" && /terceiros/i.test(c.name)) ??
-          s.chart.find(c => c.analytic && c.nature === "Despesa");
-        if (!ledger) throw new Error("O plano de contas não tem conta analítica de despesa para a comissão.");
-        step(
-          addCategory(s, {
-            name: "Comissões comerciais",
-            kind: "Despesa",
-            ledgerCode: ledger.code,
-            group: "Comercial",
-          }),
-        );
-        cat = s.categories.find(c => c.name === "Comissões comerciais");
-      }
-      const due = `${shiftMonth(month, 1)}-10`;
-      const before = new Set(s.titles.map(t => t.id));
-      closing.lines
-        .filter(l => l.total > 0)
-        .forEach(l => {
-          const r = rep(l.repId)!;
-          step(
-            createTitle(
-              s,
-              {
-                kind: "Pagar",
-                description: `Comissão ${monthLabel(month)} · ${r.name}`,
-                counterparty: r.name,
-                counterpartyDocument: r.document,
-                categoryId: cat!.id,
-                company: r.company,
-                competenceDate: monthEnd(month),
-                dueDate: due < today ? today : due,
-                amount: l.total,
-              },
-              BY,
-            ),
-          );
-        });
-      const ids = s.titles.filter(t => !before.has(t.id)).map(t => t.id);
-      await onFinance(s);
-      onApply({
-        state: {
-          ...state,
-          closings: {
-            ...state.closings,
-            [month]: { ...closing, status: "Enviada ao financeiro", sentAt: stamp(), financeTitles: ids },
-          },
-        },
-        message: `${ids.length} lançamento(s) a pagar criados no Financeiro, vencimento ${br(due < today ? today : due)}.`,
-      });
-    } catch (e) {
-      onToast({ tone: "error", text: e instanceof Error ? e.message : String(e) });
+      await onSendCommission(month);
+      onToast({ tone: "success", text: "Comissões enviadas ao Financeiro." });
+    } catch (error) {
+      onToast({ tone: "error", text: error instanceof Error ? error.message : String(error) });
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
     }
   }
   const exportCsv = () =>
@@ -197,11 +142,15 @@ export function CommissionsTab({
           )}
           {closing?.status === "Fechada" && (
             <>
-              <button className="fn-btn ghost" onClick={() => onApply(reopenCommission(state, month))}>
+              <button
+                className="fn-btn ghost"
+                disabled={sending}
+                onClick={() => onApply(reopenCommission(state, month))}
+              >
                 Reabrir
               </button>
-              <button className="fn-btn primary" onClick={sendToFinance}>
-                Enviar ao financeiro
+              <button className="fn-btn primary" disabled={sending} onClick={sendToFinance}>
+                {sending ? "Enviando…" : "Enviar ao financeiro"}
               </button>
             </>
           )}

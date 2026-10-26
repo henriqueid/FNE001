@@ -94,7 +94,11 @@ function collectionActionFor(title: CollectionTitle, today: string): CollectionA
       score: (critical ? 350 : high ? 300 : 250) + daysLate,
       reason: "vencido",
       label: critical ? `Vencido há ${daysLate} dias` : `D+${daysLate}`,
-      detail: last ? "Sem retorno agendado após a última cobrança." : "Título vencido sem cobrança registrada.",
+      detail: followUp
+        ? `Retorno agendado para ${followUp.split("-").reverse().join("/")}.`
+        : last
+          ? "Sem retorno agendado após a última cobrança."
+          : "Título vencido sem cobrança registrada.",
       suggestedAction: critical
         ? "Revisar protesto, negativação ou recompra com o cedente."
         : high

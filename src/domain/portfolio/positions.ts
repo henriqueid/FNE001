@@ -1,12 +1,16 @@
 /** Reconcilia a posição importada com pagamentos locais sem inferir compensações financeiras. */
 import type { PortfolioTitleRecord } from "./model";
 export function overlayPortfolioPosition(source: PortfolioTitleRecord, stored: PortfolioTitleRecord) {
-  const local = stored.payments.some(payment => payment.financeTitleId);
+  const local =
+    stored.payments.some(payment => payment.financeTitleId) ||
+    Boolean(stored.repurchaseReservation) ||
+    stored.events.some(event => event.action === "Recompra estornada");
   const financial = (title: PortfolioTitleRecord) => ({
     openAmount: title.openAmount,
     paidAmount: title.paidAmount,
     discountAmount: title.discountAmount,
     repurchasedAmount: title.repurchasedAmount,
+    repurchaseReservation: title.repurchaseReservation,
     abatementAmount: title.abatementAmount,
   });
   let positionReviewRequired: string | undefined;
@@ -27,6 +31,7 @@ export function overlayPortfolioPosition(source: PortfolioTitleRecord, stored: P
     ...(positionReviewRequired ? { sourcePosition: stored.sourcePosition } : {}),
     positionReviewRequired,
     status: local || stored.source === "Operação liberada" ? stored.status : source.status,
+    bankWriteoff: stored.bankWriteoff,
     bankStatus: stored.ourNumber || source.source === "Operação liberada" ? stored.bankStatus : source.bankStatus,
     dueDate:
       source.source === "Carteira anterior" && source.sourcePosition?.id !== stored.sourcePosition?.id

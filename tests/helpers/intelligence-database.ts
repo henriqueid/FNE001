@@ -21,6 +21,13 @@ export class IntelligenceDatabase implements DecisionDatabase {
     aggregate_version: 1,
     updated_at: new Date().toISOString(),
   };
+  stateExists = true;
+  members = [
+    { user_id: "actor-a", name: "Ana", status: "active" },
+    { user_id: "actor-b", name: "Bruno", status: "active" },
+    { user_id: "admin", name: "Administrador", status: "active" },
+    { user_id: "suspended", name: "Suspenso", status: "suspended" },
+  ];
   events: BudgetEvent[] = [];
   failEvent = false;
   ambiguousCommit = false;
@@ -32,6 +39,7 @@ export class IntelligenceDatabase implements DecisionDatabase {
       unlock = resolve;
     });
     await prior;
+    const existed = this.stateExists;
     const row = structuredClone(this.row),
       events = structuredClone(this.events);
     try {
@@ -50,6 +58,7 @@ export class IntelligenceDatabase implements DecisionDatabase {
     } catch (error) {
       if (!(error instanceof Error && error.message === "Commit confirmado, resposta perdida")) {
         Object.assign(this.row, row);
+        this.stateExists = existed;
         this.events = events;
       }
       throw error;
@@ -60,7 +69,11 @@ export class IntelligenceDatabase implements DecisionDatabase {
   prepare(query: string): DecisionStatement {
     let values: unknown[] = [];
     const first = async () => {
-      if (query.includes("from private.domain_events")) {
+      if (
+        query.trimStart().startsWith("select") &&
+        query.includes("from private.domain_events") &&
+        !query.includes("select distinct on")
+      ) {
         const rows = this.events
           .filter(
             event =>
@@ -68,14 +81,21 @@ export class IntelligenceDatabase implements DecisionDatabase {
               event.aggregate_type ===
                 (query.includes("IntelligenceBudgetPeriod")
                   ? "IntelligenceBudgetPeriod"
-                  : "IntelligenceBudgetReservation") &&
-              event.aggregate_id === (query.includes("IntelligenceBudgetPeriod") ? "UTC" : values[1]),
+                  : query.includes("IntelligenceBudgetPolicy")
+                    ? "IntelligenceBudgetPolicy"
+                    : "IntelligenceBudgetReservation") &&
+              event.aggregate_id ===
+                (query.includes("IntelligenceBudgetPeriod")
+                  ? "UTC"
+                  : query.includes("IntelligenceBudgetPolicy")
+                    ? "monthly"
+                    : values[1]),
           )
           .sort((a, b) => b.aggregate_version - a.aggregate_version);
         return structuredClone(rows[0] ?? null);
       }
       if (query.includes("from private.intelligence_states"))
-        return values[0] === this.row.tenant_id ? { ...this.row } : null;
+        return this.stateExists && values[0] === this.row.tenant_id ? { ...this.row } : null;
       if (query.includes("used_tokens = used_tokens +")) {
         const amount = Number(values[0]);
         if (
@@ -92,6 +112,21 @@ export class IntelligenceDatabase implements DecisionDatabase {
         this.row.used_tokens -= Number(values[0]);
         return { ...this.row };
       }
+      if (query.includes("set monthly_token_budget = ?")) {
+        this.row.monthly_token_budget = Number(values[0]);
+        this.row.aggregate_version++;
+        return { ...this.row };
+      }
+      if (query.includes("update private.intelligence_states") && query.includes("contracted = ?")) {
+        if (values[5] !== this.row.tenant_id || Number(values[6]) !== this.row.aggregate_version) return null;
+        this.row.contracted = Boolean(values[0]);
+        this.row.enabled = Boolean(values[1]);
+        this.row.status = String(values[2]);
+        this.row.monthly_token_budget = Number(values[3]);
+        this.row.aggregate_version++;
+        this.row.updated_at = new Date().toISOString();
+        return { ...this.row };
+      }
       if (query.includes("update private.intelligence_states")) {
         if (values[2] !== this.row.tenant_id) return null;
         this.row.used_tokens = Number(values[0]);
@@ -100,10 +135,26 @@ export class IntelligenceDatabase implements DecisionDatabase {
         return { ...this.row };
       }
       if (query.includes("insert into private.intelligence_states")) {
+        if (query.includes("do nothing")) {
+          if (this.stateExists) return null;
+          Object.assign(this.row, {
+            tenant_id: String(values[0]),
+            contracted: Boolean(values[1]),
+            enabled: Boolean(values[2]),
+            status: String(values[3]),
+            monthly_token_budget: Number(values[4]),
+            used_tokens: 0,
+            aggregate_version: 1,
+            updated_at: new Date().toISOString(),
+          });
+          this.stateExists = true;
+          return { ...this.row };
+        }
         this.row.contracted = Boolean(values[1]);
         this.row.enabled = Boolean(values[2]);
         this.row.status = String(values[3]);
         this.row.monthly_token_budget = Number(values[4]);
+        this.row.aggregate_version++;
         return { ...this.row };
       }
       throw new Error(`SQL não exercitado pelo adaptador: ${query}`);
@@ -118,7 +169,33 @@ export class IntelligenceDatabase implements DecisionDatabase {
         return statement;
       },
       first: async <T>() => (await first()) as T | null,
-      all: async <T>() => ({ results: [await first()].filter(Boolean) as T[] }),
+      all: async <T>() => {
+        if (query.includes("from private.access_users"))
+          return { results: (values[0] === this.row.tenant_id ? this.members : []) as T[] };
+        if (query.includes("select distinct on")) {
+          const latest = new Map<string, BudgetEvent>();
+          for (const event of this.events
+            .filter(
+              item =>
+                item.tenant_id === values[0] &&
+                item.aggregate_type === "IntelligenceBudgetReservation" &&
+                item.payload.period === values[1],
+            )
+            .sort((a, b) => a.aggregate_version - b.aggregate_version))
+            latest.set(event.aggregate_id, event);
+          const usage = new Map<string, number>();
+          for (const event of latest.values())
+            usage.set(
+              event.actor_id,
+              (usage.get(event.actor_id) ?? 0) +
+                Number(
+                  event.event_type === "AI_TOKENS_SETTLED" ? event.payload.actualTokens : event.payload.reservedTokens,
+                ),
+            );
+          return { results: [...usage].map(([user_id, used_tokens]) => ({ user_id, used_tokens })) as T[] };
+        }
+        return { results: [await first()].filter(Boolean) as T[] };
+      },
       run: async () => {
         if (query.includes("insert into private.domain_events")) {
           if (this.failEvent) throw new Error("Falha ao gravar evento");

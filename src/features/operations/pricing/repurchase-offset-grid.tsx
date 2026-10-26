@@ -38,13 +38,14 @@ export function RepurchaseOffsetGrid({
   onRestoreRate,
   onSelectVisibleOverdue,
 }: RepurchaseOffsetGridProps) {
+  const real = rows.some(item => item.kind === "Título" && item.row.real);
   return (
     <div className="offset-modal-body">
       <div className="offset-list-toolbar">
         <div>
           <strong>Itens disponíveis para composição</strong>
           <span>
-            {rows.length} resultado(s) exibido(s) · {availableCount} disponível(is) considerando o grupo
+            {rows.length} resultado(s) exibido(s) · {availableCount} disponível(is)
           </span>
         </div>
         <button type="button" onClick={onSelectVisibleOverdue}>
@@ -53,18 +54,20 @@ export function RepurchaseOffsetGrid({
       </div>
       {rows.length ? (
         <div className="offset-title-grid-scroll">
-          <div className="offset-title-grid-head">
-            <span></span>
-            <span>ITEM / ORIGEM</span>
-            <span>VENCIMENTO</span>
-            <span>VALOR ORIGINAL</span>
-            <span>TAXA VP</span>
-            <span>CORREÇÃO / MORA</span>
-            <span>MULTA</span>
-            <span>TRATAMENTO</span>
-            <span>VALOR PARCIAL</span>
-            <span>VALOR CORRIGIDO</span>
-          </div>
+          {!real && (
+            <div className="offset-title-grid-head">
+              <span></span>
+              <span>ITEM / ORIGEM</span>
+              <span>VENCIMENTO</span>
+              <span>VALOR ORIGINAL</span>
+              <span>TAXA VP</span>
+              <span>CORREÇÃO / MORA</span>
+              <span>MULTA</span>
+              <span>TRATAMENTO</span>
+              <span>VALOR PARCIAL</span>
+              <span>VALOR CORRIGIDO</span>
+            </div>
+          )}
           {rows.map(item =>
             item.kind === "Título" ? (
               <TitleOffsetRow
@@ -95,6 +98,61 @@ type TitleOffsetRowProps = {
 
 /** Linha de título em recompra, com os termos editáveis quando selecionado. */
 function TitleOffsetRow({ row, onToggle, onUpdateTerms, onRestoreRate }: TitleOffsetRowProps) {
+  if (row.real)
+    return (
+      <div className={`offset-title-grid-row offset-real-row${row.selected ? " selected" : ""}`}>
+        <input
+          aria-label={`Selecionar ${row.documentNumber}`}
+          type="checkbox"
+          checked={row.selected}
+          onChange={() => onToggle(row.id)}
+        />
+        <div className="offset-title-id">
+          <strong>{row.documentNumber}</strong>
+          <small>{row.debtorName}</small>
+          <em>{row.acquisitionReference}</em>
+        </div>
+        <span>{formatBrazilianDate(row.dueDate)}</span>
+        <span>
+          Saldo principal aberto <strong>{preciseMoney.format(row.faceAmount)}</strong>
+        </span>
+        <label>
+          Baixar título{" "}
+          <select
+            aria-label={`Baixar título ${row.documentNumber}`}
+            disabled={!row.selected}
+            value={typeof row.terms.writeOffTitle === "boolean" ? String(row.terms.writeOffTitle) : ""}
+            onChange={event =>
+              onUpdateTerms(row.id, {
+                writeOffTitle: event.target.value === "true",
+                action: "Recompra",
+                lateInterestMonthly: 0,
+                penaltyPercent: 0,
+                rateOverride: 0,
+                partialAmount: 0,
+              })
+            }
+          >
+            <option value="" disabled>
+              Escolha SIM ou NÃO
+            </option>
+            <option value="true">SIM</option>
+            <option value="false">NÃO</option>
+          </select>
+        </label>
+        <span>
+          {row.terms.writeOffTitle === true
+            ? "Baixa na liberação; instrução bancária na próxima remessa."
+            : row.terms.writeOffTitle === false
+              ? "Título permanece aberto, cobrando o sacado."
+              : "Escolha obrigatória antes de salvar."}
+        </span>
+        <div className="offset-total">
+          <strong className="negative">{formatFlowMoney(-row.presentValue)}</strong>
+          <small>Reduz o líquido da nova operação</small>
+        </div>
+      </div>
+    );
   return (
     <div className={`offset-title-grid-row${row.selected ? " selected" : ""}`}>
       <input

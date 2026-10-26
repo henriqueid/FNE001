@@ -1,5 +1,29 @@
 # Changelog
 
+## 26/10/2026 — Churume, integridade e ciclo de acesso (local)
+
+- Tarefas autoritativas, escopo/destinatários, episódios e recuperação de atribuições revogadas.
+- Solicitação/liberação/login/suspensão/reativação; perfil real próprio, proteção contra fallback demonstrativo, sessões revogadas e gestão por permissões.
+- Cadastro com motivo, versão original e histórico do servidor; validação de parâmetros materiais e alçadas. Onboarding institucional atômico.
+- Retorno governado ao risco, bloqueio de CCB não suportada, consultas sem evidência fictícia e links/contexto operacionais.
+- Carteira/auditoria paginadas, importações preservadas após falha, empresas inválidas bloqueadas, IA demonstrativa explícita, datas válidas e erros recuperáveis.
+- Configuração IA com comparação de versão, evitando reativação por snapshot antigo. Testes PostgreSQL descartáveis e navegador; detalhes no relatório da campanha. Sem publicação.
+
+## Não publicado · 25/10/2026 · Correções da auditoria Churume
+
+- Corrigidos controles de limite e histórico Comercial, com autoria do servidor e preservação de registros fora do escopo; novas aprovações exigem parecer de risco.
+- Envio de comissões convertido em comando transacional e idempotente, eliminando sequência de gravações independentes na interface.
+- Memória por título inclui IOF/retenção e fechamento em centavos. Aprovação e workspace compartilham prontidão com requisitos pendentes identificados.
+- Conversão demonstrativa cria ficha cadastral; entrada manual orienta obrigatórios; cobrança exibe retorno futuro corretamente e atalho da Carteira abre Cobrança.
+- Recompra real usa principal aberto com escolha Baixar título Sim/Não, reserva vinculada, aplicação/estorno coordenados e pedido de baixa bancária na próxima remessa compatível. Confirmação depende de retorno; encargos e compensações avulsas continuam indisponíveis.
+- Regressões de autorização, falha parcial, repetição, concorrência, baixa/retorno e dependências de recompra. Evidências e limites em `docs/testing/churume/2026-10-25-correcoes.md`; sem homologação bancária/SQL real nesta campanha.
+
+## Não publicado · 25/10/2026 · Limites de consumo da IA
+
+- Configurações → Inteligência e IA permite definir teto mensal em tokens, escolher saldo compartilhado ou cotas individuais e dividir igualmente entre usuários ativos. Gravação explícita, consumo/reservas e saldos por usuário.
+- Servidor valida teto geral e individual na mesma transação antes do provedor. Cotas excedentes, usuários sem vínculo e gravações desatualizadas são recusados; nenhuma edição apaga uso nem reservas incertas.
+- Política auditável no ledger existente, sem migração. Gravação legada de licença usa lock e preserva teto distribuído, inclusive durante configuração concorrente.
+
 ## Publicação · 25/10/2026 · Respostas pontuais do copiloto
 
 - Perguntas sobre menor/maior score ou melhor/pior liquidez retornam nome, valor e base da comparação, sem lista geral; rankings explícitos continuam disponíveis.
@@ -21,7 +45,12 @@
 - Prévia local Original/Refinado agora usa o aplicativo completo e estilos canônicos; dados fictícios persistem somente no navegador.
 - Cobertura ampliada às famílias próprias de operações, cadastros, acesso, integrações e copiloto; inventário e evidências em `docs/COBERTURA_VISUAL.md`.
 - Lista de empresas mantém referência estável, evitando ciclo de restauração do estado na demonstração completa.
-- Copiloto recupera degradê original no cabeçalho e no botão durante interação/estado aberto; repouso permanece neutro.
+
+## Não publicado · 20/10/2026 · Agenda Inteligente
+
+- Sincronização aguarda carga bem-sucedida de operações, carteira, notificações e contexto do tenant; carga incompleta ou erro não encerra pendências.
+- Alerta encerrado automaticamente volta a aberto quando a origem continua pendente, preservando histórico. Conclusões manuais são mantidas, inclusive em comandos concorrentes.
+- Simulação de usuário não altera tarefas persistidas. Resolução automática de tarefa adiada mantém estado válido para gravação.
 
 ## 20/10/2026 · Pagamentos e cobrança
 

@@ -4,9 +4,9 @@
  * (alçadas, documentos, assinaturas), checklist de prontidão, números do resumo
  * financeiro e trilha da decisão. Nada aqui tem estado nem efeitos colaterais.
  */
+import { operationReturnedToRisk } from "@/src/domain/operations/return-to-risk";
 import { stages } from "@/src/domain/core/stages";
 import { type Cedent, type Operation } from "@/src/domain/core/types";
-import { eligibilityRouteFor } from "@/src/domain/eligibility/orchestration";
 import { effectiveEvaluationOutcome, effectiveRunSummary } from "@/src/domain/eligibility/decision";
 import { type lastroAssessmentFor } from "@/src/domain/operations/lastro";
 import {
@@ -24,7 +24,11 @@ export type ApprovalDocument = NonNullable<ApprovalReview["documents"]>[number];
 export type ApprovalSignature = NonNullable<ApprovalReview["signatures"]>[number];
 export type ApprovalAuditEvent = NonNullable<ApprovalReview["audit"]>[number];
 
-export type ReadinessItem = { label: string; ok: boolean; detail: string };
+export {
+  buildReadinessChecklist,
+  isRiskApproved,
+  type ReadinessItem,
+} from "@/src/domain/operations/approval-readiness";
 export type TimelineEvent = { at: string; by: string; action: string; detail: string };
 
 export const reportTypes = ["Borderô", "Termo de cessão", "Memória financeira", "Dossiê da operação"] as const;
@@ -189,59 +193,6 @@ export function buildFinalDecisionSnapshot(operation: Operation) {
   };
 }
 
-export function isRiskApproved(operation: Operation) {
-  if (operation.eligibilityReview) return eligibilityRouteFor(operation).canAdvance;
-  return (
-    operation.riskReview?.cedentDecision === "Aprovado" &&
-    (operation.manualEntry?.entries ?? []).every(title => Boolean(operation.riskReview?.titleDecisions?.[title.id])) &&
-    (operation.manualEntry?.entries ?? []).some(
-      title => operation.riskReview?.titleDecisions?.[title.id] === "Aprovado",
-    )
-  );
-}
-
-/** Requisitos das etapas anteriores que precisam estar concluídos antes das alçadas. */
-export function buildReadinessChecklist(
-  operation: Operation,
-  lastro: ReturnType<typeof lastroAssessmentFor>,
-): ReadinessItem[] {
-  const riskApproved = isRiskApproved(operation);
-  const route = operation.eligibilityReview ? eligibilityRouteFor(operation) : undefined;
-  return [
-    {
-      label: "Risco e elegibilidade",
-      ok: riskApproved,
-      detail: route
-        ? `${route.label} · ${route.explanation}`
-        : riskApproved
-          ? "Cedente, sacados e títulos aprovados"
-          : "Existem decisões de risco pendentes",
-    },
-    {
-      label: "Parecer de lastro",
-      ok: lastro.ready,
-      detail: !lastro.required
-        ? "Pré-checagem dispensada no cadastro do cedente"
-        : lastro.ready
-          ? `Parecer ${lastro.status.toLowerCase()} registrado`
-          : "Status geral da pré-checagem pendente",
-    },
-    {
-      label: "Condição comercial",
-      ok: operation.pricingReview?.status === "Condição salva",
-      detail:
-        operation.pricingReview?.status === "Condição salva"
-          ? `Condição v${operation.pricingReview.version ?? 1} protegida`
-          : "A condição ainda não foi salva",
-    },
-    {
-      label: "Bloqueios operacionais",
-      ok: operation.blockers === 0,
-      detail: operation.blockers ? `${operation.blockers} bloqueio(s) exigem deliberação` : "Nenhum bloqueio aberto",
-    },
-  ];
-}
-
 export function buildDefaultApprovals(
   operation: Operation,
   prerequisitesReady: boolean,
@@ -381,37 +332,7 @@ export function withOperationReturnedToRisk(
   by = "Henrique",
   at = nowLabel(),
 ): Operation {
-  const reason = justification.trim();
-  return {
-    ...operation,
-    stage: 2,
-    status: "Em atenção",
-    blockers: Math.max(1, operation.blockers),
-    nextAction: "Revisar política, dados e exceções da operação devolvida",
-    approvalReview: {
-      status: "Preparação",
-      observation: reason,
-      approvals: [],
-      documents: [],
-      signatures: [],
-      finalDecision: {
-        outcome: "DEVOLVIDA",
-        decidedAt: at,
-        decidedBy: by,
-        justification: reason,
-      },
-      audit: [
-        ...(review.audit ?? []),
-        { at, by, action: "Operação devolvida", detail: reason },
-        {
-          at,
-          by: "Orquestrador FNE001",
-          action: "Pacote decisório invalidado",
-          detail: "Alçadas, documentos e assinaturas anteriores devem ser refeitos após a nova análise de risco.",
-        },
-      ],
-    },
-  };
+  return operationReturnedToRisk({ ...operation, approvalReview: review }, justification, by, at);
 }
 
 /** Disponibiliza a operação para liberação assim que a última formalidade humana é concluída. */

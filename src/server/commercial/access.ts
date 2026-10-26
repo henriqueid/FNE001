@@ -1,3 +1,4 @@
+import { sameCommercialValue } from "@/src/domain/commercial/persistence";
 import type { CommercialState } from "@/src/domain/commercial/types";
 import type { ServerPrincipal } from "@/src/server/access/repository";
 
@@ -68,10 +69,34 @@ export function mergeCommercialScope(
   if (!repIds.size) throw new CommercialScopeError("Seu usuário não possui vínculo com um responsável comercial.");
 
   const previousVisibleLinks = previous.links.filter(link => visibleLink(repIds, link));
-  const visibleDocuments = new Set(
-    [...previousVisibleLinks, ...submitted.links].map(link => link.document.replace(/\D/g, "")),
-  );
+  const previousVisibleDocuments = new Set(previousVisibleLinks.map(link => link.document.replace(/\D/g, "")));
+  const hiddenDocuments = new Set([
+    ...previous.links.filter(link => !visibleLink(repIds, link)).map(link => link.document.replace(/\D/g, "")),
+    ...previous.deals
+      .filter(deal => !repIds.has(deal.repId) && !previousVisibleDocuments.has(deal.document.replace(/\D/g, "")))
+      .map(deal => deal.document.replace(/\D/g, "")),
+  ]);
+  if (
+    submitted.links.some(
+      link =>
+        hiddenDocuments.has(link.document.replace(/\D/g, "")) &&
+        !previousVisibleDocuments.has(link.document.replace(/\D/g, "")),
+    )
+  )
+    throw new CommercialScopeError("O Comercial enviado contém registros fora da sua carteira.");
+  const visibleDocuments = new Set([
+    ...previousVisibleDocuments,
+    ...submitted.links.map(link => link.document.replace(/\D/g, "")),
+  ]);
   assertSubmittedScope(submitted, repIds, visibleDocuments);
+  const visible = filterCommercialState(previous, principal);
+  for (const key of ["links", "deals", "visits", "committees", "prospects"] as const) {
+    const hiddenIds = new Set(
+      previous[key].filter(item => !visible[key].some(own => own.id === item.id)).map(item => item.id),
+    );
+    if (submitted[key].some(item => hiddenIds.has(item.id)))
+      throw new CommercialScopeError("O Comercial enviado contém registros fora da sua carteira.");
+  }
 
   return {
     ...submitted,
@@ -80,7 +105,7 @@ export function mergeCommercialScope(
     deals: [
       ...hidden(
         previous.deals,
-        deal => repIds.has(deal.repId) || visibleDocuments.has(deal.document.replace(/\D/g, "")),
+        deal => repIds.has(deal.repId) || previousVisibleDocuments.has(deal.document.replace(/\D/g, "")),
       ),
       ...submitted.deals,
     ],
@@ -91,4 +116,70 @@ export function mergeCommercialScope(
     closings: previous.closings,
     seq: Math.max(previous.seq, submitted.seq),
   };
+}
+
+/** Exige alçada também para snapshots novos e vincula limites às decisões desta gravação. */
+export function authorizeCommercialTransition(
+  previous: CommercialState | null,
+  next: CommercialState,
+  principal: CommercialPrincipal,
+) {
+  const decisions = next.committees.filter(committee => {
+    const prior = previous?.committees.find(item => item.id === committee.id);
+    return (
+      (!prior || prior.status === "Em pauta") &&
+      (committee.status !== "Em pauta" ||
+        committee.approved !== prior?.approved ||
+        (!!prior && committee.rate !== prior.rate) ||
+        committee.riskOpinion !== prior?.riskOpinion ||
+        committee.conditions !== prior?.conditions ||
+        committee.decidedAt !== prior?.decidedAt ||
+        committee.decidedBy !== prior?.decidedBy ||
+        committee.history.slice(prior?.history.length ?? 0).some(event => event.action === "Adiado"))
+    );
+  });
+  const changedLimits = next.links.filter(link => {
+    const prior = previous?.links.find(item => item.id === link.id);
+    return (
+      link.approvedLimit !== (prior?.approvedLimit ?? 0) ||
+      (!!prior && link.approvedLimit > 0 && link.document.replace(/\D/g, "") !== prior.document.replace(/\D/g, ""))
+    );
+  });
+  if ((decisions.length || changedLimits.length) && !principal.permissions.includes("risk:decide"))
+    throw new CommercialScopeError(
+      "Somente um usuário com alçada de risco pode registrar decisões ou alterar limites.",
+    );
+  for (const link of changedLimits) {
+    const prior = previous?.links.find(item => item.id === link.id);
+    const matching = decisions.filter(
+      committee =>
+        (committee.status === "Aprovado" || committee.status === "Aprovado com ressalvas") &&
+        committee.request !== "Taxa especial" &&
+        committee.request !== "Concentração de sacado" &&
+        (committee.document
+          ? committee.document.replace(/\D/g, "") === link.document.replace(/\D/g, "")
+          : committee.clientName === link.clientName),
+    );
+    if (matching.length !== 1 || !Number.isFinite(matching[0].approved) || !(matching[0].approved! > 0))
+      throw new CommercialScopeError("A alteração de limite exige uma nova decisão correspondente do comitê.");
+    const decision = matching[0];
+    const expected =
+      decision.request === "Aumento de limite" ? (prior?.approvedLimit ?? 0) + decision.approved! : decision.approved!;
+    if (link.approvedLimit !== expected)
+      throw new CommercialScopeError("O limite enviado diverge do valor autorizado pela decisão do comitê.");
+  }
+  for (const [month, closing] of Object.entries(next.closings)) {
+    const prior = previous?.closings[month];
+    if (
+      (prior?.status === "Enviada ao financeiro" ||
+        closing.status === "Enviada ao financeiro" ||
+        closing.financeTitles?.length ||
+        closing.sentAt) &&
+      !sameCommercialValue(prior, closing)
+    )
+      throw new CommercialScopeError("O envio de comissões ao Financeiro exige o comando específico.");
+  }
+  for (const [month, closing] of Object.entries(previous?.closings ?? {}))
+    if (closing.status === "Enviada ao financeiro" && !next.closings[month])
+      throw new CommercialScopeError("O fechamento enviado ao Financeiro não pode ser removido.");
 }

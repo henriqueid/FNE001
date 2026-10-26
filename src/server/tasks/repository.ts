@@ -39,7 +39,12 @@ export async function taskRequestHash(input: {
   return hex(new Uint8Array(digest));
 }
 
-async function replayedTaskCommand(db: DecisionDatabase, tenantId: string, commandId: string, requestHash: string) {
+export async function replayedTaskCommand(
+  db: DecisionDatabase,
+  tenantId: string,
+  commandId: string,
+  requestHash: string,
+) {
   const row = await db
     .prepare(
       `select request_hash, result_payload, result_version
@@ -167,7 +172,7 @@ function projectionStatements(db: DecisionDatabase, tenantId: string, state: Tas
           task.status,
           task.ownerUserId ?? null,
           tenantId,
-          task.owner,
+          task.assignmentActive === false ? "" : task.owner,
           task.owner,
           task.department,
           task.dueAt,
@@ -187,13 +192,7 @@ function projectionStatements(db: DecisionDatabase, tenantId: string, state: Tas
             `insert into private.task_history
                (tenant_id, history_id, task_id, occurred_at, actor_user_id, actor_name,
                 action, detail, task_version)
-             values (
-               ?, ?, ?, ?,
-               (select u.user_id from private.access_users u
-                join private.tenant_memberships m on m.user_id = u.user_id and m.tenant_id = ?
-                where lower(u.name) = lower(?) limit 1),
-               ?, ?, ?, ?
-             )
+             values (?, ?, ?, ?, ?, ?, ?, ?, ?)
              on conflict (tenant_id, history_id) do nothing`,
           )
           .bind(
@@ -201,8 +200,7 @@ function projectionStatements(db: DecisionDatabase, tenantId: string, state: Tas
             entry.id,
             task.id,
             entry.at,
-            tenantId,
-            entry.by,
+            entry.actorUserId ?? null,
             entry.by,
             entry.action,
             entry.detail,
@@ -222,6 +220,7 @@ export async function saveTaskState(
   expectedVersion: number,
   commandId: string,
   requestHash: string,
+  options: { automatic?: boolean } = {},
 ): Promise<TaskState | null> {
   const replay = await replayedTaskCommand(db, tenantId, commandId, requestHash);
   if (replay) return replay;
@@ -231,7 +230,7 @@ export async function saveTaskState(
     if (repeated) return repeated;
     const previous = await loadTaskState(transaction, tenantId);
     if ((previous?.persistenceVersion ?? 0) !== expectedVersion) return null;
-    const transitionError = validateTaskTransition(previous, state, actorName);
+    const transitionError = validateTaskTransition(previous, state, actorName, options);
     if (transitionError) throw new TaskTransitionError(transitionError);
     const saved = await saveEnvelope(transaction, tenantId, actorId, state, expectedVersion);
     if (!saved) {

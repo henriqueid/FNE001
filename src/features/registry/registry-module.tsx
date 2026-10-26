@@ -60,6 +60,7 @@ export default function RegistryModule({ debtors, operations, onOpenOperation, o
   const openByDocument = (document: string) => {
     const party = parties.find(p => onlyDigits(p.document) === onlyDigits(document));
     if (party) setEditing(party);
+    else setToast({ tone: "error", text: "Ficha cadastral indisponível. Atualize os cadastros e tente novamente." });
   };
   const newForTab = () => setEditing(emptyParty(tab === "todos" ? undefined : tab));
   const applyCommercial = async (result: { state: typeof commercial; error?: string; message?: string }) => {

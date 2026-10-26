@@ -5,6 +5,7 @@
  * recompra, formulário de condição/tarifas/responsabilidade, memória lateral,
  * cálculo por título, auditoria e o modal de recompra e compensações.
  */
+import { isDemoOperation } from "@/src/domain/core/demo/operations";
 import { type Operation } from "@/src/domain/core/types";
 import { useState } from "react";
 import { PricingAuditTrail, PricingTitleMemory } from "./pricing-audit";
@@ -70,6 +71,11 @@ export function PricingPanel({
   onChange: (operation: Operation) => void;
   showGuidance: boolean;
 }) {
+  const demo = isDemoOperation(operation);
+  const unavailableReason =
+    demo || operation.repurchaseContext
+      ? undefined
+      : "Fonte autoritativa de recompra indisponível. Atualize a operação antes de compor.";
   const draft = usePricingDraft(operation, onChange);
   const { pricing, calculated, repurchase, settlementAdjustments, totalOffsets, netAfterRepurchase } = draft;
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -83,7 +89,7 @@ export function PricingPanel({
   const selectedOffsetCount = repurchase.selected.length + settlementAdjustments.selected.length;
 
   function startRepurchaseComposition() {
-    draft.unlockForRepurchase();
+    if (unavailableReason) return;
     setRepurchaseOpen(true);
   }
 
@@ -118,13 +124,29 @@ export function PricingPanel({
       {Math.abs(draft.faceDifference) > 0.01 && (
         <PricingReconciliation registeredAmount={operation.amount} titlesFace={calculated.face} />
       )}
+      {!demo &&
+        !operation.repurchaseContext &&
+        Boolean(pricing.repurchaseTitleIds?.length || pricing.settlementAdjustmentIds?.length) && (
+          <p role="alert">
+            Há seleções de recompra ou compensação sem validação autoritativa. Não foram aplicadas ao líquido; revise a
+            condição antes de salvar.
+          </p>
+        )}
       <RepurchaseOverview
+        unavailableReason={unavailableReason}
+        demo={demo}
         totalOffsets={totalOffsets}
         netAfterRepurchase={netAfterRepurchase}
         selectedCount={selectedOffsetCount}
         hasAvailableItems={Boolean(repurchase.rows.length || settlementAdjustments.rows.length)}
         onOpen={startRepurchaseComposition}
       />
+      {!demo && (
+        <p role="status">
+          Compensações e créditos reais indisponíveis. A recompra utiliza somente o saldo principal aberto; ambos os
+          tratamentos reduzem o líquido da nova operação.
+        </p>
+      )}
       <div className="pricing-body">
         <fieldset className="pricing-editor pricing-editor-fieldset" disabled={pricing.locked}>
           <PricingConditionSection
@@ -154,10 +176,12 @@ export function PricingPanel({
             onRemoveFee={draft.removeManualFee}
           />
           <RepurchaseLauncher
+            unavailableReason={unavailableReason}
+            demo={demo}
             totalOffsets={totalOffsets}
             selectedTitleCount={repurchase.selected.length}
             selectedAdjustmentCount={settlementAdjustments.selected.length}
-            onOpen={() => setRepurchaseOpen(true)}
+            onOpen={startRepurchaseComposition}
           />
           <PricingResponsibilitySection
             pricing={pricing}
@@ -183,8 +207,9 @@ export function PricingPanel({
         onToggle={() => setDetailsOpen(value => !value)}
       />
       {pricing.audit?.length ? <PricingAuditTrail audit={pricing.audit} /> : null}
-      {repurchaseOpen && (
+      {!unavailableReason && repurchaseOpen && (
         <RepurchaseModal
+          demo={demo}
           locked={Boolean(pricing.locked)}
           cedent={operation.cedent}
           commercialNet={calculated.net}

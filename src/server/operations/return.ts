@@ -1,4 +1,6 @@
 /** Devolução autorizada da operação, recebíveis, caixa e razão em uma transação auditável. */
+import { reverseRepurchases } from "./repurchase";
+import { reverseEntry } from "@/src/domain/finance/ledger";
 import type { Operation } from "@/src/domain/core/types";
 import { returnOperation } from "@/src/domain/finance/releases";
 import { portfolioBalance, portfolioTitleFromReceivable } from "@/src/domain/portfolio/model";
@@ -131,6 +133,10 @@ export async function returnReleasedOperation(
       fail("A data de devolução deve estar entre a compra e a data atual.", 400);
     const portfolio = await loadCurrentPortfolio(tx, principal.tenantId),
       titles = portfolio.titles.filter(t => t.operationId === current.id);
+    if (titles.some(t => t.repurchaseReservation))
+      fail(
+        "Há título vinculado a recompra de outra operação; desfaça a recompra dependente antes de devolver a origem.",
+      );
     if (titles.some(t => ["Registrado", "Pendente de integração", "Liquidado"].includes(t.bankStatus)))
       fail(
         "Há títulos vinculados ao banco; conclua a baixa bancária e concilie o retorno antes de devolver a operação.",
@@ -164,8 +170,15 @@ export async function returnReleasedOperation(
       principal.name,
     );
     if (returned.error || !returned.operationPatch) fail(returned.error ?? "Não foi possível calcular a devolução.");
-    const nextPortfolio = structuredClone(portfolio),
-      at = new Date().toISOString();
+    const at = new Date().toISOString();
+    const reversed = reverseRepurchases(current, portfolio, principal.name, at);
+    const nextPortfolio = reversed.portfolio;
+    for (const application of current.repurchaseApplications ?? []) {
+      if (application.reversedAt || !application.writeOffTitle) continue;
+      const entry = returned.state.journal.find(e => e.origin.id === application.id && !e.reversalOf);
+      if (!entry || entry.reversedBy) fail("Lançamento da recompra não disponível para estorno.");
+      reverseEntry(returned.state, entry.id, command.date, command.reason, principal.name);
+    }
     for (const title of nextPortfolio.titles.filter(t => t.operationId === current.id)) {
       title.status = "Cancelado";
       title.bankStatus = "Baixado";
@@ -199,7 +212,7 @@ export async function returnReleasedOperation(
       ))
     )
       fail("O financeiro mudou durante a devolução.");
-    if (titles.length) {
+    if (titles.length || current.repurchaseApplications?.some(a => !a.reversedAt)) {
       const ph = await portfolioRequestHash({
         tenantId: principal.tenantId,
         actorId: principal.id,
@@ -220,7 +233,7 @@ export async function returnReleasedOperation(
       )
         fail("A carteira mudou durante a devolução.");
     }
-    const next = resetApprovals({ ...current, ...returned.operationPatch }, principal.name, at);
+    const next = resetApprovals({ ...reversed.operation, ...returned.operationPatch }, principal.name, at);
     if (next.releaseReview)
       next.releaseReview = {
         ...next.releaseReview,

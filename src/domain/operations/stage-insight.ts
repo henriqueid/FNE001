@@ -7,7 +7,7 @@ import { type AutomationBreakdown } from "./automation";
 import { operationDateISO } from "./dates";
 import { formatFlowMoney } from "./format";
 import { type EligibilityPolicy } from "@/src/domain/eligibility/model";
-import { operationalParametersFor } from "@/src/domain/eligibility/operational-parameters";
+import { buildReadinessChecklist } from "./approval-readiness";
 import { policyParameterFor } from "@/src/domain/eligibility/policy-parameter";
 import { lastroAssessmentFor } from "./lastro";
 import {
@@ -37,13 +37,6 @@ export function stageInsightFor(
   }, {});
   const largestDebtor = Object.entries(debtorTotals).sort((a, b) => b[1] - a[1])[0];
   const concentration = total > 0 && largestDebtor ? (largestDebtor[1] / total) * 100 : 0;
-  const evidenceCount = entries.filter(entry =>
-    operation.manualEntry?.receivableType === "Duplicata"
-      ? Boolean(entry.nfeKey)
-      : operation.manualEntry?.receivableType === "Cheque"
-        ? Boolean(entry.cmc7)
-        : Boolean(entry.documentNumber),
-  ).length;
   const averageTerm = entries.length
     ? Math.round(
         entries.reduce((sum, entry) => {
@@ -53,7 +46,6 @@ export function stageInsightFor(
         }, 0) / entries.length,
       )
     : 0;
-  const parameters = operationalParametersFor(operation.institution);
   const concentrationRule = stageId === 2 ? policyParameterFor(operation, CONCENTRATION_RULE_ID, policies) : undefined;
   const concentrationLimit = typeof concentrationRule?.parameter === "number" ? concentrationRule.parameter : undefined;
   const concentrationAbove = concentrationLimit !== undefined && concentration > concentrationLimit;
@@ -163,19 +155,19 @@ export function stageInsightFor(
     };
   }
   if (stageId === 5) {
-    const ready = [
-      entries.length > 0,
-      operation.blockers === 0,
-      evidenceCount === entries.length,
-      automation.score >= parameters.readinessMinAutomation,
-    ];
-    const done = ready.filter(Boolean).length;
+    const checklist = buildReadinessChecklist(operation, lastroAssessmentFor(operation), automation);
+    const pending = checklist.filter(item => !item.ok);
+    const done = checklist.length - pending.length;
     return {
       ...common,
       title: "Prontidão para aprovação e formalização",
       description: "A etapa consolida carteira, risco, lastro e automação antes das alçadas.",
       metrics: [
-        { label: "REQUISITOS", value: `${done}/4`, detail: "Carteira, bloqueios, lastro e automação" },
+        {
+          label: "REQUISITOS",
+          value: `${done}/${checklist.length}`,
+          detail: "Mesmos requisitos do painel de Aprovação",
+        },
         {
           label: "BLOQUEIOS",
           value: String(operation.blockers),
@@ -183,9 +175,10 @@ export function stageInsightFor(
         },
         { label: "AUTOMAÇÃO ASSISTIDA", value: `${automation.score}%`, detail: "Não representa avanço da esteira" },
       ],
-      result:
-        done === 4 ? "Pacote apto para seguir às alçadas e assinaturas." : "Ainda há requisitos anteriores a concluir.",
-      tone: done === 4 ? "positive" : "warning",
+      result: !pending.length
+        ? "Pacote apto para seguir às alçadas e assinaturas."
+        : pending.map(item => `${item.label}: ${item.detail}`).join(" "),
+      tone: !pending.length ? "positive" : "warning",
     };
   }
   if (stageId === 6)

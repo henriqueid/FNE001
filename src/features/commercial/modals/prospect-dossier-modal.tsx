@@ -44,6 +44,11 @@ export function ProspectDossierModal({
     [dossier, money],
   );
   const readiness = dossierReadiness({ ...prospect, dossier: candidate });
+  const committeeHint = !readiness.ready
+    ? "Conclua os itens obrigatórios do dossiê."
+    : prospect.stage !== "Proposta"
+      ? "Conclua a visita e avance o cliente para Proposta antes de enviar ao comitê."
+      : "Levar o dossiê ao comitê";
 
   const save = async () => {
     const result = saveProspectDossier(state, prospect.id, candidate, BY);
@@ -71,8 +76,8 @@ export function ProspectDossierModal({
           </button>
           <button
             className="fn-btn primary"
-            disabled={!readiness.ready}
-            title={readiness.ready ? "Levar o dossiê ao comitê" : "Conclua os itens obrigatórios"}
+            disabled={!readiness.ready || prospect.stage !== "Proposta"}
+            title={committeeHint}
             onClick={async () => {
               const saved = await save();
               const updated = saved.result.state.prospects.find(item => item.id === prospect.id);
@@ -85,6 +90,7 @@ export function ProspectDossierModal({
       }
     >
       <div className="cm-dossier-hero">
+        {(!readiness.ready || prospect.stage !== "Proposta") && <p role="status">{committeeHint}</p>}
         <div>
           <span>PRONTIDÃO TÉCNICA PARA O COMITÊ</span>
           <strong>{readiness.percent}%</strong>

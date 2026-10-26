@@ -226,6 +226,7 @@ export function PartyFormModal({ party, onClose, onSaved, onOpenExisting }: Prop
   async function submit() {
     setAttempted(true);
     if (!isNew && !changeReason.trim()) {
+      setActiveSection("responsibilities");
       setError("Informe o motivo da alteração para manter a auditoria.");
       return;
     }

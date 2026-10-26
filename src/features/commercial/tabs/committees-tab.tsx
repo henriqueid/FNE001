@@ -60,9 +60,10 @@ export function CommitteesTab({
         </header>
         <div className="cm-pauta">
           {pauta.map(c => {
-            const prospect = state.prospects.find(
-              item => item.id === c.prospectId || (!c.prospectId && item.name === c.clientName),
+            const candidates = state.prospects.filter(item =>
+              c.prospectId ? item.id === c.prospectId : item.name === c.clientName,
             );
+            const prospect = candidates.length === 1 ? candidates[0] : undefined;
             const dossier = prospect?.dossier;
             const readiness = prospect ? dossierReadiness(prospect) : null;
             return (
@@ -136,11 +137,8 @@ export function CommitteesTab({
                   </div>
                 )}
                 <footer>
-                  {state.prospects.find(item => item.name === c.clientName) && (
-                    <button
-                      className="fn-btn ghost small"
-                      onClick={() => onOpenDossier(state.prospects.find(item => item.name === c.clientName)!)}
-                    >
+                  {prospect && (
+                    <button className="fn-btn ghost small" onClick={() => onOpenDossier(prospect)}>
                       Ver dossiê
                     </button>
                   )}

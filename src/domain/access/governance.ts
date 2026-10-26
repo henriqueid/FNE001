@@ -64,6 +64,12 @@ export function accessProfileError(user: AccessUser, permissions: readonly Permi
     (user.authorityIds !== undefined && !Array.isArray(user.authorityIds))
   )
     return "Os escopos e permissões do perfil são inválidos.";
+  if (
+    [...user.tenantIds, ...user.companyScopes, ...(user.authorityIds ?? [])].some(
+      value => typeof value !== "string" || !value.trim(),
+    )
+  )
+    return "Os identificadores de empresas e alçadas devem ser textos não vazios.";
   if (!departments.includes(user.department) || user.functionalAreas?.some(area => !departments.includes(area)))
     return "O perfil contém área de atuação inválida.";
   if (!["operator", "manager", "admin"].includes(user.access)) return "O nível de acesso é inválido.";

@@ -1,3 +1,4 @@
+import type { PortfolioTitleStatus } from "@/src/domain/portfolio/model";
 import { type EligibilityReview } from "@/src/domain/eligibility/model";
 import { type EnrichmentReview } from "@/src/domain/integrations/enrichment";
 import type { OperationalParameters as ClientOperationalParameters } from "@/src/domain/registry/operational-profile";
@@ -261,7 +262,28 @@ export type Stage = {
   description: string;
 };
 
+export type RepurchaseApplication = {
+  id: string;
+  titleId: string;
+  principal: number;
+  amount: number;
+  writeOffTitle: boolean;
+  appliedAt: string;
+  reversedAt?: string;
+  previous: {
+    status: PortfolioTitleStatus;
+    openAmount?: number;
+    repurchasedAmount: number;
+    paidAmount: number;
+    discountAmount: number;
+    abatementAmount: number;
+    payments: string;
+  };
+};
+
 export type Operation = {
+  repurchaseContext?: { titles: CedentPortfolioTitle[] };
+  repurchaseApplications?: RepurchaseApplication[];
   id: string;
   /** Versão do agregado persistido; ausente em dados de demonstração ou ainda não gravados. */
   persistenceVersion?: number;
@@ -418,10 +440,12 @@ export type Operation = {
       kind: "Esporádica";
     }>;
     repurchaseTitleIds?: string[];
+    repurchaseSourceBalances?: Record<string, number>;
     settlementAdjustmentIds?: string[];
     repurchaseTerms?: Record<
       string,
       {
+        writeOffTitle?: boolean;
         rateOverride?: number;
         lateInterestMonthly: number;
         penaltyPercent: number;

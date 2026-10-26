@@ -50,7 +50,11 @@ export function EntryFormActions({
         </label>
       )}
       {!isCheque && installments > 1 && (
-        <button className="secondary-action" onClick={onGenerateInstallments}>
+        <button
+          className="secondary-action"
+          disabled={!canSave || !Number.isInteger(installments) || installments > 120}
+          onClick={onGenerateInstallments}
+        >
           Gerar {installments} parcelas
         </button>
       )}

@@ -34,6 +34,7 @@ export default function ControlleriaModule({
 }) {
   const [tab, setTab] = useState<Tab>("painel");
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [auditPage, setAuditPage] = useState(1);
   const { commercial } = useRegistry();
   const today = todayIso();
   const titles = useMemo(
@@ -67,15 +68,21 @@ export default function ControlleriaModule({
   const pendingForm = formalization.filter(item => item.progress < 100);
   const audit = [
     ...titles.flatMap(title => title.events.map(event => ({ ...event, ref: title.documentNumber, area: "Carteira" }))),
-    ...operations.flatMap(operation =>
-      (operation.approvalReview?.audit ?? []).map((event, index) => ({
-        ...event,
-        id: `${operation.id}-${index}`,
-        ref: operation.proposal,
-        area: "Formalização",
-      })),
-    ),
+    ...operations
+      .filter(operation => companyScope === "Consolidado" || operation.vehicle === companyScope)
+      .flatMap(operation =>
+        (operation.approvalReview?.audit ?? []).map((event, index) => ({
+          ...event,
+          id: `${operation.id}-${index}`,
+          ref: operation.proposal,
+          area: "Formalização",
+        })),
+      ),
   ].sort((a, b) => b.at.localeCompare(a.at));
+  const auditPages = Math.max(1, Math.ceil(audit.length / 30));
+  const page = Math.min(auditPage, auditPages);
+  const auditStart = (page - 1) * 30;
+  const visibleAudit = audit.slice(auditStart, auditStart + 30);
   const repName = (id?: string) => commercial.reps.find(rep => rep.id === id)?.name ?? "Sem comercial";
 
   const openCheck = (id: string) => setDetailId(id);
@@ -313,8 +320,25 @@ export default function ControlleriaModule({
               <p>Eventos operacionais com responsável, momento e referência</p>
             </div>
           </header>
+          <nav className="fn-toolbar" aria-label="Páginas da trilha de auditoria">
+            <span>
+              Mostrando {audit.length ? auditStart + 1 : 0} a {Math.min(auditStart + 30, audit.length)} de{" "}
+              {audit.length} eventos · Página {page} de {auditPages}
+            </span>
+            <button type="button" className="fn-btn ghost" disabled={page === 1} onClick={() => setAuditPage(page - 1)}>
+              Anterior
+            </button>
+            <button
+              type="button"
+              className="fn-btn ghost"
+              disabled={page === auditPages}
+              onClick={() => setAuditPage(page + 1)}
+            >
+              Próxima
+            </button>
+          </nav>
           <div className="ct-audit">
-            {audit.slice(0, 30).map(event => (
+            {visibleAudit.map(event => (
               <article key={event.id}>
                 <span className="ct-audit-dot" />
                 <div>

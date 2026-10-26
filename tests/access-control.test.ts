@@ -136,3 +136,31 @@ describe("identidade e autorização", () => {
     expect(migrated.users.every(user => user.permissions.includes("settings:view"))).toBe(true);
   });
 });
+
+it("preserva identidade suspensa sem assumir permissões do primeiro administrador", () => {
+  const state = seedAccessState();
+  const operator = state.users.find(user => user.access === "operator")!;
+  const suspended = {
+    ...state,
+    authenticatedUserId: operator.id,
+    users: state.users.map(user => (user.id === operator.id ? { ...user, status: "suspended" as const } : user)),
+  };
+  expect(authenticatedUser(suspended).id).toBe(operator.id);
+  expect(can(authenticatedUser(suspended), "users:manage")).toBe(false);
+  expect(can(activeUser(suspended), "settings:manage")).toBe(false);
+});
+it("identidade ausente no diretório nunca assume o primeiro administrador", () => {
+  const state = { ...seedAccessState(), authenticatedUserId: "missing-session-user" };
+  expect(authenticatedUser(state).status).toBe("suspended");
+  expect(authenticatedUser(state).permissions).toEqual([]);
+  expect(can(authenticatedUser(state), "finance:release")).toBe(false);
+});
+
+it("gestor de usuários alcança gestão sem receber administração de configurações", () => {
+  const operator = seedAccessState().users.find(user => user.access === "operator")!;
+  const manager = { ...operator, permissions: ["users:manage" as const] };
+  expect(canAccessView(manager, "settings")).toBe(true);
+  expect(can(manager, "settings:manage")).toBe(false);
+  expect(canAccessView({ ...operator, permissions: ["settings:view"] }, "settings")).toBe(false);
+  expect(canAccessView({ ...manager, status: "suspended" }, "settings")).toBe(false);
+});

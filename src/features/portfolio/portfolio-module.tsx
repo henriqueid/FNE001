@@ -394,12 +394,7 @@ export default function PortfolioModule({
               </label>
             </div>
           </header>
-          <PortfolioTitleGrid
-            rows={shown.slice(0, 200)}
-            repName={repName}
-            portfolio={portfolio}
-            onPortfolio={onPortfolio}
-          />
+          <PortfolioTitleGrid rows={shown} repName={repName} portfolio={portfolio} onPortfolio={onPortfolio} />
           {shown.length === 0 && <p className="fn-note">Nenhum título neste filtro.</p>}
         </section>
       )}
@@ -539,17 +534,17 @@ export default function PortfolioModule({
 
       <section className="ds-card ds-today pf-next">
         <div>
-          <h2>Próximas entregas da Carteira</h2>
+          <h2>Cobrança bancária e próximas rotinas</h2>
           <p>
-            Remessa e retorno CNAB por banco, crédito a identificar, protesto, negativação, prorrogação e conta gráfica
-            do cedente.
+            Remessa e retorno CNAB 400 Itaú e Bradesco ficam no Financeiro, sujeitos ao convênio homologado. Crédito a
+            identificar, transmissão de protesto/negativação e conta gráfica completa ainda dependem de implantação.
           </p>
         </div>
         <div className="ds-today-links">
           <button type="button" onClick={() => onNavigate("finance")}>
             <span>
               <b>Remessa e confirmação de cobrança</b>
-              <small>Hoje em Financeiro › Liberações de operações</small>
+              <small>Abrir Financeiro › Cobrança</small>
             </span>
             <ArrowIcon />
           </button>

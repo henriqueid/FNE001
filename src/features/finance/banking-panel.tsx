@@ -37,8 +37,21 @@ export function BankingPanel({
   const last = useRef<{ payload: string; command: BankingCommand } | null>(null),
     account = accounts.find(a => a.id === accountId);
   const titles = portfolio.titles.filter(
-    t => t.company === account?.company && t.bankStatus === "Sem boleto" && !t.ourNumber && portfolioBalance(t) > 0,
+    t =>
+      !!account &&
+      t.company === account.company &&
+      ((t.bankWriteoff &&
+        t.bank === account.bankCode &&
+        t.agency === account.agency &&
+        t.account === account.account &&
+        t.wallet === account.collection?.wallet &&
+        (t.agreement ?? "") === (account.collection?.agreement ?? "")) ||
+        (t.bankStatus === "Sem boleto" &&
+          !t.ourNumber &&
+          portfolioBalance(t) > 0 &&
+          !["Pago", "Recomprado", "Cancelado"].includes(t.status))),
   );
+  const pendingWriteoffIds = titles.filter(t => t.bankWriteoff?.status === "Pendente").map(t => t.id);
   async function execute(
     input:
       | Omit<Extract<BankingCommand, { action: "remittance" }>, "commandId">
@@ -139,11 +152,16 @@ export function BankingPanel({
               arquivo conserva a sequência de remessa.
             </p>
           )}
+          <p className="fn-note">
+            Pedidos de baixa de recompra encerram o título no sistema. O banco permanece pendente até confirmar a baixa
+            no retorno. Baixas pendentes entram automaticamente na próxima remessa desta conta.
+          </p>
           <div className="fn-table-scroll">
             <table className="fn-table">
               <thead>
                 <tr>
                   <th>Incluir</th>
+                  <th>Instrução</th>
                   <th>Documento</th>
                   <th>Cedente</th>
                   <th>Sacado</th>
@@ -158,14 +176,18 @@ export function BankingPanel({
                       <input
                         type="checkbox"
                         aria-label={`Incluir ${t.documentNumber}`}
-                        checked={selected.includes(t.id)}
-                        disabled={busy}
+                        checked={selected.includes(t.id) || t.bankWriteoff?.status === "Pendente"}
+                        disabled={busy || !!t.bankWriteoff}
                         onChange={e =>
                           setSelected(previous =>
                             e.target.checked ? [...previous, t.id] : previous.filter(id => id !== t.id),
                           )
                         }
                       />
+                    </td>
+                    <td>
+                      {t.bankWriteoff ? `Baixa · ${t.bankWriteoff.status}` : "Entrada"}
+                      {t.bankWriteoff?.rejectionReason && <small role="status">{t.bankWriteoff.rejectionReason}</small>}
                     </td>
                     <td>{t.documentNumber}</td>
                     <td>{t.ownerName}</td>
@@ -177,12 +199,18 @@ export function BankingPanel({
               </tbody>
             </table>
           </div>
-          {!titles.length && <p>Não há títulos sem vínculo bancário nesta empresa.</p>}
+          {!titles.length && <p>Não há entradas ou pedidos de baixa nesta conta.</p>}
           <div className="fn-actions">
             <button
               className="fn-btn primary"
-              disabled={busy || !selected.length}
-              onClick={() => void execute({ action: "remittance", accountId, titleIds: selected })}
+              disabled={busy || (!selected.length && !pendingWriteoffIds.length)}
+              onClick={() =>
+                void execute({
+                  action: "remittance",
+                  accountId,
+                  titleIds: [...new Set([...selected, ...pendingWriteoffIds])],
+                })
+              }
             >
               Gerar remessa selecionada
             </button>

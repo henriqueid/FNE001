@@ -1,7 +1,7 @@
 /** Fluxo bancário completo com repositórios reais e double apenas no banco. */
 import { describe, expect, it } from "vitest";
 import { BankingDatabase } from "./cnab400-server-database";
-import { executeBankingCommand } from "@/src/server/banking/service";
+import { executeBankingCommand, validateRepurchaseBankWriteoff } from "@/src/server/banking/service";
 import { openingEntries, emptyState } from "@/src/domain/finance/ledger";
 import { accountBalance } from "@/src/domain/finance/banking";
 import { seedPortfolio } from "@/src/domain/portfolio/model";
@@ -419,4 +419,236 @@ describe("Itaú112 escritural com número atribuído pelo banco", () => {
       }),
     ).rejects.toThrow(/número|outro|colis/i);
   });
+});
+
+describe("baixa bancária após recompra", () => {
+  it("preserva registro/número, confirma somente retorno09, replay não consome nova faixa", async () => {
+    const { db, accountId, titleId } = fixture();
+    await executeBankingCommand(db, principal, remit(accountId, titleId));
+    const stored = db.portfolio.get("tenant-a")!.payload.titles[0];
+    Object.assign(stored, {
+      status: "Recomprado",
+      openAmount: 0,
+      repurchasedAmount: 1000,
+      bankStatus: "Registrado",
+      bankWriteoff: {
+        operationId: "op-new",
+        cycleId: "app1",
+        applicationId: "app1",
+        status: "Pendente",
+        requestedAt: "2026-10-25T00:00:00Z",
+      },
+    });
+    const command = remit(accountId, titleId, "writeoff-remit-01");
+    const result = await executeBankingCommand(db, principal, command);
+    expect(result.content!.split("\r\n")[1].slice(108, 110)).toBe("02");
+    expect(await executeBankingCommand(db, principal, command)).toEqual(result);
+    const current = db.portfolio.get("tenant-a")!.payload.titles[0];
+    expect(current.bankStatus).toBe("Registrado");
+    expect(current.bankWriteoff?.status).toBe("Remessa gerada");
+    expect(db.finance.get("tenant-a")!.payload.accounts[0].collection!.nextOurNumber).toBe(3);
+    const before = accountBalance(db.finance.get("tenant-a")!.payload, accountId);
+    const rows = returnFile().split("\r\n");
+    rows[1] = rows[1].slice(0, 108) + "09" + rows[1].slice(110, 253) + "0000000000000" + rows[1].slice(266);
+    await executeBankingCommand(db, principal, {
+      action: "return",
+      accountId,
+      commandId: "writeoff-return-01",
+      content: rows.join("\r\n"),
+    });
+    expect(db.portfolio.get("tenant-a")!.payload.titles[0]).toMatchObject({
+      status: "Recomprado",
+      bankStatus: "Baixado",
+      bankWriteoff: { status: "Confirmada" },
+    });
+    expect(accountBalance(db.finance.get("tenant-a")!.payload, accountId)).toBe(before);
+  });
+});
+
+it.each(["341", "237"])("baixa %s rejeitada preserva registro e permite nova remessa sem renumerar", async bank => {
+  const { db, accountId, titleId } = fixture(bank);
+  await executeBankingCommand(db, principal, remit(accountId, titleId));
+  const title = db.portfolio.get("tenant-a")!.payload.titles[0];
+  Object.assign(title, {
+    status: "Recomprado",
+    openAmount: 0,
+    repurchasedAmount: 1000,
+    bankStatus: "Registrado",
+    bankWriteoff: {
+      operationId: "new",
+      cycleId: "app",
+      applicationId: "app",
+      status: "Pendente",
+      requestedAt: "2026-10-25T00:00:00Z",
+    },
+  });
+  await executeBankingCommand(db, principal, remit(accountId, titleId, "writeoff-first-01"));
+  const rows = returnFile(bank).split("\r\n");
+  const code = bank === "341" ? "15" : "27";
+  rows[1] = rows[1].slice(0, 108) + code + rows[1].slice(110, 253) + "0000000000000" + rows[1].slice(266);
+  await executeBankingCommand(db, principal, {
+    action: "return",
+    accountId,
+    commandId: "writeoff-reject-01",
+    content: rows.join("\r\n"),
+  });
+  expect(db.portfolio.get("tenant-a")!.payload.titles[0]).toMatchObject({
+    bankStatus: "Registrado",
+    bankWriteoff: { status: "Pendente", rejectionReason: expect.stringContaining(code) },
+  });
+  const retry = await executeBankingCommand(db, principal, remit(accountId, titleId, "writeoff-retry-01"));
+  expect(retry.content!.split("\r\n")[1].slice(108, 110)).toBe("02");
+});
+it("bloqueia pagamento após recompra com baixa sem duplicar caixa", async () => {
+  const { db, accountId, titleId } = fixture();
+  await executeBankingCommand(db, principal, remit(accountId, titleId));
+  Object.assign(db.portfolio.get("tenant-a")!.payload.titles[0], {
+    status: "Recomprado",
+    openAmount: 0,
+    repurchasedAmount: 1000,
+    bankStatus: "Registrado",
+    bankWriteoff: {
+      operationId: "new",
+      cycleId: "app",
+      applicationId: "app",
+      status: "Pendente",
+      requestedAt: "2026-10-25T00:00:00Z",
+    },
+  });
+  const before = accountBalance(db.finance.get("tenant-a")!.payload, accountId);
+  await expect(
+    executeBankingCommand(db, principal, {
+      action: "return",
+      accountId,
+      commandId: "writeoff-payment-01",
+      content: returnFile(),
+    }),
+  ).rejects.toThrow(/após recompra/);
+  expect(accountBalance(db.finance.get("tenant-a")!.payload, accountId)).toBe(before);
+});
+
+it("inclui baixa pendente automaticamente na próxima remessa de entrada", async () => {
+  const { db, accountId, titleId } = fixture();
+  await executeBankingCommand(db, principal, remit(accountId, titleId));
+  const portfolio = db.portfolio.get("tenant-a")!.payload;
+  const registered = portfolio.titles[0];
+  const fresh = {
+    ...structuredClone(registered),
+    id: "new-entry",
+    documentNumber: "DOC-02",
+    bankStatus: "Sem boleto" as const,
+    ourNumber: undefined,
+  };
+  Object.assign(registered, {
+    status: "Recomprado",
+    openAmount: 0,
+    repurchasedAmount: 1000,
+    bankStatus: "Registrado",
+    bankWriteoff: {
+      operationId: "new",
+      cycleId: "app",
+      applicationId: "app",
+      status: "Pendente",
+      requestedAt: "2026-10-25T00:00:00Z",
+    },
+  });
+  portfolio.titles.push(fresh);
+  const result = await executeBankingCommand(db, principal, remit(accountId, fresh.id, "entry-and-writeoff-01"));
+  expect(result.processed).toBe(2);
+  expect(
+    result
+      .content!.split("\r\n")
+      .slice(1, -2)
+      .map(row => row.slice(108, 110))
+      .sort(),
+  ).toEqual(["01", "02"]);
+});
+
+it("baixa Itaú112 preserva número atribuído e retorno vincula remessa original", async () => {
+  const { db, accountId, titleId } = bankIssuedFixture();
+  await executeBankingCommand(db, principal, remit(accountId, titleId));
+  await executeBankingCommand(db, principal, {
+    action: "return",
+    accountId,
+    commandId: "writeoff112-entry",
+    content: bankIssuedReturn(),
+  });
+  Object.assign(db.portfolio.get("tenant-a")!.payload.titles[0], {
+    status: "Recomprado",
+    openAmount: 0,
+    repurchasedAmount: 1000,
+    bankWriteoff: {
+      operationId: "new",
+      cycleId: "app",
+      applicationId: "app",
+      status: "Pendente",
+      requestedAt: "2026-10-25T00:00:00Z",
+    },
+  });
+  const result = await executeBankingCommand(db, principal, remit(accountId, titleId, "writeoff112-remit"));
+  const detail = result.content!.split("\r\n")[1];
+  expect(detail.slice(62, 70)).toBe("12345678");
+  expect(detail.slice(108, 110)).toBe("02");
+  expect(detail.slice(37, 62).trim()).toBe("");
+  await executeBankingCommand(db, principal, {
+    action: "return",
+    accountId,
+    commandId: "writeoff112-confirm",
+    content: bankIssuedReturn("09"),
+  });
+  expect(db.portfolio.get("tenant-a")!.payload.titles[0]).toMatchObject({
+    bankStatus: "Baixado",
+    ourNumber: "12345678",
+    bankWriteoff: { status: "Confirmada" },
+  });
+});
+
+it("recompra SIM exige instrução bancária executável antes de baixar internamente", async () => {
+  const { db, accountId, titleId } = fixture();
+  const finance = db.finance.get("tenant-a")!.payload;
+  const title = db.portfolio.get("tenant-a")!.payload.titles[0];
+  Object.assign(title, {
+    bankStatus: "Registrado",
+    bank: "341",
+    agency: "1234",
+    account: "12345",
+    wallet: "109",
+    ourNumber: "00000002",
+  });
+  expect(await validateRepurchaseBankWriteoff(db, "tenant-a", finance, title)).toMatch(/remessa.*original/i);
+  Object.assign(title, { bankStatus: "Sem boleto", ourNumber: undefined });
+  await executeBankingCommand(db, principal, remit(accountId, titleId));
+  const registered = db.portfolio.get("tenant-a")!.payload.titles[0];
+  registered.bankStatus = "Registrado";
+  expect(
+    await validateRepurchaseBankWriteoff(db, "tenant-a", db.finance.get("tenant-a")!.payload, registered),
+  ).toBeNull();
+  db.finance.get("tenant-a")!.payload.accounts[0].active = false;
+  expect(
+    await validateRepurchaseBankWriteoff(db, "tenant-a", db.finance.get("tenant-a")!.payload, registered),
+  ).toBeTruthy();
+});
+
+it.each(["liquidado", "conta divergente"])("não gera baixa com %s", async reason => {
+  const { db, accountId, titleId } = fixture();
+  await executeBankingCommand(db, principal, remit(accountId, titleId));
+  const title = db.portfolio.get("tenant-a")!.payload.titles[0];
+  Object.assign(title, {
+    status: "Recomprado",
+    openAmount: 0,
+    repurchasedAmount: 1000,
+    bankStatus: reason === "liquidado" ? "Liquidado" : "Registrado",
+    account: reason === "conta divergente" ? "99999" : title.account,
+    bankWriteoff: {
+      operationId: "new",
+      cycleId: "app",
+      applicationId: "app",
+      status: "Pendente",
+      requestedAt: "2026-10-25T00:00:00Z",
+    },
+  });
+  await expect(
+    executeBankingCommand(db, principal, remit(accountId, titleId, "writeoff-invalid-01")),
+  ).rejects.toThrow();
+  expect(db.bankEvents.filter(event => event.type === "BankRemittance")).toHaveLength(1);
 });

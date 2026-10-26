@@ -12,6 +12,7 @@ export type Cnab400Account = {
   beneficiary: { document: string; name: string };
 };
 export type Cnab400Title = {
+  instruction?: "entry";
   controlId: string;
   documentNumber: string;
   ourNumber: string;
@@ -32,6 +33,9 @@ export type Cnab400Title = {
     state: string;
     email?: string;
   };
+};
+export type Cnab400Writeoff = Pick<Cnab400Title, "controlId" | "documentNumber" | "ourNumber" | "amountCents"> & {
+  instruction: "writeoff";
 };
 export type Cnab400ReturnEvent = {
   kind: "entry" | "rejection" | "settlement" | "writeoff";
@@ -67,7 +71,7 @@ export type Cnab400Remittance = {
   account: Cnab400Account;
   generatedOn: string;
   remittanceSequence: number;
-  titles: Cnab400Title[];
+  titles: (Cnab400Title | Cnab400Writeoff)[];
 };
 function fail(message: string): never {
   throw new Error(`CNAB400: ${message}`);
@@ -252,6 +256,42 @@ export function generateCnab400Remittance(input: Cnab400Remittance): string {
   let sequence = 1;
   const details = titles.flatMap(title => {
     const detailSequence = ++sequence;
+    if (title.instruction === "writeoff") {
+      const row = record("1");
+      const number = digits(title.ourNumber, a.itau ? 8 : 11, "Nosso número", true);
+      const control = text(title.controlId, 25, "Controle do título");
+      if (seenNumbers.has(number) || seenControls.has(control)) fail("Título duplicado na remessa.");
+      seenNumbers.add(number);
+      seenControls.add(control);
+      if (a.itau) {
+        put(row, 2, "0000000000000000");
+        put(row, 18, a.identity);
+        put(row, 34, "0000");
+        put(row, 63, number + "0000000000000");
+        put(row, 84, account.wallet);
+        put(row, 108, "I");
+        put(row, 140, "00000000");
+        put(row, 386, "00000000");
+      } else {
+        put(row, 2, "0000000000000000000");
+        put(row, 21, a.identity);
+        put(row, 63, "00000000");
+        put(row, 71, number + bradescoOurNumberDigit(account.wallet, number));
+        put(row, 83, "0000000000");
+        put(row, 93, "2");
+        put(row, 140, "00000000");
+      }
+      if (!a.itau) put(row, 38, control);
+      put(row, 109, "02");
+      if (!a.itau) put(row, 111, text(title.documentNumber, 10, "Número do documento"));
+      put(row, 121, "000000");
+      put(row, 127, cents(title.amountCents, "Valor registrado", true));
+      put(row, 148, "00 0000000000");
+      put(row, 161, "0".repeat(74));
+      put(row, 327, "00000000");
+      put(row, 395, String(detailSequence).padStart(6, "0"));
+      return [row.join("")];
+    }
     const row = record("1"),
       ourNumber = digits(title.ourNumber, a.itau ? 8 : 11, "Nosso número", !a.bankIssued);
     if (a.bankIssued && ourNumber !== "00000000")
@@ -403,8 +443,17 @@ export function parseCnab400Return(content: string, account: Cnab400Account): Cn
       fail("Rateio/pagamento parcial não implementado.");
     const bankOccurrence = field(row, 109, 110);
     const kinds: Record<string, Cnab400ReturnEvent["kind"]> = a.itau
-      ? { "02": "entry", "03": "rejection", "06": "settlement", "09": "writeoff" }
-      : { "02": "entry", "03": "rejection", "06": "settlement", "09": "writeoff", "10": "writeoff", "24": "rejection" };
+      ? { "02": "entry", "03": "rejection", "06": "settlement", "09": "writeoff", "15": "rejection", "16": "rejection" }
+      : {
+          "02": "entry",
+          "03": "rejection",
+          "06": "settlement",
+          "09": "writeoff",
+          "10": "writeoff",
+          "24": "rejection",
+          "27": "rejection",
+          "32": "rejection",
+        };
     const kind = kinds[bankOccurrence];
     if (!kind) fail(`Ocorrência ${bankOccurrence} não implementada; requer revisão manual.`);
     const ourNumber = field(row, a.itau ? 86 : 71, a.itau ? 93 : 81);

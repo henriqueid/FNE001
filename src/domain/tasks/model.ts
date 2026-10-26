@@ -1,3 +1,5 @@
+import { taskAudiencePermissions } from "./assignment";
+import type { AccessUser } from "@/src/domain/access/model";
 import { type AttentionItem } from "@/src/domain/copilot/attention-center";
 import {
   operationBelongsToUser,
@@ -14,6 +16,7 @@ export type TaskHistoryEntry = {
   id: string;
   at: string;
   by: string;
+  actorUserId?: string;
   action: TaskAction;
   detail: string;
 };
@@ -27,25 +30,27 @@ export type TaskRecord = {
   owner: string;
   /** Identificador nominal do usuário após assumir ou receber uma delegação. */
   ownerUserId?: string;
+  assignmentActive?: boolean;
   department: string;
   dueAt: string;
   snoozedUntil?: string;
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
+  sourceActive?: boolean;
   snapshot: TaskSnapshot;
   history: TaskHistoryEntry[];
 };
 
 export type TaskState = { version: 1; tasks: TaskRecord[]; persistenceVersion?: number };
 
-export type ManagedTask = AttentionItem &
-  Pick<
+export type ManagedTask = AttentionItem & { operationId?: string } & Pick<
     TaskRecord,
     | "source"
     | "status"
     | "owner"
     | "ownerUserId"
+    | "assignmentActive"
     | "department"
     | "dueAt"
     | "snoozedUntil"
@@ -64,8 +69,8 @@ export type TaskCommand =
 
 export const seedTaskState = (): TaskState => ({ version: 1, tasks: [] });
 
-export const taskIsExplicitlyAssigned = (task: Pick<TaskRecord, "history">) =>
-  (task.history ?? []).some(entry => entry.action === "assigned");
+export const taskIsExplicitlyAssigned = (task: Pick<TaskRecord, "history" | "assignmentActive">) =>
+  task.assignmentActive !== false && (task.history ?? []).some(entry => entry.action === "assigned");
 
 const snapshotOf = (item: AttentionItem): TaskSnapshot => {
   const { operation, ...snapshot } = item;
@@ -88,8 +93,40 @@ const dueFor = (item: AttentionItem, now: string) => {
   return date.toISOString();
 };
 
+const canonicalTaskValue = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(canonicalTaskValue);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, item]) => item !== undefined)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, canonicalTaskValue(item)]),
+    );
+  return value;
+};
+
+export function taskFactsEqual(left: unknown, right: unknown) {
+  return JSON.stringify(canonicalTaskValue(left)) === JSON.stringify(canonicalTaskValue(right));
+}
+
+function hasNewEpisode(previous?: string, current?: string) {
+  if (!previous || !current || previous === current) return false;
+  try {
+    const prior = new Set((JSON.parse(previous) as unknown[]).map(item => JSON.stringify(item)));
+    return (JSON.parse(current) as unknown[]).some(item => !prior.has(JSON.stringify(item)));
+  } catch {
+    return true;
+  }
+}
+
 /** Mantém os alertas automáticos sincronizados sem apagar o histórico das tarefas. */
-export function reconcileTasks(state: TaskState, items: AttentionItem[], now: string): TaskState {
+export function reconcileTasks(
+  state: TaskState,
+  items: AttentionItem[],
+  now: string,
+  { sourcesReady = true }: { sourcesReady?: boolean } = {},
+): TaskState {
+  if (!sourcesReady) return state;
   const live = new Map(items.map(item => [item.id, item]));
   let changed = false;
   const records = state.tasks.map(record => {
@@ -97,17 +134,46 @@ export function reconcileTasks(state: TaskState, items: AttentionItem[], now: st
     if (item) {
       live.delete(record.id);
       const snapshot = snapshotOf(item);
-      const contentChanged = JSON.stringify(snapshot) !== JSON.stringify(record.snapshot);
-      if (!contentChanged) return record;
+      const contentChanged = !taskFactsEqual(snapshot, record.snapshot);
+      const reopen =
+        record.source === "automatic" &&
+        record.status === "completed" &&
+        (record.sourceActive === false ||
+          record.history.at(-1)?.action === "resolved" ||
+          hasNewEpisode(record.snapshot.episodeKey, snapshot.episodeKey));
+      if (!contentChanged && !reopen) return record;
       changed = true;
-      return { ...record, snapshot, department: item.department, updatedAt: now };
+      return {
+        ...record,
+        snapshot,
+        sourceActive: true,
+        department: item.department,
+        updatedAt: now,
+        ...(reopen
+          ? {
+              status: "open" as const,
+              completedAt: undefined,
+              snoozedUntil: undefined,
+              history: [
+                ...record.history,
+                historyEntry(now, "STRATO Intelligence", "reopened", "Pendência novamente confirmada na origem."),
+              ],
+            }
+          : {}),
+      };
     }
-    if (record.source === "automatic" && record.status !== "completed") {
+    if (
+      record.source === "automatic" &&
+      record.sourceActive !== false &&
+      (record.status !== "completed" || record.history.at(-1)?.action !== "resolved")
+    ) {
       changed = true;
       return {
         ...record,
         status: "completed" as const,
-        completedAt: now,
+        sourceActive: false,
+        snoozedUntil: undefined,
+        completedAt: record.completedAt ?? now,
         updatedAt: now,
         history: [
           ...record.history,
@@ -123,6 +189,7 @@ export function reconcileTasks(state: TaskState, items: AttentionItem[], now: st
     records.push({
       id: item.id,
       source: "automatic",
+      sourceActive: true,
       status: "open",
       owner: item.owner,
       department: item.department,
@@ -157,6 +224,7 @@ export function managedTasks(state: TaskState, items: AttentionItem[], now?: str
       status: reminderReached ? "open" : record.status,
       owner: record.owner,
       ownerUserId: record.ownerUserId,
+      assignmentActive: record.assignmentActive,
       department: record.department,
       dueAt: record.dueAt,
       snoozedUntil: record.snoozedUntil,
@@ -186,6 +254,10 @@ export function actionableAttentionItems(tasks: ManagedTask[], now: string): Att
       department: task.department,
       timing: task.timing,
       view: task.view,
+      company: task.company,
+      requiredPermission: task.requiredPermission,
+      authorityId: task.authorityId,
+      episodeKey: task.episodeKey,
       operation: task.operation,
     }));
 }
@@ -194,6 +266,22 @@ export function actionableAttentionItems(tasks: ManagedTask[], now: string): Att
 export function visibleTasksForUser(tasks: ManagedTask[], user: AppUserProfile, scope?: UserScopeContext) {
   const areas = userFunctionalAreas(user);
   return tasks.filter(task => {
+    if (
+      task.company &&
+      user.companyScopes &&
+      !user.companyScopes.some(
+        scope =>
+          scope === "*" || scope.trim().toLocaleLowerCase("pt-BR") === task.company!.trim().toLocaleLowerCase("pt-BR"),
+      )
+    )
+      return false;
+    const audience = user as Partial<AccessUser>;
+    if (
+      audience.permissions &&
+      taskAudiencePermissions(task).some(permission => !audience.permissions!.includes(permission))
+    )
+      return false;
+    if (task.authorityId && !audience.authorityIds?.includes(task.authorityId)) return false;
     // Depois de uma atribuição explícita a tarefa deixa de ser uma fila da área e passa a ser
     // uma pendência nominal. Isso também impede que quem delegou continue vendo-a pela área.
     if (taskIsExplicitlyAssigned(task))
@@ -223,6 +311,7 @@ export function applyTaskCommand(state: TaskState, id: string, command: TaskComm
         status: "in_progress" as const,
         owner: command.owner,
         ownerUserId: command.ownerUserId,
+        assignmentActive: true,
         department: command.department ?? task.department,
         snoozedUntil: undefined,
         updatedAt: now,
@@ -263,6 +352,37 @@ export function applyTaskCommand(state: TaskState, id: string, command: TaskComm
   return found ? { ...state, tasks } : state;
 }
 
+export function returnTaskToQueue(state: TaskState, id: string, now: string): TaskState {
+  const task = state.tasks.find(record => record.id === id);
+  if (!task || task.status === "completed" || !taskIsExplicitlyAssigned(task)) return state;
+  return {
+    ...state,
+    tasks: state.tasks.map(record =>
+      record.id !== id
+        ? record
+        : {
+            ...record,
+            owner: record.snapshot.owner,
+            ownerUserId: undefined,
+            assignmentActive: false,
+            department: record.snapshot.department,
+            status: "open",
+            snoozedUntil: undefined,
+            updatedAt: now,
+            history: [
+              ...record.history,
+              historyEntry(
+                now,
+                "STRATO Intelligence",
+                "assigned",
+                "Tarefa devolvida à fila original: destinatário indisponível ou sem acesso compatível.",
+              ),
+            ],
+          },
+    ),
+  };
+}
+
 /** Reaplica somente as mudanças locais sobre uma versão mais recente recebida do servidor. */
 export function rebaseTaskState(base: TaskState, candidate: TaskState, current: TaskState): TaskState {
   const baseById = new Map(base.tasks.map(task => [task.id, task]));
@@ -287,6 +407,16 @@ export function rebaseTaskState(base: TaskState, candidate: TaskState, current: 
     const baseHistoryIds = new Set(baseTask.history.map(entry => entry.id));
     const serverHistoryIds = new Set(serverTask.history.map(entry => entry.id));
     const localHistory = task.history.filter(entry => !baseHistoryIds.has(entry.id) && !serverHistoryIds.has(entry.id));
+    const automaticTransition =
+      localHistory.length > 0 &&
+      localHistory.every(
+        entry => entry.by === "STRATO Intelligence" && (entry.action === "resolved" || entry.action === "reopened"),
+      );
+    if (
+      automaticTransition &&
+      serverTask.history.some(entry => !baseHistoryIds.has(entry.id) && entry.by !== "STRATO Intelligence")
+    )
+      continue;
     const localChanges = Object.fromEntries(
       (Object.keys(task) as (keyof TaskRecord)[])
         .filter(key => key !== "history" && JSON.stringify(task[key]) !== JSON.stringify(baseTask[key]))

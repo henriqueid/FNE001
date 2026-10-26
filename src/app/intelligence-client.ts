@@ -1,5 +1,6 @@
 import { type DeskReply } from "@/src/domain/copilot/desk-assistant";
 import { type SystemKnowledge } from "@/src/domain/copilot/system-query";
+import type { AIBudgetInput, AIBudgetSnapshot } from "@/src/domain/intelligence/budget";
 import type { IntelligenceState } from "@/src/domain/intelligence/model";
 import { getStratoTenantId } from "./tenant";
 import type { CopilotReport } from "@/src/domain/copilot/report";
@@ -119,4 +120,17 @@ export async function reviewCopilotMemory(id: string, status: "validated" | "rej
       body: JSON.stringify({ id, status, rationale }),
     }),
   );
+}
+
+export async function loadAIBudget() {
+  const response = await fetch("/api/intelligence/budget", { cache: "no-store", headers: headers() });
+  return (await bodyOf<{ budget: AIBudgetSnapshot }>(response)).budget;
+}
+export async function saveAIBudget(input: AIBudgetInput) {
+  const response = await fetch("/api/intelligence/budget", {
+    method: "PUT",
+    headers: headers(),
+    body: JSON.stringify(input),
+  });
+  return (await bodyOf<{ budget: AIBudgetSnapshot }>(response)).budget;
 }

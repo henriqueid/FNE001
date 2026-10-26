@@ -8,6 +8,7 @@ import {
   verifiedEligibilityOverrides,
   type EligibilityExceptionGrant,
 } from "./exception-evidence";
+import { bindRepurchaseSources } from "./repurchase";
 import { pricingCalculation, roundPricing } from "@/src/domain/operations/pricing";
 import { portfolioBalance, type PortfolioState } from "@/src/domain/portfolio/model";
 import { partyToCedent, partyToDebtor, type Party } from "@/src/domain/registry/parties";
@@ -222,12 +223,20 @@ export function assertAuthoritativeOperation(
       pricing.guaranteePercent > 100
     )
       throw new OperationGovernanceError("A condição comercial contém parâmetros numéricos inválidos.");
-    if (pricing.repurchaseTitleIds?.length || pricing.settlementAdjustmentIds?.length)
+    if (pricing.settlementAdjustmentIds?.length)
       throw new OperationGovernanceError(
         "Recompras e compensações exigem vínculo autoritativo aos títulos da carteira.",
       );
-    const calculated = pricingCalculation(current, pricing);
-    if (!Number.isFinite(calculated.net) || roundPricing(requested.netAmount) !== roundPricing(calculated.net))
+    const bound = bindRepurchaseSources(current, context.portfolio);
+    const calculated = pricingCalculation(bound, pricing);
+    const repurchases = (pricing.repurchaseTitleIds ?? []).reduce(
+      (sum, id) => sum + (bound.repurchaseContext?.titles.find(t => t.id === id)?.faceAmount ?? 0),
+      0,
+    );
+    if (
+      !Number.isFinite(calculated.net) ||
+      roundPricing(requested.netAmount) !== roundPricing(calculated.net - repurchases)
+    )
       throw new OperationGovernanceError("O valor líquido diverge do preço recalculado no servidor.");
   }
   if (

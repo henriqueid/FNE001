@@ -1,8 +1,26 @@
 # STRATO — contexto de continuidade
 
-## Refinamento, bancos e copiloto · 25/10/2026
+## Campanha Churume e acessos · 26/10/2026 · local
 
-Lote autorizado para publicação: acabamento visual compartilhado, bancos/remessas em Configurações e consultas pontuais de score/liquidez com empates e ausência de métrica explícitos. Copiloto preserva degradê original no cabeçalho e no botão ativo/hover. Sem migração ou alteração de cálculo financeiro. Correção paralela da Agenda Inteligente excluída deste lote. Verificação e resultado remoto em `docs/deployments/2026-10-25-refinamento-bancos-copiloto.md`.
+Correções do dossiê25/10 integradas com ciclo completo de usuário, autorização server-side, auditoria cadastral, tarefas autoritativas e CAS da licença IA. PostgreSQL18 instalado localmente para clusters descartáveis; runner aplica migrações e valida transações, backup/restauração e HTTP autenticado. Navegador com duas sessões locais confirmou solicitação pendente, aprovação, login, consulta sem edição, revogação de módulo, suspensão de sessão e reativação exigindo login novo. Corridas de login/suspensão e configuração IA receberam regressões SQL. Novos achados de onboarding SQL/contexto/identidade demonstrativa no acesso real foram corrigidos. Relatório consolidado em `docs/testing/churume/2026-10-26-correcoes/resultado.md`; detalhes por frente na mesma pasta. Sem publicação, migração ou conexão produtiva. Departamentos/módulos/alçadas existentes preservados; extensão de catálogo livre e tetos por valor está planejada em `departamentos-modulos-alcadas.md`. Acordos mantém histórico completo por decisão explícita do usuário26/10.
+
+## Churume · 25/10/2026 · correções locais
+
+Perfil em `docs/testing/agents/churume.md`; diagnóstico original preservado e resultado em `docs/testing/churume/2026-10-25-correcoes.md`. C01–C07 corrigidos com regressões; limites/histórico Comercial e envio transacional de comissões protegidos no servidor. Recompra real recebeu escolha explícita Sim/Não autorizada pelo usuário: principal aberto, mesma empresa/cedente, reserva contra repetição, aplicação/estorno coordenados e instrução bancária 02 quando cabível. Não presume encargos, parcial, compensações avulsas ou liberação automática de retenção posterior. Autoridade, fontes transitórias e fila bancária protegidas; confirmação somente retorno. Contrato em `docs/ARCHITECTURE.md` e `docs/integrations/CNAB400.md`.
+
+Verificação: `npm run check` 869 aprovados/18 ignorados; build passou. Teste oscilante de devolução corrigido para usar o comando realmente vencedor, sem alterar regra financeira. Revisão independente e conferência visual realizadas; SQL nativo e integrações externas não homologados. Sem publicação ou migração. Prévia isolada porta 5175, `?screen=repurchase` para simular escolhas; não executa efeitos reais.
+
+## Limites de IA · 25/10/2026 · implementação local
+
+Pedido: teto geral e distribuição por usuário. Unidade: tokens mensais UTC. Nova API `/api/intelligence/budget` e painel de limites em Inteligência e IA; modo compartilhado preserva comportamento atual, modo individual exige cota. Política versionada em `IntelligenceBudgetPolicy/monthly`, uso por ator derivado da última reserva/liquidação. Ambos os tetos sob lock do tenant antes do provedor; autoria, vínculo e permissão server-side, sem reset de uso e sem migração. Save legado de licença agora transacional, adquire lock antes de consultar política, evitando restaurar teto com snapshot antigo. Revisão independente encontrou essa corrida; corrigida com teste RED→GREEN. Verificação: typecheck/lint/formatação e build aprovados, suíte final 770 aprovados/16 ignorados. Teste preexistente de devolução oscilou antes de passar isolado e na suíte final; não alterado. PostgreSQL nativo indisponível localmente, incluindo dois novos casos reais preparados mas ignorados. Sem publicação deste novo lote. Plano: `docs/superpowers/plans/2026-10-25-limites-ia.md`.
+
+## Refinamento, bancos e copiloto · 25/10/2026 · publicado
+
+Código `3f0e588`: visual aprovado, bancos/remessas em Configurações e respostas pontuais do copiloto; cabeçalho e botão interativo com degradê original. Lote isolado com 744 testes aprovados/14 ignorados, builds local/remoto aprovados, serviço ativo e saúde interna/pública OK. Sem migração ou movimentação real. Correção paralela da Agenda Inteligente preservada localmente e excluída desta publicação. Registro em `docs/deployments/2026-10-25-refinamento-bancos-copiloto.md`. Checkout principal mantém alterações locais; publicação saiu de worktree isolado para origin/main.
+
+## Agenda Inteligente · 20/10/2026 · correção local
+
+Relato de pendências que somem como concluídas. Efeito de reconciliação rodava após carregar tarefas, antes de operações/carteira/notificações; lista vazia era tratada como resolução. Banco produtivo confirmou `portfolio-overdue` concluída por evento automático `resolved`, sem conclusão humana. `reconcileTasks` agora preserva estado com `sourcesReady: false` e reabre somente conclusão automática cujo alerta reaparece. Raiz exige fontes carregadas sem erro e notificações do tenant atual; simulação de usuário não reconcilia. Rebase preserva comando humano concorrente; resolução automática limpa adiamento. Check: 732 aprovados/14 ignorados, build e revisão independente aprovados. Sem migração nem correção SQL de dados. Publicação pendente.
 
 ## Pagamentos e cobrança · 20/10/2026 · publicado
 

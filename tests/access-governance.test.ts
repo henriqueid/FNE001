@@ -40,3 +40,20 @@ describe("governança de alterações de acesso", () => {
     ).toEqual([]);
   });
 });
+
+import { accessProfileError } from "@/src/domain/access/governance";
+import { allPermissions } from "@/src/domain/access/model";
+it.each([
+  { companyScopes: [123] },
+  { companyScopes: [""] },
+  { tenantIds: [false] },
+  { authorityIds: [{}] },
+  { authorityIds: [""] },
+])("rejeita identificadores não textuais ou vazios nas atribuições: %j", patch => {
+  expect(
+    accessProfileError(
+      { ...operator, functionalAreas: [operator.department], ...patch } as unknown as typeof operator,
+      allPermissions,
+    ),
+  ).toBeTruthy();
+});

@@ -11,24 +11,34 @@ import { type Operation } from "@/src/domain/core/types";
 import { ArrowIcon, ClockIcon, SearchIcon, UsersIcon } from "@/src/ui/icons";
 import { useEffect, useMemo, useState } from "react";
 
-const presenceLabel: Record<LivePresence, string> = { active: "Em atividade", away: "Ausente", offline: "Offline" };
+const presenceLabel: Record<LivePresence, string> = {
+  active: "Em atividade",
+  away: "Ausente",
+  offline: "Offline",
+  unknown: "Presença não monitorada",
+};
 
 export default function LiveOperations({
   users,
   currentUser,
   operations,
   onOpenOperation,
+  demoMode = false,
 }: {
   users: AccessUser[];
   currentUser: AccessUser;
   operations: Operation[];
   onOpenOperation: (operation: Operation) => void;
+  demoMode?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [presence, setPresence] = useState<"all" | LivePresence>("all");
   const [selectedId, setSelectedId] = useState<string>();
   const [clock, setClock] = useState(() => new Date());
-  const operators = useMemo(() => buildLiveOperators(users, currentUser, operations), [currentUser, operations, users]);
+  const operators = useMemo(
+    () => buildLiveOperators(users, currentUser, operations, demoMode),
+    [currentUser, operations, users, demoMode],
+  );
   const filtered = operators.filter(operator => {
     const text = `${operator.user.name} ${operator.user.department} ${operator.task} ${operator.context}`.toLowerCase();
     return (presence === "all" || operator.presence === presence) && text.includes(query.trim().toLowerCase());
@@ -41,24 +51,29 @@ export default function LiveOperations({
   );
 
   useEffect(() => {
+    if (!demoMode) return;
     const timer = window.setInterval(() => setClock(new Date()), 30_000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [demoMode]);
 
   return (
     <div className="lv-page">
       <header className="lv-header">
         <div>
           <span className="lv-eyebrow">
-            <i /> GESTÃO EM TEMPO REAL
+            <i /> {demoMode ? "DEMONSTRAÇÃO · PRESENÇA SIMULADA" : "GESTÃO DA EQUIPE"}
           </span>
-          <h1>Operação ao vivo</h1>
-          <p>Acompanhe presença, contexto e resultados da sua equipe sem visualizar conteúdo pessoal.</p>
+          <h1>{demoMode ? "Operação ao vivo" : "Equipe e operações"}</h1>
+          <p>
+            {demoMode
+              ? "Presença, tempos e eventos de sessão são fictícios nesta demonstração."
+              : "Atribuições e operações do sistema. Presença online e duração de sessão ainda não são monitoradas."}
+          </p>
         </div>
         <div className="lv-updated">
           <i />
           <span>
-            <b>Atualizado agora</b>
+            <b>{demoMode ? "Simulação local" : "Contexto carregado"}</b>
             <small>{clock.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</small>
           </span>
         </div>
@@ -72,7 +87,7 @@ export default function LiveOperations({
           <div>
             <small>ONLINE AGORA</small>
             <b>
-              {online} <em>de {operators.length}</em>
+              {demoMode ? online : "—"} <em>de {operators.length}</em>
             </b>
           </div>
         </article>
@@ -82,14 +97,14 @@ export default function LiveOperations({
           </span>
           <div>
             <small>TEMPO MÉDIO CONECTADO</small>
-            <b>{formatLiveDuration(averageSession)}</b>
+            <b>{demoMode ? formatLiveDuration(averageSession) : "—"}</b>
           </div>
         </article>
         <article>
           <span className="lv-pulse" />
           <div>
             <small>EM ATIVIDADE</small>
-            <b>{operators.filter(item => item.presence === "active").length}</b>
+            <b>{demoMode ? operators.filter(item => item.presence === "active").length : "—"}</b>
           </div>
         </article>
         <article data-alert={alerts > 0 || undefined}>
@@ -120,17 +135,19 @@ export default function LiveOperations({
                 ["away", "Ausentes"],
                 ["offline", "Offline"],
               ] as const
-            ).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                className={presence === value ? "is-active" : ""}
-                onClick={() => setPresence(value)}
-              >
-                {label}
-                {value !== "all" && <b>{operators.filter(item => item.presence === value).length}</b>}
-              </button>
-            ))}
+            )
+              .filter(([value]) => demoMode || value === "all")
+              .map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={presence === value ? "is-active" : ""}
+                  onClick={() => setPresence(value)}
+                >
+                  {label}
+                  {value !== "all" && <b>{operators.filter(item => item.presence === value).length}</b>}
+                </button>
+              ))}
           </div>
         </div>
 
@@ -139,7 +156,7 @@ export default function LiveOperations({
             <thead>
               <tr>
                 <th>Pessoa</th>
-                <th>Atividade agora</th>
+                <th>{demoMode ? "Atividade agora" : "Próxima ação da operação"}</th>
                 <th>Contexto</th>
                 <th>Sessão</th>
                 <th>Progresso</th>
@@ -169,7 +186,8 @@ export default function LiveOperations({
                   <td>
                     <b>{operator.task}</b>
                     <small>
-                      {operator.screen} · há {operator.activityMinutes || 0} min
+                      {operator.screen}
+                      {demoMode ? ` · há ${operator.activityMinutes || 0} min` : ""}
                     </small>
                     {operator.alert && <em className="lv-alert">{operator.alert}</em>}
                   </td>
@@ -178,7 +196,9 @@ export default function LiveOperations({
                     <small>{operator.result}</small>
                   </td>
                   <td>
-                    <b>{operator.presence === "offline" ? "—" : formatLiveDuration(operator.sessionMinutes)}</b>
+                    <b>
+                      {!demoMode || operator.presence === "offline" ? "—" : formatLiveDuration(operator.sessionMinutes)}
+                    </b>
                     <small>{operator.user.department}</small>
                   </td>
                   <td>
@@ -213,8 +233,8 @@ export default function LiveOperations({
         </div>
       </section>
       <p className="lv-privacy">
-        A Operação ao Vivo registra eventos de trabalho do STRATO. Ela não captura a tela, mensagens pessoais ou
-        conteúdo digitado.
+        São exibidos responsáveis e dados das operações permitidas ao seu perfil. Não há captura de tela ou conteúdo
+        pessoal.
       </p>
       {selected && (
         <OperatorDrawer
@@ -236,20 +256,24 @@ function OperatorDrawer({
   onClose: () => void;
   onOpenOperation: (operation: Operation) => void;
 }) {
-  const events = [
-    { time: "Agora", title: operator.task, detail: `${operator.screen} · ${operator.context}`, current: true },
-    { time: "Há 18 min", title: "Resultado registrado", detail: operator.result },
-    {
-      time: "Há 42 min",
-      title: "Tarefa anterior concluída",
-      detail: operator.operation ? `Operação ${operator.operation.proposal} atualizada` : "Fila operacional revisada",
-    },
-    {
-      time: formatLiveDuration(operator.sessionMinutes),
-      title: "Sessão iniciada",
-      detail: "Acesso autenticado no STRATO",
-    },
-  ];
+  const events = operator.simulated
+    ? [
+        { time: "Agora", title: operator.task, detail: `${operator.screen} · ${operator.context}`, current: true },
+        { time: "Há 18 min", title: "Resultado registrado", detail: operator.result },
+        {
+          time: "Há 42 min",
+          title: "Tarefa anterior concluída",
+          detail: operator.operation
+            ? `Operação ${operator.operation.proposal} atualizada`
+            : "Fila operacional revisada",
+        },
+        {
+          time: formatLiveDuration(operator.sessionMinutes),
+          title: "Sessão iniciada",
+          detail: "Acesso autenticado no STRATO",
+        },
+      ]
+    : [];
   return (
     <div
       className="lv-drawer-layer"
@@ -278,7 +302,7 @@ function OperatorDrawer({
         </header>
         <section className="lv-now">
           <span className="lv-eyebrow">
-            <i /> ATIVIDADE ATUAL
+            <i /> {operator.simulated ? "ATIVIDADE ATUAL SIMULADA" : "CONTEXTO DA OPERAÇÃO"}
           </span>
           <h3>{operator.task}</h3>
           <p>{operator.screen}</p>
@@ -293,7 +317,7 @@ function OperatorDrawer({
             </div>
             <div>
               <dt>Tempo nesta atividade</dt>
-              <dd>{operator.activityMinutes} min</dd>
+              <dd>{operator.simulated ? `${operator.activityMinutes} min` : "Não monitorado"}</dd>
             </div>
           </dl>
           {operator.operation && (
@@ -304,8 +328,12 @@ function OperatorDrawer({
         </section>
         <section className="lv-history">
           <div>
-            <h3>Histórico da sessão</h3>
-            <span>{formatLiveDuration(operator.sessionMinutes)} de conexão</span>
+            <h3>{operator.simulated ? "Histórico de sessão simulado" : "Histórico de presença"}</h3>
+            <span>
+              {operator.simulated
+                ? `${formatLiveDuration(operator.sessionMinutes)} de conexão`
+                : "Telemetria não disponível"}
+            </span>
           </div>
           <ol>
             {events.map(event => (

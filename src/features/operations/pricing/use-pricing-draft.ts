@@ -5,6 +5,7 @@
  * recompra, compensações, política) e todas as ações que alteram o rascunho
  * ou salvam a condição na operação.
  */
+import { isDemoOperation } from "@/src/domain/core/demo/operations";
 import { type Operation } from "@/src/domain/core/types";
 import {
   baseRateForTargetFinal,
@@ -43,6 +44,7 @@ function toggleId(ids: string[] | undefined, id: string) {
 }
 
 export function usePricingDraft(operation: Operation, onChange: (operation: Operation) => void) {
+  const demo = isDemoOperation(operation);
   const [pricing, setPricing] = useState<PricingDraft>(normalizedPricing(operation));
   const [feedback, setFeedback] = useState("");
   const [feeDescription, setFeeDescription] = useState("");
@@ -137,6 +139,7 @@ export function usePricingDraft(operation: Operation, onChange: (operation: Oper
   }
 
   function setRepurchaseSelection(ids: string[]) {
+    if (pricing.locked) return;
     setPricing(current => asSimulation(current, { repurchaseTitleIds: ids }));
     setFeedback("");
   }
@@ -146,14 +149,18 @@ export function usePricingDraft(operation: Operation, onChange: (operation: Oper
   }
 
   function toggleSettlementAdjustment(id: string) {
+    if (!demo || pricing.locked) return;
     const settlementAdjustmentIds = toggleId(pricing.settlementAdjustmentIds, id);
     setPricing(value => asSimulation(value, { settlementAdjustmentIds }));
     setFeedback("");
   }
 
   function updateRepurchaseTerms(id: string, changes: Partial<RepurchaseTerms>) {
+    if (pricing.locked) return;
     setPricing(current => {
-      const existing = current.repurchaseTerms?.[id] ?? DEFAULT_REPURCHASE_TERMS;
+      const existing =
+        current.repurchaseTerms?.[id] ??
+        (demo ? DEFAULT_REPURCHASE_TERMS : { lateInterestMonthly: 0, penaltyPercent: 0, action: "Recompra" as const });
       return asSimulation(current, {
         repurchaseTerms: { ...(current.repurchaseTerms ?? {}), [id]: { ...existing, ...changes } },
       });
@@ -174,12 +181,37 @@ export function usePricingDraft(operation: Operation, onChange: (operation: Oper
 
   /** "Limpar recompra": remove títulos e compensações selecionados. */
   function clearOffsets() {
+    if (pricing.locked) return;
     setRepurchaseSelection([]);
     setPricing(current => ({ ...current, settlementAdjustmentIds: [], status: "Simulação" }));
   }
 
   /** Mensagem de bloqueio do salvamento, ou `undefined` quando a condição pode ser salva. */
   function saveBlocker() {
+    if (pricing.locked) return "Esta condição está protegida. Use Editar condição antes de salvar uma revisão.";
+    if (!demo) {
+      if (pricing.settlementAdjustmentIds?.length)
+        return "Compensações e créditos reais indisponíveis; remova a seleção legada antes de salvar.";
+      const selectedIds = pricing.repurchaseTitleIds ?? [];
+      if (
+        selectedIds.length &&
+        (!operation.repurchaseContext || selectedIds.some(id => !repurchase.rows.some(row => row.id === id)))
+      )
+        return "Atualize a operação: há seleções de recompra sem saldo autoritativo disponível.";
+      if (repurchase.selected.some(row => typeof row.terms.writeOffTitle !== "boolean"))
+        return "Escolha Baixar título SIM ou NÃO para cada título selecionado em recompra.";
+      if (
+        repurchase.selected.some(
+          row =>
+            row.terms.action !== "Recompra" ||
+            row.terms.lateInterestMonthly !== 0 ||
+            row.terms.penaltyPercent !== 0 ||
+            (row.terms.rateOverride ?? 0) !== 0 ||
+            (row.terms.partialAmount ?? 0) !== 0,
+        )
+      )
+        return "Recompra real admite somente o principal aberto integral, sem juros, multa ou tratamentos legados. Limpe a seleção e revise os termos.";
+    }
     if (!calculated.sourceTitleCount)
       return "A precificação está bloqueada: nenhum título foi recebido da etapa de entrada.";
     if (!calculated.hasDecisions)
@@ -223,6 +255,9 @@ export function usePricingDraft(operation: Operation, onChange: (operation: Oper
     };
     const saved = {
       ...pricing,
+      ...(!demo
+        ? { repurchaseSourceBalances: Object.fromEntries(repurchase.selected.map(row => [row.id, row.faceAmount])) }
+        : {}),
       status: "Condição salva" as const,
       savedAt,
       savedBy: "Henrique",

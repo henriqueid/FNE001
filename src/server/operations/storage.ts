@@ -5,6 +5,9 @@ import { jsonParameter } from "@/src/server/database/postgres";
 import type { DecisionDatabase } from "@/src/server/decisions/repository";
 import { hydrateOperationsFromReceivables } from "@/src/server/receivables/repository";
 
+import { loadCurrentPortfolio } from "@/src/server/portfolio/repository";
+import { bindRepurchaseSources } from "./repurchase";
+
 type OperationRow = { payload: Operation; aggregate_version: number };
 
 const materialEvent = `case
@@ -25,7 +28,9 @@ export async function loadOperations(db: DecisionDatabase, tenantId: string): Pr
     .bind(tenantId)
     .all<OperationRow>();
   const operations = result.results.map(row => ({ ...row.payload, persistenceVersion: row.aggregate_version }));
-  return hydrateOperationsFromReceivables(db, tenantId, operations);
+  const hydrated = await hydrateOperationsFromReceivables(db, tenantId, operations);
+  const portfolio = await loadCurrentPortfolio(db, tenantId);
+  return hydrated.map(operation => bindRepurchaseSourcesForRead(operation, portfolio));
 }
 
 export async function loadOperationSnapshot(db: DecisionDatabase, tenantId: string, operationId: string) {
@@ -37,7 +42,7 @@ export async function loadOperationSnapshot(db: DecisionDatabase, tenantId: stri
   const [operation] = await hydrateOperationsFromReceivables(db, tenantId, [
     { ...row.payload, persistenceVersion: row.aggregate_version },
   ]);
-  return operation;
+  return bindRepurchaseSourcesForRead(operation, await loadCurrentPortfolio(db, tenantId));
 }
 
 export async function saveOperationRecord(
@@ -123,4 +128,12 @@ export async function saveOperationRecord(
     )
     .first<OperationRow>();
   return row ? { ...row.payload, persistenceVersion: row.aggregate_version } : null;
+}
+
+function bindRepurchaseSourcesForRead(
+  operation: Operation,
+  portfolio: Awaited<ReturnType<typeof loadCurrentPortfolio>>,
+) {
+  const source = bindRepurchaseSources({ ...operation, pricingReview: undefined }, portfolio);
+  return { ...operation, repurchaseContext: source.repurchaseContext };
 }

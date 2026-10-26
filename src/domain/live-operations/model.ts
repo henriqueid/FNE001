@@ -2,7 +2,7 @@ import { type AccessUser } from "@/src/domain/access/model";
 import { stages } from "@/src/domain/core/stages";
 import { type Operation } from "@/src/domain/core/types";
 
-export type LivePresence = "active" | "away" | "offline";
+export type LivePresence = "active" | "away" | "offline" | "unknown";
 
 export type LiveOperator = {
   user: AccessUser;
@@ -16,6 +16,7 @@ export type LiveOperator = {
   progress: number;
   alert?: string;
   operation?: Operation;
+  simulated?: boolean;
 };
 
 const seededNumber = (value: string) => [...value].reduce((total, character) => total + character.charCodeAt(0), 0);
@@ -31,7 +32,12 @@ export function supervisedUsers(users: AccessUser[], viewer: AccessUser) {
 }
 
 /** Monta a projeção da sala operacional sem expor conteúdo digitado ou a tela física do usuário. */
-export function buildLiveOperators(users: AccessUser[], viewer: AccessUser, operations: Operation[]): LiveOperator[] {
+export function buildLiveOperators(
+  users: AccessUser[],
+  viewer: AccessUser,
+  operations: Operation[],
+  demoMode = false,
+): LiveOperator[] {
   const supervised = supervisedUsers(users, viewer);
   const usersWithOperationalEvidence = supervised.filter(user =>
     operations.some(operation => operation.owner === user.name),
@@ -42,8 +48,9 @@ export function buildLiveOperators(users: AccessUser[], viewer: AccessUser, oper
     const owned = operations.filter(operation => operation.owner === user.name);
     const operation =
       owned.find(item => item.status !== "Cancelada" && item.status !== "Liberada ao financeiro") ?? owned[0];
-    const presence: LivePresence =
-      index === usersWithOperationalEvidence.length - 1 && usersWithOperationalEvidence.length > 4
+    const presence: LivePresence = !demoMode
+      ? "unknown"
+      : index === usersWithOperationalEvidence.length - 1 && usersWithOperationalEvidence.length > 4
         ? "offline"
         : seed % 5 === 0
           ? "away"
@@ -71,13 +78,20 @@ export function buildLiveOperators(users: AccessUser[], viewer: AccessUser, oper
                   task: operation?.nextAction ?? "Organizando fila",
                   context: operation?.cedent ?? "Fila operacional",
                 };
-    const activityMinutes = presence === "offline" ? 0 : presence === "away" ? 16 + (seed % 14) : 2 + (seed % 11);
+    const activityMinutes =
+      !demoMode || presence === "offline" ? 0 : presence === "away" ? 16 + (seed % 14) : 2 + (seed % 11);
     return {
       user,
       presence,
-      sessionMinutes: presence === "offline" ? 0 : 72 + (seed % 341),
+      sessionMinutes: !demoMode || presence === "offline" ? 0 : 72 + (seed % 341),
       activityMinutes,
-      ...roleActivity,
+      ...(demoMode
+        ? roleActivity
+        : {
+            screen: operation ? `Operações · ${stage}` : "Sem operação vinculada",
+            task: operation?.nextAction ?? "Sem próxima ação registrada",
+            context: operation?.cedent ?? "Sem operação vinculada",
+          }),
       result: operation
         ? `${operation.titleCount} títulos · ${operation.status}`
         : index % 2
@@ -91,6 +105,7 @@ export function buildLiveOperators(users: AccessUser[], viewer: AccessUser, oper
             ? `${operation.blockers} bloqueio${operation.blockers > 1 ? "s" : ""} na tarefa`
             : undefined,
       operation,
+      simulated: demoMode,
     };
   });
 }

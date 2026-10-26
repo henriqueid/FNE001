@@ -17,6 +17,7 @@ import { formatBrazilianDate } from "@/src/domain/operations/format";
 import { lastroAssessmentFor } from "@/src/domain/operations/lastro";
 import { useEffect, useRef, useState } from "react";
 import { uploadOperationDocument, type UploadedDocument } from "@/src/app/documents-client";
+import { returnApprovalToRisk } from "./return-to-risk-client";
 import { ApprovalAuthorities } from "./approval-authorities";
 import { ApprovalDocuments } from "./approval-documents";
 import { ApprovalDecisionSummary } from "./approval-decision-summary";
@@ -56,6 +57,8 @@ export function ApprovalPanel({
   const isDemo = useStratoAuth()?.mode === "demo";
   const [serverSlots, setServerSlots] = useState<ApprovalSlot[]>([]);
   const [decisionBusy, setDecisionBusy] = useState(false);
+  const [returnBusy, setReturnBusy] = useState(false);
+  const returnBusyRef = useRef(false);
   const currentOperationId = useRef(operation.id);
   useEffect(() => {
     currentOperationId.current = operation.id;
@@ -228,12 +231,31 @@ export function ApprovalPanel({
     setFeedback("Operação aprovada. O pacote está pronto para envio às assinaturas.");
   }
 
-  function returnToRisk() {
+  async function returnToRisk() {
+    if (returnBusyRef.current || decisionBusy || attachmentBusy) return;
     if (observation.trim().length < 8) {
       setFeedback("Registre uma justificativa com pelo menos oito caracteres antes de devolver a operação.");
       return;
     }
-    onChange(withOperationReturnedToRisk(operation, review, observation));
+    if (isDemo) {
+      onChange(withOperationReturnedToRisk(operation, review, observation));
+      return;
+    }
+    returnBusyRef.current = true;
+    setReturnBusy(true);
+    try {
+      const saved = await returnApprovalToRisk(operation.id, operation.persistenceVersion ?? 0, observation.trim());
+      if (currentOperationId.current !== saved.id) return;
+      onChange(saved);
+      setFeedback(
+        "Devolução ao Risco confirmada pelo servidor. Alçadas, documentos e assinaturas precisarão ser refeitos.",
+      );
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Não foi possível devolver a operação ao Risco.");
+    } finally {
+      returnBusyRef.current = false;
+      setReturnBusy(false);
+    }
   }
 
   function rejectOperation() {
@@ -428,6 +450,7 @@ export function ApprovalPanel({
     <section className="approval-workbench">
       <ApprovalDecisionSummary operation={operation} figures={figures} />
       <ApprovalFooter
+        busy={returnBusy || decisionBusy || attachmentBusy}
         status={review.status}
         prerequisitesReady={prerequisitesReady}
         observation={observation}

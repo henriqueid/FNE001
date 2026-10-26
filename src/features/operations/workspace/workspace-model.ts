@@ -15,7 +15,8 @@ import {
   settlementAdjustmentCalculation,
 } from "@/src/domain/operations/pricing";
 import { operationNeedsCedent } from "@/src/domain/operations/queries";
-import { stageInsightFor } from "@/src/domain/operations/stage-insight";
+import { buildReadinessChecklist } from "@/src/domain/operations/approval-readiness";
+import { type stageInsightFor } from "@/src/domain/operations/stage-insight";
 import { operationalParametersFor, riskFromScore } from "@/src/domain/eligibility/operational-parameters";
 
 export type WorkspaceFeedback = { tone: "success" | "warning"; message: string };
@@ -103,7 +104,6 @@ export function stageAdvanceBlocker(
       };
     }
   }
-  const currentAssessment = stageInsightFor(operation, operation.stage, automation);
   if (operation.stage === 2 && operation.eligibilityReview) {
     const route = eligibilityRouteFor(operation);
     if (!route.canAdvance) {
@@ -160,6 +160,11 @@ export function stageAdvanceBlocker(
     };
   }
   if (operation.stage === 5) {
+    const pending = buildReadinessChecklist(operation, lastroAssessmentFor(operation, debtors), automation).filter(
+      item => !item.ok,
+    );
+    if (pending.length)
+      return { feedback: { tone: "warning", message: pending.map(item => `${item.label}: ${item.detail}`).join(" ") } };
     const review = operation.approvalReview;
     const allApprovals =
       Boolean(review?.approvals?.length) && review!.approvals!.every(item => item.status === "Aprovado");
@@ -178,9 +183,6 @@ export function stageAdvanceBlocker(
         },
       };
     }
-  }
-  if (operation.source === "Digitação manual" && operation.stage === 5 && currentAssessment.tone === "warning") {
-    return { feedback: { tone: "warning", message: currentAssessment.result } };
   }
   return null;
 }
@@ -260,7 +262,7 @@ export function summaryFinancialsFor(operation: Operation, cedents: Cedent[]) {
   const adjustments = settlementAdjustmentCalculation(operation, pricing);
   const offsets = roundPricing(repurchase.total + adjustments.total);
   const face = calculation.face || operation.amount;
-  const net = operation.pricingReview ? roundPricing(calculation.net - offsets) : operation.netAmount;
+  const net = roundPricing(calculation.net - offsets);
   const cedent = cedents.find(item => item.document.replace(/\D/g, "") === operation.document.replace(/\D/g, ""));
   const availableLimit = cedent ? Math.max(0, cedent.creditLimit - cedent.usedLimit) : 0;
   const limitAfterOperation = Math.max(0, availableLimit - face);

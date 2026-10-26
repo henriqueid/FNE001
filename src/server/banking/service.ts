@@ -4,10 +4,11 @@ import {
   parseCnab400Return,
   type Cnab400Account,
   type Cnab400Title,
+  type Cnab400Writeoff,
 } from "@/src/domain/banking/cnab400";
 import { resolveCollectionCharges } from "@/src/domain/banking/charges";
 import type { CompanyBankAccount, FinanceState } from "@/src/domain/finance/model";
-import { portfolioBalance, type PortfolioState } from "@/src/domain/portfolio/model";
+import { portfolioBalance, type PortfolioState, type PortfolioTitleRecord } from "@/src/domain/portfolio/model";
 import { settleReceivable } from "@/src/domain/portfolio/settlement";
 import { onlyDigits, type Party } from "@/src/domain/registry/parties";
 import type { ServerPrincipal } from "@/src/server/access/repository";
@@ -33,6 +34,7 @@ export type BankingResult = {
   message: string;
 };
 type Binding = {
+  instruction?: "writeoff";
   titleId: string;
   controlId: string;
   ourNumber: string;
@@ -134,6 +136,77 @@ async function persist(
   )
     fail("A carteira mudou durante o comando; atualize e repita.");
 }
+export async function validateRepurchaseBankWriteoff(
+  db: DecisionDatabase,
+  tenantId: string,
+  finance: FinanceState | null,
+  title: PortfolioTitleRecord,
+): Promise<string | null> {
+  if (title.bankStatus === "Sem boleto" || title.bankStatus === "Baixado") return null;
+  if (title.bankStatus !== "Registrado" || !title.ourNumber)
+    return "Confirme o registro bancário antes de recomprar com baixa.";
+  const candidates =
+    finance?.accounts.filter(
+      account =>
+        !!account.collection &&
+        account.company === title.company &&
+        account.bankCode === title.bank &&
+        account.agency === title.agency &&
+        account.account === title.account &&
+        account.collection?.wallet === title.wallet &&
+        (account.collection?.agreement ?? "") === (title.agreement ?? ""),
+    ) ?? [];
+  if (candidates.length !== 1) return "A baixa exige uma conta de cobrança única correspondente ao registro vigente.";
+  const account = candidates[0],
+    c = account.collection!;
+  if (!account.active || !account.usage.collection || c.layout !== "CNAB 400")
+    return "Configure conta ativa de cobrança CNAB400 antes de recomprar com baixa.";
+  const bankAssigned = account.bankCode === "341" && c.wallet === "112";
+  if (!bankAssigned && (!Number.isSafeInteger(c.nextOurNumber) || c.nextOurNumber <= 0))
+    return "Corrija o próximo nosso número da conta antes de recomprar com baixa.";
+  if (c.sendPayerEmail && account.bankCode !== "341")
+    return "Envio de e-mail do pagador está implementado somente para o Itaú.";
+  const history = await bankAccountEvents<RemittanceEvent>(db, tenantId, "BankRemittance", account.id);
+  const original = history
+    .slice()
+    .sort((left, right) => right.sequence - left.sequence)
+    .flatMap(item => item.bindings)
+    .find(binding => binding.titleId === title.id && binding.instruction !== "writeoff");
+  if (
+    !original ||
+    original.documentNumber !== title.documentNumber ||
+    (!(account.bankCode === "341" && c.wallet === "112") && original.ourNumber !== title.ourNumber)
+  )
+    return "A baixa exige remessa de registro original rastreável nesta conta; origem remessa inexistente ou divergente.";
+  if (
+    !Number.isSafeInteger(c.nextRemittanceSequence) ||
+    Number(c.nextRemittanceSequence) <= 0 ||
+    history.some(
+      item => item.sequence >= c.nextRemittanceSequence! || (!bankAssigned && item.nextOurNumber > c.nextOurNumber),
+    )
+  )
+    return "Corrija o próximo sequencial de remessa antes de recomprar com baixa.";
+  try {
+    generateCnab400Remittance({
+      account: cnabAccount(account),
+      generatedOn: new Date().toISOString().slice(0, 10),
+      remittanceSequence: c.nextRemittanceSequence!,
+      titles: [
+        {
+          instruction: "writeoff",
+          controlId: original.controlId,
+          ourNumber: title.ourNumber,
+          documentNumber: original.documentNumber,
+          amountCents: original.amountCents,
+        },
+      ],
+    });
+  } catch (error) {
+    return error instanceof Error ? error.message : "Configuração bancária inválida para baixa.";
+  }
+  return null;
+}
+
 async function remittance(
   db: DecisionDatabase,
   principal: ServerPrincipal,
@@ -167,17 +240,85 @@ async function remittance(
     fail("A numeração configurada já foi reservada; restaure o próximo sequencial do histórico bancário.");
   const state = structuredClone(portfolio),
     bindings: Binding[] = [],
-    titles: Cnab400Title[] = [];
+    titles: (Cnab400Title | Cnab400Writeoff)[] = [];
   let next = c.nextOurNumber;
   let itemIndex = 0;
   const generatedOn = new Date().toISOString().slice(0, 10);
-  for (const id of [...command.titleIds].sort()) {
+  const pendingWriteoffs = state.titles.filter(
+    title =>
+      title.bankWriteoff?.status === "Pendente" &&
+      title.company === account.company &&
+      title.bank === account.bankCode &&
+      title.agency === account.agency &&
+      title.account === account.account &&
+      title.wallet === c.wallet &&
+      (title.agreement ?? "") === (c.agreement ?? ""),
+  );
+  const ids = [...new Set([...command.titleIds, ...pendingWriteoffs.map(title => title.id)])].sort();
+  if (ids.length > 1000) fail("A remessa, incluindo baixas pendentes, excede mil títulos.");
+  for (const id of ids) {
     const title = state.titles.find(t => t.id === id);
     if (!title || title.company !== account.company || !principalHasCompanyScope(principal, title.company))
       fail("Título fora do escopo da conta selecionada.", 403);
     if (title.positionReviewRequired)
       fail(`A posição do título exige revisão antes de gerar remessa: ${title.positionReviewRequired}`);
-    if (title.bankStatus !== "Sem boleto" || title.ourNumber || portfolioBalance(title) <= 0)
+    if (title.bankWriteoff) {
+      if (title.bankWriteoff.status !== "Pendente")
+        fail("Baixa já incluída em remessa; recupere o arquivo gravado ou importe o retorno.");
+      if (
+        title.status !== "Recomprado" ||
+        portfolioBalance(title) !== 0 ||
+        title.bankStatus !== "Registrado" ||
+        !title.ourNumber
+      )
+        fail("Baixa de recompra exige título encerrado no sistema e registro bancário vigente, sem liquidação.");
+      if (
+        title.bank !== account.bankCode ||
+        title.agency !== account.agency ||
+        title.account !== account.account ||
+        title.wallet !== c.wallet ||
+        (title.agreement ?? "") !== (c.agreement ?? "")
+      )
+        fail("A conta selecionada diverge do registro bancário do título a baixar.");
+      const originals = history
+        .flatMap(h => h.bindings)
+        .filter(b => b.titleId === title.id && b.instruction !== "writeoff");
+      const original = originals.at(-1);
+      if (
+        !original ||
+        (!bankAssigned && original.ourNumber !== title.ourNumber) ||
+        original.documentNumber !== title.documentNumber
+      )
+        fail("A baixa exige remessa de registro original rastreável nesta conta.");
+      titles.push({
+        instruction: "writeoff",
+        controlId: original.controlId,
+        ourNumber: title.ourNumber,
+        documentNumber: original.documentNumber,
+        amountCents: original.amountCents,
+      });
+      bindings.push({ ...original, ourNumber: title.ourNumber, instruction: "writeoff" });
+      title.bankWriteoff = {
+        ...title.bankWriteoff,
+        status: "Remessa gerada",
+        remittanceCommandId: command.commandId,
+        rejectionReason: undefined,
+      };
+      title.events.push({
+        id: `bank-writeoff-remittance:${command.commandId}:${title.id}`,
+        at: new Date().toISOString(),
+        by: principal.name,
+        action: "Remessa de baixa gerada",
+        detail: `Ocorrência02 · nosso número ${title.ourNumber} · sequência ${c.nextRemittanceSequence}. Aguardando envio e retorno bancário.`,
+      });
+      continue;
+    }
+    if (
+      title.bankStatus !== "Sem boleto" ||
+      title.ourNumber ||
+      portfolioBalance(title) <= 0 ||
+      ["Pago", "Recomprado", "Cancelado"].includes(title.status)
+    )
       fail(`Título ${title.documentNumber} já possui vínculo bancário ou não tem saldo para registrar.`);
     if (!title.issueDate) fail(`Informe a data de emissão real do título ${title.documentNumber}.`);
     const payerParty = await findRegistryPartyByDocument(db, principal.tenantId, title.debtorDocument);
@@ -299,6 +440,7 @@ async function bankReturn(
       .flatMap(h => h.bindings)
       .filter(
         b =>
+          b.instruction !== "writeoff" &&
           (bankAssigned ? /^0+$/.test(b.ourNumber) : b.ourNumber === event.ourNumber) &&
           b.controlId === event.controlId &&
           b.documentNumber === event.documentNumber,
@@ -324,6 +466,7 @@ async function bankReturn(
         .slice()
         .sort((left, right) => right.sequence - left.sequence)
         .flatMap(remittance => remittance.bindings)
+        .filter(binding => binding.instruction !== "writeoff")
         .find(candidate => candidate.titleId === title.id);
       if (newest?.controlId !== event.controlId)
         fail("O retorno se refere a uma remessa anterior deste título; confira a remessa vigente.");
@@ -381,6 +524,10 @@ async function bankReturn(
         "Retorno contém tarifa, IOF, abatimento ou outros componentes que exigem conciliação/lançamentos auxiliares configurados. Nenhum valor foi descartado; importação bloqueada para conferência.",
       );
     if (event.kind === "settlement") {
+      if (title.bankWriteoff || title.status === "Recomprado")
+        fail(
+          "Liquidação recebida após recompra com baixa: concilie o crédito e a recompra antes de importar. Nenhum caixa foi movimentado.",
+        );
       if (
         event.amountCents !== binding.amountCents ||
         Math.round(portfolioBalance(title) * 100) !== event.amountCents ||
@@ -407,7 +554,7 @@ async function bankReturn(
       nextPortfolio = settled.portfolio;
     } else {
       const repeatedConfirmation =
-        bankAssigned &&
+        (bankAssigned || title.bankWriteoff?.status === "Confirmada") &&
         event.kind === "entry" &&
         (title.status === "Pago" ||
           title.status === "Cancelado" ||
@@ -415,7 +562,28 @@ async function bankReturn(
           title.bankStatus === "Baixado");
       if (!repeatedConfirmation && (title.status === "Pago" || title.bankStatus === "Liquidado"))
         fail("Ocorrência cadastral não pode desfazer título já liquidado.");
-      if (!repeatedConfirmation)
+      const writeoffRejection =
+        event.kind === "rejection" &&
+        (account.bankCode === "341" ? ["15", "16"] : ["27", "32"]).includes(event.bankOccurrence);
+      if (writeoffRejection) {
+        if (!title.bankWriteoff || title.bankWriteoff.status !== "Remessa gerada")
+          fail("Rejeição de baixa sem pedido vigente; confira a instrução bancária.");
+        title.bankWriteoff = {
+          ...title.bankWriteoff,
+          status: "Pendente",
+          rejectionReason: `Ocorrência ${event.bankOccurrence}: ${event.rejectionCodes.join(", ") || "motivo não informado pelo banco"}`,
+        };
+      } else if (event.kind === "rejection" && title.bankWriteoff) {
+        fail("Rejeição de entrada incompatível com pedido de baixa vigente; confira o retorno.");
+      } else if (event.kind === "writeoff" && title.bankWriteoff) {
+        title.bankWriteoff = {
+          ...title.bankWriteoff,
+          status: "Confirmada",
+          confirmedAt: event.occurredOn,
+          rejectionReason: undefined,
+        };
+      }
+      if (!repeatedConfirmation && !writeoffRejection)
         title.bankStatus = event.kind === "entry" ? "Registrado" : event.kind === "writeoff" ? "Baixado" : "Sem boleto";
       title.events.push({
         id: `bank-return:${eventHash}`,

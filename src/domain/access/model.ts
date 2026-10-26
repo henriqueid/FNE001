@@ -38,6 +38,10 @@ export type AccessState = {
   users: AccessUser[];
 };
 
+export function emptyAccessState(): AccessState {
+  return { version: 2, authenticatedUserId: "", users: [] };
+}
+
 export type AccessView =
   | "home"
   | "operations"
@@ -193,7 +197,22 @@ export function activeUser(state: AccessState): AccessUser {
 }
 
 export function authenticatedUser(state: AccessState): AccessUser {
-  return state.users.find(user => user.id === state.authenticatedUserId && user.status === "active") ?? state.users[0];
+  return (
+    state.users.find(user => user.id === state.authenticatedUserId) ?? {
+      id: state.authenticatedUserId,
+      name: "Sessão indisponível",
+      role: "Sem acesso",
+      department: "Operações",
+      access: "operator",
+      status: "suspended",
+      email: "",
+      tenantIds: [],
+      responsibilities: [],
+      companyScopes: [],
+      permissions: [],
+      authorityIds: [],
+    }
+  );
 }
 
 export function can(user: AccessUser, permission: Permission) {
@@ -216,7 +235,7 @@ const viewPermissions: Record<AccessView, Permission[]> = {
   registry: ["registry:view", "registry:edit"],
   policies: ["settings:manage"],
   integrations: ["settings:manage"],
-  settings: ["settings:manage"],
+  settings: ["settings:manage", "users:manage"],
 };
 
 export function canAccessView(user: AccessUser, view: AccessView) {

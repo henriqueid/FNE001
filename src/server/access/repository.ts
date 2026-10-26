@@ -6,7 +6,7 @@ import {
   type AccessUser,
   type Permission,
 } from "@/src/domain/access/model";
-import { normalizeCpf, normalizeLoginName } from "@/src/domain/access/identity";
+import { isValidCpf, normalizeCpf, normalizeLoginName } from "@/src/domain/access/identity";
 import { userFunctionalAreas, type UserDepartment } from "@/src/domain/copilot/daily-briefing";
 import { type DecisionDatabase } from "@/src/server/decisions/repository";
 import { verifyPassword } from "./password";
@@ -133,7 +133,7 @@ export async function authenticateCredentials(
 ) {
   await seedAccessDirectory(db);
   const normalizedIdentifier = identifier.trim().toLowerCase();
-  const normalizedCpf = normalizeCpf(identifier);
+  const normalizedCpf = /^[\d.\-\s]+$/.test(identifier) && isValidCpf(identifier) ? normalizeCpf(identifier) : null;
   const credential = await db
     .prepare(
       `SELECT c.user_id, c.password_hash, c.status AS credential_status,
@@ -287,7 +287,7 @@ export async function createManagedAccessUser(
       `SELECT user_id FROM private.access_users
        WHERE lower(COALESCE(email, '')) = ? OR lower(COALESCE(login_name, '')) = ? OR cpf = ?`,
     )
-    .bind(normalizedEmail ?? "", normalizedLoginName, normalizedCpf)
+    .bind(normalizedEmail, normalizedLoginName, normalizedCpf)
     .first<{ user_id: string }>();
   if (existing) throw new AccessIdentityConflictError("E-mail, login personalizado ou CPF já está em uso.");
 
@@ -500,6 +500,11 @@ export async function applyAccessUserProfile(
       now,
     )
     .run();
+  if (user.status !== "active")
+    await db
+      .prepare("UPDATE private.app_sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL")
+      .bind(now, user.id)
+      .run();
   await db
     .prepare("UPDATE private.access_credentials SET status = ?, updated_at = ? WHERE user_id = ?")
     .bind(user.status === "active" ? "active" : user.status, now, user.id)

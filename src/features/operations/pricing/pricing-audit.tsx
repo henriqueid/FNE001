@@ -24,6 +24,7 @@ export function PricingTitleMemory({ calculated, feeAllocation, open, onToggle }
           <small>
             {calculated.titleRows.length} recebíveis · tarifas rateadas {feeAllocation.toLowerCase()}
             {calculated.vaEnabled ? " · incorporadas ao VA" : ""}
+            {" · líquido inclui IOF e retenção manual; fechamento em centavos"}
           </small>
         </span>
         <strong>{open ? "Recolher" : "Ver cálculo"}</strong>
@@ -38,7 +39,7 @@ export function PricingTitleMemory({ calculated, feeAllocation, open, onToggle }
             <span>FACE</span>
             <span>DESÁGIO</span>
             <span>TARIFAS</span>
-            <span>RETENÇÃO</span>
+            <span>RETENÇÕES / IOF</span>
             <span>LÍQUIDO</span>
           </div>
           {calculated.titleRows.map(row => (
@@ -50,7 +51,16 @@ export function PricingTitleMemory({ calculated, feeAllocation, open, onToggle }
               <span>{preciseMoney.format(row.title.amount)}</span>
               <span>{preciseMoney.format(row.displayedDiscount)}</span>
               <span>{calculated.vaEnabled ? "Inclusa no VA" : preciseMoney.format(row.displayedFees)}</span>
-              <span>{preciseMoney.format(row.allocatedGuarantee)}</span>
+              <span>
+                {preciseMoney.format(row.allocatedGuarantee + row.allocatedManualRetention + row.allocatedIof)}
+                <small>
+                  Garantia {preciseMoney.format(row.allocatedGuarantee)} · manual{" "}
+                  {preciseMoney.format(row.allocatedManualRetention)} · IOF {preciseMoney.format(row.allocatedIof)}
+                </small>
+                {row.netAdjustment !== 0 && (
+                  <small>Ajuste de fechamento {preciseMoney.format(row.netAdjustment)}</small>
+                )}
+              </span>
               <strong>{preciseMoney.format(row.net)}</strong>
             </div>
           ))}

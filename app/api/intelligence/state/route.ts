@@ -1,7 +1,11 @@
 import { emptyIntelligenceState, validateIntelligenceState } from "@/src/domain/intelligence/model";
 import { sessionPrincipal } from "@/src/server/access/session";
 import { getDatabase } from "@/src/server/database/postgres";
-import { loadIntelligenceState, saveIntelligenceState } from "@/src/server/intelligence/repository";
+import {
+  IntelligenceStateWriteError,
+  loadIntelligenceState,
+  saveIntelligenceState,
+} from "@/src/server/intelligence/repository";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
@@ -36,6 +40,12 @@ export async function PUT(request: Request) {
   const body = (await request.json().catch(() => null)) as { state?: unknown } | null;
   const validation = validateIntelligenceState(body?.state, access.tenantId);
   if (!validation.ok) return json({ error: validation.error }, 400);
-  const state = await saveIntelligenceState(access.db, access.tenantId, access.principal.id, validation.state);
-  return json({ state });
+  try {
+    const state = await saveIntelligenceState(access.db, access.tenantId, access.principal.id, validation.state);
+    return json({ state });
+  } catch (error) {
+    if (error instanceof IntelligenceStateWriteError) return json({ error: error.message }, error.status);
+    console.error("intelligence_state_save_failed");
+    return json({ error: "Não foi possível salvar a configuração de IA." }, 500);
+  }
 }

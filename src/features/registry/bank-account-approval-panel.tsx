@@ -19,14 +19,18 @@ export function BankAccountApprovalPanel({
   const [changes, setChanges] = useState<BankAccountChange[]>([]);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string>();
-  const [available, setAvailable] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
     try {
       setChanges(await loadBankAccountChanges());
-      setAvailable(true);
-    } catch {
-      setAvailable(false);
+    } catch (reason) {
+      setLoadError(reason instanceof Error ? reason.message : "Não foi possível carregar as alterações bancárias.");
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -35,9 +39,10 @@ export function BankAccountApprovalPanel({
     void refresh();
   }, [refresh]);
 
-  if (!available || !changes.length) return null;
+  if (!loading && !loadError && !changes.length) return null;
 
   const decide = async (change: BankAccountChange, decision: "APPROVED" | "REJECTED") => {
+    if (loading || loadError || busy) return;
     const reason = reasons[change.changeId]?.trim() ?? "";
     if (reason.length < 5) {
       onFeedback(false, "Informe o motivo da decisão com pelo menos 5 caracteres.");
@@ -68,7 +73,20 @@ export function BankAccountApprovalPanel({
           <p>Confira titularidade e destino. O solicitante não pode decidir a própria alteração.</p>
         </div>
         <b>{changes.length} pendente(s)</b>
+        <button type="button" disabled={loading || busy !== undefined} onClick={() => void refresh()}>
+          {loading ? "Atualizando…" : "Atualizar fila"}
+        </button>
       </header>
+      {loadError && (
+        <div role="alert">
+          <p>{loadError}</p>
+          {changes.length > 0 && <p>Exibindo a última fila carregada. Atualize antes de decidir.</p>}
+          <button type="button" disabled={loading || busy !== undefined} onClick={() => void refresh()}>
+            Tentar novamente
+          </button>
+        </div>
+      )}
+      {loading && <p role="status">Carregando alterações bancárias…</p>}
       <div className="rg-bank-approval-list">
         {changes.map(change => (
           <article key={change.changeId}>
@@ -105,12 +123,15 @@ export function BankAccountApprovalPanel({
                 onChange={event => setReasons(current => ({ ...current, [change.changeId]: event.target.value }))}
                 placeholder="Evidência ou motivo da decisão"
               />
-              <button disabled={busy === change.changeId} onClick={() => void decide(change, "REJECTED")}>
+              <button
+                disabled={loading || Boolean(loadError) || busy !== undefined}
+                onClick={() => void decide(change, "REJECTED")}
+              >
                 <AlertIcon /> Rejeitar
               </button>
               <button
                 className="primary"
-                disabled={busy === change.changeId}
+                disabled={loading || Boolean(loadError) || busy !== undefined}
                 onClick={() => void decide(change, "APPROVED")}
               >
                 <CheckIcon /> Aprovar

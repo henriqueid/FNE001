@@ -13,6 +13,17 @@ export function consumeOperationServerResult(operation: Operation) {
   return saved;
 }
 
+export function mergeOperationAcknowledgement(current: Operation, submitted: Operation, saved: Operation): Operation {
+  if (current.id !== saved.id || (current.persistenceVersion ?? 0) > (saved.persistenceVersion ?? 0)) return current;
+  if (current === submitted) return saved;
+  return {
+    ...current,
+    persistenceVersion: saved.persistenceVersion,
+    repurchaseContext: saved.repurchaseContext,
+    repurchaseApplications: saved.repurchaseApplications,
+  };
+}
+
 /** Mantém o lote e sua origem assistida; decisões são produzidas depois pelos fluxos autorizados. */
 export function newOperationAtEntry(operation: Operation): Operation {
   const entries = operation.manualEntry?.entries ?? [];
@@ -37,5 +48,7 @@ export function newOperationAtEntry(operation: Operation): Operation {
     approvalReview: undefined,
     releaseReview: undefined,
     cancellation: undefined,
+    repurchaseApplications: undefined,
+    repurchaseContext: undefined,
   };
 }

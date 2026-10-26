@@ -2,6 +2,7 @@
 
 import {
   authenticatedUser,
+  can,
   permissionsForAreas,
   startUserPreview,
   stopUserPreview,
@@ -97,6 +98,7 @@ export function UsersAccessPanel({
     pendingProposal?.subjectUserId === persistedSelected.id ? pendingProposal.proposed : persistedSelected;
   const active = state.users.find(user => user.id === state.previewUserId) ?? authenticatedUser(state);
   const actor = authenticatedUser(state);
+  const canManage = can(actor, "users:manage");
   const directAdmin = actor.status === "active" && actor.access === "admin";
   const managers = useMemo(
     () => state.users.filter(user => user.access !== "operator" && user.status === "active"),
@@ -105,7 +107,7 @@ export function UsersAccessPanel({
 
   const selectedPendingRequest = changeRequests.find(request => request.subjectUserId === persistedSelected.id);
   const persistProfile = async (proposed: AccessUser) => {
-    if (savingProfile) return;
+    if (!canManage || savingProfile) return;
     setSavingProfile(true);
     setApprovalFeedback(undefined);
     try {
@@ -123,7 +125,7 @@ export function UsersAccessPanel({
     }
   };
   const save = (patch: Partial<AccessUser>) => {
-    if (savingProfile) return;
+    if (!canManage || savingProfile) return;
     if (!demoMode && selectedPendingRequest && !directAdmin) {
       setApprovalFeedback({
         tone: "error",
@@ -158,7 +160,7 @@ export function UsersAccessPanel({
   };
 
   useEffect(() => {
-    if (demoMode) return;
+    if (demoMode || !canManage) return;
     let cancelled = false;
     loadAccessChangeRequests(getStratoTenantId())
       .then(requests => {
@@ -174,10 +176,10 @@ export function UsersAccessPanel({
     return () => {
       cancelled = true;
     };
-  }, [demoMode]);
+  }, [demoMode, canManage]);
 
   const submitCriticalChange = async () => {
-    if (!pendingProposal) return;
+    if (!canManage || !pendingProposal) return;
     setSubmittingChange("request");
     setApprovalFeedback(undefined);
     try {
@@ -208,6 +210,7 @@ export function UsersAccessPanel({
   };
 
   const decideCriticalChange = async (request: AccessChangeRequest, decision: "APPROVED" | "REJECTED") => {
+    if (!canManage || !directAdmin) return;
     setSubmittingChange(request.id);
     setApprovalFeedback(undefined);
     try {
@@ -235,6 +238,7 @@ export function UsersAccessPanel({
 
   const addUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!canManage || savingNewUser) return;
     setSavingNewUser(true);
     setCreateError("");
     try {
@@ -260,6 +264,8 @@ export function UsersAccessPanel({
           Dia e histórico de tarefas.
         </p>
       </header>
+
+      {!canManage && <p role="status">Somente consulta. Seu perfil não permite administrar usuários.</p>}
 
       <section className="access-summary" aria-label="Resumo dos acessos">
         <article>
@@ -375,9 +381,11 @@ export function UsersAccessPanel({
               <small>EQUIPE</small>
               <b>Usuários cadastrados</b>
             </div>
-            <button type="button" onClick={() => setCreating(true)}>
-              + Adicionar usuário
-            </button>
+            {canManage && (
+              <button type="button" onClick={() => setCreating(true)}>
+                + Adicionar usuário
+              </button>
+            )}
           </header>
           {state.users.map(user => (
             <button
@@ -401,7 +409,7 @@ export function UsersAccessPanel({
           ))}
         </aside>
 
-        <section className="access-editor">
+        <fieldset className="access-editor" disabled={!canManage}>
           <header>
             <div>
               <small>PERFIL SELECIONADO</small>
@@ -424,7 +432,7 @@ export function UsersAccessPanel({
                     ? "Aprovar e ativar acesso"
                     : "Solicitar ativação do acesso"}
               </button>
-            ) : (
+            ) : canManage ? (
               <button
                 type="button"
                 disabled={selected.status !== "active" || selected.id === active.id}
@@ -432,7 +440,7 @@ export function UsersAccessPanel({
               >
                 {selected.id === active.id ? "Visão atual" : "Testar visão deste usuário"}
               </button>
-            )}
+            ) : null}
           </header>
 
           {approvalFeedback && (
@@ -696,10 +704,10 @@ export function UsersAccessPanel({
               </label>
             </div>
           </section>
-        </section>
+        </fieldset>
       </div>
 
-      {creating && (
+      {canManage && creating && (
         <div className="access-create-backdrop" role="presentation">
           <section
             className="access-create-modal"

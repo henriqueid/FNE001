@@ -6,6 +6,8 @@ import {
   saveIntelligenceState,
   settleIntelligenceReservation,
 } from "@/src/server/intelligence/repository";
+import { loadIntelligenceBudget, saveIntelligenceBudget } from "@/src/server/intelligence/budget-configuration";
+import { jsonParameter } from "@/src/server/database/postgres";
 import { emptyIntelligenceState } from "@/src/domain/intelligence/model";
 const isolated = process.env.STRATO_TEST_DATABASE_URL,
   actorId = "user-henrique-admin";
@@ -104,5 +106,113 @@ describe.skipIf(!isolated)("ledger IA em PostgreSQL novo e descartável", () => 
     } finally {
       await db.exec(`drop trigger ${name} on private.domain_events; drop function private.${name}()`);
     }
+  });
+  it("cota individual usa última liquidação por reserva e preserva teto ao salvar licença antiga", async () => {
+    const { db, tenantId } = await fixture();
+    await db
+      .prepare("insert into private.tenant_memberships(tenant_id,user_id) values (?,?)")
+      .bind(tenantId, actorId)
+      .run();
+    await saveIntelligenceBudget(db, tenantId, actorId, {
+      mode: "allocated",
+      version: 0,
+      monthlyTokenBudget: 100,
+      allocations: [{ userId: actorId, monthlyTokenBudget: 60 }],
+    });
+    const results = await Promise.allSettled([
+      reserveIntelligenceTokens(db, tenantId, 40, actorId),
+      reserveIntelligenceTokens(db, tenantId, 40, actorId),
+    ]);
+    expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
+    const call = results.find(result => result.status === "fulfilled");
+    if (call?.status !== "fulfilled") throw new Error("Reserva ausente");
+    await call.value.settle(20);
+    await call.value.settle(20);
+    await saveIntelligenceState(db, tenantId, actorId, {
+      ...emptyIntelligenceState(tenantId),
+      contracted: true,
+      enabled: true,
+      status: "AI_AVAILABLE",
+      monthlyTokenBudget: 999,
+      persistenceVersion: (await loadIntelligenceState(db, tenantId, actorId))?.persistenceVersion,
+    });
+    const result = await loadIntelligenceBudget(db, tenantId, actorId);
+    expect(result.policy.monthlyTokenBudget).toBe(100);
+    expect(result.users.find(user => user.userId === actorId)?.usedTokens).toBe(20);
+    expect(result.usedTokens).toBe(20);
+  });
+  it("save legado iniciado durante primeira política lê estado após adquirir lock", async () => {
+    const { db, tenantId } = await fixture();
+    const license = await loadIntelligenceState(db, tenantId, actorId);
+    let release!: () => void, entered!: () => void;
+    const ready = new Promise<void>(resolve => {
+        entered = resolve;
+      }),
+      hold = new Promise<void>(resolve => {
+        release = resolve;
+      });
+    const configuration = db.transaction!(async transaction => {
+      await transaction
+        .prepare("select tenant_id from private.intelligence_states where tenant_id = ? for update")
+        .bind(tenantId)
+        .first();
+      await transaction
+        .prepare("update private.intelligence_states set monthly_token_budget = 60 where tenant_id = ?")
+        .bind(tenantId)
+        .run();
+      await transaction
+        .prepare(
+          "insert into private.domain_events(tenant_id,event_id,aggregate_type,aggregate_id,aggregate_version,event_type,actor_id,payload) values (?,?, 'IntelligenceBudgetPolicy','monthly',1,'AI_BUDGET_CONFIGURED',?,?)",
+        )
+        .bind(
+          tenantId,
+          crypto.randomUUID(),
+          actorId,
+          jsonParameter({ mode: "allocated", allocations: [{ userId: actorId, monthlyTokenBudget: 60 }] }),
+        )
+        .run();
+      entered();
+      await hold;
+    });
+    await ready;
+    let completed = false;
+    const legacy = saveIntelligenceState(db, tenantId, actorId, {
+      ...emptyIntelligenceState(tenantId),
+      monthlyTokenBudget: 999,
+      persistenceVersion: license?.persistenceVersion,
+    }).then(() => {
+      completed = true;
+    });
+    try {
+      await new Promise(resolve => setTimeout(resolve, 30));
+      expect(completed).toBe(false);
+    } finally {
+      release();
+      await configuration;
+      await legacy;
+    }
+    expect((await loadIntelligenceBudget(db, tenantId, actorId)).policy.monthlyTokenBudget).toBe(60);
+  });
+  it("CAS de licença impede snapshot antigo de reativar configuração desligada", async () => {
+    const { db, tenantId } = await fixture();
+    const before = await loadIntelligenceState(db, tenantId, actorId);
+    if (!before) throw new Error("Fixture IA ausente");
+    const disabled = await saveIntelligenceState(db, tenantId, actorId, {
+      ...before,
+      contracted: false,
+      enabled: false,
+      status: "AI_DISABLED",
+    });
+    await expect(saveIntelligenceState(db, tenantId, actorId, before)).rejects.toMatchObject({ status: 409 });
+    const stored = await db
+      .prepare(
+        "select contracted, enabled, aggregate_version, used_tokens from private.intelligence_states where tenant_id = ?",
+      )
+      .bind(tenantId)
+      .first<{ contracted: boolean; enabled: boolean; aggregate_version: number; used_tokens: number | string }>();
+    expect(stored?.contracted).toBe(false);
+    expect(stored?.enabled).toBe(false);
+    expect(Number(stored?.aggregate_version)).toBe(disabled.persistenceVersion);
+    expect(Number(stored?.used_tokens)).toBe(before.usedTokens);
   });
 });

@@ -495,6 +495,7 @@ export function PortfolioTitleGrid({
   const [visible, setVisible] = useState<ColumnKey[]>(defaultVisible);
   const [columnMenu, setColumnMenu] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [pageIndex, setPageIndex] = useState(0);
   const [sort, setSort] = useState<{ key: ColumnKey; direction: "asc" | "desc" }>({ key: "dueDate", direction: "asc" });
   const [widths, setWidths] = useState<Record<string, number>>(() =>
     Object.fromEntries(columns.map(column => [column.key, column.width])),
@@ -510,12 +511,16 @@ export function PortfolioTitleGrid({
       return sort.direction === "asc" ? result : -result;
     });
   }, [columns, rows, sort]);
+  const pageSize = 100;
+  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const page = Math.min(pageIndex, pageCount - 1);
+  const pageRows = sorted.slice(page * pageSize, (page + 1) * pageSize);
   const selectedVisible = sorted.filter(row => selected.includes(row.id));
-  const allSelected = sorted.length > 0 && sorted.every(row => selected.includes(row.id));
+  const allSelected = pageRows.length > 0 && pageRows.every(row => selected.includes(row.id));
   const totalWidth = 44 + visibleColumns.reduce((sum, column) => sum + widths[column.key], 0);
 
   function toggleAll() {
-    const ids = sorted.map(row => row.id);
+    const ids = pageRows.map(row => row.id);
     setSelected(current =>
       allSelected ? current.filter(id => !ids.includes(id)) : [...new Set([...current, ...ids])],
     );
@@ -526,6 +531,7 @@ export function PortfolioTitleGrid({
   }
 
   function changeSort(key: ColumnKey) {
+    setPageIndex(0);
     setSort(current => ({ key, direction: current.key === key && current.direction === "asc" ? "desc" : "asc" }));
   }
 
@@ -640,7 +646,7 @@ export function PortfolioTitleGrid({
             </tr>
           </thead>
           <tbody>
-            {sorted.map(row => (
+            {pageRows.map(row => (
               <tr key={row.id} className={selected.includes(row.id) ? "selected" : ""}>
                 <td className="pf-select-column">
                   <input
@@ -663,6 +669,31 @@ export function PortfolioTitleGrid({
           </tbody>
         </table>
       </div>
+      <nav className="pf-grid-toolbar" aria-label="Paginação dos títulos">
+        <span role="status">
+          Página {page + 1} de {pageCount} · {sorted.length} título(s) · exportação inclui todo o filtro
+        </span>
+        <div>
+          <button
+            type="button"
+            className="fn-btn ghost small"
+            disabled={page === 0}
+            onClick={() => setPageIndex(page - 1)}
+            aria-label="Página anterior"
+          >
+            Anterior
+          </button>
+          <button
+            type="button"
+            className="fn-btn ghost small"
+            disabled={page + 1 >= pageCount}
+            onClick={() => setPageIndex(page + 1)}
+            aria-label="Próxima página"
+          >
+            Próxima
+          </button>
+        </div>
+      </nav>
       {detail && (
         <PortfolioTitleDetails
           title={detail}

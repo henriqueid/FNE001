@@ -373,3 +373,36 @@ it.each(accounts)("deduplica mesmo evento presente em arquivos bancários difere
     parseCnab400Return(original, account).events[0].idempotencyKey,
   );
 });
+
+describe("baixa de registro existente", () => {
+  it.each([accounts[0], accounts[1], { ...accounts[0], wallet: "112", mode: "registered-bank-issued" as const }])(
+    "gera ocorrência02 sem novo registro em $bankCode/$wallet",
+    account => {
+      const rows = generateCnab400Remittance({
+        account,
+        generatedOn: "2026-10-25",
+        remittanceSequence: 2,
+        titles: [
+          {
+            instruction: "writeoff",
+            controlId: "ORIGINAL",
+            documentNumber: "DOC-01",
+            ourNumber: "2",
+            amountCents: 100000,
+          },
+        ],
+      }).split("\r\n");
+      expect(rows[1].slice(108, 110)).toBe("02");
+      expect(rows[1].slice(37, 62).trim()).toBe(account.bankCode === "341" ? "" : "ORIGINAL");
+      if (account.bankCode === "341") {
+        expect(rows[1].slice(1, 17)).toBe("0000000000000000");
+        expect(rows[1].slice(110, 120)).toBe("          ");
+      }
+      expect(rows[1].slice(account.bankCode === "341" ? 62 : 70, account.bankCode === "341" ? 70 : 81)).toBe(
+        account.bankCode === "341" ? "00000002" : "00000000002",
+      );
+      expect(rows[1].slice(126, 139)).toBe("0000000100000");
+      expect(rows[2][0]).toBe("9");
+    },
+  );
+});

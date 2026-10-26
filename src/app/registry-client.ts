@@ -31,14 +31,16 @@ export async function loadRegistryPartyStats(): Promise<RegistryPartyStats> {
   if (!response.ok) throw new Error("Não foi possível carregar os totais dos cadastros.");
   return ((await response.json()) as { stats: RegistryPartyStats }).stats;
 }
-export async function persistRegistryParty(party: Party) {
+export async function persistRegistryParty(party: Party, reason?: string, expectedUpdatedAt?: string): Promise<Party> {
   const response = await fetch("/api/registry/parties", {
     method: "PUT",
     headers: { ...headers(), "content-type": "application/json" },
-    body: JSON.stringify(party),
+    body: JSON.stringify({ party, reason, expectedUpdatedAt }),
   });
-  const body = (await response.json().catch(() => ({}))) as { error?: string };
+  const body = (await response.json().catch(() => ({}))) as { error?: string; party?: Party };
   if (!response.ok) throw new Error(body.error ?? "Não foi possível salvar o cadastro no banco.");
+  if (!body.party) throw new Error("O servidor não confirmou o cadastro salvo.");
+  return body.party;
 }
 
 async function bankChangeRequest(path = "", init?: RequestInit) {

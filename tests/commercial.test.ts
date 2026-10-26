@@ -150,7 +150,7 @@ describe("regras comerciais", () => {
     const approved = decideCommittee(
       queued,
       committee.id,
-      { status: "Aprovado", approved: 450_000, rate: 2.5 },
+      { status: "Aprovado", approved: 450_000, rate: 2.5, riskOpinion: "Capacidade de pagamento verificada." },
       "Henrique",
     ).state;
     const converted = approved.prospects.find(item => item.id === prospect.id)!;
@@ -228,4 +228,16 @@ describe("regras comerciais", () => {
     expect(archived.lost).toContain("Endividamento incompatível");
     expect(archived.history?.at(-1)?.action).toBe("Reprovado pelo comitê");
   });
+});
+
+it("exige parecer de risco para aprovação simples", () => {
+  const state = seedCommercial("2026-10-13");
+  const committee = state.committees.find(item => item.status === "Em pauta")!;
+  const result = decideCommittee(
+    state,
+    committee.id,
+    { status: "Aprovado", approved: 100, riskOpinion: "   " },
+    "Risco",
+  );
+  expect(result.error).toContain("parecer de risco");
 });

@@ -153,3 +153,14 @@ export function buildInstallments<T extends ManualEntry>(completed: T, installme
     };
   });
 }
+
+export function entryDraftBlockers(draft: EntryDraft, type: ReceivableType | "", hasDebtor: boolean) {
+  const document = type === "Cheque" ? draft.documentNumber.trim() || draft.cmc7.trim() : draft.documentNumber.trim();
+  return [
+    !type ? "Selecione o tipo de recebível." : "",
+    !hasDebtor ? "Selecione um sacado." : "",
+    !document ? "Informe o número do documento." : "",
+    !Number.isFinite(draft.amount) || draft.amount <= 0 ? "Informe um valor maior que zero." : "",
+    !draft.dueDate ? "Informe o vencimento." : "",
+  ].filter(Boolean);
+}

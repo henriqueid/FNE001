@@ -1,3 +1,4 @@
+import { isValidCpf, normalizeCpf } from "@/src/domain/access/identity";
 import { type DecisionDatabase } from "@/src/server/decisions/repository";
 import { authenticateCredentials, createSession, principalForSession, revokeSession } from "./repository";
 
@@ -33,8 +34,26 @@ export async function createUserSession(db: DecisionDatabase, userId: string) {
 }
 
 export async function loginSession(db: DecisionDatabase, tenantId: string, identifier: string, password: string) {
-  const userId = await authenticateCredentials(db, tenantId, identifier, password);
-  return userId ? createUserSession(db, userId) : null;
+  if (!db.transaction) return null;
+  return db.transaction(async transaction => {
+    const normalizedIdentifier = identifier.trim().toLowerCase();
+    const normalizedCpf = /^[\d.\-\s]+$/.test(identifier) && isValidCpf(identifier) ? normalizeCpf(identifier) : null;
+    // Serializa emissão com mudança de status e revogação, antes de bloquear credenciais.
+    const user = await transaction
+      .prepare(
+        `SELECT u.user_id FROM private.access_users u
+         JOIN private.tenant_memberships m ON m.user_id = u.user_id AND m.tenant_id = ?
+         WHERE lower(COALESCE(u.email, '')) = ?
+            OR lower(COALESCE(u.login_name, '')) = ?
+            OR COALESCE(u.cpf, '') = ?
+         FOR UPDATE OF u`,
+      )
+      .bind(tenantId, normalizedIdentifier, normalizedIdentifier, normalizedCpf)
+      .first<{ user_id: string }>();
+    if (!user) return null;
+    const userId = await authenticateCredentials(transaction, tenantId, identifier, password);
+    return userId ? createUserSession(transaction, userId) : null;
+  });
 }
 
 export async function sessionPrincipal(db: DecisionDatabase, headers: Headers, tenantId: string) {

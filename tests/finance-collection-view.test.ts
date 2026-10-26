@@ -36,6 +36,24 @@ it("oferece aba Cobrança na navegação financeira", () => {
   expect(html).toMatch(/role="tab"[^>]*>.*?<span>Cobrança<\/span>/);
 });
 
+it("abre cobrança diretamente quando acionada pela Carteira", () => {
+  const html = renderToStaticMarkup(
+    createElement(FinanceModule, {
+      state,
+      onState: vi.fn(),
+      onEffects: vi.fn(),
+      onPatchOperation: vi.fn(),
+      operations: [],
+      carteira: [],
+      companyScope: company,
+      onOpenOperation: vi.fn(),
+      initialTab: "cobranca",
+    }),
+  );
+  expect(html).toContain("Carteira bancária indisponível neste ambiente");
+  expect(html).toContain("CNAB 400 Itaú e Bradesco");
+});
+
 it("reúne remessa, retorno e posição bancária somente da empresa selecionada", () => {
   const html = renderToStaticMarkup(
     createElement(CollectionTab, { state, portfolio, scope: company, onCommitted: vi.fn(), onConfigureBanks: vi.fn() }),

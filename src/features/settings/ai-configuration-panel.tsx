@@ -6,10 +6,12 @@ import { useEffect, useState } from "react";
 type CheckState = "idle" | "loading" | "success" | "error";
 
 export function AIConfigurationPanel({
+  demoMode = false,
   active = false,
   available = false,
   onAvailabilityChange,
 }: {
+  demoMode?: boolean;
   active?: boolean;
   available?: boolean;
   onAvailabilityChange?: (available: boolean) => void;
@@ -19,6 +21,7 @@ export function AIConfigurationPanel({
   const [message, setMessage] = useState("");
 
   const refresh = () => {
+    if (demoMode) return;
     setState("loading");
     setMessage("");
     return loadAIConfiguration()
@@ -33,6 +36,7 @@ export function AIConfigurationPanel({
   };
 
   useEffect(() => {
+    if (demoMode) return;
     let mounted = true;
     void loadAIConfiguration()
       .then(result => {
@@ -48,9 +52,10 @@ export function AIConfigurationPanel({
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [demoMode]);
 
   const test = () => {
+    if (demoMode) return;
     setState("loading");
     setMessage("");
     void testAIConfiguration()
@@ -66,6 +71,23 @@ export function AIConfigurationPanel({
         onAvailabilityChange?.(false);
       });
   };
+
+  if (demoMode)
+    return (
+      <section className="settings-ai-provider" aria-labelledby="settings-ai-provider-title">
+        <header>
+          <div>
+            <h3 id="settings-ai-provider-title">Conexão com a OpenAI</h3>
+            <p>Demonstração — nenhum provedor real é consultado.</p>
+          </div>
+          <b>Demonstração</b>
+        </header>
+        <p>Teste de conexão e leitura de credenciais disponíveis apenas no ambiente autenticado.</p>
+        <button type="button" disabled>
+          Teste real indisponível na demonstração
+        </button>
+      </section>
+    );
 
   return (
     <section className="settings-ai-provider" aria-labelledby="settings-ai-provider-title">

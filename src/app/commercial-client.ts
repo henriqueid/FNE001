@@ -1,4 +1,5 @@
 import type { CommercialState } from "@/src/domain/commercial/types";
+import type { FinanceState } from "@/src/domain/finance/model";
 import { getStratoTenantId } from "./tenant";
 
 const headers = () => ({ "x-strato-tenant-id": getStratoTenantId() });
@@ -33,4 +34,21 @@ export async function persistCommercialState(commercial: CommercialState): Promi
     response = await request();
   }
   return (await body<{ commercial: CommercialState }>(response)).commercial;
+}
+
+export async function sendCommission(month: string, expectedCommercialVersion: number, expectedFinanceVersion: number) {
+  const requestBody = JSON.stringify({ month, expectedCommercialVersion, expectedFinanceVersion });
+  const request = () =>
+    fetch("/api/commercial/commissions", {
+      method: "POST",
+      headers: { ...headers(), "content-type": "application/json" },
+      body: requestBody,
+    });
+  let response: Response;
+  try {
+    response = await request();
+  } catch {
+    response = await request();
+  }
+  return body<{ commercial: CommercialState; finance: FinanceState; replayed: boolean }>(response);
 }

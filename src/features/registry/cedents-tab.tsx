@@ -14,6 +14,7 @@ import { portfolioTitles, type PortfolioTitle } from "@/src/domain/home/metrics"
 import { type ClientRecord } from "@/src/domain/registry/registry";
 import { br, compact } from "@/src/features/finance/finance-ui";
 import { type AppView } from "@/src/features/shell/shell-context";
+import { pressable } from "@/src/ui/a11y";
 import { SearchIcon } from "@/src/ui/icons";
 import { Fragment, useMemo, useState } from "react";
 import { scoreClassification, scoreTone } from "./registry-format";
@@ -153,7 +154,11 @@ export function CedentsTab({
                 );
                 return (
                   <Fragment key={record.document}>
-                    <tr className="cm-click" onClick={() => setOpen(open === record.document ? null : record.document)}>
+                    <tr
+                      className="cm-click"
+                      aria-expanded={open === record.document}
+                      {...pressable(() => setOpen(open === record.document ? null : record.document))}
+                    >
                       <td>
                         <b>{record.name}</b>
                         <small>

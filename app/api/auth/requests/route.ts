@@ -32,6 +32,15 @@ export async function POST(request: Request) {
     password?: string;
     department?: UserDepartment;
   };
+  if (
+    !body ||
+    typeof body !== "object" ||
+    Array.isArray(body) ||
+    [body.name, body.email, body.loginName, body.cpf, body.password, body.department].some(
+      value => value !== undefined && typeof value !== "string",
+    )
+  )
+    return json({ error: "Dados de acesso inválidos." }, 400);
   const name = body.name?.trim() ?? "";
   const email = body.email?.trim().toLowerCase() ?? "";
   const loginName = normalizeLoginName(body.loginName ?? "");

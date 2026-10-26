@@ -1,3 +1,4 @@
+import { attributeCommercialHistory } from "./history";
 import { digits } from "@/src/domain/commercial/calendar";
 import { validateCommercialTransition } from "@/src/domain/commercial/persistence";
 import type { CommercialState } from "@/src/domain/commercial/types";
@@ -138,14 +139,17 @@ export async function saveCommercialState(
   expectedVersion: number,
   commandId: string,
   requestHash: string,
+  authorize?: (previous: CommercialState | null, next: CommercialState) => void,
 ): Promise<CommercialState | null> {
   const existing = await replayed(db, tenantId, commandId, requestHash);
   if (existing) return existing;
   const work = async (transaction: DecisionDatabase) => {
     const previous = await loadCommercialState(transaction, tenantId);
     if ((previous?.persistenceVersion ?? 0) !== expectedVersion) return null;
+    authorize?.(previous, state);
     const transitionError = validateCommercialTransition(previous, state);
     if (transitionError) throw new CommercialTransitionError(transitionError);
+    state = attributeCommercialHistory(previous, state, actorName);
     const eventId = crypto.randomUUID();
     const outboxId = crypto.randomUUID();
     const row = await transaction

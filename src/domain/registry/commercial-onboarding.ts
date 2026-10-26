@@ -54,3 +54,25 @@ export function approvedProspectToParty(prospect: Prospect, commercial: Commerci
     ],
   };
 }
+
+/** Reconstitui fichas ausentes da demonstração sem reaplicar o dossiê sobre cadastros revisados. */
+export function syncCommercialOnboardingParties(parties: Party[], commercial: CommercialState, actor: string): Party[] {
+  const result = [...parties];
+  for (const prospect of commercial.prospects) {
+    const generated = approvedProspectToParty(prospect, commercial, actor);
+    if (!generated) continue;
+    const index = result.findIndex(party => onlyDigits(party.document) === onlyDigits(generated.document));
+    if (index < 0) result.push(generated);
+    else if (!result[index].roles.includes("cedente")) {
+      const registered = result[index];
+      result[index] = {
+        ...registered,
+        roles: [...registered.roles, "cedente"],
+        roleData: { ...registered.roleData, cedente: generated.roleData.cedente },
+        history: [...registered.history, ...generated.history],
+        updatedAt: generated.updatedAt,
+      };
+    }
+  }
+  return result;
+}

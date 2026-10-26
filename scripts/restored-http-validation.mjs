@@ -154,6 +154,30 @@ export async function verifyRestoredHttp({ url, directory, credentials }) {
       mode: 0o600,
     });
     console.log("HTTP restaurado verificado: login, cookie, APIs autenticadas, isolamento e logout.");
+    if (process.env.STRATO_TEST_BROWSER_HOLD === "1") {
+      await writeFile(
+        path.join(directory, "browser-fixture.json"),
+        JSON.stringify({
+          origin: base,
+          identifier: credentials.identifier,
+          password: credentials.password,
+          tenantId: "strato-demo",
+        }),
+        { mode: 0o600 },
+      );
+      console.log(`Prévia autenticada descartável: ${base}. Fixture privada em ${directory}/browser-fixture.json`);
+      await new Promise(resolve => {
+        const finish = () => {
+          clearTimeout(timer);
+          process.off("SIGTERM", finish);
+          process.off("SIGINT", finish);
+          resolve();
+        };
+        const timer = setTimeout(finish, 20 * 60_000);
+        process.once("SIGTERM", finish);
+        process.once("SIGINT", finish);
+      });
+    }
     return evidence;
   } finally {
     if (!exited) {

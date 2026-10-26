@@ -75,11 +75,12 @@ export function ManualEntryPanel({
                   <TitleEntryForm receivableType={receivableType} draft={draft} onChange={entry.setField} />
                 )}
               </div>
+              {entry.draftBlockers.length > 0 && <p role="status">{entry.draftBlockers.join(" ")}</p>}
               <EntryFormActions
                 editing={Boolean(editingId)}
                 isCheque={isCheque}
                 hasEntries={entries.length > 0}
-                canSave={Boolean(entry.selectedDebtor)}
+                canSave={entry.draftBlockers.length === 0}
                 installments={entry.installments}
                 onCancelEdit={entry.cancelEdit}
                 onCopyPrevious={entry.copyPrevious}

@@ -1,3 +1,4 @@
+import type { Permission } from "@/src/domain/access/model";
 import { operationsForUser, userHasFunctionalArea, type AppUserProfile, type UserScopeContext } from "./daily-briefing";
 import { money } from "@/src/domain/core/format";
 import { stages } from "@/src/domain/core/stages";
@@ -22,6 +23,10 @@ export type AttentionItem = {
   timing: string;
   view: AppView;
   operation?: Operation;
+  company?: string;
+  requiredPermission?: Permission;
+  authorityId?: string;
+  episodeKey?: string;
 };
 
 const stageName = (operation: Operation) => stages.find(stage => stage.id === operation.stage)?.title ?? "Operação";
@@ -60,6 +65,8 @@ export function buildAttentionItems({
         timing: "Agora",
         view: "operations",
         operation,
+        company: operation.vehicle,
+        requiredPermission: "operations:view",
       });
       return;
     }
@@ -86,6 +93,8 @@ export function buildAttentionItems({
         timing: "Hoje",
         view: release ? "finance" : "operations",
         operation,
+        company: operation.vehicle,
+        requiredPermission: release ? "finance:view" : "operations:view",
       });
       return;
     }
@@ -105,6 +114,8 @@ export function buildAttentionItems({
         timing: "Acompanhar",
         view: "operations",
         operation,
+        company: operation.vehicle,
+        requiredPermission: "operations:view",
       });
   });
 
@@ -112,17 +123,26 @@ export function buildAttentionItems({
     ...scoped.map(operation => operation.document.replace(/\D/g, "")),
     ...(user.cedentDocuments ?? []).map(document => document.replace(/\D/g, "")),
   ]);
-  const overdue = titles.filter(
+  const overdueTitles = titles.filter(
     title =>
       title.dueDate < referenceDate &&
       (user.access === "admin" ||
         userHasFunctionalArea(user, "Diretoria") ||
         documents.has(title.ownerDocument.replace(/\D/g, ""))),
   );
-  if (overdue.length) {
+  const companies = [
+    ...new Set(overdueTitles.map(title => title.vehicle).filter((company): company is string => !!company)),
+  ];
+  for (const company of companies) {
+    const overdue = overdueTitles.filter(title => title.vehicle === company);
     const total = overdue.reduce((sum, title) => sum + title.amount, 0);
     items.push({
-      id: "portfolio-overdue",
+      id: `portfolio-overdue:${encodeURIComponent(company)}`,
+      company,
+      episodeKey: JSON.stringify(
+        overdue.map(title => [title.id, title.dueDate]).sort(([left], [right]) => left.localeCompare(right)),
+      ),
+      requiredPermission: "portfolio:manage",
       kind: "collection",
       tone: "warning",
       title: overdue.length === 1 ? "1 título vencido pede ação" : `${overdue.length} títulos vencidos pedem ação`,

@@ -6,12 +6,13 @@ import { retryFailedNotifications, syncPublishedNotifications } from "@/src/app/
 
 const emptyHealth: OutboxHealth = { pending: 0, failed: 0, published: 0 };
 
-export function OutboxHealthPanel({ tenantId }: { tenantId: string }) {
+export function OutboxHealthPanel({ tenantId, demoMode = false }: { tenantId: string; demoMode?: boolean }) {
   const [health, setHealth] = useState(emptyHealth);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const refresh = () => {
+    if (demoMode) return;
     setBusy(true);
     setError("");
     return syncPublishedNotifications(tenantId)
@@ -21,6 +22,7 @@ export function OutboxHealthPanel({ tenantId }: { tenantId: string }) {
   };
 
   useEffect(() => {
+    if (demoMode) return;
     let cancelled = false;
     syncPublishedNotifications(tenantId)
       .then(result => {
@@ -32,9 +34,10 @@ export function OutboxHealthPanel({ tenantId }: { tenantId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [tenantId]);
+  }, [tenantId, demoMode]);
 
   const retry = () => {
+    if (demoMode) return;
     setBusy(true);
     setError("");
     void retryFailedNotifications(tenantId)
@@ -42,6 +45,19 @@ export function OutboxHealthPanel({ tenantId }: { tenantId: string }) {
       .catch(reason => setError(reason instanceof Error ? reason.message : "Falha ao reprocessar a outbox."))
       .finally(() => setBusy(false));
   };
+
+  if (demoMode)
+    return (
+      <section className="settings-outbox" aria-labelledby="settings-outbox-title">
+        <header>
+          <strong id="settings-outbox-title">Entrega de eventos — Demonstração</strong>
+        </header>
+        <p>A fila real não é consultada, processada ou reprocessada neste modo.</p>
+        <button type="button" disabled>
+          Fila real indisponível na demonstração
+        </button>
+      </section>
+    );
 
   return (
     <section className="settings-outbox" aria-labelledby="settings-outbox-title">

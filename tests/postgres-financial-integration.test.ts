@@ -1,5 +1,10 @@
 /** Executado somente por scripts/test-postgres-isolated.mjs em cluster novo e descartável. */
 import { beforeAll, describe, expect, it } from "vitest";
+import { emptyState, openingEntries } from "@/src/domain/finance/ledger";
+import { seedCommercial } from "@/src/domain/commercial/seed";
+import type { CommercialState } from "@/src/domain/commercial/types";
+import { executeCommissionCommand } from "@/src/server/commercial/commission-command";
+import { commercialRequestHash, loadCommercialState, saveCommercialState } from "@/src/server/commercial/repository";
 import { getDatabase } from "@/src/server/database/postgres";
 import { saveOperation } from "@/src/server/operations/repository";
 import { financeRequestHash, loadFinanceState, saveFinanceState } from "@/src/server/finance/repository";
@@ -180,5 +185,135 @@ describe.skipIf(!isolated)("coordenação em PostgreSQL isolado", () => {
     } finally {
       await db.exec("alter table private.portfolio_states drop constraint qa_rollback_guard");
     }
+  });
+});
+
+/** Mesmo contrato de comissões exercitado com locks e rollback PostgreSQL reais. */
+describe.skipIf(!isolated)("comissões em PostgreSQL isolado", () => {
+  beforeAll(() => {
+    const url = new URL(isolated!);
+    if (url.hostname !== "127.0.0.1" || url.port === "5432" || process.env.DATABASE_URL !== isolated)
+      throw new Error("Teste permitido somente em cluster local descartável com porta própria.");
+  });
+  async function commissionFixture() {
+    const db = getDatabase();
+    const tenantId = `qa-commission-${crypto.randomUUID()}`;
+    await db
+      .prepare(
+        "insert into private.tenants(tenant_id, legal_name, display_name) values (?, 'QA isolado', 'QA isolado')",
+      )
+      .bind(tenantId)
+      .run();
+    const finance = openingEntries(emptyState("2026-01-01"));
+    const seed = seedCommercial("2026-10-25");
+    const commercial: CommercialState = {
+      ...seed,
+      links: [],
+      deals: [],
+      prospects: [],
+      committees: [],
+      visits: [],
+      reps: [{ ...seed.reps[0], company: finance.accounts[0].company }],
+      closings: {
+        "2026-09": {
+          month: "2026-09",
+          status: "Fechada",
+          closedAt: "2026-10-01",
+          closedBy: actor,
+          rules: seed.rules,
+          lines: [
+            {
+              repId: seed.reps[0].id,
+              base: 1000,
+              goal: 1000,
+              attainment: 100,
+              rate: 10,
+              commission: 100,
+              bonus: 0,
+              bonusAccounts: [],
+              clawback: 0,
+              total: 100,
+              deals: 1,
+            },
+          ],
+        },
+      },
+    };
+    await saveFinanceState(
+      db,
+      tenantId,
+      actor,
+      finance,
+      0,
+      "commission-fixture-finance",
+      await financeRequestHash({ tenantId, actorId: actor, expectedVersion: 0, state: finance }),
+    );
+    await saveCommercialState(
+      db,
+      tenantId,
+      actor,
+      "QA",
+      commercial,
+      0,
+      "commission-fixture-commercial",
+      await commercialRequestHash({ tenantId, actorId: actor, expectedVersion: 0, state: commercial }),
+    );
+    const principal: ServerPrincipal = {
+      id: actor,
+      name: "QA",
+      role: "Admin",
+      department: "Financeiro",
+      functionalAreas: [],
+      access: "admin",
+      status: "active",
+      tenantId,
+      permissions: ["portfolio:manage", "finance:release"],
+      authorityIds: [],
+      companyScopes: ["*"],
+    };
+    return {
+      db,
+      tenantId,
+      principal,
+      command: { month: "2026-09", expectedFinanceVersion: 1, expectedCommercialVersion: 1 },
+    };
+  }
+  it("duas requisições concorrentes gravam só uma obrigação", async () => {
+    const { db, tenantId, principal, command } = await commissionFixture();
+    const results = await Promise.all([
+      executeCommissionCommand(db, principal, command),
+      executeCommissionCommand(db, principal, command),
+    ]);
+    expect(results.filter(result => result.replayed)).toHaveLength(1);
+    expect((await loadFinanceState(db, tenantId))?.titles).toHaveLength(1);
+    expect((await loadCommercialState(db, tenantId))?.closings[command.month].financeTitles).toHaveLength(1);
+    const count = await db
+      .prepare("select count(*)::integer as total from private.finance_titles where tenant_id = ?")
+      .bind(tenantId)
+      .first<{ total: number }>();
+    expect(count?.total).toBe(1);
+  });
+  it("falha SQL comercial desfaz título/razão/recibo e retry recupera envio", async () => {
+    const { db, tenantId, principal, command } = await commissionFixture();
+    // Restrição só no cluster descartável; força erro depois da escrita financeira.
+    await db.exec(
+      `alter table private.commercial_states add constraint qa_commission_rollback check (tenant_id <> '${tenantId}' or aggregate_version = 1)`,
+    );
+    try {
+      await expect(executeCommissionCommand(db, principal, command)).rejects.toThrow();
+      expect((await loadFinanceState(db, tenantId))?.titles).toHaveLength(0);
+      expect((await loadCommercialState(db, tenantId))?.closings[command.month].status).toBe("Fechada");
+      const count = await db
+        .prepare(
+          "select count(*)::integer as total from private.finance_commands where tenant_id = ? and command_id = ?",
+        )
+        .bind(tenantId, "commission:2026-09")
+        .first<{ total: number }>();
+      expect(count?.total).toBe(0);
+    } finally {
+      await db.exec("alter table private.commercial_states drop constraint qa_commission_rollback");
+    }
+    await executeCommissionCommand(db, principal, command);
+    expect((await loadFinanceState(db, tenantId))?.titles).toHaveLength(1);
   });
 });

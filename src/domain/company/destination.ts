@@ -26,9 +26,13 @@ export const emptyCompanyDestination = (): CompanyDestinationDraft => ({
 });
 
 export function validateCompanyDestination(value: CompanyDestinationDraft) {
-  if (value.legalName.trim().length < 3) return "Informe a razão social.";
-  if (value.tradeName.trim().length < 2) return "Informe o nome do veículo ou nome fantasia.";
-  if (!isValidCnpj(onlyDigits(value.document))) return "Informe um CNPJ válido.";
-  if (value.detail.trim().length < 3) return "Descreva a classe, produto ou finalidade do veículo.";
+  if (typeof value?.legalName !== "string" || value.legalName.trim().length < 3) return "Informe a razão social.";
+  if (typeof value.tradeName !== "string" || value.tradeName.trim().length < 2)
+    return "Informe o nome do veículo ou nome fantasia.";
+  if (typeof value.document !== "string" || !isValidCnpj(onlyDigits(value.document))) return "Informe um CNPJ válido.";
+  if (typeof value.detail !== "string" || value.detail.trim().length < 3)
+    return "Descreva a classe, produto ou finalidade do veículo.";
+  if (!["Factoring", "FIDC", "Securitizadora"].includes(value.institution))
+    return "Escolha um tipo de instituição válido.";
   return undefined;
 }

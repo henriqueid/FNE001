@@ -61,7 +61,7 @@ export const sourceOptions: { source: OperationSource; label: string; descriptio
   {
     source: "Crédito estruturado",
     label: "Crédito estruturado",
-    description: "CCB, contrato, cronograma e garantias",
+    description: "CCB ainda não suportada. Criação indisponível nesta implantação.",
     tag: "CCB",
   },
 ];
@@ -110,6 +110,7 @@ export function NewOperationModal({
     : undefined;
 
   function chooseSource(next: OperationSource) {
+    if (next === "Crédito estruturado") return;
     setSource(next);
     setAnalysis(null);
   }
@@ -206,6 +207,7 @@ export function NewOperationModal({
           {sourceOptions.map(option => (
             <button
               className={source === option.source ? "selected" : ""}
+              disabled={option.source === "Crédito estruturado"}
               onClick={() => chooseSource(option.source)}
               key={option.source}
             >
@@ -390,9 +392,14 @@ export function NewOperationModal({
           </button>
           <button
             className="primary-action"
-            disabled={!cedent || (requiresFile && (!analysis || analysis.intake.status === "BLOQUEADO"))}
+            disabled={
+              !cedent ||
+              source === "Crédito estruturado" ||
+              (requiresFile && (!analysis || analysis.intake.status === "BLOQUEADO"))
+            }
             onClick={() =>
               cedent &&
+              source !== "Crédito estruturado" &&
               onCreate({
                 source,
                 operationType: detectedType,

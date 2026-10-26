@@ -4,6 +4,7 @@
  * líquido, limite, spread, composição, observação, automação, veículo e ritmo.
  * O estado de exibição fica no workspace para sobreviver à troca de etapa.
  */
+import { operationHistory } from "@/src/domain/operations/history";
 import { preciseMoney } from "@/src/domain/core/format";
 import { type Cedent, type Operation } from "@/src/domain/core/types";
 import { type AutomationBreakdown } from "@/src/domain/operations/automation";
@@ -42,6 +43,8 @@ export function OperationSummaryAside({
   readOnly?: boolean;
 }) {
   const pace = paceFor(operation);
+  const history = operationHistory(operation);
+  const savedCondition = operation.pricingReview?.status === "Condição salva";
   const { pricing, calculation, offsets, face, net, availableLimit, limitAfterOperation, approvals, approvedCount } =
     summaryFinancialsFor(operation, cedents);
   return (
@@ -90,8 +93,9 @@ export function OperationSummaryAside({
           </div>
         </div>
         <div className="summary-financial-hero">
-          <span>LÍQUIDO DO BORDERÔ</span>
+          <span>{savedCondition ? "LÍQUIDO DO BORDERÔ" : "LÍQUIDO SIMULADO"}</span>
           <strong>{preciseMoney.format(net)}</strong>
+          {!savedCondition && <small>Condição comercial ainda não salva. Valores estimados para esta operação.</small>}
           <small>
             Face {preciseMoney.format(face)} · {operation.titleCount} recebíveis
           </small>
@@ -249,9 +253,21 @@ export function OperationSummaryAside({
           <Badge tone={operation.institution.toLowerCase()}>{operation.institution}</Badge>
           <strong>{operation.vehicle}</strong>
           {operation.fundClass && <small>{operation.fundClass}</small>}
-          <button>
-            Ver estrutura do veículo <ArrowIcon />
-          </button>
+          <details>
+            <summary>
+              Ver estrutura do veículo <ArrowIcon />
+            </summary>
+            <div>
+              <strong>Estrutura informada nesta operação</strong>
+              <p>Veículo: {operation.vehicle}</p>
+              <p>Instituição: {operation.institution}</p>
+              <p>Classe: {operation.fundClass ?? "Não informada nesta operação"}</p>
+              <p>Participantes: {operation.participants?.join(" · ") || "Não informados nesta operação"}</p>
+              <small>
+                Dados preservados no aditivo {operation.aditivoNumber}; não substituem o cadastro jurídico do veículo.
+              </small>
+            </div>
+          </details>
         </div>
         {operation.participants && (
           <div className="summary-section expanded-only">
@@ -288,24 +304,29 @@ export function OperationSummaryAside({
           </div>
         </div>
         <div className="summary-section timeline-mini expanded-only">
-          <span>ATIVIDADE RECENTE</span>
-          <div>
-            <i />
-            <p>
-              <strong>Política reavaliada</strong>
-              <small>Agora · pelo motor de regras</small>
-            </p>
-          </div>
-          <div>
-            <i />
-            <p>
-              <strong>Dados do sacado atualizados</strong>
-              <small>Há 3 min · Serasa API</small>
-            </p>
-          </div>
-          <button>
-            Ver linha do tempo completa <ArrowIcon />
-          </button>
+          <span>HISTÓRICO REGISTRADO</span>
+          <details>
+            <summary>
+              Ver linha do tempo completa <ArrowIcon />
+            </summary>
+            <small>Aditivo {operation.aditivoNumber} · registros preservados por etapa.</small>
+            {history.length ? (
+              history.map((event, index) => (
+                <div key={`${event.at}-${index}`}>
+                  <i />
+                  <p>
+                    <strong>{event.action}</strong>
+                    <small>
+                      {event.at} · {event.by}
+                    </small>
+                    <small>{event.detail}</small>
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p>Nenhuma atividade registrada nesta operação.</p>
+            )}
+          </details>
         </div>
       </aside>
     </>

@@ -10,6 +10,8 @@ import { Badge } from "@/src/features/operations/components/status";
 import { ArrowIcon } from "@/src/ui/icons";
 
 type RepurchaseOverviewProps = {
+  demo?: boolean;
+  unavailableReason?: string;
   totalOffsets: number;
   netAfterRepurchase: number;
   selectedCount: number;
@@ -19,6 +21,8 @@ type RepurchaseOverviewProps = {
 
 /** Resumo da recompra aplicada ao borderô, com botão para compor ou revisar. */
 export function RepurchaseOverview({
+  unavailableReason,
+  demo = true,
   totalOffsets,
   netAfterRepurchase,
   selectedCount,
@@ -32,7 +36,16 @@ export function RepurchaseOverview({
     >
       <div className="repurchase-overview-main">
         <span>RECOMPRA</span>
-        <strong>{totalOffsets !== 0 ? "Resumo da recompra" : "Nenhuma recompra adicionada"}</strong>
+        <strong>
+          {unavailableReason
+            ? "Recompra indisponível"
+            : totalOffsets !== 0
+              ? "Resumo da recompra"
+              : "Nenhuma recompra adicionada"}
+        </strong>
+        <small>
+          {unavailableReason || (demo ? "Simulação de recompra e compensações" : "Recompra de saldo principal aberto")}
+        </small>
         {totalOffsets !== 0 && <small>{selectedCount} item(ns) compondo este borderô</small>}
       </div>
       {totalOffsets !== 0 && (
@@ -51,7 +64,12 @@ export function RepurchaseOverview({
           </div>
         </div>
       )}
-      <button type="button" data-testid="open-repurchase" disabled={!hasAvailableItems} onClick={onOpen}>
+      <button
+        type="button"
+        data-testid="open-repurchase"
+        disabled={Boolean(unavailableReason) || !hasAvailableItems}
+        onClick={onOpen}
+      >
         {totalOffsets !== 0 ? "Revisar recompra" : "Fazer recompra"}
         <ArrowIcon />
       </button>
@@ -60,6 +78,8 @@ export function RepurchaseOverview({
 }
 
 type RepurchaseLauncherProps = {
+  demo?: boolean;
+  unavailableReason?: string;
   totalOffsets: number;
   selectedTitleCount: number;
   selectedAdjustmentCount: number;
@@ -68,6 +88,8 @@ type RepurchaseLauncherProps = {
 
 /** Atalho para a recompra dentro do formulário da condição. */
 export function RepurchaseLauncher({
+  unavailableReason,
+  demo = true,
   totalOffsets,
   selectedTitleCount,
   selectedAdjustmentCount,
@@ -77,8 +99,19 @@ export function RepurchaseLauncher({
     <section id="pricing-repurchase" className="pricing-section pricing-offset-launcher pricing-anchor">
       <div>
         <Badge tone={totalOffsets > 0 ? "ready" : "eyebrow"}>RECOMPRA E COMPENSAÇÕES</Badge>
-        <strong>Compor recompra no borderô</strong>
-        <span>Títulos do cedente ou do grupo, pendências e créditos disponíveis.</span>
+        <strong>
+          {unavailableReason
+            ? "Recompra indisponível"
+            : demo
+              ? "Simulação de recompra e compensações"
+              : "Recompra de saldo principal aberto"}
+        </strong>
+        <span>
+          {unavailableReason ||
+            (demo
+              ? "Títulos fictícios do cedente ou do grupo, pendências e créditos demonstrativos."
+              : "Defina se cada título será baixado ou seguirá em cobrança do sacado.")}
+        </span>
         {totalOffsets > 0 && (
           <small>
             {selectedTitleCount} título(s) em recompra · {selectedAdjustmentCount} compensação(ões) · total{" "}
@@ -86,7 +119,7 @@ export function RepurchaseLauncher({
           </small>
         )}
       </div>
-      <button type="button" onClick={onOpen}>
+      <button type="button" data-testid="launch-repurchase" disabled={Boolean(unavailableReason)} onClick={onOpen}>
         {totalOffsets > 0 ? "Revisar recompra" : "Adicionar recompra"}
         <ArrowIcon />
       </button>

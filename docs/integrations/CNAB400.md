@@ -30,9 +30,9 @@ Para duplicatas adquiridas, `title.finalBeneficiary` recebe os dados cadastrais 
 
 ## Escopo e limites
 
-- Entrada01, espécie01, moeda real: Itaú109 e Bradesco09/19 com emissão pelo cliente; Itaú112 escritural com numeração pelo banco. DAC Bradesco calculado; não gera boleto/código de barras localmente.
-- Retorno: entrada02, rejeição03, liquidação06, baixa09; Bradesco também baixa10 e rejeição24. Baixa sem pagamento permanece baixa. Ocorrências diferentes são recusadas para revisão manual, incluindo PIX, estorno, cartório e pagamento parcial.
-- Instruções0000: nenhum protesto, negativação, alteração ou baixa automática comandados. Valores não utilizados ficam zerados segundo seu campo; complementos ficam em branco.
+- Entrada01 e pedido de baixa02 de registro existente; espécie01, moeda real nas entradas: Itaú109 e Bradesco09/19 com emissão pelo cliente; Itaú112 escritural com numeração pelo banco. DAC Bradesco calculado; não gera boleto/código de barras localmente.
+- Retorno: entrada02, rejeição03, liquidação06, baixa09; Bradesco também baixa10 e rejeição24. Rejeição de baixa/instrução Itaú15/16 e Bradesco27/32 preserva registro e devolve pedido à fila com motivo. Baixa sem pagamento permanece baixa. Ocorrências diferentes são recusadas para revisão manual, incluindo PIX, estorno, cartório e pagamento parcial.
+- Instruções0000: nenhum protesto, negativação ou alteração comandados. Baixa de recompra é ocorrência02 explícita, sem reutilizar entrada01. Valores não utilizados ficam zerados segundo seu campo; complementos ficam em branco.
 - Datas restritas a 2000–2099; título de entrada a vencer, CPF/CNPJ válidos, CEP de oito dígitos, textos sem truncamento. Conversão de acentos é explícita para ASCII.
 - Sem desconto múltiplo, IOF de seguro, rateio ou débito automático. Multa percentual Itaú é enviada em registro2; o complemento equivalente Bradesco permanece fora do escopo. Beneficiário final distinto exige os dados completos no complemento implementado; não preencher com os dados do adquirente por conveniência.
 - Validar contrato, carteira, faixa de nosso número, credenciais da conta e layout vigente com cada banco e concluir homologação formal antes de uso produtivo. Nenhuma conta fictícia é aplicada por padrão em produção.
@@ -60,3 +60,11 @@ Para a conta Itaú112 informada pelo usuário, foram confirmados juros de8% ao m
 `lateFinePercent` com `lateFineDaysAfterDue` explícito gera registro2, código2, data DDMMAAAA e percentual com duas casas. `sendPayerEmail` gera registro5 com e-mail cadastrado do sacado, preservando-o e combinando os dados do sacador quando necessário. Sem e-mail válido solicitado, a remessa é recusada.
 
 Fonte: [manual oficial Itaú](https://download.itau.com.br/bankline/layout_cobranca_400bytes_cnab_itau.pdf), notas3/5 (p18), registro2 (p9), registro5 (p12), notas29/35 (p37–39). A numeração pelo banco e os complementos precisam ser homologados no contrato efetivo. A captura não comprova transmissão nem aceite bancário.
+
+## Baixa bancária após recompra
+
+Recompra com “Baixar título: SIM” pode encerrar o ativo no sistema e manter banco Registrado. `PortfolioTitleRecord.bankWriteoff` guarda operação/ciclo/aplicação e estados `Pendente`, `Remessa gerada` e `Confirmada`. Antes de concluir a recompra, servidor valida conta única ativa configurada, numeração disponível e remessa de registro original rastreável; título importado sem essa evidência bloqueia a baixa com motivo explícito. Título sem boleto ou já baixado não precisa de instrução. Registro inconclusivo ou liquidado bloqueia a operação.
+
+Próxima remessa da mesma conta inclui automaticamente pedidos pendentes, inclusive títulos Recomprado com saldo zero. Ocorrência02 conserva nosso número atribuído e valor nominal da remessa original, inclusive Itaú112; o vínculo interno preserva controle/documento do registro. Itaú preenche demais campos com zeros/brancos conforme nota6, enquanto Bradesco mantém controle/documento; não reserva novo nosso número nem repete entrada01. Arquivo gerado apenas muda pedido para `Remessa gerada`, sem afirmar transmissão ou aceite. Recuperação/replay devolve mesmos bytes. Retorno09/10 confirma banco Baixado e pedido Confirmada, sem caixa. Rejeição explícita preserva registro, registra códigos e permite nova remessa. Retorno06 após recompra com baixa bloqueia arquivo para conciliação manual; não duplica recebimento.
+
+Fontes primárias para ocorrência02: [Itaú](https://download.itau.com.br/bankline/layout_cobranca_400bytes_cnab_itau.pdf), nota6/p19 (campos obrigatórios e preenchimento por picture), retorno15/16 na nota17/p23; [Bradesco](https://banco.bradesco/assets/pessoajuridica/pdf/mpo_arquivos_layout_400P.pdf), campo109–110 da remessa e tabela de retorno27/32. Conferência documental em25/10/2026; sem transmissão ou homologação bancária nesta tarefa.

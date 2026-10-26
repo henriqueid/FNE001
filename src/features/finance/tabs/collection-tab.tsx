@@ -36,6 +36,10 @@ export function CollectionTab({
           <div>
             <h2>Cobrança</h2>
             <p>Gere remessas, importe retornos e acompanhe o registro e a liquidação dos títulos.</p>
+            <p>
+              CNAB 400 Itaú e Bradesco disponíveis para contas compatíveis. Uso bancário exige homologação do convênio;
+              outros bancos e layouts ainda não são atendidos por esta rotina.
+            </p>
           </div>
           {onConfigureBanks && (
             <button className="fn-btn" onClick={onConfigureBanks}>

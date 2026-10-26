@@ -18,7 +18,8 @@ export type PersistOperationCommand = {
 };
 
 export function operationPayload(operation: Operation): Operation {
-  const { persistenceVersion: _version, ...payload } = operation;
+  const { persistenceVersion: _version, repurchaseContext: _context, ...payload } = operation;
+  void _context;
   void _version;
   return stripReceivablesFromOperation(payload as Operation);
 }

@@ -81,6 +81,7 @@ export function ApprovalFeedback({ message, onDismiss }: { message: string; onDi
 }
 
 export function ApprovalFooter({
+  busy = false,
   status,
   prerequisitesReady,
   observation,
@@ -90,6 +91,7 @@ export function ApprovalFooter({
   onReturn,
   onReject,
 }: {
+  busy?: boolean;
   status: ApprovalStatus;
   prerequisitesReady: boolean;
   observation: string;
@@ -118,16 +120,16 @@ export function ApprovalFooter({
         <small>{observation.trim().length}/8 caracteres mínimos para devolver ou reprovar</small>
       </label>
       <div className="approval-footer-actions">
-        <button className="danger-secondary" onClick={onReject}>
+        <button className="danger-secondary" disabled={busy} onClick={onReject}>
           Reprovar
         </button>
-        <button className="secondary-action" onClick={onReturn}>
+        <button className="secondary-action" disabled={busy} onClick={onReturn}>
           Devolver para risco
         </button>
-        <button className="secondary-action" onClick={onSubmit}>
+        <button className="secondary-action" disabled={busy} onClick={onSubmit}>
           Enviar para alçadas
         </button>
-        <button className="primary-action action-confirm" onClick={onApprove}>
+        <button className="primary-action action-confirm" disabled={busy} onClick={onApprove}>
           Aprovar operação <ArrowIcon />
         </button>
       </div>

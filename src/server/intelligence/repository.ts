@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import type { IntelligenceState } from "@/src/domain/intelligence/model";
 import type { DecisionDatabase } from "@/src/server/decisions/repository";
+import { readBudgetPolicy, readUserTokenUsage } from "./budget-policy";
 import { jsonParameter } from "@/src/server/database/postgres";
 type IntelligenceStateRow = {
   tenant_id: string;
@@ -22,6 +23,14 @@ type BudgetEvent = {
 const fields =
   "tenant_id, contracted, enabled, status, monthly_token_budget, used_tokens, aggregate_version, updated_at";
 export class IntelligenceBudgetError extends Error {}
+export class IntelligenceStateWriteError extends IntelligenceBudgetError {
+  constructor(
+    message: string,
+    public status: 400 | 409 = 409,
+  ) {
+    super(message);
+  }
+}
 function stateFromRow(row: IntelligenceStateRow, budgetPeriod?: string): IntelligenceState {
   return {
     version: 1,
@@ -74,7 +83,7 @@ async function updateUsage(db: DecisionDatabase, tenantId: string, actorId: stri
   return row;
 }
 /** Usa o contador legado conservadoramente no primeiro mês; nunca zera sem marcador auditável. */
-async function lockedMonth(db: DecisionDatabase, tenantId: string, actorId: string) {
+export async function lockedIntelligenceMonth(db: DecisionDatabase, tenantId: string, actorId: string) {
   let row = await db
     .prepare(`select ${fields} from private.intelligence_states where tenant_id = ? for update`)
     .bind(tenantId)
@@ -110,9 +119,22 @@ async function lockedMonth(db: DecisionDatabase, tenantId: string, actorId: stri
 export async function loadIntelligenceState(db: DecisionDatabase, tenantId: string, actorId: string) {
   requireActor(actorId);
   return requireTransaction(db)(async transaction => {
-    const month = await lockedMonth(transaction, tenantId, actorId);
+    const month = await lockedIntelligenceMonth(transaction, tenantId, actorId);
     return month ? stateFromRow(month.row, month.period) : null;
   });
+}
+export async function ensureIntelligenceState(
+  db: DecisionDatabase,
+  tenantId: string,
+  actorId: string,
+  state: IntelligenceState,
+) {
+  await db
+    .prepare(
+      "insert into private.intelligence_states (tenant_id, contracted, enabled, status, monthly_token_budget, used_tokens, updated_by) values (?, ?, ?, ?, ?, ?, ?) on conflict (tenant_id) do nothing",
+    )
+    .bind(tenantId, state.contracted, state.enabled, state.status, state.monthlyTokenBudget, 0, actorId)
+    .run();
 }
 export async function saveIntelligenceState(
   db: DecisionDatabase,
@@ -120,14 +142,50 @@ export async function saveIntelligenceState(
   actorId: string,
   state: IntelligenceState,
 ) {
-  const row = await db
-    .prepare(
-      `insert into private.intelligence_states (tenant_id, contracted, enabled, status, monthly_token_budget, used_tokens, updated_by) values (?, ?, ?, ?, ?, ?, ?) on conflict (tenant_id) do update set contracted = excluded.contracted, enabled = excluded.enabled, status = excluded.status, monthly_token_budget = excluded.monthly_token_budget, used_tokens = private.intelligence_states.used_tokens, aggregate_version = private.intelligence_states.aggregate_version + 1, updated_by = excluded.updated_by, updated_at = now() returning ${fields}`,
-    )
-    .bind(tenantId, state.contracted, state.enabled, state.status, state.monthlyTokenBudget, 0, actorId)
-    .first<IntelligenceStateRow>();
-  if (!row) throw new Error("A configuração de IA não foi gravada.");
-  return stateFromRow(row);
+  requireActor(actorId);
+  const expectedVersion = state.persistenceVersion === undefined ? 0 : state.persistenceVersion;
+  if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 0)
+    throw new IntelligenceStateWriteError("Versão da configuração de IA inválida.", 400);
+  return requireTransaction(db)(async transaction => {
+    if (expectedVersion === 0) {
+      const created = await transaction
+        .prepare(
+          `insert into private.intelligence_states (tenant_id, contracted, enabled, status, monthly_token_budget, used_tokens, updated_by) values (?, ?, ?, ?, ?, ?, ?) on conflict (tenant_id) do nothing returning ${fields}`,
+        )
+        .bind(tenantId, state.contracted, state.enabled, state.status, state.monthlyTokenBudget, 0, actorId)
+        .first<IntelligenceStateRow>();
+      if (created) return stateFromRow(created);
+    }
+    const current = await transaction
+      .prepare(`select ${fields} from private.intelligence_states where tenant_id = ? for update`)
+      .bind(tenantId)
+      .first<IntelligenceStateRow>();
+    if (!current || Number(current.aggregate_version) !== expectedVersion)
+      throw new IntelligenceStateWriteError("A configuração de IA foi alterada. Recarregue antes de salvar.");
+    // Após adquirir o lock, preserva o teto confirmado pela política de orçamento.
+    const policy = await transaction
+      .prepare(
+        "select aggregate_version, payload from private.domain_events where tenant_id = ? and aggregate_type = 'IntelligenceBudgetPolicy' and aggregate_id = 'monthly' order by aggregate_version desc limit 1",
+      )
+      .bind(tenantId)
+      .first();
+    const row = await transaction
+      .prepare(
+        `update private.intelligence_states set contracted = ?, enabled = ?, status = ?, monthly_token_budget = ?, aggregate_version = aggregate_version + 1, updated_by = ?, updated_at = now() where tenant_id = ? and aggregate_version = ? returning ${fields}`,
+      )
+      .bind(
+        state.contracted,
+        state.enabled,
+        state.status,
+        policy ? Number(current.monthly_token_budget) : state.monthlyTokenBudget,
+        actorId,
+        tenantId,
+        expectedVersion,
+      )
+      .first<IntelligenceStateRow>();
+    if (!row) throw new IntelligenceStateWriteError("A configuração de IA foi alterada. Recarregue antes de salvar.");
+    return stateFromRow(row);
+  });
 }
 /** Consulta a decisão persistida: reinício do processo ou resposta de commit perdida não duplica ajuste. */
 export async function settleIntelligenceReservation(
@@ -140,7 +198,7 @@ export async function settleIntelligenceReservation(
   requireActor(actorId);
   if (!Number.isSafeInteger(actualTokens) || actualTokens <= 0) return;
   await requireTransaction(db)(async transaction => {
-    const month = await lockedMonth(transaction, tenantId, actorId);
+    const month = await lockedIntelligenceMonth(transaction, tenantId, actorId);
     if (!month) throw new IntelligenceBudgetError("Configuração de IA não encontrada.");
     const reserved = await transaction
       .prepare(
@@ -189,7 +247,7 @@ export async function reserveIntelligenceTokens(
   if (!Number.isSafeInteger(tokens) || tokens <= 0) throw new IntelligenceBudgetError("Reserva de IA inválida.");
   const reservationId = randomUUID();
   const period = await requireTransaction(db)(async transaction => {
-    const month = await lockedMonth(transaction, tenantId, actorId);
+    const month = await lockedIntelligenceMonth(transaction, tenantId, actorId);
     const budget = Number(month?.row.monthly_token_budget),
       used = Number(month?.row.used_tokens);
     if (
@@ -201,6 +259,17 @@ export async function reserveIntelligenceTokens(
       used > budget - tokens
     )
       throw new IntelligenceBudgetError("IA sem licença, desativada ou sem saldo para esta solicitação.");
+    const policy = await readBudgetPolicy(transaction, tenantId, budget);
+    if (policy.mode === "allocated") {
+      const limit = policy.allocations.find(item => item.userId === actorId)?.monthlyTokenBudget ?? 0;
+      const userUsed =
+        (await readUserTokenUsage(transaction, tenantId, month.period)).find(item => item.userId === actorId)
+          ?.usedTokens ?? 0;
+      if (userUsed > limit - tokens)
+        throw new IntelligenceBudgetError(
+          "Sua cota mensal de IA não tem saldo para esta solicitação. Consulte o administrador.",
+        );
+    }
     await updateUsage(transaction, tenantId, actorId, used + tokens);
     await event(
       transaction,

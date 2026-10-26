@@ -17,6 +17,21 @@ const detected = buildAttentionItems({
 const initial = () => reconcileTasks(seedTaskState(), detected.slice(0, 2), now);
 
 describe("persistência de tarefas", () => {
+  it("reconciliação de tarefa adiada e reabertura preservam estado e trilha válidos", () => {
+    const state = initial();
+    const snoozed = applyTaskCommand(
+      state,
+      state.tasks[0].id,
+      { type: "snooze", by: "Henrique", until: "2026-10-14T12:00:00.000Z" },
+      now,
+    );
+    const resolved = reconcileTasks(snoozed, [], "2026-10-13T12:01:00.000Z");
+    expect(validateTaskState(resolved)).toBeNull();
+    expect(validateTaskTransition(snoozed, resolved, "Henrique")).toBeNull();
+    const reopened = reconcileTasks(resolved, detected.slice(0, 2), "2026-10-13T12:02:00.000Z");
+    expect(validateTaskState(reopened)).toBeNull();
+    expect(validateTaskTransition(resolved, reopened, "Henrique")).toBeNull();
+  });
   it("valida o agregado e aceita histórico novo produzido pelo ator da sessão", () => {
     const state = initial();
     const next = applyTaskCommand(

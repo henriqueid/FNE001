@@ -9,6 +9,7 @@ import {
   createEmptyEntry,
   type DebtorDraft,
   emptyDebtorDraft,
+  entryDraftBlockers,
   type EntryDraftKey,
   formatTaxId,
   isDebtorFormValid,
@@ -47,6 +48,7 @@ export function useManualEntry({
   const [emptyEntry] = useState(() => createEmptyEntry(`manual-${Date.now()}`));
   const [draft, setDraft] = useState(emptyEntry);
   const [debtorDraft, setDebtorDraft] = useState<DebtorDraft>(emptyDebtorDraft);
+  const draftBlockers = entryDraftBlockers(draft, receivableType, Boolean(selectedDebtor));
   const hasSavedEntries = entries.length > 0;
   const debtorFormValid = isDebtorFormValid(debtorDraft, requireEmail, requirePhone);
   const setField = (field: EntryDraftKey, value: string | number) =>
@@ -83,9 +85,9 @@ export function useManualEntry({
     setEditorOpen(true);
   }
   function completeDraft() {
-    if (!selectedDebtor) return null;
-    const document = receivableType === "Cheque" ? draft.documentNumber || draft.cmc7 : draft.documentNumber;
-    if (!document.trim() || draft.amount <= 0 || !draft.dueDate) return null;
+    if (draftBlockers.length || !selectedDebtor) return null;
+    const document =
+      receivableType === "Cheque" ? draft.documentNumber.trim() || draft.cmc7.trim() : draft.documentNumber.trim();
     return {
       ...draft,
       documentNumber: document,
@@ -108,7 +110,8 @@ export function useManualEntry({
   }
   function generateInstallments() {
     const completed = completeDraft();
-    if (!completed || !receivableType || installments < 2) return;
+    if (!completed || !receivableType || !Number.isInteger(installments) || installments < 2 || installments > 120)
+      return;
     const generated = buildInstallments(completed, installments);
     const next = [...entries, ...generated];
     setEntries(next);
@@ -185,6 +188,7 @@ export function useManualEntry({
     showDeleteAll,
     setShowDeleteAll,
     draft,
+    draftBlockers,
     setField,
     changeDebtorQuery,
     searchDebtor,

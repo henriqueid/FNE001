@@ -17,31 +17,35 @@ async function context(request: Request) {
 export async function GET(request: Request) {
   const access = await context(request);
   if ("error" in access) return access.error;
-  if (
-    !access.principal.permissions.some(permission => permission === "settings:view" || permission === "settings:manage")
-  )
-    return json({ error: "Sem permissão para consultar empresas e veículos." }, 403);
+  const visible = <T extends { name: string }>(entries: T[]) =>
+    access.principal.permissions.includes("settings:manage")
+      ? entries
+      : entries.filter(
+          entry => access.principal.companyScopes.includes("*") || access.principal.companyScopes.includes(entry.name),
+        );
   const destinations = await loadCompanyDestinations(access.db, access.tenantId);
-  if (destinations.length) return json({ destinations });
+  if (destinations.length) return json({ destinations: visible(destinations) });
   const primary = await loadCompanyProfile(access.db, access.tenantId);
   return json({
-    destinations: primary
-      ? [
-          {
-            id: `primary-${access.tenantId}`,
-            legalName: primary.legalName,
-            tradeName: primary.tradeName,
-            name: primary.tradeName,
-            document: primary.document,
-            institution:
-              primary.institutionType === "FIDC" || primary.institutionType === "Securitizadora"
-                ? primary.institutionType
-                : "Factoring",
-            detail: "Empresa principal",
-            status: "ACTIVE",
-          },
-        ]
-      : [],
+    destinations: visible(
+      primary
+        ? [
+            {
+              id: `primary-${access.tenantId}`,
+              legalName: primary.legalName,
+              tradeName: primary.tradeName,
+              name: primary.tradeName,
+              document: primary.document,
+              institution:
+                primary.institutionType === "FIDC" || primary.institutionType === "Securitizadora"
+                  ? primary.institutionType
+                  : "Factoring",
+              detail: "Empresa principal",
+              status: "ACTIVE",
+            },
+          ]
+        : [],
+    ),
   });
 }
 

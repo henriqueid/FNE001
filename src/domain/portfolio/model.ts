@@ -84,12 +84,30 @@ export type PortfolioConfirmation = {
 };
 
 export type PortfolioTitleRecord = {
+  repurchaseReservation?: {
+    applicationId: string;
+    operationId: string;
+    amount: number;
+    principal: number;
+    writeOffTitle: boolean;
+    appliedAt: string;
+  };
   sourcePosition?: { id: string; date: string; openAmount: number; paidAmount: number; discountAmount: number };
   positionReviewRequired?: string;
   id: string;
   receivableId?: string;
   status: PortfolioTitleStatus;
   bankStatus: PortfolioBankStatus;
+  bankWriteoff?: {
+    operationId: string;
+    cycleId: string;
+    applicationId: string;
+    status: "Pendente" | "Remessa gerada" | "Confirmada";
+    requestedAt: string;
+    remittanceCommandId?: string;
+    confirmedAt?: string;
+    rejectionReason?: string;
+  };
   source: "Carteira anterior" | "Operação liberada";
   importSource?: OperationSource;
   receivableType?: string;

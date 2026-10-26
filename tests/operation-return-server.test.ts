@@ -169,7 +169,11 @@ it("conflito de chave ou devoluções concorrentes não repete estorno", async (
     returnReleasedOperation(db, principal, { ...input, commandId: "return-operation-0002" }),
   ]);
   expect(outcomes.filter(result => result.status === "fulfilled")).toHaveLength(1);
-  await expect(returnReleasedOperation(db, principal, { ...input, reason: "Outro conteúdo" })).rejects.toThrow(
+  const winner = outcomes.find(result => result.status === "fulfilled");
+  if (!winner) throw new Error("Nenhuma devolução foi confirmada.");
+  const winningInput = { ...input, commandId: winner.value.commandId };
+  expect((await returnReleasedOperation(db, principal, winningInput)).commandId).toBe(winner.value.commandId);
+  await expect(returnReleasedOperation(db, principal, { ...winningInput, reason: "Outro conteúdo" })).rejects.toThrow(
     /chave/i,
   );
   expect((await loadFinanceState(db, "tenant-a"))!.journal).toHaveLength(2);

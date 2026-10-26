@@ -14,7 +14,7 @@ import { ChartImportModal, downloadCsv } from "@/src/features/finance/chart-impo
 import { Field, br, money } from "@/src/features/finance/finance-ui";
 import { ReportExport } from "@/src/ui/report-export";
 import { buildAccountingReport } from "@/src/domain/reports/accounting";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 export function AccountingTab({
   state,
@@ -23,7 +23,7 @@ export function AccountingTab({
 }: {
   state: FinanceState;
   scope: string;
-  onApply: (r: Result) => void;
+  onApply: (r: Result) => boolean | Promise<boolean>;
 }) {
   const today = todayIso();
   const [view, setView] = useState<"diario" | "balancete" | "dre" | "plano" | "fechamento">("balancete");
@@ -42,6 +42,26 @@ export function AccountingTab({
     ledgerCode: "",
     group: "",
   });
+  const [setupSaving, setSetupSaving] = useState(false);
+  const [setupError, setSetupError] = useState("");
+  const setupSavingRef = useRef(false);
+  async function saveSetup(result: Result) {
+    if (setupSavingRef.current) return false;
+    setupSavingRef.current = true;
+    setSetupSaving(true);
+    setSetupError("");
+    try {
+      const confirmed = await onApply(result);
+      if (!result.error && confirmed) return true;
+      setSetupError(result.error ?? "Gravação não confirmada. Os campos foram preservados para tentar novamente.");
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : "Não foi possível confirmar a gravação.");
+    } finally {
+      setupSavingRef.current = false;
+      setSetupSaving(false);
+    }
+    return false;
+  }
   const tb = useMemo(() => trialBalance(state, scope, from, to), [state, scope, from, to]);
   const dre = useMemo(() => incomeStatement(state, scope, from, to), [state, scope, from, to]);
   const entries = state.journal
@@ -303,95 +323,99 @@ export function AccountingTab({
             ))}
           </div>
           <aside>
-            <h4>Nova conta analítica</h4>
-            <div className="fn-form single">
-              <Field label="Código">
-                <input
-                  value={newAcc.code}
-                  onChange={e => setNewAcc({ ...newAcc, code: e.target.value })}
-                  placeholder="5.1.10"
-                />
-              </Field>
-              <Field label="Nome">
-                <input value={newAcc.name} onChange={e => setNewAcc({ ...newAcc, name: e.target.value })} />
-              </Field>
-              <Field label="Natureza">
-                <select
-                  value={newAcc.nature}
-                  onChange={e => setNewAcc({ ...newAcc, nature: e.target.value as typeof newAcc.nature })}
-                >
-                  {["Ativo", "Passivo", "Patrimônio líquido", "Receita", "Despesa"].map(n => (
-                    <option key={n}>{n}</option>
-                  ))}
-                </select>
-              </Field>
-              <button
-                className="fn-btn primary"
-                onClick={() => {
-                  const r = addChartAccount(state, newAcc);
-                  onApply(r);
-                  if (!r.error) setNewAcc({ code: "", name: "", nature: newAcc.nature });
-                }}
-              >
-                Criar conta
-              </button>
-            </div>
-            <h4>Categorias gerenciais</h4>
-            <ul className="fn-cats">
-              {state.categories.map(c => (
-                <li key={c.id}>
-                  <span className={`fn-kind-dot ${c.kind === "Despesa" ? "pay" : "receive"}`}>{c.name}</span>
-                  <small>
-                    {c.group} → {c.ledgerCode}
-                  </small>
-                </li>
-              ))}
-            </ul>
-            <div className="fn-form single">
-              <Field label="Nova categoria">
-                <input value={newCat.name} onChange={e => setNewCat({ ...newCat, name: e.target.value })} />
-              </Field>
-              <Field label="Tipo">
-                <select
-                  value={newCat.kind}
-                  onChange={e =>
-                    setNewCat({ ...newCat, kind: e.target.value as "Receita" | "Despesa", ledgerCode: "" })
-                  }
-                >
-                  <option>Despesa</option>
-                  <option>Receita</option>
-                </select>
-              </Field>
-              <Field label="Conta contábil">
-                <select value={newCat.ledgerCode} onChange={e => setNewCat({ ...newCat, ledgerCode: e.target.value })}>
-                  <option value="">Escolha</option>
-                  {state.chart
-                    .filter(c => c.analytic && c.nature === newCat.kind)
-                    .map(c => (
-                      <option key={c.code} value={c.code}>
-                        {c.code} {c.name}
-                      </option>
+            {setupError && <p role="alert">{setupError}</p>}
+            <fieldset disabled={setupSaving} style={{ border: 0, padding: 0, minWidth: 0 }}>
+              <h4>Nova conta analítica</h4>
+              <div className="fn-form single">
+                <Field label="Código">
+                  <input
+                    value={newAcc.code}
+                    onChange={e => setNewAcc({ ...newAcc, code: e.target.value })}
+                    placeholder="5.1.10"
+                  />
+                </Field>
+                <Field label="Nome">
+                  <input value={newAcc.name} onChange={e => setNewAcc({ ...newAcc, name: e.target.value })} />
+                </Field>
+                <Field label="Natureza">
+                  <select
+                    value={newAcc.nature}
+                    onChange={e => setNewAcc({ ...newAcc, nature: e.target.value as typeof newAcc.nature })}
+                  >
+                    {["Ativo", "Passivo", "Patrimônio líquido", "Receita", "Despesa"].map(n => (
+                      <option key={n}>{n}</option>
                     ))}
-                </select>
-              </Field>
-              <Field label="Grupo">
-                <input
-                  value={newCat.group}
-                  onChange={e => setNewCat({ ...newCat, group: e.target.value })}
-                  placeholder="Estrutura"
-                />
-              </Field>
-              <button
-                className="fn-btn ghost"
-                onClick={() => {
-                  const r = addCategory(state, newCat);
-                  onApply(r);
-                  if (!r.error) setNewCat({ name: "", kind: newCat.kind, ledgerCode: "", group: "" });
-                }}
-              >
-                Criar categoria
-              </button>
-            </div>
+                  </select>
+                </Field>
+                <button
+                  className="fn-btn primary"
+                  onClick={async () => {
+                    if (await saveSetup(addChartAccount(state, newAcc)))
+                      setNewAcc({ code: "", name: "", nature: newAcc.nature });
+                  }}
+                >
+                  Criar conta
+                </button>
+              </div>
+              <h4>Categorias gerenciais</h4>
+              <ul className="fn-cats">
+                {state.categories.map(c => (
+                  <li key={c.id}>
+                    <span className={`fn-kind-dot ${c.kind === "Despesa" ? "pay" : "receive"}`}>{c.name}</span>
+                    <small>
+                      {c.group} → {c.ledgerCode}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+              <div className="fn-form single">
+                <Field label="Nova categoria">
+                  <input value={newCat.name} onChange={e => setNewCat({ ...newCat, name: e.target.value })} />
+                </Field>
+                <Field label="Tipo">
+                  <select
+                    value={newCat.kind}
+                    onChange={e =>
+                      setNewCat({ ...newCat, kind: e.target.value as "Receita" | "Despesa", ledgerCode: "" })
+                    }
+                  >
+                    <option>Despesa</option>
+                    <option>Receita</option>
+                  </select>
+                </Field>
+                <Field label="Conta contábil">
+                  <select
+                    value={newCat.ledgerCode}
+                    onChange={e => setNewCat({ ...newCat, ledgerCode: e.target.value })}
+                  >
+                    <option value="">Escolha</option>
+                    {state.chart
+                      .filter(c => c.analytic && c.nature === newCat.kind)
+                      .map(c => (
+                        <option key={c.code} value={c.code}>
+                          {c.code} {c.name}
+                        </option>
+                      ))}
+                  </select>
+                </Field>
+                <Field label="Grupo">
+                  <input
+                    value={newCat.group}
+                    onChange={e => setNewCat({ ...newCat, group: e.target.value })}
+                    placeholder="Estrutura"
+                  />
+                </Field>
+                <button
+                  className="fn-btn ghost"
+                  onClick={async () => {
+                    if (await saveSetup(addCategory(state, newCat)))
+                      setNewCat({ name: "", kind: newCat.kind, ledgerCode: "", group: "" });
+                  }}
+                >
+                  Criar categoria
+                </button>
+              </div>
+            </fieldset>
           </aside>
         </div>
       )}

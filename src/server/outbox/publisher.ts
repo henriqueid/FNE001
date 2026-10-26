@@ -288,7 +288,30 @@ type NotificationRow = {
   vehicle: string;
 };
 
-export async function listPublishedNotifications(db: DecisionDatabase, tenantId: string, principal: ServerPrincipal) {
+function publishedNotification(row: NotificationRow): PublishedNotification {
+  return {
+    id: row.notification_id,
+    sourceEventId: row.source_event_id,
+    decisionId: row.decision_id,
+    operationId: row.operation_id,
+    kind: row.kind,
+    tone: row.tone,
+    title: row.title,
+    summary: row.summary,
+    detail: row.detail,
+    impact: row.impact,
+    nextAction: row.next_action,
+    owner: row.owner,
+    department: row.department,
+    timing: row.timing,
+    view: row.view_name,
+    requiredPermission: row.required_permission ?? undefined,
+    authorityId: row.authority_id ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+async function notificationRows(db: DecisionDatabase, tenantId: string) {
   await ensurePublisherSchema(db);
   const result = await db
     .prepare(
@@ -297,35 +320,26 @@ export async function listPublishedNotifications(db: DecisionDatabase, tenantId:
        JOIN private.operations operation
          ON operation.tenant_id = notification.tenant_id AND operation.operation_id = notification.operation_id
        WHERE notification.tenant_id = ? AND notification.status = 'OPEN'
-       ORDER BY notification.created_at DESC LIMIT 100`,
+       ORDER BY notification.created_at DESC, notification.notification_id`,
     )
     .bind(tenantId)
     .all<NotificationRow>();
-  return result.results
+  return result.results;
+}
+
+/** Somente a reconciliação interna consome a fonte integral; a API sempre aplica audiência e escopo. */
+export async function loadPublishedTaskNotifications(db: DecisionDatabase, tenantId: string) {
+  return (await notificationRows(db, tenantId)).map(row => ({ ...publishedNotification(row), company: row.vehicle }));
+}
+
+export async function listPublishedNotifications(db: DecisionDatabase, tenantId: string, principal: ServerPrincipal) {
+  return (await notificationRows(db, tenantId))
     .filter(row => principalHasCompanyScope(principal, row.vehicle))
     .filter(row => !row.required_permission || principal.permissions.includes(row.required_permission))
     .filter(row => !row.authority_id || principal.authorityIds.includes(row.authority_id))
     .filter(row => principal.access === "admin" || functionalAreasMatchQueue(principal.functionalAreas, row.department))
-    .map((row): PublishedNotification => ({
-      id: row.notification_id,
-      sourceEventId: row.source_event_id,
-      decisionId: row.decision_id,
-      operationId: row.operation_id,
-      kind: row.kind,
-      tone: row.tone,
-      title: row.title,
-      summary: row.summary,
-      detail: row.detail,
-      impact: row.impact,
-      nextAction: row.next_action,
-      owner: row.owner,
-      department: row.department,
-      timing: row.timing,
-      view: row.view_name,
-      requiredPermission: row.required_permission ?? undefined,
-      authorityId: row.authority_id ?? undefined,
-      createdAt: row.created_at,
-    }));
+    .slice(0, 100)
+    .map(publishedNotification);
 }
 
 export async function outboxHealth(

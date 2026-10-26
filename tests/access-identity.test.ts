@@ -70,10 +70,18 @@ describe("identificadores de acesso", () => {
   it("autentica com login personalizado ou CPF formatado usando a mesma credencial", async () => {
     const byLogin = await credentialDatabase();
     expect(await authenticateCredentials(byLogin.db, "tenant-1", " Joao.Silva ", "SenhaSegura2026")).toBe("user-1");
-    expect(byLogin.bindings[0]).toEqual(["tenant-1", "joao.silva", "joao.silva", ""]);
+    expect(byLogin.bindings[0]).toEqual(["tenant-1", "joao.silva", "joao.silva", null]);
 
     const byCpf = await credentialDatabase();
     expect(await authenticateCredentials(byCpf.db, "tenant-1", "529.982.247-25", "SenhaSegura2026")).toBe("user-1");
     expect(byCpf.bindings[0]).toEqual(["tenant-1", "529.982.247-25", "529.982.247-25", "52998224725"]);
   });
+});
+
+it("login textual nunca procura CPF vazio ou dígitos extraídos de letras", async () => {
+  for (const identifier of ["login.inexistente", "nome52998224725", "nome123"]) {
+    const captured = await credentialDatabase();
+    await authenticateCredentials(captured.db, "tenant-1", identifier, "SenhaSegura2026");
+    expect(captured.bindings[0][3]).toBeNull();
+  }
 });

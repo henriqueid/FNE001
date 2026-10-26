@@ -21,7 +21,21 @@ export const compact = (v: number) => {
       ? `${s}R$ ${(a / 1e3).toFixed(1).replace(".", ",")} mil`
       : `${s}${brl.format(a)}`;
 };
-export const br = (iso?: string) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : "—");
+export function br(value?: string) {
+  if (typeof value !== "string") return "—";
+  const iso = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,9})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?)?$/,
+  );
+  const local = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!iso && !local) return "—";
+  const [year, month, day] = iso ? [iso[1], iso[2], iso[3]] : [local![3], local![2], local![1]];
+  const y = Number(year),
+    m = Number(month),
+    d = Number(day);
+  const leap = y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return y > 0 && m >= 1 && m <= 12 && d >= 1 && d <= days[m - 1] ? `${day}/${month}/${year}` : "—";
+}
 export const BY = "Henrique";
 
 /** Converte valor digitado em pt-BR ("1.500,55", "1500,55", "1.500") ou com ponto decimal ("1500.55").

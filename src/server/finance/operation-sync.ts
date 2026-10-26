@@ -1,4 +1,5 @@
 /** Materializa compra e contas a pagar no servidor, na transação da liberação. */
+import { post, roleLedger } from "@/src/domain/finance/ledger";
 import type { Operation } from "@/src/domain/core/types";
 import { normalizedPricing, pricingCalculation } from "@/src/domain/operations/pricing";
 import { syncReleases } from "@/src/domain/finance/releases";
@@ -28,6 +29,28 @@ export async function syncReleasedOperationFinance(
   };
   const next = syncReleases(current, [operation], { [operation.id]: financials }, actorId);
   if (next === current) return;
+  for (const application of operation.repurchaseApplications ?? []) {
+    if (
+      !application.writeOffTitle ||
+      application.reversedAt ||
+      next.journal.some(e => e.origin.id === application.id && !e.reversalOf)
+    )
+      continue;
+    post(
+      next,
+      {
+        date: operation.releaseReview.releasedAt!.slice(0, 10),
+        company: operation.vehicle,
+        history: `Recompra ${application.titleId} · operação ${operation.id}`,
+        origin: { type: "Operação", id: application.id },
+        lines: [
+          { ledger: roleLedger(next, "retentions"), debit: application.amount, credit: 0 },
+          { ledger: roleLedger(next, "acquired"), debit: 0, credit: application.principal },
+        ],
+      },
+      actorId,
+    );
+  }
   const error = validateFinanceState(next);
   if (error) throw new FinanceTransitionError(error);
   const expectedVersion = current.persistenceVersion ?? 0;

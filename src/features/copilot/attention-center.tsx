@@ -1,5 +1,7 @@
 "use client";
 
+import type { AccessUser } from "@/src/domain/access/model";
+import { taskAssigneeError, taskSnoozeError } from "@/src/domain/tasks/assignment";
 import { type AttentionItem } from "@/src/domain/copilot/attention-center";
 import { type AppUserProfile, type DailyBriefingData } from "@/src/domain/copilot/daily-briefing";
 import { type ManagedTask, type TaskCommand, type TaskStatus } from "@/src/domain/tasks/model";
@@ -59,6 +61,7 @@ export function AttentionCenter({
   briefing,
   currentUser,
   assignees,
+  tenantId,
   initialItemId,
   onClose,
   onOpenTask,
@@ -67,7 +70,8 @@ export function AttentionCenter({
   items: ManagedTask[];
   briefing: DailyBriefingData;
   currentUser: AppUserProfile;
-  assignees: { id: string; name: string; department: string }[];
+  assignees: AccessUser[];
+  tenantId: string;
   initialItemId?: string;
   onClose: () => void;
   onOpenTask: (item: AttentionItem) => void;
@@ -77,10 +81,7 @@ export function AttentionCenter({
   const [selectedId, setSelectedId] = useState(initialItemId ?? items.find(item => item.status !== "completed")?.id);
   const [actionPanel, setActionPanel] = useState<ActionPanel>(null);
   const [note, setNote] = useState("");
-  const team = assignees.length
-    ? assignees
-    : [{ id: currentUser.id, name: currentUser.name, department: currentUser.department }];
-  const [delegateTo, setDelegateTo] = useState(team[0].id);
+  const [delegateTo, setDelegateTo] = useState("");
   const [snoozeUntil, setSnoozeUntil] = useState(tomorrowMorning);
   const active = items.filter(item => item.status !== "completed");
   const filtered = useMemo(
@@ -93,6 +94,10 @@ export function AttentionCenter({
     [items, filter],
   );
   const selected = filtered.find(item => item.id === selectedId) ?? filtered[0];
+  const team = selected ? assignees.filter(member => !taskAssigneeError(selected, member, tenantId)) : [];
+  const self = team.find(member => member.id === currentUser.id);
+  const delegate = team.find(member => member.id === delegateTo);
+  const snoozeError = actionPanel === "snooze" ? taskSnoozeError(snoozeUntil) : null;
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
@@ -288,19 +293,21 @@ export function AttentionCenter({
                   <div className="attn-actions">
                     <button
                       type="button"
-                      onClick={() =>
+                      disabled={!self}
+                      onClick={() => {
+                        if (!self) return;
                         run({
                           type: "assign",
                           by: currentUser.name,
-                          owner: currentUser.name,
-                          ownerUserId: currentUser.id,
-                          department: currentUser.department,
-                        })
-                      }
+                          owner: self.name,
+                          ownerUserId: self.id,
+                          department: self.department,
+                        });
+                      }}
                     >
                       Assumir
                     </button>
-                    <button type="button" onClick={() => setActionPanel("delegate")}>
+                    <button type="button" disabled={!team.length} onClick={() => setActionPanel("delegate")}>
                       Delegar
                     </button>
                     <button type="button" onClick={() => setActionPanel("snooze")}>
@@ -310,6 +317,10 @@ export function AttentionCenter({
                       Concluir
                     </button>
                   </div>
+                )}
+
+                {selected.status !== "completed" && !team.length && (
+                  <p role="status">Nenhum destinatário compatível com a empresa, permissões e alçada desta tarefa.</p>
                 )}
 
                 {actionPanel && (
@@ -329,7 +340,11 @@ export function AttentionCenter({
                     {actionPanel === "delegate" && (
                       <label>
                         Responsável
-                        <select value={delegateTo} onChange={event => setDelegateTo(event.target.value)}>
+                        <select
+                          value={delegate ? delegateTo : ""}
+                          onChange={event => setDelegateTo(event.target.value)}
+                        >
+                          <option value="">Selecione um responsável</option>
                           {team.map(member => (
                             <option key={member.id} value={member.id}>
                               {member.name} · {member.department}
@@ -348,6 +363,7 @@ export function AttentionCenter({
                         />
                       </label>
                     )}
+                    {snoozeError && <p role="alert">{snoozeError}</p>}
                     <label>
                       {actionPanel === "complete" ? "Registro da conclusão" : "Observação (opcional)"}
                       <textarea
@@ -359,7 +375,9 @@ export function AttentionCenter({
                     <button
                       className="attn-confirm-action"
                       type="button"
+                      disabled={(actionPanel === "delegate" && !delegate) || !!snoozeError}
                       onClick={() => {
+                        if (actionPanel === "snooze" && taskSnoozeError(snoozeUntil)) return;
                         if (actionPanel === "complete") run({ type: "complete", by: currentUser.name, note });
                         if (actionPanel === "snooze")
                           run({
@@ -370,7 +388,7 @@ export function AttentionCenter({
                           });
                         if (actionPanel === "delegate") {
                           const member = team.find(item => item.id === delegateTo);
-                          if (!member) return;
+                          if (!member || taskAssigneeError(selected, member, tenantId)) return;
                           run({
                             type: "assign",
                             by: currentUser.name,

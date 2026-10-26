@@ -29,6 +29,15 @@ export async function POST(request: Request) {
     email?: string;
     password?: string;
   };
+  if (
+    !body ||
+    typeof body !== "object" ||
+    Array.isArray(body) ||
+    [body.mode, body.identifier, body.email, body.password].some(
+      value => value !== undefined && typeof value !== "string",
+    )
+  )
+    return json({ error: "Dados de acesso inválidos." }, 400);
   let session;
   if (body.mode === "demo") {
     if (url.hostname !== "localhost" && url.hostname !== "127.0.0.1")

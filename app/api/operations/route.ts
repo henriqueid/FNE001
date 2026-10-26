@@ -20,6 +20,9 @@ import {
   operationRequiresAuthority,
 } from "@/src/server/operations/validation";
 
+import { bindRepurchaseSources } from "@/src/server/operations/repurchase";
+import { loadCurrentPortfolio } from "@/src/server/portfolio/repository";
+
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
 async function context(request: Request) {
@@ -57,7 +60,7 @@ export async function PUT(request: Request) {
     return json({ error: "Comando de persistência inválido." }, 400);
   const error = validatePersistedOperation(command.operation);
   if (error) return json({ error }, 400);
-  const requested = command.operation;
+  let requested = command.operation;
   const expectedVersion = Number(command.expectedVersion);
   if (!access.db.transaction) return json({ error: "A gravação exige transação de banco." }, 503);
   try {
@@ -82,6 +85,7 @@ export async function PUT(request: Request) {
         throw new OperationGovernanceError(
           "Execuções e exceções de elegibilidade exigem o comando dedicado do servidor.",
         );
+      requested = bindRepurchaseSources(requested, await loadCurrentPortfolio(transaction, access.tenantId));
       assertOperationTransition(current, requested);
       assertOperationTitleTotals(requested);
       await assertFormalizationDocuments(requested, access.tenantId, access.principal.id);

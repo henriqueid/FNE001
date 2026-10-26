@@ -1,14 +1,7 @@
-import { validateParty, type Party } from "@/src/domain/registry/parties";
+import { executeRegistryPartyCommand, RegistryCommandError } from "@/src/server/registry/party-command";
 import { sessionPrincipal } from "@/src/server/access/session";
 import { getDatabase } from "@/src/server/database/postgres";
-import {
-  findRegistryPartyByDocument,
-  findRegistryPartyById,
-  loadRegistryParties,
-  loadRegistryPartyStats,
-  saveRegistryParty,
-  searchRegistryParties,
-} from "@/src/server/registry/repository";
+import { loadRegistryParties, loadRegistryPartyStats, searchRegistryParties } from "@/src/server/registry/repository";
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 async function context(request: Request) {
@@ -46,27 +39,12 @@ export async function PUT(request: Request) {
   if ("error" in access) return access.error;
   if (!access.principal.permissions.includes("registry:edit"))
     return json({ error: "Sem permissão para editar cadastros." }, 403);
-  const party = (await request.json().catch(() => null)) as Party | null;
-  if (!party?.id || !Array.isArray(party.roles)) return json({ error: "Cadastro inválido." }, 400);
-  const sameDocument = await findRegistryPartyByDocument(access.db, access.tenantId, party.document);
-  const blocking = validateParty(party, sameDocument ? [sameDocument] : []).find(issue => issue.blocking);
-  if (blocking) return json({ error: blocking.message }, 400);
+  const input = await request.json().catch(() => null);
   try {
-    const current = await findRegistryPartyById(access.db, access.tenantId, party.id);
-    if (
-      (!current && party.bankAccounts.length > 0) ||
-      (current && JSON.stringify(current.bankAccounts) !== JSON.stringify(party.bankAccounts))
-    )
-      return json(
-        {
-          error:
-            "Alterações de contas bancárias exigem solicitação e aprovação por outra pessoa no fluxo de segurança do Cadastro.",
-        },
-        409,
-      );
-    await saveRegistryParty(access.db, access.tenantId, access.principal.id, party);
+    const party = await executeRegistryPartyCommand(access.db, access.tenantId, access.principal, input);
     return json({ party });
   } catch (reason) {
+    if (reason instanceof RegistryCommandError) return json({ error: reason.message }, reason.status);
     console.error("registry_party_save_failed", reason);
     return json({ error: "O banco não conseguiu salvar o cadastro. Tente novamente." }, 500);
   }

@@ -29,26 +29,35 @@ const departments: UserDepartment[] = [
   "Cadastro",
 ];
 
-async function context(request: Request) {
+async function context(request: Request, requireManagement = true) {
   const db = getDatabase();
   const tenantId = request.headers.get("x-strato-tenant-id")?.trim();
   if (!tenantId) return { error: json({ error: "Empresa não informada." }, 400) } as const;
   const principal = await sessionPrincipal(db, request.headers, tenantId);
   if (!principal) return { error: json({ error: "Sessão ausente ou expirada." }, 401) } as const;
-  if (!principal.permissions.includes("users:manage"))
+  if (requireManagement && !principal.permissions.includes("users:manage"))
     return { error: json({ error: "Usuário sem permissão para administrar acessos." }, 403) } as const;
   return { db, tenantId, principal } as const;
 }
 
 export async function GET(request: Request) {
-  const access = await context(request);
-  if ("error" in access) return access.error;
-  return json(await loadAccessDirectory(access.db, access.tenantId, access.principal.id));
+  const access = await context(request, false);
+  if ("error" in access) return access.error!;
+  const state = await loadAccessDirectory(access.db, access.tenantId, access.principal.id);
+  const own = state.users.find(
+    user => user.id === access.principal.id && user.status === "active" && user.tenantIds.includes(access.tenantId),
+  );
+  if (!own) return json({ error: "Sessão ausente ou expirada." }, 401);
+  return json(
+    access.principal.permissions.includes("users:manage")
+      ? state
+      : { version: 2, authenticatedUserId: access.principal.id, users: [own] },
+  );
 }
 
 export async function POST(request: Request) {
   const access = await context(request);
-  if ("error" in access) return access.error;
+  if ("error" in access) return access.error!;
   const body = (await request.json().catch(() => ({}))) as {
     name?: string;
     email?: string;
@@ -57,6 +66,15 @@ export async function POST(request: Request) {
     password?: string;
     department?: UserDepartment;
   };
+  if (
+    !body ||
+    typeof body !== "object" ||
+    Array.isArray(body) ||
+    [body.name, body.email, body.loginName, body.cpf, body.password, body.department].some(
+      value => value !== undefined && typeof value !== "string",
+    )
+  )
+    return json({ error: "Dados de acesso inválidos." }, 400);
   const name = body.name?.trim() ?? "";
   const email = body.email?.trim().toLowerCase() ?? "";
   const loginName = normalizeLoginName(body.loginName ?? "");
@@ -97,12 +115,13 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   const access = await context(request);
-  if ("error" in access) return access.error;
-  const state = (await request.json()) as AccessState;
+  if ("error" in access) return access.error!;
+  const state = (await request.json().catch(() => null)) as AccessState | null;
   if (state?.version !== 2 || !Array.isArray(state.users)) return json({ error: "Diretório de acesso inválido." }, 400);
   if (
     state.users.some(
       user =>
+        !user ||
         !departments.includes(user.department) ||
         !Array.isArray(user.functionalAreas) ||
         !user.functionalAreas.includes(user.department) ||

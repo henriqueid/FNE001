@@ -91,7 +91,7 @@ export type Props = {
   operations: Operation[];
   financials: OpFinancials;
   finance: FinanceState;
-  onFinance: (s: FinanceState) => void | Promise<void>;
+  onSendCommission: (month: string) => Promise<void>;
   onOpenOperation: (op: Operation) => void;
   onNavigate?: (view: AppView) => void;
   canDecideCommittee?: boolean;
@@ -103,7 +103,7 @@ export default function CommercialModule({
   operations,
   financials,
   finance,
-  onFinance,
+  onSendCommission,
   onOpenOperation,
   onNavigate,
   canDecideCommittee = false,
@@ -704,7 +704,7 @@ export default function CommercialModule({
           repFilter={repFilter}
           today={today}
           finance={finance}
-          onFinance={onFinance}
+          onSendCommission={onSendCommission}
           onApply={apply}
           onToast={setToast}
           onRules={() => setModal({ type: "rules" })}

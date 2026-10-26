@@ -164,9 +164,10 @@ export function CommitteeModal({
               onChange={e => setDecision({ ...decision, conditions: e.target.value })}
             />
           </Field>
-          <Field label="Parecer de risco" wide>
+          <Field label="Parecer de risco (obrigatório para aprovação)" wide>
             <textarea
               rows={2}
+              required={decision.status === "Aprovado" || decision.status === "Aprovado com ressalvas"}
               value={decision.riskOpinion}
               onChange={e => setDecision({ ...decision, riskOpinion: e.target.value })}
             />

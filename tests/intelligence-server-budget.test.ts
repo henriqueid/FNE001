@@ -50,7 +50,11 @@ describe("consumo de IA controlado pelo servidor", () => {
   });
   it("cliente não consegue apagar consumo já contabilizado", async () => {
     const { db, row } = database({ used: 80 });
-    await saveIntelligenceState(db, "tenant-a", "actor", { ...seedIntelligenceState(), usedTokens: 0 });
+    await saveIntelligenceState(db, "tenant-a", "actor", {
+      ...seedIntelligenceState(),
+      usedTokens: 0,
+      persistenceVersion: row.aggregate_version,
+    });
     expect(row.used_tokens).toBe(80);
   });
 });

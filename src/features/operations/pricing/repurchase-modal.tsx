@@ -27,6 +27,7 @@ function offsetEffectTone(totalOffsets: number) {
 }
 
 type RepurchaseModalProps = {
+  demo?: boolean;
   locked: boolean;
   cedent: string;
   commercialNet: number;
@@ -50,6 +51,7 @@ type RepurchaseModalProps = {
 };
 
 export function RepurchaseModal({
+  demo = true,
   locked,
   cedent,
   commercialNet,
@@ -91,7 +93,9 @@ export function RepurchaseModal({
               {cedent} ·{" "}
               {locked
                 ? "condição salva em modo de consulta. Use Editar condição para fazer alterações."
-                : "selecione os títulos da recompra e demais compensações financeiras."}
+                : demo
+                  ? "Simulação: selecione os títulos e demais compensações demonstrativas."
+                  : "selecione os saldos principais e escolha Baixar título SIM ou NÃO em cada linha."}
             </p>
           </div>
           <button aria-label="Fechar recompra e compensações" onClick={onClose}>
@@ -127,7 +131,7 @@ export function RepurchaseModal({
           settlementAdjustments={settlementAdjustments}
         />
         <fieldset className="offset-modal-controls" disabled={locked}>
-          <OffsetFilterPanel filters={filters} onFiltersChange={onFiltersChange} />
+          <OffsetFilterPanel demo={demo} filters={filters} onFiltersChange={onFiltersChange} />
           <OffsetSelectionMemory
             selectedCount={selectedCount}
             groups={selectedOffsetMemory}
@@ -148,7 +152,9 @@ export function RepurchaseModal({
           <span>
             {locked
               ? "Esta condição está salva e protegida. Você pode consultar a composição; para alterar a recompra, feche esta janela e use Editar condição."
-              : "A taxa VP parte da aquisição original e pode ser ajustada. Correção/mora e multa incidem nos vencidos. O tratamento define se haverá recompra integral, recompra parcial, baixa bancária ou baixa somente no sistema. Créditos selecionados compensam a recompra e aumentam o líquido final."}
+              : !demo
+                ? "SIM baixa o título na liberação e agenda instrução bancária na próxima remessa; NÃO mantém o título aberto cobrando o sacado. Ambos descontam o principal do líquido. Compensações e créditos reais indisponíveis."
+                : "A taxa VP parte da aquisição original e pode ser ajustada. Correção/mora e multa incidem nos vencidos. O tratamento define se haverá recompra integral, recompra parcial, baixa bancária ou baixa somente no sistema. Créditos selecionados compensam a recompra e aumentam o líquido final."}
           </span>
         </div>
         <div className="modal-actions offset-modal-actions">
@@ -206,11 +212,30 @@ function OffsetInsights({ selectedCount, repurchase, settlementAdjustments }: Of
 }
 
 type OffsetFilterPanelProps = {
+  demo: boolean;
   filters: OffsetFilters;
   onFiltersChange: (changes: Partial<OffsetFilters>) => void;
 };
 
-function OffsetFilterPanel({ filters, onFiltersChange }: OffsetFilterPanelProps) {
+function OffsetFilterPanel({ demo, filters, onFiltersChange }: OffsetFilterPanelProps) {
+  if (!demo)
+    return (
+      <section className="offset-filter-panel offset-real-filter">
+        <p>Somente títulos do mesmo cedente e da mesma empresa, pelo saldo principal aberto.</p>
+        <label className="offset-search">
+          <span>BUSCAR TÍTULO OU SACADO</span>
+          <div>
+            <SearchIcon />
+            <input
+              aria-label="Buscar itens para compensação"
+              value={filters.search}
+              placeholder="Título ou sacado"
+              onChange={event => onFiltersChange({ search: event.target.value })}
+            />
+          </div>
+        </label>
+      </section>
+    );
   return (
     <section className="offset-filter-panel">
       <div className="offset-nature-filter">

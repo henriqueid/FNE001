@@ -21,6 +21,47 @@ const detected = buildAttentionItems({
 });
 
 describe("motor de tarefas", () => {
+  it("não conclui pendência durante carga incompleta das fontes", () => {
+    const initial = reconcileTasks(seedTaskState(), [detected[0]], now);
+    const loading = reconcileTasks(initial, [], "2026-10-10T12:01:00.000Z", { sourcesReady: false });
+    expect(loading).toBe(initial);
+    expect(loading.tasks[0].status).toBe("open");
+    const loaded = reconcileTasks(loading, [detected[0]], "2026-10-10T12:02:00.000Z", { sourcesReady: true });
+    expect(loaded.tasks[0].status).toBe("open");
+    expect(loaded.tasks[0].history.some(entry => entry.action === "resolved")).toBe(false);
+  });
+
+  it("reabre conclusão automática quando a pendência continua existindo na origem", () => {
+    const initial = reconcileTasks(seedTaskState(), [detected[0]], now);
+    const resolved = reconcileTasks(initial, [], "2026-10-10T12:01:00.000Z");
+    const recovered = reconcileTasks(resolved, [detected[0]], "2026-10-10T12:02:00.000Z");
+    expect(recovered.tasks[0].status).toBe("open");
+    expect(recovered.tasks[0].completedAt).toBeUndefined();
+    expect(recovered.tasks[0].history.map(entry => entry.action)).toEqual(["created", "resolved", "reopened"]);
+    expect(actionableAttentionItems(managedTasks(recovered, [detected[0]]), now)).toHaveLength(1);
+  });
+
+  it("preserva conclusão manual quando o alerta continua sendo detectado", () => {
+    const initial = reconcileTasks(seedTaskState(), [detected[0]], now);
+    const completed = applyTaskCommand(initial, detected[0].id, { type: "complete", by: "Henrique" }, now);
+    expect(reconcileTasks(completed, [detected[0]], now).tasks[0].status).toBe("completed");
+  });
+
+  it("não sobrepõe conclusão manual concorrente com reabertura automática enfileirada", () => {
+    const initial = reconcileTasks(seedTaskState(), [detected[0]], now);
+    const resolved = reconcileTasks(initial, [], "2026-10-10T12:01:00.000Z");
+    const recovered = reconcileTasks(resolved, [detected[0]], "2026-10-10T12:02:00.000Z");
+    const manuallyCompleted = applyTaskCommand(
+      resolved,
+      detected[0].id,
+      { type: "complete", by: "Henrique" },
+      "2026-10-10T12:03:00.000Z",
+    );
+    const rebased = rebaseTaskState(resolved, recovered, manuallyCompleted);
+    expect(rebased.tasks[0].status).toBe("completed");
+    expect(rebased.tasks[0].history.at(-1)?.action).toBe("completed");
+  });
+
   it("transforma alertas automáticos em tarefas persistentes", () => {
     const state = reconcileTasks(seedTaskState(), detected, now);
     const tasks = managedTasks(state, detected);

@@ -188,7 +188,8 @@ export function CedentProfileFields({
           <legend>Limite global</legend>
           <div className="fn-form">
             <Field label="Limite aprovado (R$)">
-              <MoneyDraft value={data.creditLimit} onChange={creditLimit => patch({ creditLimit })} />
+              <input value={formatMoneyInput(data.creditLimit)} readOnly aria-label="Limite aprovado (R$)" />
+              <small>Atualizado por decisão do comitê no Comercial.</small>
             </Field>
             <Field label="Validade do limite">
               <input

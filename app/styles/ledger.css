@@ -9752,3 +9752,46 @@ table th {
 .sx-main:has(.fn-backdrop .fn-bank-section-title) {
   z-index: 110;
 }
+
+.offset-real-row {
+  min-width: 940px;
+  grid-template-columns: 24px minmax(160px, 1.5fr) 90px 120px 140px minmax(180px, 1.4fr) 120px;
+  gap: 16px;
+  padding: 16px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.offset-real-row > span,
+.offset-real-row > label {
+  min-width: 0;
+  font-size: 12px;
+  color: var(--ds-text-2);
+}
+.offset-real-row > label {
+  display: grid;
+  gap: 6px;
+}
+.offset-real-row select {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 1px solid var(--ds-border);
+  border-radius: 8px;
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font: inherit;
+}
+.offset-real-row > span > strong {
+  display: block;
+  color: var(--ds-text);
+}
+.offset-filter-panel.offset-real-filter {
+  grid-template-columns: minmax(200px, 1fr) minmax(240px, 1fr);
+  align-items: center;
+  font-size: 12px;
+}
+@media (max-width: 640px) {
+  .offset-filter-panel.offset-real-filter {
+    grid-template-columns: 1fr;
+  }
+}

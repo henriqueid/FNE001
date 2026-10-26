@@ -29,3 +29,7 @@ O STRATO é uma plataforma operacional de recebíveis. Preserve segurança, rast
 - O navegador nunca recebe `DATABASE_URL`, `OPENAI_API_KEY` ou credenciais administrativas.
 - Migrações aplicadas não são recriadas nem renomeadas.
 
+
+## Agente de testes Churume
+
+Quando solicitado, usar o perfil `docs/testing/agents/churume.md` para auditar todas as etapas do comercial à cobrança. Relatórios ficam em `docs/testing/churume/`; auditoria não autoriza correção, publicação ou movimentação real.

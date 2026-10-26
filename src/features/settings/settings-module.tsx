@@ -10,10 +10,11 @@ import { type IntegrationState, updateIntegrationMode } from "@/src/domain/integ
 import { operationalDefaultsSnapshot, type OperationalDefaultsState } from "@/src/domain/registry/operational-profile";
 import { OperationalParametersEditor } from "@/src/features/registry/operational-parameters-editor";
 import { type HomePeriod } from "@/src/domain/home/settings";
-import { type AccessState } from "@/src/domain/access/model";
+import { authenticatedUser, can, type AccessState } from "@/src/domain/access/model";
 import { UsersAccessPanel } from "./users-access-panel";
 import { aiStatusLabel, effectiveAIStatus, type IntelligenceState } from "@/src/domain/intelligence/model";
 import { OutboxHealthPanel } from "./outbox-health-panel";
+import { AIBudgetPanel } from "./ai-budget-panel";
 import { AIConfigurationPanel } from "./ai-configuration-panel";
 import { loadOperationalParameters, persistOperationalParameters } from "@/src/app/operational-parameters-client";
 import {
@@ -178,11 +179,19 @@ export default function SettingsModule({
   onFinance,
   companyScope,
   bankSettingsCompany,
+  initialSection,
+  intelligenceReady = true,
+  intelligenceError,
+  onRetryIntelligence,
 }: {
   finance: FinanceState;
   onFinance: (state: FinanceState) => void | Promise<void>;
   companyScope: string;
   bankSettingsCompany?: string;
+  initialSection?: "integrations";
+  intelligenceReady?: boolean;
+  intelligenceError?: string;
+  onRetryIntelligence?: () => void;
   policies: EligibilityPolicyState;
   persistedPolicies: EligibilityPolicyState;
   onPolicies: (state: EligibilityPolicyState) => void;
@@ -204,7 +213,20 @@ export default function SettingsModule({
 }) {
   const destinations = useCompanyDestinations();
   const companyDirectory = useCompanyDirectory();
-  const [section, setSection] = useState<SettingsSection>(bankSettingsCompany ? "banks" : "overview");
+  const canManageSettings = can(authenticatedUser(access), "settings:manage");
+  const canManageUsers = can(authenticatedUser(access), "users:manage");
+  const [requestedSection, setSection] = useState<SettingsSection>(
+    bankSettingsCompany ? "banks" : (initialSection ?? "overview"),
+  );
+  const section = canManageSettings ? requestedSection : canManageUsers ? "access" : undefined;
+  const visibleMenuGroups = canManageSettings
+    ? menuGroups
+    : canManageUsers
+      ? menuGroups
+          .map(group => ({ ...group, items: group.items.filter(item => item.id === "access") }))
+          .filter(group => group.items.length)
+      : [];
+  const intelligenceBlocked = !demoMode && (!intelligenceReady || Boolean(intelligenceError));
   const activePolicies = policies.policies.filter(policy => policy.status === "ATIVA").length;
   const executableRules = masterRuleCatalog.filter(
     rule => rule.readiness !== "REQUER_DADO" && rule.readiness !== "REQUER_INTEGRACAO",
@@ -228,7 +250,7 @@ export default function SettingsModule({
   const interfaceChanged = interfaceDraft.showGuidance !== showGuidance || interfaceDraft.showJourney !== showJourney;
 
   useEffect(() => {
-    if (demoMode) return;
+    if (demoMode || !canManageSettings) return;
     let cancelled = false;
     loadOperationalParameters()
       .then(result => {
@@ -246,12 +268,12 @@ export default function SettingsModule({
     return () => {
       cancelled = true;
     };
-  }, [demoMode, onOperationalDefaults]);
+  }, [demoMode, canManageSettings, onOperationalDefaults]);
 
   const editOperationalDefaults = (candidate: OperationalDefaultsState) => setOperationalDraft(candidate);
 
   const submitCompanyDestination = async () => {
-    if (!companyDirectory) return;
+    if (!canManageSettings || !companyDirectory) return;
     const validationError = validateCompanyDestination(companyDraft);
     if (validationError) {
       setCompanyFeedback(validationError);
@@ -272,6 +294,7 @@ export default function SettingsModule({
   };
 
   const saveOperationalDefaults = async () => {
+    if (!canManageSettings) return;
     setOperationalSubmitting(true);
     setOperationalFeedback(undefined);
     try {
@@ -293,6 +316,7 @@ export default function SettingsModule({
   };
 
   const saveInterfacePreferences = () => {
+    if (!canManageSettings) return;
     onGuidance(interfaceDraft.showGuidance);
     onJourney(interfaceDraft.showJourney);
     setInterfaceSaved(true);
@@ -303,7 +327,11 @@ export default function SettingsModule({
       <header className="settings-page-head">
         <span>ADMINISTRAÇÃO DA PLATAFORMA</span>
         <h1>Configurações</h1>
-        <p>Organize empresas, políticas, integrações e preferências em um único lugar.</p>
+        <p>
+          {canManageSettings
+            ? "Organize empresas, políticas, integrações e preferências em um único lugar."
+            : "Administre usuários, empresas permitidas e competências de acesso."}
+        </p>
       </header>
 
       <div className="settings-layout">
@@ -312,7 +340,7 @@ export default function SettingsModule({
             <strong>Central de configurações</strong>
             <small>Selecione um assunto para começar.</small>
           </div>
-          {menuGroups.map(group => (
+          {visibleMenuGroups.map(group => (
             <div className="settings-nav-group" key={group.label}>
               <span>{group.label}</span>
               {group.items.map(item => (
@@ -334,7 +362,7 @@ export default function SettingsModule({
         </aside>
 
         <section className="settings-content">
-          {section !== "overview" && currentSection && (
+          {canManageSettings && section !== "overview" && currentSection && (
             <div className="settings-context-bar">
               <button type="button" onClick={() => setSection("overview")}>
                 Configurações
@@ -444,6 +472,7 @@ export default function SettingsModule({
           {section === "policies" && (
             <>
               <PolicyApprovalPanel
+                canManage={can(authenticatedUser(access), "settings:manage")}
                 companies={destinations.map(destination => destination.name)}
                 actorId={policyApprovalActor.id}
                 demoMode={demoMode}
@@ -478,16 +507,26 @@ export default function SettingsModule({
               </header>
               <div
                 className="settings-ai-readiness"
-                data-ready={effectiveAIStatus(intelligence) === "AI_AVAILABLE" || undefined}
+                data-ready={
+                  (!demoMode && !intelligenceBlocked && effectiveAIStatus(intelligence) === "AI_AVAILABLE") || undefined
+                }
                 role="status"
               >
                 <div>
                   <span>ESTADO DO COPILOTO</span>
-                  <strong>{aiStatusLabel(intelligence)}</strong>
+                  <strong>
+                    {demoMode
+                      ? "Demonstração · sem conexão real"
+                      : intelligenceBlocked
+                        ? "Configuração não confirmada"
+                        : aiStatusLabel(intelligence)}
+                  </strong>
                   <small>
-                    {effectiveAIStatus(intelligence) === "AI_AVAILABLE"
-                      ? "Licença, ativação e conexão estão prontas para perguntas livres."
-                      : "Conclua as etapas abaixo. Cada item mostra exatamente o que ainda falta."}
+                    {demoMode
+                      ? "Dados demonstrativos locais. Nenhuma conexão real é validada neste ambiente."
+                      : effectiveAIStatus(intelligence) === "AI_AVAILABLE"
+                        ? "Licença, ativação e conexão estão prontas para perguntas livres."
+                        : "Conclua as etapas abaixo. Cada item mostra exatamente o que ainda falta."}
                   </small>
                 </div>
                 <div>
@@ -501,12 +540,24 @@ export default function SettingsModule({
                   </span>
                 </div>
               </div>
+              {intelligenceBlocked && (
+                <div role={intelligenceError ? "alert" : "status"}>
+                  <p>{intelligenceError || "Carregando a configuração confirmada pelo servidor…"}</p>
+                  {onRetryIntelligence && (
+                    <button type="button" onClick={onRetryIntelligence}>
+                      Tentar novamente
+                    </button>
+                  )}
+                </div>
+              )}
               <div className="settings-interface-grid">
                 <label data-complete={intelligence.contracted || undefined}>
                   <input
                     type="checkbox"
                     checked={intelligence.contracted}
+                    disabled={intelligenceBlocked}
                     onChange={event => {
+                      if (intelligenceBlocked) return;
                       const contracted = event.target.checked;
                       onIntelligence(current => ({
                         ...current,
@@ -528,15 +579,14 @@ export default function SettingsModule({
                   <input
                     type="checkbox"
                     checked={intelligence.enabled}
-                    disabled={!intelligence.contracted}
+                    disabled={intelligenceBlocked || !intelligence.contracted}
                     onChange={event => {
+                      if (intelligenceBlocked) return;
                       const enabled = event.target.checked;
                       onIntelligence(current => ({
                         ...current,
                         enabled,
                         status: enabled ? "AI_PROCESSING" : "AI_DISABLED",
-                        monthlyTokenBudget:
-                          enabled && current.monthlyTokenBudget <= 0 ? 1_000_000 : current.monthlyTokenBudget,
                         updatedAt: new Date().toISOString(),
                       }));
                     }}
@@ -550,44 +600,38 @@ export default function SettingsModule({
                 </label>
               </div>
               <AIConfigurationPanel
+                demoMode={demoMode}
                 active={intelligence.contracted && intelligence.enabled}
                 available={effectiveAIStatus(intelligence) === "AI_AVAILABLE"}
                 onAvailabilityChange={available =>
                   onIntelligence(current => ({
                     ...current,
                     status: available ? "AI_AVAILABLE" : "AI_UNAVAILABLE",
-                    monthlyTokenBudget: current.monthlyTokenBudget > 0 ? current.monthlyTokenBudget : 1_000_000,
                     updatedAt: new Date().toISOString(),
                   }))
                 }
               />
-              <div className="settings-goal-row">
-                <span>
-                  <strong>Orçamento mensal de tokens</strong>
-                  <small>{aiStatusLabel(intelligence)}</small>
-                </span>
-                <label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="10000"
-                    aria-label="Orçamento mensal de tokens da IA"
-                    value={intelligence.monthlyTokenBudget}
-                    onChange={event =>
-                      onIntelligence(current => ({
-                        ...current,
-                        monthlyTokenBudget: Math.max(0, Number(event.target.value)),
-                        updatedAt: new Date().toISOString(),
-                      }))
-                    }
-                  />
-                </label>
-              </div>
+              <AIBudgetPanel
+                key={intelligence.tenantId}
+                intelligence={intelligence}
+                users={access.users}
+                canManage={authenticatedUser(access).permissions.includes("settings:manage")}
+                demoMode={demoMode}
+                onSaved={budget =>
+                  onIntelligence(current => ({
+                    ...current,
+                    monthlyTokenBudget: budget.policy.monthlyTokenBudget,
+                    usedTokens: budget.usedTokens,
+                    budgetPeriod: budget.period,
+                    updatedAt: new Date().toISOString(),
+                  }))
+                }
+              />
               <p className="settings-integration-requirements">
                 <b>Regra de segurança:</b> nenhuma decisão, cálculo, desbloqueio de alçada ou movimentação financeira
                 depende da IA. Em falha, o STRATO mantém o resultado determinístico e informa a indisponibilidade.
               </p>
-              <OutboxHealthPanel tenantId={intelligence.tenantId} />
+              <OutboxHealthPanel tenantId={intelligence.tenantId} demoMode={demoMode} />
             </div>
           )}
 
@@ -866,7 +910,7 @@ export default function SettingsModule({
             </div>
           )}
 
-          {showCompanyCreate && (
+          {canManageSettings && showCompanyCreate && (
             <div className="modal-backdrop" role="presentation">
               <section
                 className="settings-modal settings-company-modal"

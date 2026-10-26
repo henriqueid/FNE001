@@ -128,7 +128,8 @@ export async function loadOperationApprovalGrants(
       `select event_id, actor_id, payload, aggregate_version,
          coalesce((select max((returned.payload->'result'->'operation'->>'persistenceVersion')::integer)
            from private.domain_events returned where returned.tenant_id = approvals.tenant_id
-             and returned.aggregate_type = 'OperationReturn' and returned.event_type = 'OPERATION_RETURNED'
+             and ((returned.aggregate_type = 'OperationReturn' and returned.event_type = 'OPERATION_RETURNED')
+               or (returned.aggregate_type = 'OperationRiskReturn' and returned.event_type = 'OPERATION_RETURNED_TO_RISK'))
              and returned.payload->'result'->'operation'->>'id' = approvals.aggregate_id), 0) as return_version
        from private.domain_events approvals
        where tenant_id = ? and aggregate_type = 'OperationApproval' and aggregate_id = ?
@@ -136,8 +137,9 @@ export async function loadOperationApprovalGrants(
          and aggregate_version > coalesce((
            select max((returned.payload->'result'->'operation'->>'persistenceVersion')::integer)
            from private.domain_events returned
-           where returned.tenant_id = approvals.tenant_id and returned.aggregate_type = 'OperationReturn'
-             and returned.event_type = 'OPERATION_RETURNED'
+           where returned.tenant_id = approvals.tenant_id
+             and ((returned.aggregate_type = 'OperationReturn' and returned.event_type = 'OPERATION_RETURNED')
+               or (returned.aggregate_type = 'OperationRiskReturn' and returned.event_type = 'OPERATION_RETURNED_TO_RISK'))
              and returned.payload->'result'->'operation'->>'id' = approvals.aggregate_id
          ), 0)
        order by aggregate_version`,

@@ -5,8 +5,11 @@ import { type AccessState, type AccessUser } from "@/src/domain/access/model";
 import { authenticatedFetch } from "./session-client";
 
 async function accessBody(response: Response) {
-  const body = (await response.json()) as AccessState & { error?: string };
+  const body = (await response.json().catch(() => null)) as (AccessState & { error?: string }) | null;
+  if (!body || typeof body !== "object") throw new Error("Não foi possível confirmar seu acesso. Tente novamente.");
   if (!response.ok) throw new Error(body.error ?? "Não foi possível sincronizar os usuários e acessos.");
+  if (body.version !== 2 || typeof body.authenticatedUserId !== "string" || !Array.isArray(body.users))
+    throw new Error("Não foi possível confirmar seu acesso. Tente novamente.");
   return body;
 }
 

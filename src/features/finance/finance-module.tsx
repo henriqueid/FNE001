@@ -52,6 +52,7 @@ export type Props = {
   portfolio?: PortfolioState;
   onConfigureBanks?: (company?: string) => void;
   onBankingCommitted?: () => Promise<void>;
+  initialTab?: Tab;
   onReturnOperation?: (
     operation: Operation,
     intent: Omit<OperationReturnCommand, "operationId" | "expectedVersion">,
@@ -71,8 +72,9 @@ export default function FinanceModule({
   onBankingCommitted,
   onConfigureBanks,
   onReturnOperation,
+  initialTab,
 }: Props) {
-  const [tab, setTab] = useState<Tab>("caixa");
+  const [tab, setTab] = useState<Tab>(initialTab ?? "caixa");
   const [toast, setToast] = useState<Toast>(null);
   const [action, setAction] = useState<Action>(null);
   const [newTitle, setNewTitle] = useState(false);

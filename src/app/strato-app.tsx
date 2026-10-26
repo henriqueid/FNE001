@@ -21,6 +21,7 @@ import { operationMutationPermissionError } from "@/src/domain/operations/mutati
 
 import { managerOf, repAt } from "@/src/domain/commercial/rules";
 import { emptyCommercial, seedCommercial } from "@/src/domain/commercial/seed";
+import { prepareCommissionTransfer } from "@/src/domain/commercial/finance-transfer";
 import { type CommercialState } from "@/src/domain/commercial/types";
 import { initialCedents } from "@/src/domain/core/demo/cedents";
 import { initialDebtors } from "@/src/domain/core/demo/debtors";
@@ -37,6 +38,7 @@ import { portfolioQualityHistories } from "@/src/domain/risk/portfolio-quality-h
 import { QualityContext, type QualityValue, useQualityPolicyState } from "@/src/features/risk/use-quality-policy";
 import { mergeParties, type Party, partyToCedent, partyToDebtor, seedParties } from "@/src/domain/registry/parties";
 import { saveParty as savePartyRecord } from "@/src/domain/registry/party-save";
+import { syncCommercialOnboardingParties } from "@/src/domain/registry/commercial-onboarding";
 import { buildRegistry, effectiveCedents, repurchaseEvents } from "@/src/domain/registry/registry";
 import { portfolioHomeTitles, seedPortfolio, syncPortfolio } from "@/src/domain/portfolio/model";
 import { Shell } from "@/src/features/shell/shell";
@@ -71,11 +73,13 @@ import {
   visibleTasksForUser,
 } from "@/src/domain/tasks/model";
 import {
+  type AccessState,
   activeUser,
   authenticatedUser,
   can,
   canAccessView,
   defaultViewFor,
+  emptyAccessState,
   seedAccessState,
   stopUserPreview,
 } from "@/src/domain/access/model";
@@ -105,6 +109,7 @@ import {
 import {
   loadCommercialState as loadServerCommercial,
   persistCommercialState as persistServerCommercial,
+  sendCommission as sendServerCommission,
 } from "./commercial-client";
 import { loadOperationalParameters as loadServerOperationalParameters } from "./operational-parameters-client";
 import { loadIntegrationState as loadServerIntegrations } from "./integrations-client";
@@ -113,7 +118,11 @@ import {
   persistIntelligenceState as persistServerIntelligence,
 } from "./intelligence-client";
 import type { PortfolioFocus } from "@/src/features/portfolio/portfolio-navigation";
-import { consumeOperationServerResult, newOperationAtEntry } from "./operation-server-result";
+import {
+  consumeOperationServerResult,
+  mergeOperationAcknowledgement,
+  newOperationAtEntry,
+} from "./operation-server-result";
 import {
   approveCopilotOperation as approveCopilotOperationFlow,
   buildCopilotOperation,
@@ -174,10 +183,14 @@ export default function StratoApp() {
   const [showGuidance, setShowGuidance] = useState(true);
   const [showJourney, setShowJourney] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
-  const [access, setAccess] = useState(() => seedAccessState());
+  const [access, setAccess] = useState(() => (isDemo ? seedAccessState() : emptyAccessState()));
   const [accessServerReady, setAccessServerReady] = useState(isDemo);
+  const [accessLoadError, setAccessLoadError] = useState<string>();
+  const [accessLoadAttempt, setAccessLoadAttempt] = useState(0);
   const [intelligence, setIntelligence] = useState(() => (isDemo ? seedIntelligenceState() : emptyIntelligenceState()));
   const [intelligenceServerReady, setIntelligenceServerReady] = useState(isDemo);
+  const [intelligencePersistenceError, setIntelligencePersistenceError] = useState<string>();
+  const [intelligenceLoadAttempt, setIntelligenceLoadAttempt] = useState(0);
   const persistedIntelligenceRef = useRef<IntelligenceState | null>(isDemo ? intelligence : null);
   const intelligenceSaveQueue = useRef<Promise<IntelligenceState> | null>(null);
   const currentUser = useMemo(() => activeUser(access), [access]);
@@ -190,13 +203,24 @@ export default function StratoApp() {
     `${currentUser.id}:${currentUser.permissions.join(",")}:${currentUser.companyScopes.join(",")}`,
   );
   const [bankSettingsCompany, setBankSettingsCompany] = useState<string>();
+  const [settingsInitialSection, setSettingsInitialSection] = useState<"integrations">();
   const [portfolioFocus, setPortfolioFocus] = useState<PortfolioFocus>();
+  const [financeInitialTab, setFinanceInitialTab] = useState<"cobranca">();
+  const [navigationDenied, setNavigationDenied] = useState<string>();
   const navigate = (target: AppView) => {
-    if (!canAccessView(currentUser, target)) return;
+    if (!canAccessView(currentUser, target)) {
+      setNavigationDenied(
+        "Seu perfil não tem permissão para acessar este módulo. Solicite liberação ao administrador.",
+      );
+      return;
+    }
+    setNavigationDenied(undefined);
     setSelected(null);
     setBankSettingsCompany(undefined);
+    setSettingsInitialSection(target === "integrations" ? "integrations" : undefined);
+    setFinanceInitialTab(undefined);
     if (target === "portfolio") setPortfolioFocus(undefined);
-    setView(target);
+    setView(target === "integrations" ? "settings" : target);
   };
   const openPortfolio = (focus: PortfolioFocus) => {
     if (!canAccessView(currentUser, "portfolio")) return;
@@ -310,7 +334,10 @@ export default function StratoApp() {
 
   const persistRealCommercial = useCallback(
     (candidate: CommercialState) => {
-      if (isDemo) return Promise.resolve(candidate);
+      if (isDemo) {
+        setSavedParties(current => syncCommercialOnboardingParties(current, candidate, "Comercial"));
+        return Promise.resolve(candidate);
+      }
       const prior = commercialSaveQueue.current ?? Promise.resolve(candidate);
       const queued = prior.catch(() => candidate).then(() => persistServerCommercial(candidate));
       commercialSaveQueue.current = queued;
@@ -348,6 +375,23 @@ export default function StratoApp() {
     },
     [persistRealCommercial],
   );
+
+  const sendCommercialCommission = async (month: string) => {
+    if (commercialSaveQueue.current) await commercialSaveQueue.current;
+    const currentCommercial = commercialRef.current;
+    const currentFinance = financeRef.current;
+    const result = isDemo
+      ? prepareCommissionTransfer(currentFinance, currentCommercial, month, isoDate(new Date()), currentUser.name)
+      : await sendServerCommission(
+          month,
+          currentCommercial.persistenceVersion ?? 0,
+          currentFinance.persistenceVersion ?? 0,
+        );
+    commercialRef.current = result.commercial;
+    financeRef.current = result.finance;
+    setCommercial(result.commercial);
+    setFinance(result.finance);
+  };
 
   const persistRealPortfolio = useCallback(
     (candidate: typeof portfolio) => {
@@ -422,22 +466,15 @@ export default function StratoApp() {
     void queued
       .then(saved => {
         setOperationPersistenceError(undefined);
-        setOperations(current =>
-          current.map(operation =>
-            operation.id === saved.id && (operation.persistenceVersion ?? 0) <= (saved.persistenceVersion ?? 0)
-              ? { ...operation, persistenceVersion: saved.persistenceVersion }
-              : operation,
-          ),
-        );
-        setSelected(current =>
-          current?.id === saved.id && (current.persistenceVersion ?? 0) <= (saved.persistenceVersion ?? 0)
-            ? { ...current, persistenceVersion: saved.persistenceVersion }
-            : current,
-        );
+        setOperations(current => current.map(operation => mergeOperationAcknowledgement(operation, candidate, saved)));
+        setSelected(current => (current ? mergeOperationAcknowledgement(current, candidate, saved) : current));
         if (saved.status === "Liberada ao financeiro") {
           void Promise.all([loadServerFinance(), loadCurrentPortfolio()])
             .then(([serverFinance, serverPortfolio]) => {
-              if (serverFinance) setFinance(serverFinance);
+              if (serverFinance) {
+                financeRef.current = serverFinance;
+                setFinance(serverFinance);
+              }
               portfolioRef.current = serverPortfolio;
               setPortfolio(serverPortfolio);
             })
@@ -650,6 +687,48 @@ export default function StratoApp() {
     [operations, isDemo, portfolio],
   );
 
+  const confirmedAccessKey = useRef<string | undefined>(undefined);
+  const applyConfirmedAccess = useCallback(
+    (serverState: AccessState, preservePreview = false) => {
+      if (isDemo) {
+        setAccess(serverState);
+        return;
+      }
+      const actor = authenticatedUser(serverState);
+      const key = `${actor.id}:${actor.status}:${[...actor.permissions].sort().join(",")}:${[...actor.companyScopes].sort().join(",")}`;
+      const changed = confirmedAccessKey.current !== undefined && confirmedAccessKey.current !== key;
+      confirmedAccessKey.current = key;
+      if (changed) {
+        setSelected(null);
+        setOperations([]);
+        setOperationsServerReady(false);
+        setFinance(emptyFinance());
+        setFinanceServerReady(false);
+        const emptyCommercialState = emptyCommercial();
+        commercialRef.current = emptyCommercialState;
+        setCommercial(emptyCommercialState);
+        setCommercialServerReady(false);
+        const emptyPortfolioState = { version: 3 as const, titles: [] };
+        portfolioRef.current = emptyPortfolioState;
+        setPortfolio(emptyPortfolioState);
+        setPortfolioServerReady(false);
+        taskRef.current = seedTaskState();
+        setTasks(taskRef.current);
+        setTasksServerReady(false);
+        setSavedParties([]);
+        setPolicies(emptyEligibilityPolicies());
+        setPersistedPolicies(emptyEligibilityPolicies());
+        setPoliciesServerReady(false);
+      }
+      setAccess(current => ({
+        ...serverState,
+        previewUserId:
+          preservePreview && can(actor, "users:manage") ? current.previewUserId : serverState.previewUserId,
+      }));
+    },
+    [isDemo],
+  );
+
   // Restaura o que foi salvo depois de montar (evita divergência na hidratação do SSR).
   useEffect(() => {
     const browserState = loadPersistedState();
@@ -659,7 +738,9 @@ export default function StratoApp() {
     if (stored.debtors) setDebtors(stored.debtors);
     if (stored.finance) setFinance(stored.finance);
     if (stored.commercial) setCommercial(stored.commercial);
-    if (stored.parties) setSavedParties(stored.parties);
+    if (isDemo && stored.commercial)
+      setSavedParties(syncCommercialOnboardingParties(stored.parties ?? seedParties(), stored.commercial, "Comercial"));
+    else if (stored.parties) setSavedParties(stored.parties);
     if (stored.portfolio) setPortfolio(stored.portfolio);
     if (stored.policies) {
       setPolicies(stored.policies);
@@ -721,30 +802,42 @@ export default function StratoApp() {
   ]);
 
   useEffect(() => {
-    if (!storageReady || accessServerReady) return;
-    if (isDemo) return;
-    let cancelled = false;
-    const tenantId = intelligence.tenantId;
-    loadAccessDirectory(tenantId)
-      .then(serverState => {
-        if (cancelled) return;
-        setAccess(current => ({ ...serverState, previewUserId: current.previewUserId }));
-      })
-      .catch(() => {
-        /* mantém a sessão atual e tenta novamente no próximo acesso */
-      })
-      .finally(() => {
-        if (!cancelled) setAccessServerReady(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [accessServerReady, intelligence.tenantId, storageReady, isDemo]);
-
-  useEffect(() => {
     if (!storageReady || isDemo) return;
     let cancelled = false;
-    loadRegistryParties()
+    let sequence = 0;
+    const refresh = () => {
+      const requestSequence = ++sequence;
+      return loadAccessDirectory(intelligence.tenantId)
+        .then(serverState => {
+          if (cancelled || requestSequence !== sequence) return;
+          if (!serverState.users.some(user => user.id === serverState.authenticatedUserId && user.status === "active"))
+            throw new Error("Sessão sem perfil ativo confirmado.");
+          applyConfirmedAccess(serverState, true);
+          setAccessLoadError(undefined);
+        })
+        .catch(error => {
+          if (cancelled || requestSequence !== sequence) return;
+          applyConfirmedAccess(emptyAccessState());
+          setAccessLoadError(error instanceof Error ? error.message : "Não foi possível confirmar seu acesso.");
+        })
+        .finally(() => {
+          if (!cancelled && requestSequence === sequence) setAccessServerReady(true);
+        });
+    };
+    void refresh();
+    const interval = window.setInterval(() => void refresh(), 30_000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [intelligence.tenantId, storageReady, isDemo, accessLoadAttempt, applyConfirmedAccess]);
+
+  useEffect(() => {
+    if (!storageReady || isDemo || !accessServerReady) return;
+    let cancelled = false;
+    (can(sessionUser, "registry:view") ? loadRegistryParties() : Promise.resolve([]))
       .then(parties => {
         if (!cancelled) setSavedParties(parties);
       })
@@ -754,12 +847,12 @@ export default function StratoApp() {
     return () => {
       cancelled = true;
     };
-  }, [isDemo, storageReady]);
+  }, [isDemo, storageReady, accessServerReady, sessionUser]);
 
   useEffect(() => {
-    if (!storageReady || isDemo || operationsServerReady) return;
+    if (!storageReady || isDemo || !accessServerReady || operationsServerReady) return;
     let cancelled = false;
-    loadServerOperations()
+    (can(sessionUser, "operations:view") ? loadServerOperations() : Promise.resolve([]))
       .then(serverOperations => {
         if (cancelled) return;
         setOperations(serverOperations);
@@ -777,12 +870,12 @@ export default function StratoApp() {
     return () => {
       cancelled = true;
     };
-  }, [isDemo, operationsServerReady, storageReady]);
+  }, [isDemo, operationsServerReady, storageReady, accessServerReady, sessionUser]);
 
   useEffect(() => {
-    if (!storageReady || isDemo || financeServerReady) return;
+    if (!storageReady || isDemo || !accessServerReady || financeServerReady) return;
     let cancelled = false;
-    loadServerFinance()
+    (can(sessionUser, "finance:view") ? loadServerFinance() : Promise.resolve(null))
       .then(serverFinance => {
         if (cancelled) return;
         setFinance(serverFinance ?? emptyFinance());
@@ -800,12 +893,15 @@ export default function StratoApp() {
     return () => {
       cancelled = true;
     };
-  }, [financeServerReady, isDemo, storageReady]);
+  }, [financeServerReady, isDemo, storageReady, accessServerReady, sessionUser]);
 
   useEffect(() => {
-    if (!storageReady || isDemo || commercialServerReady) return;
+    if (!storageReady || isDemo || !accessServerReady || commercialServerReady) return;
     let cancelled = false;
-    loadServerCommercial()
+    (can(sessionUser, "portfolio:manage") || can(sessionUser, "risk:decide")
+      ? loadServerCommercial()
+      : Promise.resolve(null)
+    )
       .then(serverCommercial => {
         if (cancelled) return;
         const loaded = serverCommercial ?? emptyCommercial();
@@ -825,12 +921,12 @@ export default function StratoApp() {
     return () => {
       cancelled = true;
     };
-  }, [commercialServerReady, isDemo, storageReady]);
+  }, [commercialServerReady, isDemo, storageReady, accessServerReady, sessionUser]);
 
   useEffect(() => {
-    if (!storageReady || isDemo || tasksServerReady) return;
+    if (!storageReady || isDemo || !accessServerReady || tasksServerReady) return;
     let cancelled = false;
-    loadServerTasks()
+    (can(sessionUser, "dashboard:view") ? loadServerTasks() : Promise.resolve(null))
       .then(serverTasks => {
         if (cancelled) return;
         const loaded = serverTasks ?? seedTaskState();
@@ -850,10 +946,10 @@ export default function StratoApp() {
     return () => {
       cancelled = true;
     };
-  }, [isDemo, storageReady, tasksServerReady]);
+  }, [isDemo, storageReady, tasksServerReady, accessServerReady, sessionUser]);
 
   useEffect(() => {
-    if (!storageReady || isDemo || !tasksServerReady) return;
+    if (!storageReady || isDemo || !tasksServerReady || !can(sessionUser, "dashboard:view")) return;
     let cancelled = false;
     const refreshTasks = () => {
       if (taskSaveQueue.current) return;
@@ -880,12 +976,15 @@ export default function StratoApp() {
       window.clearInterval(interval);
       window.removeEventListener("focus", refreshTasks);
     };
-  }, [isDemo, storageReady, tasksServerReady]);
+  }, [isDemo, storageReady, tasksServerReady, sessionUser]);
 
   useEffect(() => {
-    if (!storageReady || isDemo || policiesServerReady) return;
+    if (!storageReady || isDemo || !accessServerReady || policiesServerReady) return;
     let cancelled = false;
-    loadServerPolicies()
+    (can(sessionUser, "settings:view") || can(sessionUser, "settings:manage")
+      ? loadServerPolicies()
+      : Promise.resolve(null)
+    )
       .then(serverPolicies => {
         if (cancelled) return;
         const loaded = serverPolicies ?? emptyEligibilityPolicies();
@@ -906,7 +1005,7 @@ export default function StratoApp() {
     return () => {
       cancelled = true;
     };
-  }, [isDemo, policiesServerReady, storageReady]);
+  }, [isDemo, policiesServerReady, storageReady, accessServerReady, sessionUser]);
 
   useEffect(() => {
     if (!storageReady || isDemo || operationalDefaultsServerReady) return;
@@ -953,14 +1052,18 @@ export default function StratoApp() {
         persistedIntelligenceRef.current = serverState;
         setIntelligence(serverState);
         setIntelligenceServerReady(true);
+        setIntelligencePersistenceError(undefined);
       })
-      .catch(() => {
-        /* não grava o estado vazio por cima do servidor quando a leitura falha */
+      .catch(error => {
+        if (!cancelled)
+          setIntelligencePersistenceError(
+            error instanceof Error ? error.message : "Não foi possível carregar a configuração de IA.",
+          );
       });
     return () => {
       cancelled = true;
     };
-  }, [intelligenceServerReady, isDemo, storageReady]);
+  }, [intelligenceServerReady, intelligenceLoadAttempt, isDemo, storageReady]);
 
   useEffect(() => {
     if (!storageReady || isDemo || !intelligenceServerReady || intelligence === persistedIntelligenceRef.current)
@@ -975,12 +1078,19 @@ export default function StratoApp() {
       void queued
         .then(saved => {
           persistedIntelligenceRef.current = saved;
+          setIntelligencePersistenceError(undefined);
           setIntelligence(current =>
             current === candidate ? saved : { ...current, persistenceVersion: saved.persistenceVersion },
           );
         })
-        .catch(() => {
-          /* mantém a alteração em memória; uma próxima mudança tentará gravar novamente */
+        .catch(error => {
+          setIntelligence(current => {
+            if (current !== candidate) return current;
+            return persistedIntelligenceRef.current ?? current;
+          });
+          setIntelligencePersistenceError(
+            error instanceof Error ? error.message : "A alteração de IA não foi salva. Tente novamente.",
+          );
         })
         .finally(() => {
           if (intelligenceSaveQueue.current === queued) intelligenceSaveQueue.current = null;
@@ -990,9 +1100,9 @@ export default function StratoApp() {
   }, [currentUser.permissions, intelligence, intelligenceServerReady, isDemo, storageReady]);
 
   useEffect(() => {
-    if (!storageReady || isDemo || portfolioServerReady) return;
+    if (!storageReady || isDemo || !accessServerReady || portfolioServerReady) return;
     let cancelled = false;
-    loadCurrentPortfolio()
+    (can(sessionUser, "dashboard:view") ? loadCurrentPortfolio() : Promise.resolve({ version: 3 as const, titles: [] }))
       .then(serverPortfolio => {
         if (cancelled) return;
         portfolioRef.current = serverPortfolio;
@@ -1009,15 +1119,17 @@ export default function StratoApp() {
     return () => {
       cancelled = true;
     };
-  }, [isDemo, portfolioServerReady, storageReady]);
+  }, [isDemo, portfolioServerReady, storageReady, accessServerReady, sessionUser]);
 
   useEffect(() => {
-    if (!accessServerReady) return;
+    if (!accessServerReady || isDemo) return;
     let cancelled = false;
     const refresh = () =>
       syncPublishedNotifications(intelligence.tenantId)
         .then(result => {
-          if (!cancelled) setPublishedNotifications(result.notifications);
+          if (!cancelled) {
+            setPublishedNotifications(result.notifications);
+          }
         })
         .catch(() => {
           /* mantém a última posição conhecida quando o publicador estiver indisponível */
@@ -1028,7 +1140,7 @@ export default function StratoApp() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [accessServerReady, intelligence.tenantId]);
+  }, [accessServerReady, intelligence.tenantId, isDemo]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setTaskClock(Date.now()), 60_000);
@@ -1336,7 +1448,12 @@ export default function StratoApp() {
         if (!result.ok) return { error: result.error };
         if (!isDemo) {
           try {
-            await persistRegistryParty(result.saved.find(item => item.id === party.id) ?? party);
+            const confirmed = await persistRegistryParty(
+              result.saved.find(item => item.id === party.id) ?? party,
+              reason,
+              party.updatedAt,
+            );
+            result.saved = result.saved.map(item => (item.id === confirmed.id ? confirmed : item));
           } catch (error) {
             return { error: error instanceof Error ? error.message : "Não foi possível salvar o cadastro." };
           }
@@ -1480,26 +1597,43 @@ export default function StratoApp() {
     [publishedAttentionItems, systemAttentionItems],
   );
   useEffect(() => {
-    if (!storageReady || !tasksServerReady || (!isDemo && sessionUser.access !== "admin")) return;
+    if (!isDemo || !storageReady || !tasksServerReady || access.previewUserId) return;
     const current = taskRef.current;
-    const next = reconcileTasks(current, persistentAttentionItems, new Date().toISOString());
+    const next = reconcileTasks(current, persistentAttentionItems, new Date().toISOString(), { sourcesReady: true });
     if (next === current) return;
     taskRef.current = next;
     setTasks(next);
-    persistRealTasks(current, next);
-  }, [isDemo, persistentAttentionItems, persistRealTasks, sessionUser.access, storageReady, tasksServerReady]);
+  }, [isDemo, persistentAttentionItems, storageReady, tasksServerReady, access.previewUserId]);
   const taskItems = useMemo(() => {
     const allManaged = managedTasks(
       tasks,
-      [...persistentAttentionItems, ...detectedAttentionItems],
+      isDemo ? [...persistentAttentionItems, ...detectedAttentionItems] : [],
       new Date(taskClock).toISOString(),
+    ).map(task =>
+      isDemo
+        ? task
+        : {
+            ...task,
+            operation: scopedOperations.find(
+              operation => operation.id === tasks.tasks.find(record => record.id === task.id)?.snapshot.operationId,
+            ),
+          },
     );
     const visible = new Set(visibleTasksForUser(allManaged, currentUser, userScope).map(task => task.id));
-    const detected = new Set(detectedAttentionItems.map(item => item.id));
+    const detected = new Set(isDemo ? detectedAttentionItems.map(item => item.id) : []);
     return allManaged.filter(
       task => visible.has(task.id) || (detected.has(task.id) && !taskIsExplicitlyAssigned(task)),
     );
-  }, [tasks, persistentAttentionItems, detectedAttentionItems, taskClock, userScope, currentUser]);
+  }, [
+    tasks,
+    isDemo,
+    persistentAttentionItems,
+    detectedAttentionItems,
+    taskClock,
+    userScope,
+    currentUser,
+    scopedOperations,
+  ]);
   const attentionItems = useMemo(
     () => actionableAttentionItems(taskItems, new Date(taskClock).toISOString()),
     [taskItems, taskClock],
@@ -1526,6 +1660,45 @@ export default function StratoApp() {
     setTasks(next);
     persistRealTasks(current, next);
   };
+  if (!isDemo && accessLoadError)
+    return (
+      <section className="empty-state" role="alert">
+        <strong>Acesso não confirmado</strong>
+        <p>{accessLoadError}</p>
+        <button type="button" onClick={() => setAccessLoadAttempt(attempt => attempt + 1)}>
+          Tentar novamente
+        </button>
+        <button type="button" onClick={() => void auth?.signOut()}>
+          Voltar ao login
+        </button>
+      </section>
+    );
+  if (
+    !isDemo &&
+    accessServerReady &&
+    !(
+      [
+        "home",
+        "operations",
+        "controlleria",
+        "portfolio",
+        "commercial",
+        "live",
+        "finance",
+        "registry",
+        "settings",
+      ] as const
+    ).some(target => canAccessView(currentUser, target))
+  )
+    return (
+      <section className="empty-state" role="status">
+        <strong>Nenhum módulo liberado</strong>
+        <p>Seu cadastro está ativo. Solicite ao administrador as empresas e permissões necessárias para trabalhar.</p>
+        <button type="button" onClick={() => void auth?.signOut()}>
+          Voltar ao login
+        </button>
+      </section>
+    );
   if (
     !isDemo &&
     (!accessServerReady ||
@@ -1589,6 +1762,7 @@ export default function StratoApp() {
   else if (view === "finance")
     page = (
       <FinanceModule
+        initialTab={financeInitialTab}
         onConfigureBanks={
           canAccessView(currentUser, "settings")
             ? company => {
@@ -1656,7 +1830,7 @@ export default function StratoApp() {
         operations={scopedOperations}
         financials={homeFinancials}
         finance={finance}
-        onFinance={applyFinanceState}
+        onSendCommission={sendCommercialCommission}
         canDecideCommittee={can(currentUser, "risk:decide")}
         onOpenOperation={setSelected}
         onNavigate={navigate}
@@ -1704,6 +1878,7 @@ export default function StratoApp() {
   else if (view === "live")
     page = (
       <LiveOperations
+        demoMode={isDemo}
         users={access.users}
         currentUser={currentUser}
         operations={scopedOperations}
@@ -1727,7 +1902,10 @@ export default function StratoApp() {
         portfolio={portfolio}
         onPortfolio={applyPortfolioState}
         companyScope={companyScope}
-        onNavigate={navigate}
+        onNavigate={target => {
+          navigate(target);
+          if (target === "finance") setFinanceInitialTab("cobranca");
+        }}
         focus={portfolioFocus}
         debtors={scoredDebtors}
         finance={!isDemo ? finance : undefined}
@@ -1756,10 +1934,11 @@ export default function StratoApp() {
   else if (view === "settings" || view === "policies")
     page = (
       <SettingsModule
-        key={bankSettingsCompany ?? "settings"}
+        key={`${settingsInitialSection ?? "overview"}:${bankSettingsCompany ?? ""}`}
         finance={finance}
         onFinance={applyFinanceState}
         companyScope={companyScope}
+        initialSection={settingsInitialSection}
         bankSettingsCompany={bankSettingsCompany}
         policies={policies}
         persistedPolicies={persistedPolicies}
@@ -1780,9 +1959,16 @@ export default function StratoApp() {
         operationalDefaults={operationalDefaults}
         onOperationalDefaults={setOperationalDefaults}
         access={access}
-        onAccess={setAccess}
+        onAccess={applyConfirmedAccess}
         intelligence={intelligence}
         onIntelligence={setIntelligence}
+        intelligenceReady={intelligenceServerReady}
+        intelligenceError={intelligencePersistenceError}
+        onRetryIntelligence={() => {
+          setIntelligencePersistenceError(undefined);
+          setIntelligenceServerReady(false);
+          setIntelligenceLoadAttempt(attempt => attempt + 1);
+        }}
         policyApprovalActor={{ id: sessionUser.id, name: sessionUser.name }}
         demoMode={isDemo}
       />
@@ -1826,9 +2012,9 @@ export default function StratoApp() {
                 dailyBriefing={dailyBriefing}
                 attentionItems={attentionItems}
                 taskItems={taskItems}
-                taskAssignees={access.users
-                  .filter(user => user.status === "active" && user.tenantIds.includes(intelligence.tenantId))
-                  .map(user => ({ id: user.id, name: user.name, department: user.department }))}
+                taskAssignees={access.users.filter(
+                  user => user.status === "active" && user.tenantIds.includes(intelligence.tenantId),
+                )}
                 onTaskCommand={runTaskCommand}
                 briefingReady={storageReady}
                 previewedBy={access.previewUserId ? sessionUser.name : undefined}
@@ -1840,6 +2026,14 @@ export default function StratoApp() {
                 portfolioTitles={livePortfolioTitles}
                 demoMode={isDemo}
               >
+                {navigationDenied && (
+                  <div className="empty-state" role="alert">
+                    <span>{navigationDenied}</span>
+                    <button type="button" onClick={() => setNavigationDenied(undefined)}>
+                      Fechar aviso
+                    </button>
+                  </div>
+                )}
                 {operationPersistenceError && (
                   <div className="empty-state" role="alert">
                     <strong>Alterações da operação ainda não foram salvas</strong>

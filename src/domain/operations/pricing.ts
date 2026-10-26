@@ -87,6 +87,41 @@ export function repurchaseCalculation(operation: Operation, pricing: PricingDraf
   today.setHours(12, 0, 0, 0);
   const cedentDocument = operation.document.replace(/\D/g, "");
   const selectedIds = new Set(pricing.repurchaseTitleIds ?? []);
+  if (!isDemoOperation(operation)) {
+    const rows = (operation.repurchaseContext?.titles ?? [])
+      .map(title => {
+        const signedDays = Math.ceil((new Date(`${title.dueDate}T12:00:00`).getTime() - today.getTime()) / 86400000);
+        const terms = {
+          lateInterestMonthly: 0,
+          penaltyPercent: 0,
+          action: "Recompra" as const,
+          ...pricing.repurchaseTerms?.[title.id],
+        };
+        return {
+          ...title,
+          real: true,
+          scope: "Cedente" as const,
+          overdue: signedDays < 0,
+          days: Math.max(1, Math.abs(signedDays)),
+          adjustment: 0,
+          lateInterest: 0,
+          penalty: 0,
+          fullRegressValue: title.faceAmount,
+          presentValue: title.faceAmount,
+          appliedRate: 0,
+          terms,
+          selected: selectedIds.has(title.id),
+        };
+      })
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    const selected = rows.filter(row => row.selected);
+    return {
+      rows,
+      selected,
+      overdueCount: rows.filter(row => row.overdue).length,
+      total: roundPricing(selected.reduce((sum, row) => sum + row.presentValue, 0)),
+    };
+  }
   const rows = (isDemoOperation(operation) ? cedentPortfolioTitles : [])
     .filter(
       title =>
@@ -118,6 +153,7 @@ export function repurchaseCalculation(operation: Operation, pricing: PricingDraf
           : fullRegressValue;
       return {
         ...title,
+        real: false,
         scope: title.groupOwnerDocument ? ("Grupo empresarial" as const) : ("Cedente" as const),
         overdue,
         days,
@@ -226,19 +262,68 @@ export function pricingCalculation(operation: Operation, pricing: PricingDraft) 
   const net = Math.max(0, face - originalDiscount - fees - iof - guarantee - pricing.manualRetention);
   const allInMonthly = net > 0 && weightedTerm > 0 ? (Math.pow(face / net, 30 / weightedTerm) - 1) * 100 : 0;
   const spread = allInMonthly - pricing.fundingCostMonthly;
-  const titleRows = rows.map((row, index) => {
-    const allocatedFees = allocatedFeeValues[index];
-    const chargedFees = pricing.vaEnabled ? 0 : allocatedFees;
-    const allocatedGuarantee = face ? (guarantee * row.title.amount) / face : 0;
-    return {
-      ...row,
-      displayedDiscount: row.discount,
-      allocatedFees,
-      displayedFees: chargedFees,
-      allocatedGuarantee,
-      net: Math.max(0, row.title.amount - row.baseDiscount - allocatedFees - allocatedGuarantee),
-    };
-  });
+  // Fechamento acumulado em centavos preserva o agregado e evita perder resíduos de rateio.
+  const allocateCents = (amount: number, allocationWeights: number[]) => {
+    const totalWeight = allocationWeights.reduce((sum, value) => sum + value, 0);
+    let cumulativeWeight = 0;
+    let allocated = 0;
+    return allocationWeights.map((weight, index) => {
+      cumulativeWeight += weight;
+      const cumulative =
+        index === allocationWeights.length - 1
+          ? round2(amount)
+          : round2(totalWeight ? (amount * cumulativeWeight) / totalWeight : 0);
+      const value = round2(cumulative - allocated);
+      allocated = cumulative;
+      return value;
+    });
+  };
+  const faceWeights = rows.map(row => row.title.amount);
+  const memoryFees = allocateCents(fees, weights);
+  const memoryGuarantee = allocateCents(guarantee, faceWeights);
+  const memoryIof = allocateCents(
+    iof,
+    baseRows.map((row, index) =>
+      operation.institution === "Factoring"
+        ? Math.max(0, row.title.amount - row.baseDiscount - allocatedFeeValues[index]) *
+          (0.000041 * Math.min(row.days, 365) + 0.0038)
+        : 0,
+    ),
+  );
+  const memoryRetention = allocateCents(pricing.manualRetention, faceWeights);
+  const memoryNetBase = rows.map((row, index) =>
+    round2(
+      row.title.amount -
+        row.baseDiscount -
+        memoryFees[index] -
+        memoryGuarantee[index] -
+        memoryIof[index] -
+        memoryRetention[index],
+    ),
+  );
+  const memoryNet = allocateCents(
+    net,
+    memoryNetBase.map(value => Math.max(0, value)),
+  );
+  const titleRows = rows.map((row, index) => ({
+    ...row,
+    displayedDiscount: row.discount,
+    allocatedFees: memoryFees[index],
+    displayedFees: pricing.vaEnabled ? 0 : memoryFees[index],
+    allocatedGuarantee: memoryGuarantee[index],
+    allocatedIof: memoryIof[index],
+    allocatedManualRetention: memoryRetention[index],
+    netAdjustment: round2(
+      memoryNet[index] -
+        (row.title.amount -
+          row.discount -
+          (pricing.vaEnabled ? 0 : memoryFees[index]) -
+          memoryGuarantee[index] -
+          memoryIof[index] -
+          memoryRetention[index]),
+    ),
+    net: memoryNet[index],
+  }));
   return {
     face,
     discount,

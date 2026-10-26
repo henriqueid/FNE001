@@ -21,6 +21,8 @@ export function governReleaseTransition(
   actor: Actor,
   now = new Date().toISOString(),
 ): Operation {
+  if (!same(current?.repurchaseApplications, requested.repurchaseApplications))
+    throw new OperationGovernanceError("Aplicações de recompra pertencem exclusivamente ao servidor.");
   const next = requested.releaseReview;
   if (!next) return requested;
   const previous = current?.releaseReview;
@@ -76,6 +78,8 @@ export function governReleaseTransition(
       "Favorecidos, contas, valores e data não podem mudar durante a aprovação; devolva para nova preparação.",
     );
 
+  const preparationError = preparedReleaseError(requested, previous);
+  if (preparationError) throw new OperationGovernanceError(preparationError);
   const payables = approvedPayables(requested, previous, now);
 
   const governed: ReleaseReview = {
@@ -110,6 +114,26 @@ export function governReleaseTransition(
 
 /** Invariantes mínimas que não podem depender apenas da interface do navegador. */
 export function assertOperationTransition(current: Operation | null, requested: Operation) {
+  const comparable = (operation: Operation) => ({ ...operation, repurchaseContext: undefined });
+  const isCCB = (operation: Operation) =>
+    operation.source === "Crédito estruturado" || /\bccb\b/i.test(operation.operationType ?? "");
+  const legacyCCB = current && isCCB(current);
+  if (isCCB(requested) && !legacyCCB)
+    throw new OperationGovernanceError("CCB ainda não suportada para criação ou conversão de operações.");
+  if (current && legacyCCB) {
+    const cancellationComparable = (operation: Operation) => ({
+      ...comparable(operation),
+      status: undefined,
+      cancellation: undefined,
+      nextAction: undefined,
+    });
+    const cancellationOnly =
+      requested.status === "Cancelada" && same(cancellationComparable(current), cancellationComparable(requested));
+    if (!same(comparable(current), comparable(requested)) && !cancellationOnly)
+      throw new OperationGovernanceError(
+        "CCB legada disponível somente para consulta ou cancelamento, sem alterar os demais dados.",
+      );
+  }
   if (!current && requested.stage !== 1)
     throw new OperationGovernanceError("Uma operação nova deve começar na etapa Entrada.");
   if (
@@ -125,7 +149,11 @@ export function assertOperationTransition(current: Operation | null, requested: 
     );
   if (current && requested.stage < current.stage)
     throw new OperationGovernanceError("O retorno de etapa exige o fluxo explícito de devolução.");
-  if (current && ["Cancelada", "Liberada ao financeiro"].includes(current.status) && !same(current, requested))
+  if (
+    current &&
+    ["Cancelada", "Liberada ao financeiro"].includes(current.status) &&
+    !same(comparable(current), comparable(requested))
+  )
     throw new OperationGovernanceError("Uma operação encerrada é somente para consulta e não pode ser reescrita.");
   if (requested.stage > 1 && requested.titleCount <= 0)
     throw new OperationGovernanceError("A operação precisa ter ao menos um título antes de avançar da entrada.");

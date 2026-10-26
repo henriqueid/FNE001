@@ -43,6 +43,7 @@ export function buildNewOperation(
   commercial: CommercialState,
   today: string,
 ): Operation {
+  if (source === "Crédito estruturado") throw new Error("CCB ainda não suportada para criação de operações.");
   const nextActions: Record<OperationSource, string> = {
     "XML NF-e": "Conferir títulos identificados nos XMLs",
     CNAB: "Validar leiaute e ocorrências importadas",

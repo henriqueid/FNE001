@@ -4,6 +4,7 @@ import { type ReactElement } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ChartImportModal } from "@/src/features/finance/chart-import-modal";
 import { AccountingTab } from "@/src/features/finance/tabs/accounting-tab";
+import { NewTitleModal } from "@/src/features/finance/titles/new-title-modal";
 import { ImportModal } from "@/src/features/finance/titles/import-titles-modal";
 import ControlleriaModule from "@/src/features/controlleria/controlleria-module";
 import { seedFinance } from "@/src/domain/finance/setup";
@@ -256,4 +257,100 @@ it.each(["conta", "categoria"])("rejeição do servidor mantém campos de %s e a
   await click(render(screen), kind === "conta" ? "Criar conta" : "Criar categoria");
   expect(field(render(screen), kind === "conta" ? "Nome" : "Nova categoria").props.value).toContain("CHURUME");
   expect(words(render(screen))).toContain("CHURUME conflito no servidor");
+});
+
+it.each(["31/02/2026", "29/02/2025", "2026-04-31"])(
+  "importação sinaliza vencimento inexistente %s antes de enviar",
+  due => {
+    const onApply = vi.fn();
+    const screen = () => ImportModal({ state: finance, defaultCompany: "CHURUME Alpha", onClose: vi.fn(), onApply });
+    const category = finance.categories.find(item => item.kind === "Despesa")!.name;
+    change(
+      field(render(screen), "Linhas (separadas por tabulação ou ponto e vírgula)", "textarea"),
+      `Pagar;CHURUME;CHURUME;${category};CHURUME Alpha;26/10/2026;${due};100,00`,
+    );
+    const tree = render(screen);
+    expect(words(tree)).toMatch(/Revisar:.*vencimento/);
+    expect(onApply).not.toHaveBeenCalled();
+  },
+);
+it("competência explicitamente inválida não vira vencimento por fallback silencioso", () => {
+  const screen = () =>
+    ImportModal({ state: finance, defaultCompany: "CHURUME Alpha", onClose: vi.fn(), onApply: vi.fn() });
+  const category = finance.categories.find(item => item.kind === "Despesa")!.name;
+  change(
+    field(render(screen), "Linhas (separadas por tabulação ou ponto e vírgula)", "textarea"),
+    `Pagar;CHURUME;CHURUME;${category};CHURUME Alpha;inválida;30/10/2026;100,00`,
+  );
+  expect(words(render(screen))).toMatch(/Revisar:.*competência/);
+});
+it("parcelamento trunca quantidade fracionária sem perder centavos do total", () => {
+  const screen = () =>
+    NewTitleModal({ state: finance, defaultCompany: "CHURUME Alpha", onClose: vi.fn(), onApply: vi.fn() });
+  change(field(render(screen), "Valor (R$)"), "100,00");
+  click(render(screen), "Nota parcelada");
+  change(field(render(screen), "Parcelas"), "3.5");
+  const tree = render(screen);
+  expect(field(tree, "Parcelas").props.value).toBe(3);
+  const inputs = elements(tree).filter(
+    item => item.props["aria-label"] && String(item.props["aria-label"]).startsWith("Valor da parcela"),
+  );
+  expect(inputs).toHaveLength(3);
+  expect(inputs.reduce((sum, item) => sum + Number(String(item.props.value).replace(",", ".")), 0)).toBeCloseTo(100, 2);
+});
+
+it.each([
+  ["Competência (data da nota)", "2026-02-30"],
+  ["Vencimento", ""],
+  ["Vencimento", "2026-04-31"],
+])("novo lançamento bloqueia %s inválido inclusive no handler", (label, value) => {
+  const onApply = vi.fn();
+  const screen = () => NewTitleModal({ state: finance, defaultCompany: "CHURUME Alpha", onClose: vi.fn(), onApply });
+  change(field(render(screen), "Descrição"), "CHURUME");
+  change(field(render(screen), "Favorecido"), "CHURUME");
+  change(field(render(screen), "Valor (R$)"), "100,00");
+  change(field(render(screen), label), value);
+  const tree = render(screen);
+  const submit = elements(tree).find(item => item.type === "button" && item.props.className === "fn-btn primary")!;
+  expect(submit.props.disabled).toBe(true);
+  (submit.props.onClick as () => void)();
+  expect(onApply).not.toHaveBeenCalled();
+});
+it("parcelamento mensal preserva total e ajusta dia para fevereiro", () => {
+  const onApply = vi.fn();
+  const screen = () => NewTitleModal({ state: finance, defaultCompany: "CHURUME Alpha", onClose: vi.fn(), onApply });
+  change(field(render(screen), "Descrição"), "CHURUME");
+  change(field(render(screen), "Favorecido"), "CHURUME");
+  change(field(render(screen), "Valor (R$)"), "100,00");
+  click(render(screen), "Nota parcelada");
+  change(field(render(screen), "1º vencimento"), "2026-01-31");
+  const tree = render(screen);
+  const submit = elements(tree).find(item => item.type === "button" && item.props.className === "fn-btn primary")!;
+  expect(submit.props.disabled).toBe(false);
+  (submit.props.onClick as () => void)();
+  const result = onApply.mock.calls[0][0] as Result;
+  expect(result.error).toBeUndefined();
+  const created = result.state.titles.slice(finance.titles.length);
+  expect(created.map(title => title.dueDate)).toEqual(["2026-01-31", "2026-02-28", "2026-03-31"]);
+  expect(created.reduce((sum, title) => sum + Math.round(title.amount * 100), 0)).toBe(10000);
+});
+it("importação mista mantém revisão e importa só linha válida com valor brasileiro", () => {
+  const onApply = vi.fn();
+  const screen = () => ImportModal({ state: finance, defaultCompany: "CHURUME Alpha", onClose: vi.fn(), onApply });
+  const category = finance.categories.find(item => item.kind === "Despesa")!.name;
+  change(
+    field(render(screen), "Linhas (separadas por tabulação ou ponto e vírgula)", "textarea"),
+    [
+      `Pagar;CHURUME válido;CHURUME;${category};CHURUME Alpha;;28/02/28;1.234,56`,
+      `Pagar;CHURUME inválido;CHURUME;${category};CHURUME Alpha;;31/02/2028;100,00`,
+    ].join("\n"),
+  );
+  const tree = render(screen);
+  expect(words(tree)).toMatch(/Revisar:.*vencimento/);
+  click(tree, "Importar 1 lançamento(s)");
+  const result = onApply.mock.calls[0][0] as Result;
+  expect(result.error).toBeUndefined();
+  const created = result.state.titles.slice(finance.titles.length);
+  expect(created).toHaveLength(1);
+  expect(created[0]).toMatchObject({ amount: 1234.56, dueDate: "2028-02-28", competenceDate: "2028-02-28" });
 });

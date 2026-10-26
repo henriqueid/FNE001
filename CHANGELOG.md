@@ -1,5 +1,12 @@
 # Changelog
 
+## Local · 26/10/2026 — Retomada do dossiê Churume
+
+- Conciliação/transferência aguardam confirmação, bloqueiam envio duplicado e preservam rascunhos após recusa ou erro. Contexto de conta/empresa e sessão impedem respostas atrasadas de afetar novo preparo; OFX usa snapshot atual.
+- Cobrança/checagem preservam identidade por título/empresa, bloqueiam duplicidade e datas inválidas; contatos secundários e DDD55 corrigidos. Promessas quitadas deixam lista ativa; Acordos conserva todo histórico.
+- Calendário financeiro validado no domínio e agregado persistido; importação sinaliza datas impossíveis e competência inválida. Parcelamento inteiro preserva centavos.
+- Lote permanece local. Evidências, revisão e limites em `docs/testing/churume/2026-10-26-retomada/resultado.md`.
+
 ## Publicação ·26/10/2026 — Churume, integridade e ciclo de acesso
 
 - Tarefas autoritativas, escopo/destinatários, episódios e recuperação de atribuições revogadas.

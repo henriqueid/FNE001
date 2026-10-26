@@ -225,6 +225,7 @@ export default function PortfolioModule({
       />
       {tab === "cobranca" ? (
         <CollectionCenter
+          key={companyScope}
           rows={openScoped}
           today={today}
           portfolio={portfolio}
@@ -394,7 +395,13 @@ export default function PortfolioModule({
               </label>
             </div>
           </header>
-          <PortfolioTitleGrid rows={shown} repName={repName} portfolio={portfolio} onPortfolio={onPortfolio} />
+          <PortfolioTitleGrid
+            key={companyScope}
+            rows={shown}
+            repName={repName}
+            portfolio={portfolio}
+            onPortfolio={onPortfolio}
+          />
           {shown.length === 0 && <p className="fn-note">Nenhum título neste filtro.</p>}
         </section>
       )}

@@ -1,6 +1,7 @@
 // Motor financeiro e contábil. Funções puras: recebem o estado e devolvem um novo estado.
 // Nada é removido: excluir = cancelar com estorno do lançamento de competência;
 // estornar = lançar a contrapartida (movimento e contábil) e registrar no histórico.
+import { isFinanceDate } from "./date";
 import {
   chartWithBanks,
   modelCategories,
@@ -90,6 +91,7 @@ export function post(
   },
   by: string,
 ) {
+  if (!isFinanceDate(input.date)) throw new Error("Informe uma data válida para o lançamento contábil.");
   const lines = input.lines
     .filter(l => Math.abs(l.debit) > 0.004 || Math.abs(l.credit) > 0.004)
     .map(l => ({ ...l, debit: round2(l.debit), credit: round2(l.credit) }));

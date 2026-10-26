@@ -4,6 +4,7 @@
  * Importação de títulos colados do Excel.
  */
 import { useCompanyDestinations } from "@/src/app/company-context";
+import { parseFinanceDate } from "@/src/domain/finance/date";
 import { todayIso, type Result } from "@/src/domain/finance/ledger";
 import type { FinanceState } from "@/src/domain/finance/model";
 import { createTitle } from "@/src/domain/finance/titles";
@@ -27,11 +28,6 @@ export function ImportModal({
   const destinations = useCompanyDestinations();
   const [text, setText] = useState("");
   const today = todayIso();
-  const toIso = (v: string) => {
-    const m = v.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-    if (m) return `${m[3].length === 2 ? `20${m[3]}` : m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
-    return /^\d{4}-\d{2}-\d{2}$/.test(v.trim()) ? v.trim() : "";
-  };
   const fallbackCompany = defaultCompany === "Consolidado" ? (destinations[0]?.name ?? "") : defaultCompany;
   const parsed = text
     .split(/\r?\n/)
@@ -55,8 +51,9 @@ export function ImportModal({
         : (destinations.find(item => item.name === fallbackCompany)?.name ?? "");
       const companyError =
         !company && (companyQuery && matches.length > 1 ? "empresa ambígua" : "empresa não encontrada");
-      const due = toIso(c[6] ?? ""),
-        competence = toIso(c[5] ?? "") || due || today;
+      const due = parseFinanceDate(c[6] ?? "");
+      const explicitCompetence = c[5] ?? "";
+      const competence = explicitCompetence ? parseFinanceDate(explicitCompetence) : due || today;
       const amount = num(c[7] ?? "");
       const errors = [
         companyError,
@@ -65,6 +62,7 @@ export function ImportModal({
         !c[2] && "favorecido",
         (!category || (kind && category.kind !== (kind === "Pagar" ? "Despesa" : "Receita"))) && "categoria",
         !due && "vencimento",
+        !competence && "competência",
         !(amount > 0) && "valor",
       ].filter(Boolean) as string[];
       return {
@@ -82,6 +80,7 @@ export function ImportModal({
     });
   const ok = parsed.filter(p => !p.errors.length);
   function submit() {
+    if (!ok.length) return;
     let current = state;
     for (const p of ok) {
       const r = createTitle(

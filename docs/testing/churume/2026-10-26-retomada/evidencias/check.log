@@ -1,0 +1,34 @@
+
+> strato-receivables-os@0.7.0 check
+> npm run typecheck && npm run lint && npm run format:check && npm run test
+
+
+> strato-receivables-os@0.7.0 typecheck
+> tsc --noEmit -p .
+
+
+> strato-receivables-os@0.7.0 lint
+> eslint src app tests
+
+
+> strato-receivables-os@0.7.0 format:check
+> prettier --check "src/**/*.{ts,tsx}" "app/**/*.{ts,tsx,css}" "tests/**/*.ts"
+
+Checking formatting...
+All matched files use Prettier code style!
+
+> strato-receivables-os@0.7.0 test
+> vitest run
+
+
+ RUN  v5.0.3 /Users/henriquemoura/Documents/ChatGPT/STRATO
+
+
+ Test Files  178 passed | 6 skipped (184)
+      Tests  1177 passed | 30 skipped (1207)
+   Start at  12:05:36
+   Duration  9.00s (transform 38%, import 33%, tests 25%, worker 4%)
+
+  Transform  transforming modules took 12.55s · 38% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns

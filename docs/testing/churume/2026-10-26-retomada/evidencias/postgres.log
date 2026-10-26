@@ -1,0 +1,26 @@
+PostgreSQL isolado: 40 migrações executadas; testes de coordenação iniciados.
+
+ RUN  v5.0.3 /Users/henriquemoura/Documents/ChatGPT/STRATO
+
+
+ Test Files  6 passed (6)
+      Tests  29 passed (29)
+   Start at  12:04:08
+   Duration  2.01s (tests 52%, transform 39%, import 9%)
+
+  Transform  transforming modules took 2.70s · 39% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+
+
+ RUN  v5.0.3 /Users/henriquemoura/Documents/ChatGPT/STRATO
+
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  12:04:10
+   Duration  203ms (tests 63%, transform 25%, import 10%, worker 2%)
+
+Recuperação PostgreSQL verificada: 74 tabelas/1464 linhas, hashes e metadados iguais em outra base do cluster descartável.
+HTTP restaurado verificado: login, cookie, APIs autenticadas, isolamento e logout.
+Cluster isolado encerrado. Evidências temporárias: /var/folders/hr/fdtrdch96_xbvmnfl1c83pm40000gn/T/strato-isolated-pg-wIsjFw

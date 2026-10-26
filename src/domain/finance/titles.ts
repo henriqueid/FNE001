@@ -2,6 +2,7 @@
  * Ciclo de vida do título a pagar/receber: lançar, baixar (parcial, juros, desconto), excluir, estornar,
  * prorrogar e editar. Nada é apagado: toda mudança gera contrapartida contábil e histórico.
  */
+import { isFinanceDate } from "./date";
 import {
   type Draft,
   type Effect,
@@ -40,8 +41,10 @@ export type TitleInput = {
 
 export function createTitleDraft(d: Draft, input: TitleInput, by: string) {
   const amount = round2(input.amount);
-  if (!(amount > 0)) throw new Error("Informe um valor maior que zero.");
+  if (!Number.isFinite(amount) || !(amount > 0)) throw new Error("Informe um valor finito maior que zero.");
   if (!input.description.trim()) throw new Error("Informe a descrição do lançamento.");
+  if (!isFinanceDate(input.competenceDate)) throw new Error("Informe uma data de competência válida.");
+  if (!isFinanceDate(input.dueDate)) throw new Error("Informe uma data de vencimento válida.");
   const id = nextId(d, input.kind === "Pagar" ? "CP" : "CR");
   const settlementLedger =
     input.settlementLedger ?? (input.kind === "Pagar" ? roleLedger(d, "payables") : roleLedger(d, "receivables"));
@@ -425,7 +428,8 @@ export function rescheduleTitles(
     ids.forEach(id => {
       const t = d.titles.find(x => x.id === id);
       if (!t || t.status !== "Em aberto") return;
-      const due = opts.newDate || addDays(t.dueDate, opts.days ?? 0);
+      const due = opts.newDate ?? addDays(t.dueDate, opts.days ?? 0);
+      if (!isFinanceDate(due)) throw new Error("Informe uma data de vencimento válida.");
       patchTitle(d, id, { dueDate: due }, hist(by, "Vencimento alterado", `${t.dueDate} → ${due} · ${opts.reason}`));
       n++;
     });
@@ -454,7 +458,7 @@ export function editTitle(
     if (t.origin === "Liberação de operação" && changes.amount !== undefined && changes.amount !== t.amount)
       throw new Error("O valor de uma liberação só muda devolvendo a operação.");
     const amount = changes.amount !== undefined ? round2(changes.amount) : t.amount;
-    if (!(amount > 0)) throw new Error("Informe um valor maior que zero.");
+    if (!Number.isFinite(amount) || !(amount > 0)) throw new Error("Informe um valor finito maior que zero.");
     const accountingChanged =
       t.competenceEntryId &&
       (amount !== t.amount ||
@@ -462,6 +466,8 @@ export function editTitle(
         (changes.competenceDate && changes.competenceDate !== t.competenceDate));
     let competenceEntryId = t.competenceEntryId;
     const next = { ...t, ...changes, amount };
+    if (!isFinanceDate(next.competenceDate)) throw new Error("Informe uma data de competência válida.");
+    if (!isFinanceDate(next.dueDate)) throw new Error("Informe uma data de vencimento válida.");
     if (accountingChanged) {
       reverseEntry(d, t.competenceEntryId, todayIso(), `Alteração de ${t.id}: ${reason}`, by);
       const category = d.categories.find(c => c.id === next.categoryId);

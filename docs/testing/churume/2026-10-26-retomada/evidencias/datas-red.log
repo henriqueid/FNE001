@@ -1,0 +1,107 @@
+
+ RUN  v5.0.3 /Users/henriquemoura/Documents/ChatGPT/STRATO
+
+ ❯ tests/finance-date-entry-integrity.test.ts (15 tests | 14 failed) 10ms
+   × não cria título com vencimento inválido 2026-02-30 3ms
+   × não cria título com vencimento inválido 2025-02-29 0ms
+   × não cria título com vencimento inválido 2026-04-31 0ms
+   × não cria título com vencimento inválido 2026-13-01 0ms
+   × não cria título com vencimento inválido 0000-01-01 0ms
+   × não cria título com vencimento inválido  0ms
+   × não cria título com vencimento inválido 26/10/2026 0ms
+   × recusa competência impossível antes de gerar o diário 0ms
+   × recusa valor infinito na origem do lançamento 1ms
+   × recusa edição e prorrogação para data impossível, sem mudar histórico 0ms
+   × API recusa data inválida no título: dueDate 1ms
+   × API recusa data inválida no título: competenceDate 1ms
+   × API recusa datas inexistentes no diário e no extrato 0ms
+   × fechamento recusa dia inexistente 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 14 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/finance-date-entry-integrity.test.ts > não cria título com vencimento inválido 2026-02-30
+ FAIL  tests/finance-date-entry-integrity.test.ts > não cria título com vencimento inválido 2025-02-29
+ FAIL  tests/finance-date-entry-integrity.test.ts > não cria título com vencimento inválido 2026-04-31
+ FAIL  tests/finance-date-entry-integrity.test.ts > não cria título com vencimento inválido 2026-13-01
+ FAIL  tests/finance-date-entry-integrity.test.ts > não cria título com vencimento inválido 0000-01-01
+ FAIL  tests/finance-date-entry-integrity.test.ts > não cria título com vencimento inválido
+ FAIL  tests/finance-date-entry-integrity.test.ts > não cria título com vencimento inválido 26/10/2026
+TypeError: .toMatch() expects to receive a string, but got undefined
+ ❯ tests/finance-date-entry-integrity.test.ts:10:23
+      8| it.each(["2026-02-30", "2025-02-29", "2026-04-31", "2026-13-01", "0000…
+      9|  const result=createTitle(state,{...input,dueDate},"CHURUME");
+     10|  expect(result.error).toMatch(/data|vencimento/i);expect(result.state)…
+       |                       ^
+     11| });
+     12| it("recusa competência impossível antes de gerar o diário",()=>{
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯
+
+ FAIL  tests/finance-date-entry-integrity.test.ts > recusa competência impossível antes de gerar o diário
+TypeError: .toMatch() expects to receive a string, but got undefined
+ ❯ tests/finance-date-entry-integrity.test.ts:14:23
+     12| it("recusa competência impossível antes de gerar o diário",()=>{
+     13|  const result=createTitle(state,{...input,competenceDate:"2026-02-31"}…
+     14|  expect(result.error).toMatch(/data|competência/i);expect(result.state…
+       |                       ^
+     15| });
+     16| it("recusa valor infinito na origem do lançamento",()=>{
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯
+
+ FAIL  tests/finance-date-entry-integrity.test.ts > recusa valor infinito na origem do lançamento
+TypeError: .toMatch() expects to receive a string, but got undefined
+ ❯ tests/finance-date-entry-integrity.test.ts:18:23
+     16| it("recusa valor infinito na origem do lançamento",()=>{
+     17|  const result=createTitle(state,{...input,amount:Infinity},"CHURUME");
+     18|  expect(result.error).toMatch(/valor/i);expect(result.state).toBe(stat…
+       |                       ^
+     19| });
+     20| it("recusa edição e prorrogação para data impossível, sem mudar histór…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯
+
+ FAIL  tests/finance-date-entry-integrity.test.ts > recusa edição e prorrogação para data impossível, sem mudar histórico
+TypeError: .toMatch() expects to receive a string, but got undefined
+ ❯ tests/finance-date-entry-integrity.test.ts:23:23
+     21|  const created=createTitle(state,input,"CHURUME").state;const title=cr…
+     22|  const edited=editTitle(created,title.id,{dueDate:"2026-02-30"},"Motiv…
+     23|  expect(edited.error).toMatch(/data|vencimento/i);expect(edited.state)…
+       |                       ^
+     24|  const moved=rescheduleTitles(created,[title.id],{newDate:"2026-04-31"…
+     25|  expect(moved.error).toMatch(/data|vencimento/i);expect(moved.state).t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/14]⎯
+
+ FAIL  tests/finance-date-entry-integrity.test.ts > API recusa data inválida no título: dueDate
+ FAIL  tests/finance-date-entry-integrity.test.ts > API recusa data inválida no título: competenceDate
+TypeError: .toMatch() expects to receive a string, but got object
+ ❯ tests/finance-date-entry-integrity.test.ts:29:37
+     27| it.each(["dueDate","competenceDate"] as const)("API recusa data inváli…
+     28|  const created=createTitle(state,input,"CHURUME").state;const copy=str…
+     29|  expect(validateFinanceState(copy)).toMatch(/data|vencimento|competênc…
+       |                                     ^
+     30| });
+     31| it("API recusa datas inexistentes no diário e no extrato",()=>{
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/14]⎯
+
+ FAIL  tests/finance-date-entry-integrity.test.ts > API recusa datas inexistentes no diário e no extrato
+TypeError: .toMatch() expects to receive a string, but got object
+ ❯ tests/finance-date-entry-integrity.test.ts:32:114
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/14]⎯
+
+ FAIL  tests/finance-date-entry-integrity.test.ts > fechamento recusa dia inexistente
+TypeError: .toMatch() expects to receive a string, but got undefined
+ ❯ tests/finance-date-entry-integrity.test.ts:36:143
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/14]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  14 failed | 1 passed (15)
+   Start at  11:57:12
+   Duration  244ms (transform 58%, import 31%, tests 9%, worker 2%)

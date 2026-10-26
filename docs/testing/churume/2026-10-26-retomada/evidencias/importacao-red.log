@@ -1,0 +1,76 @@
+
+ RUN  v5.0.3 /Users/henriquemoura/Documents/ChatGPT/STRATO
+
+ ❯ tests/finance-ui-confirmation-audit.test.ts (18 tests | 5 failed) 141ms
+   × importação sinaliza vencimento inexistente 31/02/2026 antes de enviar 4ms
+   × importação sinaliza vencimento inexistente 29/02/2025 antes de enviar 1ms
+   × importação sinaliza vencimento inexistente 2026-04-31 antes de enviar 0ms
+   × competência explicitamente inválida não vira vencimento por fallback silencioso 1ms
+   × parcelamento trunca quantidade fracionária sem perder centavos do total 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/finance-ui-confirmation-audit.test.ts > importação sinaliza vencimento inexistente 31/02/2026 antes de enviar
+ FAIL  tests/finance-ui-confirmation-audit.test.ts > importação sinaliza vencimento inexistente 29/02/2025 antes de enviar
+ FAIL  tests/finance-ui-confirmation-audit.test.ts > importação sinaliza vencimento inexistente 2026-04-31 antes de enviar
+AssertionError: expected 'Categorias disponíveis: Receita de de…' to match /Revisar:.*vencimento/
+
+- Expected:
+/Revisar:.*vencimento/
+
++ Received:
+"Categorias disponíveis: Receita de deságio, Tarifas e ad valorem, Juros e mora, Rendimentos de aplicação, Folha e encargos, Aluguel e condomínio, Sistemas e tecnologia, Serviços de terceiros, Tarifas bancárias, Cartório e cobrança, Tributos sobre receitas, Despesas gerais. Empresa em branco usa CHURUME Alpha.#TipoDescriçãoCategoriaVencimentoValorSituação1PagarCHURUMECHURUME · CHURUME AlphaFolha e encargos—R$ 100,00Pronto"
+
+ ❯ tests/finance-ui-confirmation-audit.test.ts:266:48
+    264|  const category=finance.categories.find(item=>item.kind==="Despesa")!.…
+    265|  change(field(render(screen),"Linhas (separadas por tabulação ou ponto…
+    266|  const tree=render(screen);expect(words(tree)).toMatch(/Revisar:.*venc…
+       |                                                ^
+    267| });
+    268| it("competência explicitamente inválida não vira vencimento por fallba…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/finance-ui-confirmation-audit.test.ts > competência explicitamente inválida não vira vencimento por fallback silencioso
+AssertionError: expected 'Categorias disponíveis: Receita de de…' to match /Revisar:.*competência/
+
+- Expected:
+/Revisar:.*competência/
+
++ Received:
+"Categorias disponíveis: Receita de deságio, Tarifas e ad valorem, Juros e mora, Rendimentos de aplicação, Folha e encargos, Aluguel e condomínio, Sistemas e tecnologia, Serviços de terceiros, Tarifas bancárias, Cartório e cobrança, Tributos sobre receitas, Despesas gerais. Empresa em branco usa CHURUME Alpha.#TipoDescriçãoCategoriaVencimentoValorSituação1PagarCHURUMECHURUME · CHURUME AlphaFolha e encargos30/10/2026R$ 100,00Pronto"
+
+ ❯ tests/finance-ui-confirmation-audit.test.ts:272:32
+    270|  const category=finance.categories.find(item=>item.kind==="Despesa")!.…
+    271|  change(field(render(screen),"Linhas (separadas por tabulação ou ponto…
+    272|  expect(words(render(screen))).toMatch(/Revisar:.*competência/);
+       |                                ^
+    273| });
+    274| it("parcelamento trunca quantidade fracionária sem perder centavos do …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  tests/finance-ui-confirmation-audit.test.ts > parcelamento trunca quantidade fracionária sem perder centavos do total
+AssertionError: expected 3.5 to be 3 // Object.is equality
+
+- Expected
++ Received
+
+- 3
++ 3.5
+
+ ❯ tests/finance-ui-confirmation-audit.test.ts:279:71
+    277|  click(render(screen),"Nota parcelada");
+    278|  change(field(render(screen),"Parcelas"),"3.5");
+    279|  const tree=render(screen);expect(field(tree,"Parcelas").props.value).…
+       |                                                                       ^
+    280|  const inputs=elements(tree).filter(item=>item.props["aria-label"] && …
+    281|  expect(inputs).toHaveLength(3);expect(inputs.reduce((sum,item)=>sum+N…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 13 passed (18)
+   Start at  12:02:37
+   Duration  570ms (transform 50%, tests 29%, import 20%, worker 1%)

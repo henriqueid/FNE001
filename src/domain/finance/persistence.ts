@@ -1,3 +1,4 @@
+import { isFinanceDate } from "./date";
 /** Validação do agregado financeiro e preservação dos fatos contábeis recebidos pelas APIs. */
 import type { FinanceState, JournalEntry } from "./model";
 
@@ -36,6 +37,13 @@ export function validateFinanceState(state: FinanceState): string | null {
     )
   )
     return "Partida contábil inválida.";
+  if (state.accounts.some(account => !isFinanceDate(account.openingDate)))
+    return "Data de abertura de conta bancária inválida.";
+  if (state.titles.some(title => !isFinanceDate(title.competenceDate) || !isFinanceDate(title.dueDate)))
+    return "Data de competência ou vencimento de título financeiro inválida.";
+  if (state.movements.some(movement => !isFinanceDate(movement.date))) return "Data de movimento bancário inválida.";
+  if (state.journal.some(entry => !isFinanceDate(entry.date))) return "Data de lançamento contábil inválida.";
+  if ((state.statement ?? []).some(line => !isFinanceDate(line.date))) return "Data de extrato bancário inválida.";
   if (!unique(state.chart.map(account => account.code))) return "Há códigos duplicados no plano de contas.";
   if (!unique(state.accounts.map(account => account.id))) return "Há contas bancárias duplicadas.";
   if (!unique(state.categories.map(category => category.id))) return "Há categorias financeiras duplicadas.";
@@ -70,8 +78,7 @@ export function validateFinanceState(state: FinanceState): string | null {
   const reversalError = validateJournalReversals(state.journal);
   if (reversalError) return reversalError;
   for (const closure of state.periodClosures ?? []) {
-    if (!closure.company.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(closure.throughDate))
-      return `Fechamento ${closure.id} inválido.`;
+    if (!closure.company.trim() || !isFinanceDate(closure.throughDate)) return `Fechamento ${closure.id} inválido.`;
     const accountIds = new Set(
       state.accounts.filter(account => account.company === closure.company).map(account => account.id),
     );

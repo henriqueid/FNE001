@@ -47,7 +47,9 @@ export function CollectionCenter({
   );
   const byId = useMemo(() => new Map(rows.map(row => [row.id, row])), [rows]);
   const detail = detailId ? byId.get(detailId) : undefined;
-  const promises = rows.filter(row => row.collectionOccurrences?.at(-1)?.outcome === "Promessa de pagamento");
+  const promises = rows.filter(
+    row => row.amount > 0 && row.collectionOccurrences?.at(-1)?.outcome === "Promessa de pagamento",
+  );
   const agreements = rows.filter(row =>
     row.collectionOccurrences?.some(item => item.outcome === "Negociação em andamento"),
   );

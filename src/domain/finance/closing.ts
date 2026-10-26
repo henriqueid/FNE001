@@ -1,3 +1,4 @@
+import { isFinanceDate } from "./date";
 import { inScope } from "./banking";
 import { hist, nextId, run, type Result } from "./ledger";
 import { nowStamp, type FinanceState } from "./model";
@@ -18,7 +19,7 @@ export function assertDateOpen(state: FinanceState, company: string, date: strin
 
 export function closeFinancePeriod(state: FinanceState, scope: string, throughDate: string, by: string): Result {
   return run(state, draft => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(throughDate)) throw new Error("Informe uma data-base válida.");
+    if (!isFinanceDate(throughDate)) throw new Error("Informe uma data-base válida.");
     const companies = [
       ...new Set([
         ...draft.accounts.map(account => account.company),

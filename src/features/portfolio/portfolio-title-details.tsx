@@ -1,9 +1,10 @@
 "use client";
 
 import { confirmStateCommit, type StateCommit } from "@/src/ui/confirmed-state";
-import { type FormEvent, type ReactNode, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRegistry } from "@/src/app/registry-context";
+import { isFinanceDate } from "@/src/domain/finance/date";
 import { digits } from "@/src/domain/commercial/calendar";
 import {
   addCollectionOccurrence,
@@ -62,6 +63,13 @@ function localDateTime(date = new Date()) {
   return shifted.toISOString().slice(0, 16);
 }
 
+function isLocalDateTime(value: string) {
+  return (
+    isFinanceDate(value.slice(0, 10)) &&
+    /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,3})?)?$/.test(value)
+  );
+}
+
 function suggestedReturn(outcome: CollectionOutcome, promiseDate: string) {
   if (outcome === "Promessa de pagamento" && promiseDate) return `${promiseDate}T09:00`;
   const days = outcome === "Boleto solicitado" ? 1 : outcome === "Sem resposta" ? 2 : 3;
@@ -80,28 +88,42 @@ function displayDateTime(value?: string) {
 function whatsappNumber(phone?: string) {
   const number = digits(phone ?? "");
   if (!number) return "";
-  return number.startsWith("55") ? number : `55${number}`;
+  return number.startsWith("55") && number.length > 11 ? number : `55${number}`;
 }
 
-export function PortfolioTitleDetails({
-  title,
-  repName,
-  portfolio,
-  onPortfolio,
-  onClose,
-  initialTab = "resumo",
-}: {
+type PortfolioTitleDetailsProps = {
   title: PortfolioGridRow;
   repName: (id?: string) => string;
   portfolio: PortfolioState;
   onPortfolio: StateCommit<PortfolioState>;
   onClose: () => void;
   initialTab?: DetailTab;
-}) {
+};
+
+export function PortfolioTitleDetails(props: PortfolioTitleDetailsProps) {
+  return <TitleDetailsForm key={JSON.stringify([props.title.company, props.title.id])} {...props} />;
+}
+
+function TitleDetailsForm({
+  title,
+  repName,
+  portfolio,
+  onPortfolio,
+  onClose,
+  initialTab = "resumo",
+}: PortfolioTitleDetailsProps) {
   const { parties } = useRegistry();
   const [tab, setTab] = useState<DetailTab>(initialTab);
   const [notice, setNotice] = useState("");
   const [saving, setSaving] = useState(false);
+  const pending = useRef(false);
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   const cedent = parties.find(party => digits(party.document) === digits(title.ownerDocument));
   const debtor = parties.find(party => digits(party.document) === digits(title.debtorDocument));
   const payments = title.payments ?? [];
@@ -126,8 +148,8 @@ export function PortfolioTitleDetails({
   const [confirmationAt, setConfirmationAt] = useState(title.confirmation?.contactedAt ?? localDateTime());
   const [confirmationContact, setConfirmationContact] = useState(title.confirmation?.contactPerson ?? "");
   const [confirmationNotes, setConfirmationNotes] = useState(title.confirmation?.notes ?? "");
-  const phone = debtor?.phone ?? debtor?.contacts?.find(contact => contact.phone)?.phone ?? "";
-  const email = debtor?.email ?? debtor?.contacts?.find(contact => contact.email)?.email ?? "";
+  const phone = debtor?.phone?.trim() || debtor?.contacts?.find(contact => contact.phone?.trim())?.phone?.trim() || "";
+  const email = debtor?.email?.trim() || debtor?.contacts?.find(contact => contact.email?.trim())?.email?.trim() || "";
   const waNumber = whatsappNumber(phone);
   const message = `Olá, estamos entrando em contato sobre o título ${title.documentNumber}, no valor atual de ${money(balance)}, com vencimento em ${br(title.dueDate)}.`;
   const whatsappHref = waNumber ? `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}` : "";
@@ -148,11 +170,17 @@ export function PortfolioTitleDetails({
 
   async function saveOccurrence(event: FormEvent) {
     event.preventDefault();
-    if (saving) return;
-    if (!notes.trim() || !nextContactAt) {
-      setNotice("Informe o resumo da conversa e a data do próximo contato.");
+    if (pending.current || !active.current) return;
+    if (
+      !notes.trim() ||
+      !isLocalDateTime(chargedAt) ||
+      !isLocalDateTime(nextContactAt) ||
+      (outcome === "Promessa de pagamento" && !isFinanceDate(promiseDate))
+    ) {
+      setNotice("Informe resumo e datas válidas de cobrança, próximo contato e promessa quando aplicável.");
       return;
     }
+    pending.current = true;
     setSaving(true);
     const confirmed = await confirmStateCommit(() =>
       onPortfolio(
@@ -163,12 +191,14 @@ export function PortfolioTitleDetails({
           outcome,
           notes: notes.trim(),
           nextContactAt,
-          promiseDate: promiseDate || undefined,
+          promiseDate: outcome === "Promessa de pagamento" ? promiseDate : undefined,
           createdAt: new Date().toISOString(),
           createdBy: "Henrique",
         }),
       ),
     );
+    pending.current = false;
+    if (!active.current) return;
     setSaving(false);
     if (!confirmed) {
       setNotice("Não foi possível confirmar a gravação. Os campos foram mantidos para tentar novamente.");
@@ -182,11 +212,12 @@ export function PortfolioTitleDetails({
 
   async function saveConfirmation(event: FormEvent) {
     event.preventDefault();
-    if (saving) return;
-    if (!confirmationNotes.trim()) {
-      setNotice("Registre a conclusão ou divergência encontrada pela Controladoria.");
+    if (pending.current || !active.current) return;
+    if (!confirmationNotes.trim() || !isLocalDateTime(confirmationAt)) {
+      setNotice("Informe data válida do contato e a conclusão ou divergência encontrada pela Controladoria.");
       return;
     }
+    pending.current = true;
     setSaving(true);
     const confirmed = await confirmStateCommit(() =>
       onPortfolio(
@@ -201,6 +232,8 @@ export function PortfolioTitleDetails({
         }),
       ),
     );
+    pending.current = false;
+    if (!active.current) return;
     setSaving(false);
     if (!confirmed) {
       setNotice("Não foi possível confirmar a gravação. Os campos foram mantidos para tentar novamente.");

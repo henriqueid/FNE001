@@ -8,7 +8,7 @@ import { addDays, round2, todayIso, type Result } from "@/src/domain/finance/led
 import { type CompanyBankAccount, type FinanceState } from "@/src/domain/finance/model";
 import { BY, Field, Modal, br, money, parseMoneyBR, type Action } from "@/src/features/finance/finance-ui";
 import { AlertIcon, CheckIcon, UndoIcon } from "@/src/ui/icons";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function ExtractTab({
   state,
@@ -22,7 +22,7 @@ export function ExtractTab({
   scope: string;
   accountId: string;
   setAccountId: (id: string) => void;
-  onApply: (r: Result) => void;
+  onApply: (r: Result) => boolean | Promise<boolean>;
   onAction: (a: NonNullable<Action>) => void;
 }) {
   const today = todayIso();
@@ -31,6 +31,41 @@ export function ExtractTab({
   const [from, setFrom] = useState(addDays(today, -30));
   const [to, setTo] = useState(today);
   const [showTransfer, setShowTransfer] = useState(false);
+  const pending = useRef(false);
+  const context = useRef({});
+  const [actionError, setActionError] = useState("");
+  useEffect(() => {
+    context.current = {};
+    return () => {
+      context.current = {};
+    };
+  }, [scope, account?.id]);
+  const contextKey = JSON.stringify([scope, account?.id]);
+  const [preparedContext, setPreparedContext] = useState(contextKey);
+  if (preparedContext !== contextKey) {
+    setPreparedContext(contextKey);
+    setShowTransfer(false);
+    setActionError("");
+  }
+  const applyTransfer = async (result: Result) => {
+    if (pending.current) return false;
+    pending.current = true;
+    const submittedContext = context.current;
+    setActionError("");
+    try {
+      const confirmed = await onApply(result);
+      if (context.current !== submittedContext) return false;
+      if (confirmed && !result.error) setShowTransfer(false);
+      else if (result.error) setActionError(result.error);
+      return confirmed && !result.error;
+    } catch (error) {
+      if (context.current === submittedContext)
+        setActionError(error instanceof Error ? error.message : "Não foi possível confirmar a transferência.");
+      return false;
+    } finally {
+      pending.current = false;
+    }
+  };
   if (!account)
     return (
       <section className="fn-card">
@@ -57,7 +92,13 @@ export function ExtractTab({
             {account.bankName} · ag {account.agency} · cc {account.account} · {account.company}
           </p>
         </div>
-        <button className="fn-btn ghost" onClick={() => setShowTransfer(true)}>
+        <button
+          className="fn-btn ghost"
+          onClick={() => {
+            context.current = {};
+            setShowTransfer(true);
+          }}
+        >
           Transferência entre contas
         </button>
       </header>
@@ -159,16 +200,21 @@ export function ExtractTab({
           </tbody>
         </table>
       </div>
+      {actionError && (
+        <p className="fn-warning" role="alert">
+          {actionError}
+        </p>
+      )}
       {showTransfer && (
         <TransferModal
           state={state}
           accounts={accounts}
           defaultFrom={account.id}
-          onClose={() => setShowTransfer(false)}
-          onApply={r => {
-            onApply(r);
-            if (!r.error) setShowTransfer(false);
+          onClose={() => {
+            context.current = {};
+            setShowTransfer(false);
           }}
+          onApply={applyTransfer}
         />
       )}
     </section>
@@ -186,7 +232,7 @@ export function TransferModal({
   accounts: CompanyBankAccount[];
   defaultFrom: string;
   onClose: () => void;
-  onApply: (r: Result) => void;
+  onApply: (r: Result) => boolean | Promise<boolean>;
 }) {
   const [from, setFrom] = useState(defaultFrom);
   const fromAcc = accounts.find(a => a.id === from);
@@ -226,7 +272,15 @@ export function TransferModal({
     >
       <div className="fn-form">
         <Field label="De">
-          <select value={from} onChange={e => setFrom(e.target.value)}>
+          <select
+            value={from}
+            onChange={e => {
+              const id = e.target.value;
+              const source = accounts.find(item => item.id === id);
+              setFrom(id);
+              setTo(accounts.find(item => item.id !== id && item.company === source?.company)?.id ?? "");
+            }}
+          >
             {accounts.map(a => (
               <option key={a.id} value={a.id}>
                 {a.nickname} · {money(accountBalance(state, a.id))}

@@ -14,7 +14,7 @@ import {
   suggestFor,
   undoReconcile,
 } from "@/src/domain/finance/reconciliation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { round2, type Result } from "@/src/domain/finance/ledger";
 import type { FinanceState, Movement, StatementLine } from "@/src/domain/finance/model";
 import { AlertIcon, CheckIcon, SparkIcon, UndoIcon } from "@/src/ui/icons";
@@ -196,6 +196,31 @@ export function ReconcileTab({
   const [launching, setLaunching] = useState<StatementLine | null>(null);
   const [diffOpen, setDiffOpen] = useState(false);
   const [importInfo, setImportInfo] = useState("");
+  const [actionError, setActionError] = useState("");
+  const pending = useRef(false);
+  const modalSession = useRef({});
+  const current = useRef({ state, context: {} });
+  useEffect(() => {
+    current.current.state = state;
+  }, [state]);
+  useEffect(() => {
+    const session = current.current;
+    session.context = {};
+    return () => {
+      session.context = {};
+    };
+  }, [scope, account?.id]);
+  const contextKey = JSON.stringify([scope, account?.id]);
+  const [preparedContext, setPreparedContext] = useState(contextKey);
+  if (preparedContext !== contextKey) {
+    setPreparedContext(contextKey);
+    setBankSel(new Set());
+    setSysSel(new Set());
+    setLaunching(null);
+    setDiffOpen(false);
+    setImportInfo("");
+    setActionError("");
+  }
   if (!account)
     return (
       <section className="fn-card">
@@ -224,10 +249,24 @@ export function ReconcileTab({
     setSysSel(new Set());
   };
   const apply = async (r: Result) => {
-    if (await onApply(r)) {
-      clear();
-      setLaunching(null);
-      setDiffOpen(false);
+    if (pending.current) return;
+    pending.current = true;
+    const context = current.current.context;
+    const submittedModal = modalSession.current;
+    setActionError("");
+    try {
+      const confirmed = await onApply(r);
+      if (current.current.context !== context || modalSession.current !== submittedModal) return;
+      if (confirmed && !r.error) {
+        clear();
+        setLaunching(null);
+        setDiffOpen(false);
+      } else if (r.error) setActionError(r.error);
+    } catch (error) {
+      if (current.current.context === context && modalSession.current === submittedModal)
+        setActionError(error instanceof Error ? error.message : "Não foi possível confirmar a conciliação.");
+    } finally {
+      pending.current = false;
     }
   };
   const toggle = (set: Set<string>, setter: (s: Set<string>) => void, id: string) => {
@@ -238,12 +277,24 @@ export function ReconcileTab({
   };
 
   async function onFile(file: File) {
+    if (pending.current) return;
+    pending.current = true;
+    const context = current.current.context;
+    setActionError("");
+    setImportInfo("");
     try {
       const parsed = parseOfx(await file.text());
-      if (await onApply(importStatement(state, account.id, parsed.lines, file.name, BY, parsed)))
-        setImportInfo(`${file.name}: ${parsed.lines.length} lançamento(s) importado(s).`);
+      if (current.current.context !== context) return;
+      const result = importStatement(current.current.state, account!.id, parsed.lines, file.name, BY, parsed);
+      const confirmed = await onApply(result);
+      if (current.current.context !== context) return;
+      if (confirmed && !result.error) setImportInfo(`${file.name}: ${parsed.lines.length} lançamento(s) importado(s).`);
+      else if (result.error) setActionError(result.error);
     } catch (error) {
-      onApply({ state, error: error instanceof Error ? error.message : "Não foi possível ler o OFX." });
+      if (current.current.context === context)
+        setActionError(error instanceof Error ? error.message : "Não foi possível ler o OFX.");
+    } finally {
+      pending.current = false;
     }
   }
 
@@ -322,6 +373,11 @@ export function ReconcileTab({
           ))}
         </div>
       </div>
+      {actionError && (
+        <p className="fn-warning" role="alert">
+          {actionError}
+        </p>
+      )}
       {importInfo && (
         <p className="fn-note">
           <CheckIcon /> {importInfo}
@@ -375,7 +431,10 @@ export function ReconcileTab({
           <button
             className="fn-btn small ghost"
             disabled={!(bankPicked.length || sysPicked.length) || Math.abs(diff) < 0.005}
-            onClick={() => setDiffOpen(true)}
+            onClick={() => {
+              modalSession.current = {};
+              setDiffOpen(true);
+            }}
           >
             Lançar diferença e conciliar
           </button>
@@ -454,7 +513,13 @@ export function ReconcileTab({
                       <td className={`num ${l.amount < 0 ? "bad" : "good"}`}>{money(l.amount)}</td>
                       <td className="actions">
                         {l.status === "Pendente" ? (
-                          <button className="fn-btn small ghost" onClick={() => setLaunching(l)}>
+                          <button
+                            className="fn-btn small ghost"
+                            onClick={() => {
+                              modalSession.current = {};
+                              setLaunching(l);
+                            }}
+                          >
                             Lançar
                           </button>
                         ) : (
@@ -552,14 +617,27 @@ export function ReconcileTab({
         Dica: um movimento e o seu estorno que não chegaram ao banco podem ser conciliados juntos, sem linha do extrato,
         porque se anulam. Pagamentos agrupados pelo banco (1 linha × vários lançamentos) também fecham pela soma.
       </p>
-      {launching && <LaunchModal state={state} line={launching} onClose={() => setLaunching(null)} onApply={apply} />}
+      {launching && (
+        <LaunchModal
+          state={state}
+          line={launching}
+          onClose={() => {
+            modalSession.current = {};
+            setLaunching(null);
+          }}
+          onApply={apply}
+        />
+      )}
       {diffOpen && (
         <DiffModal
           state={state}
           lineIds={[...bankSel]}
           movementIds={[...sysSel]}
           diff={diff}
-          onClose={() => setDiffOpen(false)}
+          onClose={() => {
+            modalSession.current = {};
+            setDiffOpen(false);
+          }}
           onApply={apply}
         />
       )}

@@ -1,8 +1,12 @@
 # STRATO — contexto de continuidade
 
+## Retomada Churume ·26/10/2026 · novo lote local
+
+Após publicação aa1aa8b, corrigidos novos defeitos reproduzidos em conciliação/OFX/transferência, cobrança/checagem/contatos e entradas financeiras. Datas civis usam calendário canônico; parcelas inteiras preservam total. Gravação pendente, mudança de contexto e reabertura de modal recebem regressões. Acordos históricos preservados. Relatório: `docs/testing/churume/2026-10-26-retomada/resultado.md`. Revisão independente realizada; check, build e PostgreSQL descartável registrados no relatório. **Este novo lote não foi publicado.** Produção continua na publicação abaixo; seções locais anteriores à publicação são históricas. Cobertura de handlers não certifica telas completas no navegador.
+
 ## Publicação integral autorizada ·26/10/2026
 
-Publicado código `c132acd`: limites gerais/individuais de IA, correções Churume25/26, recompra com escolha de baixa, tarefas autoritativas, usuários/permissões/sessões e configuração IA versionada. Visual aprovado preservado. Check do lote1.105pass/30skip; PostgreSQL29/29+documentos/recuperação/HTTP; build local/remoto aprovados; dependências produtivas sem vulnerabilidades. Serviço reiniciado11:49:13 de26/10 (America/Sao_Paulo), saúde interna/pública e página pública OK; novas APIs negam acesso sem sessão. Sem migração ou movimentação real. Registro: `docs/deployments/2026-10-26-churume-acessos-ia.md`. As seções “local/não publicado” abaixo são históricas; esses lotes agora foram incluídos nesta publicação. Editor livre de departamentos/autoridades e tetos de alçada por valor continuam planejados; cobertura visual individual total e fornecedores externos seguem os limites do dossiê.
+Publicado código `c132acd`: limites gerais/individuais de IA, correções Churume25/26, recompra com escolha de baixa, tarefas autoritativas, usuários/permissões/sessões e configuração IA versionada. Visual aprovado preservado. Check do lote1.105pass/30skip; PostgreSQL29/29+documentos/recuperação/HTTP; build local/remoto aprovados; dependências produtivas sem vulnerabilidades. Serviço reiniciado11:49:13 de26/10 (America/Sao_Paulo), saúde interna/pública e página pública OK; novas APIs negam acesso sem sessão. Sem migração ou movimentação real. Registro: `docs/deployments/2026-10-26-churume-acessos-ia.md`. As seções “local/não publicado” anteriores à retomada são históricas; esses lotes agora foram incluídos nesta publicação. Editor livre de departamentos/autoridades e tetos de alçada por valor continuam planejados; cobertura visual individual total e fornecedores externos seguem os limites do dossiê.
 
 ## Campanha Churume e acessos · 26/10/2026 · local
 

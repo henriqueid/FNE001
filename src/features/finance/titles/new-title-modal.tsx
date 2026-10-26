@@ -4,6 +4,7 @@
  * Novo lançamento: único, nota parcelada ou recorrente, com opção de lançar e baixar.
  */
 import { useCompanyDestinations } from "@/src/app/company-context";
+import { isFinanceDate } from "@/src/domain/finance/date";
 import { addDays, round2, todayIso, type Effect, type Result } from "@/src/domain/finance/ledger";
 import type { FinanceState, FinanceTitle } from "@/src/domain/finance/model";
 import { createTitle } from "@/src/domain/finance/titles";
@@ -64,9 +65,10 @@ export function NewTitleModal({
   const [method, setMethod] = useState("PIX");
   const category = cats.find(c => c.id === categoryId) ?? cats[0];
   const value = num(amount);
-  const n = mode === "unico" ? 1 : Math.max(2, count);
+  const n = mode === "unico" ? 1 : Math.max(2, Math.min(60, Math.trunc(count)));
 
   const generated: Installment[] = useMemo(() => {
+    if (!isFinanceDate(firstDue)) return [];
     const dueOf = (i: number) =>
       interval === "mensal" || mode === "recorrente" ? addMonths(firstDue, i) : addDays(firstDue, i * Number(interval));
     if (mode === "unico") return [{ due: firstDue, amount: value.toFixed(2) }];
@@ -88,6 +90,7 @@ export function NewTitleModal({
   };
 
   function submit() {
+    if (!valid) return;
     let current = state;
     const effects: Effect[] = [];
     for (let i = 0; i < rows.length; i++) {
@@ -128,10 +131,13 @@ export function NewTitleModal({
 
   const valid =
     value > 0 &&
+    isFinanceDate(competence) &&
+    isFinanceDate(firstDue) &&
+    rows.length > 0 &&
     description.trim() &&
     counterparty.trim() &&
     category &&
-    rows.every(r => num(r.amount.replace(".", ",")) > 0 && r.due) &&
+    rows.every(r => num(r.amount.replace(".", ",")) > 0 && isFinanceDate(r.due)) &&
     (!settleNow || accounts.length);
   return (
     <Modal
@@ -266,7 +272,7 @@ export function NewTitleModal({
               max={60}
               value={count}
               onChange={e => {
-                setCount(Math.min(60, Math.max(2, Number(e.target.value) || 2)));
+                setCount(Math.min(60, Math.max(2, Math.trunc(Number(e.target.value)) || 2)));
                 setEdited(null);
               }}
             />

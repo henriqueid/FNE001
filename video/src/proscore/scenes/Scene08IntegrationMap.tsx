@@ -2,8 +2,9 @@ import { AbsoluteFill, Img, interpolate, staticFile } from "remotion";
 import { clamp, colors } from "../../brand/tokens";
 import { Background } from "../../components/Background";
 import { useNarration } from "../components/clock";
-import { ScreenCapture } from "../components/ScreenCapture";
-import { appear, Badge, Dot, Impact, SceneLabel } from "../components/ui";
+import { aim, LiveScreen } from "../components/LiveScreen";
+import { ImpactMoment, Particles, usePop } from "../components/motion";
+import { Badge, Dot, SceneLabel } from "../components/ui";
 import { INTEGRATION_MAP } from "../data/integrationMap";
 
 const PURPLE = "#C084FC";
@@ -12,12 +13,14 @@ const PURPLE = "#C084FC";
 export const Scene08IntegrationMap: React.FC = () => {
   const { frame, at } = useNarration("s08");
   const realAt = at(8);
+  const pop = usePop();
   const ringFade = interpolate(frame, [realAt - 6, realAt + 12], [1, 0], clamp);
   const cx = 960;
   const cy = 520;
   return (
     <AbsoluteFill>
       <Background />
+      <Particles count={26} seed="s08" color="#C084FC" />
       <SceneLabel index={8} title="Mapa de integrações" />
       <AbsoluteFill style={{ opacity: ringFade }}>
         <Badge kind="proposal" from={10} />
@@ -27,7 +30,13 @@ export const Scene08IntegrationMap: React.FC = () => {
             const x = cx + Math.cos(a) * 640;
             const y = cy + Math.sin(a) * 320;
             const active = frame >= at(i + 1);
-            return <line key={m.module} x1={cx} y1={cy} x2={x} y2={y} stroke={active ? PURPLE : "rgba(255,255,255,0.12)"} strokeWidth={active ? 2.5 : 1.5} strokeDasharray="8 8" />;
+            const k = ((frame + i * 9) % 45) / 45;
+            return (
+              <g key={m.module}>
+                <line x1={cx} y1={cy} x2={x} y2={y} stroke={active ? PURPLE : "rgba(255,255,255,0.12)"} strokeWidth={active ? 2.5 : 1.5} strokeDasharray="8 8" strokeDashoffset={-frame * 0.8} />
+                {active ? <circle cx={cx + (x - cx) * k} cy={cy + (y - cy) * k} r={6} fill={PURPLE} style={{ filter: `drop-shadow(0 0 6px ${PURPLE})` }} /> : null}
+              </g>
+            );
           })}
         </svg>
         <div
@@ -43,7 +52,7 @@ export const Scene08IntegrationMap: React.FC = () => {
             background: "rgba(7,18,51,0.95)",
             border: `2px solid ${colors.accentStrong}`,
             boxShadow: "0 0 60px rgba(59,107,255,0.4)",
-            ...appear(frame, at(0)),
+            ...pop(at(0), { from: 0.5 }),
           }}
         >
           <Img src={staticFile("strato-logo.png")} style={{ width: 220 }} />
@@ -69,7 +78,7 @@ export const Scene08IntegrationMap: React.FC = () => {
                 border: `1px solid ${current ? PURPLE : "rgba(192,132,252,0.35)"}`,
                 boxShadow: current ? `0 0 0 3px ${PURPLE}55` : "0 14px 40px rgba(2,6,23,0.4)",
                 color: colors.white,
-                ...appear(frame, start, 14, 14),
+                ...pop(start, { from: 0.7, dy: 0 }),
               }}
             >
               <div style={{ fontSize: 30, fontWeight: 800 }}>{m.module}</div>
@@ -86,21 +95,27 @@ export const Scene08IntegrationMap: React.FC = () => {
       </AbsoluteFill>
       <AbsoluteFill style={{ opacity: 1 - ringFade }}>
         <Badge kind="real" from={realAt} />
-        <ScreenCapture
+        <LiveScreen
           enterAt={realAt}
-          images={[{ src: "proscore/screens/integracoes.jpg", at: 0 }]}
+          shots={[{ at: 0, state: "cfg-integracoes" }]}
           camera={[
-            { at: 0, rect: [280, 230, 1320, 660] },
-            { at: realAt + 90, rect: [280, 600, 1320, 330] },
+            { at: 0, rect: [280, 230, 1320, 693] },
+            { at: realAt + 80, rect: [280, 560, 1320, 693], dur: 1.4 },
+          ]}
+          cursor={[
+            { at: realAt + 16, x: 900, y: 500 },
+            { at: realAt + 40, ...aim("cfg-integracoes.resumo", 3.2, 0.5), dur: 0.9 },
+            { at: realAt + 110, ...aim("cfg-integracoes.bureau", 0.3, 4), dur: 1.0 },
+            { at: realAt + 150, ...aim("cfg-integracoes.protestos", 0.3, 4), dur: 0.8 },
+            { at: realAt + 190, ...aim("cfg-integracoes.pep", 0.3, 4), dur: 0.8 },
           ]}
           marks={[
-            { at: realAt + 30, end: realAt + 100, rect: [300, 352, 330, 22] },
-            { at: realAt + 110, rect: [296, 648, 1284, 236], color: PURPLE },
+            { at: realAt + 30, end: realAt + 100, rect: [296, 352, 400, 24] },
+            { at: realAt + 100, rect: [296, 648, 1284, 236], color: PURPLE },
           ]}
-          view={{ x: 230, y: 110, w: 1460, h: 740 }}
         />
       </AbsoluteFill>
-      <Impact lines={["Uma plataforma.", "Múltiplas oportunidades de inteligência."]} at={realAt + 200} />
+      <ImpactMoment at={realAt + 230} lines={["Uma plataforma.", "Múltiplas oportunidades de inteligência."]} />
     </AbsoluteFill>
   );
 };

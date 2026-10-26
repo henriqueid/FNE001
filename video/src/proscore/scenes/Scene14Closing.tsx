@@ -1,41 +1,46 @@
-import { AbsoluteFill, Img, interpolate, staticFile } from "remotion";
+import { AbsoluteFill, Img, interpolate, spring, staticFile } from "remotion";
 import { clamp, colors, ease } from "../../brand/tokens";
 import { Background } from "../../components/Background";
 import { useNarration } from "../components/clock";
-import { ScreenCapture } from "../components/ScreenCapture";
-import { appear, SceneLabel } from "../components/ui";
+import { LiveScreen } from "../components/LiveScreen";
+import { Particles, usePop } from "../components/motion";
+import { SceneLabel } from "../components/ui";
 
-
-// Cena 14: volta ao dashboard real, câmera se afasta e surge a assinatura final.
+// Cena 14: volta ao dashboard real, a câmera se afasta e a assinatura entra.
 export const Scene14Closing: React.FC = () => {
-  const { frame, at } = useNarration("s14");
+  const { frame, at, fps } = useNarration("s14");
+  const pop = usePop();
   const out = interpolate(frame, [at(2), at(2) + 40], [1, 0], { ...clamp, easing: ease.inOut });
+  const ring = spring({ frame: frame - at(2) - 20, fps, config: { damping: 20 } });
   return (
     <AbsoluteFill>
       <Background />
+      <Particles count={40} seed="s14" />
       <SceneLabel index={14} title="Encerramento" />
-      <AbsoluteFill style={{ opacity: out, scale: String(0.85 + out * 0.15) }}>
-        <ScreenCapture
-          images={[{ src: "screens/visao-geral.jpg", at: 0 }]}
+      <AbsoluteFill style={{ opacity: out, scale: String(0.7 + out * 0.3) }}>
+        <LiveScreen
+          shots={[{ at: 0, state: "home" }]}
           camera={[
-            { at: 0, rect: [0, 280, 1260, 700] },
-            { at: 30, rect: [0, 0, 1600, 1000] },
+            { at: 0, rect: [0, 280, 1250, 656] },
+            { at: 20, rect: [0, 0, 1600, 840], dur: 6 },
           ]}
+          tilt={0}
         />
       </AbsoluteFill>
-      <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", textAlign: "center", gap: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 40, ...appear(frame, at(2) + 30, 20, 20) }}>
-          <Img src={staticFile("strato-logo.png")} style={{ width: 420 }} />
+      <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+        <div style={{ position: "absolute", width: 900, height: 900, borderRadius: "50%", border: `2px solid ${colors.accent}`, opacity: (1 - ring) * 0.6, scale: String(0.2 + ring * 1.4) }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 40, ...pop(at(2) + 30, { from: 0.6 }) }}>
+          <Img src={staticFile("strato-logo.png")} style={{ width: 430 }} />
           <span style={{ fontSize: 60, color: colors.textFaint, fontWeight: 300 }}>×</span>
           {/* Nome em texto simples: sem reproduzir a identidade visual da proScore. */}
-          <span style={{ fontSize: 76, fontWeight: 700, color: colors.white }}>proScore</span>
+          <span style={{ fontSize: 78, fontWeight: 700, color: colors.white }}>proScore</span>
         </div>
-        <div style={{ marginTop: 40, fontSize: 38, color: colors.white, fontWeight: 600, ...appear(frame, at(3), 20) }}>
+        <div style={{ marginTop: 44, fontSize: 40, color: colors.white, fontWeight: 600, ...pop(at(3)) }}>
           Explorando novas possibilidades para o mercado de crédito e recebíveis.
         </div>
-        <div style={{ marginTop: 56, fontSize: 30, fontWeight: 700, color: colors.white, ...appear(frame, at(4), 20) }}>Henrique Moura</div>
-        <div style={{ fontSize: 24, color: colors.accent, fontWeight: 600, letterSpacing: "0.2em", ...appear(frame, at(4) + 8, 20) }}>STRATO</div>
-        <div style={{ marginTop: 50, fontSize: 21, color: colors.textFaint, fontStyle: "italic", ...appear(frame, at(4) + 30, 20) }}>
+        <div style={{ marginTop: 56, fontSize: 32, fontWeight: 700, color: colors.white, ...pop(at(4)) }}>Henrique Moura</div>
+        <div style={{ fontSize: 25, color: colors.accent, fontWeight: 600, letterSpacing: "0.2em", ...pop(at(4) + 8) }}>STRATO</div>
+        <div style={{ marginTop: 50, fontSize: 22, color: colors.textFaint, fontStyle: "italic", ...pop(at(4) + 30) }}>
           Proposta de integração e parceria — sujeita a avaliação conjunta.
         </div>
       </AbsoluteFill>

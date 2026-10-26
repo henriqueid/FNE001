@@ -1,0 +1,385 @@
+{
+  "home-modal": {
+    "src": "proscore/states/home-modal.jpg",
+    "width": 1600,
+    "height": 1000,
+    "targets": {
+      "close": [
+        1233,
+        96,
+        36,
+        36
+      ],
+      "kpis": [
+        395,
+        388,
+        69,
+        14
+      ]
+    }
+  },
+  "home": {
+    "src": "proscore/states/home.jpg",
+    "width": 1600,
+    "height": 1940,
+    "targets": {
+      "kpiVolume": [
+        59,
+        341,
+        131,
+        17
+      ],
+      "kpiCaixa": [
+        934,
+        341,
+        80,
+        17
+      ],
+      "leitura": [
+        108,
+        546,
+        955,
+        29
+      ],
+      "decisoes": [
+        60,
+        673,
+        385,
+        30
+      ],
+      "decidirGZ": [
+        688,
+        819,
+        91,
+        38
+      ],
+      "radar": [
+        1235,
+        153,
+        129,
+        33
+      ],
+      "tabScore": [
+        1292,
+        209,
+        31,
+        29
+      ],
+      "novaOperacao": [
+        1034,
+        122,
+        154,
+        40
+      ],
+      "fab": [
+        1514,
+        914,
+        64,
+        64
+      ]
+    }
+  },
+  "home-score": {
+    "src": "proscore/states/home-score.jpg",
+    "width": 1600,
+    "height": 2263,
+    "targets": {
+      "scoreCarteira": [
+        1252,
+        350,
+        211,
+        48
+      ],
+      "scoreInterno": null,
+      "rede": [
+        1252,
+        549,
+        109,
+        18
+      ]
+    }
+  },
+  "cop-open": {
+    "src": "proscore/states/cop-open.jpg",
+    "width": 1600,
+    "height": 1000,
+    "targets": {
+      "textarea": [
+        1165,
+        838,
+        340,
+        27
+      ],
+      "chip": [
+        1360,
+        767,
+        185,
+        18
+      ],
+      "panel": [
+        1102,
+        150,
+        476,
+        758
+      ]
+    }
+  },
+  "cop-answer": {
+    "src": "proscore/states/cop-answer.jpg",
+    "width": 1600,
+    "height": 1000,
+    "targets": {
+      "verMais": [
+        1235,
+        2082,
+        115,
+        32
+      ],
+      "panel": [
+        1102,
+        150,
+        476,
+        758
+      ]
+    }
+  },
+  "cop-report": {
+    "src": "proscore/states/cop-report.jpg",
+    "width": 1600,
+    "height": 1000,
+    "targets": {
+      "table": [
+        26,
+        282,
+        1108,
+        390
+      ],
+      "tabs": [
+        26,
+        218,
+        472,
+        46
+      ]
+    }
+  },
+  "op": {
+    "src": "proscore/states/op.jpg",
+    "width": 1600,
+    "height": 2065,
+    "targets": {
+      "stepper": [
+        335,
+        254,
+        69,
+        15
+      ],
+      "motor": [
+        85,
+        734,
+        740,
+        26
+      ],
+      "abrir": [
+        1113,
+        747,
+        92,
+        24
+      ]
+    }
+  },
+  "op-motor": {
+    "src": "proscore/states/op-motor.jpg",
+    "width": 1600,
+    "height": 2329,
+    "targets": {
+      "motor": [
+        85,
+        734,
+        740,
+        26
+      ],
+      "avaliacoes": [
+        81,
+        891,
+        59,
+        13
+      ],
+      "excecao": [
+        169,
+        1096,
+        808,
+        19
+      ],
+      "alerta": [
+        169,
+        1034,
+        883,
+        19
+      ],
+      "cedente": [
+        85,
+        1230,
+        357,
+        16
+      ],
+      "sacados": [
+        81,
+        1364,
+        180,
+        16
+      ],
+      "sacadoCritico": [
+        157,
+        1536,
+        204,
+        14
+      ],
+      "bureau": [
+        1090,
+        1849,
+        107,
+        36
+      ],
+      "analiseSacado": [
+        641,
+        1370,
+        156,
+        16
+      ]
+    }
+  },
+  "mod-operacoes": {
+    "src": "proscore/states/mod-operacoes.jpg",
+    "width": 1600,
+    "height": 1670,
+    "targets": {
+      "fluxo": [
+        61,
+        446,
+        189,
+        16
+      ],
+      "prioridades": null,
+      "saldos": null
+    }
+  },
+  "mod-carteira": {
+    "src": "proscore/states/mod-carteira.jpg",
+    "width": 1600,
+    "height": 1275,
+    "targets": {
+      "fluxo": null,
+      "prioridades": [
+        61,
+        491,
+        214,
+        18
+      ],
+      "saldos": null
+    }
+  },
+  "mod-financeiro": {
+    "src": "proscore/states/mod-financeiro.jpg",
+    "width": 1600,
+    "height": 1761,
+    "targets": {
+      "fluxo": null,
+      "prioridades": null,
+      "saldos": [
+        61,
+        773,
+        338,
+        18
+      ]
+    }
+  },
+  "mod-cadastros": {
+    "src": "proscore/states/mod-cadastros.jpg",
+    "width": 1600,
+    "height": 2578,
+    "targets": {
+      "fluxo": null,
+      "prioridades": null,
+      "saldos": null
+    }
+  },
+  "mod-comercial": {
+    "src": "proscore/states/mod-comercial.jpg",
+    "width": 1600,
+    "height": 1855,
+    "targets": {
+      "fluxo": null,
+      "prioridades": null,
+      "saldos": null
+    }
+  },
+  "mod-auditoria": {
+    "src": "proscore/states/mod-auditoria.jpg",
+    "width": 1600,
+    "height": 3005,
+    "targets": {
+      "trilha": [
+        36,
+        167,
+        661,
+        21
+      ]
+    }
+  },
+  "cfg-politicas": {
+    "src": "proscore/states/cfg-politicas.jpg",
+    "width": 1600,
+    "height": 2407,
+    "targets": {
+      "matriz": [
+        469,
+        277,
+        555,
+        33
+      ],
+      "regras": [
+        296,
+        975,
+        141,
+        15
+      ],
+      "aprovada": [
+        293,
+        884,
+        136,
+        15
+      ]
+    }
+  },
+  "cfg-integracoes": {
+    "src": "proscore/states/cfg-integracoes.jpg",
+    "width": 1600,
+    "height": 1600,
+    "targets": {
+      "resumo": [
+        296,
+        349,
+        86,
+        29
+      ],
+      "bureau": [
+        312,
+        679,
+        389,
+        25
+      ],
+      "protestos": [
+        745,
+        679,
+        389,
+        25
+      ],
+      "pep": [
+        1177,
+        678,
+        389,
+        24
+      ]
+    }
+  }
+}

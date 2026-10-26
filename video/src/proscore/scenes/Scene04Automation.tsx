@@ -2,8 +2,9 @@ import { AbsoluteFill, interpolate, random } from "remotion";
 import { clamp, colors, ease } from "../../brand/tokens";
 import { Background } from "../../components/Background";
 import { useNarration } from "../components/clock";
-import { ScreenCapture } from "../components/ScreenCapture";
-import { appear, Badge, Impact, SceneLabel, Tile } from "../components/ui";
+import { aim, LiveScreen, target } from "../components/LiveScreen";
+import { ImpactMoment, Particles } from "../components/motion";
+import { appear, Badge, SceneLabel, Tile } from "../components/ui";
 
 const N = 36;
 // Destino sintético de cada título na simulação: 0 fluxo autorizado, 1 pendência, 2 exceção.
@@ -44,6 +45,7 @@ export const Scene04Automation: React.FC = () => {
   return (
     <AbsoluteFill>
       <Background />
+      <Particles count={22} seed="s04" />
       <SceneLabel index={4} title="Automação orientada a eventos" />
       <AbsoluteFill style={{ opacity: simFade }}>
         <Badge kind="simulation" from={10} />
@@ -100,20 +102,30 @@ export const Scene04Automation: React.FC = () => {
       </AbsoluteFill>
       <AbsoluteFill style={{ opacity: 1 - simFade }}>
         <Badge kind="real" from={realAt} />
-        <ScreenCapture
+        <LiveScreen
           enterAt={realAt}
-          images={[{ src: "proscore/screens/motor-resultado.jpg", at: 0 }]}
+          shots={[
+            { at: 0, state: "op" },
+            { at: realAt + 52, state: "op-motor" },
+          ]}
           camera={[
-            { at: 0, rect: [40, 80, 1220, 560] },
-            { at: realAt + 90, rect: [40, 230, 1220, 360] },
+            { at: 0, rect: [40, 120, 1250, 656] },
+            { at: realAt + 20, rect: [40, 600, 1250, 656], dur: 1.0 },
+            { at: realAt + 70, rect: [40, 690, 1250, 656], dur: 1.0 },
+          ]}
+          cursor={[
+            { at: realAt + 12, x: 700, y: 900 },
+            { at: realAt + 48, ...aim("op.abrir"), click: true, dur: 1.0 },
+            { at: realAt + 100, ...aim("op-motor.avaliacoes", 3, 2), dur: 0.9 },
+            { at: realAt + 150, ...aim("op-motor.excecao", 0.35, 0.5), dur: 1.0 },
           ]}
           marks={[
-            { at: realAt + 30, end: realAt + 110, rect: [64, 272, 1160, 92] },
-            { at: realAt + 120, rect: [64, 470, 1160, 70], color: "#F87171" },
+            { at: realAt + 80, end: realAt + 140, rect: [target("op-motor.avaliacoes")[0] - 6, target("op-motor.avaliacoes")[1] - 16, 1150, 96] },
+            { at: realAt + 150, rect: [target("op-motor.excecao")[0] - 110, target("op-motor.excecao")[1] - 14, 1150, 48], color: "#F87171" },
           ]}
         />
       </AbsoluteFill>
-      <Impact lines={["Menos atividades repetitivas.", "Mais atenção às exceções."]} at={realAt + 150} />
+      <ImpactMoment at={realAt + 210} lines={["Menos atividades repetitivas.", "Mais atenção às exceções."]} />
     </AbsoluteFill>
   );
 };

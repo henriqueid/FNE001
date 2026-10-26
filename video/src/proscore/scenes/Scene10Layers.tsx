@@ -2,7 +2,8 @@ import { AbsoluteFill, interpolate } from "remotion";
 import { clamp, colors } from "../../brand/tokens";
 import { Background } from "../../components/Background";
 import { useNarration } from "../components/clock";
-import { appear, Badge, Dot, SceneLabel, Tile } from "../components/ui";
+import { Particles, usePop } from "../components/motion";
+import { Badge, Dot, SceneLabel, Tile } from "../components/ui";
 
 const STATE = {
   existente: { c: "#34D399", l: "Existente" },
@@ -22,6 +23,7 @@ const LAYERS: { title: string; sub: string; state: keyof typeof STATE; sentence:
 // Cena 10: arquitetura em camadas, com dados subindo até a ação auditada.
 export const Scene10Layers: React.FC = () => {
   const { frame, at } = useNarration("s10");
+  const pop = usePop();
   const H = 104;
   const G = 14;
   const bottom = 880;
@@ -29,13 +31,14 @@ export const Scene10Layers: React.FC = () => {
     <AbsoluteFill>
       <Background />
       <SceneLabel index={10} title="As camadas de inteligência" />
+      <Particles count={26} seed="s10" />
       <Badge kind="vision" from={10} />
       {LAYERS.map((l, i) => {
         const y = bottom - (i + 1) * H - i * G;
         const on = at(l.sentence);
         const s = STATE[l.state];
         return (
-          <div key={l.title} style={{ position: "absolute", left: 300, top: y, width: 1320, height: H, ...appear(frame, on, 16, 24) }}>
+          <div key={l.title} style={{ position: "absolute", left: 300, top: y, width: 1320, height: H, ...pop(on, { dy: -70, from: 0.92 }) }}>
             <Tile
               accent={s.c}
               style={{
@@ -86,7 +89,7 @@ export const Scene10Layers: React.FC = () => {
       })}
       <Tile
         accent="#34D399"
-        style={{ position: "absolute", right: 70, top: 110, width: 470, ...appear(frame, at(7)) }}
+        style={{ position: "absolute", right: 70, top: 110, width: 470, ...pop(at(7), { dx: 80, dy: 0 }) }}
       >
         <div style={{ fontSize: 17, color: "#6EE7B7", fontWeight: 700, letterSpacing: "0.1em" }}>IA COMO CAMADA OPCIONAL</div>
         <div style={{ fontSize: 22, marginTop: 4 }}>A plataforma funciona sem ela; com ela, decide melhor.</div>

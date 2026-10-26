@@ -2,7 +2,8 @@ import { AbsoluteFill, interpolate } from "remotion";
 import { clamp, colors, ease } from "../../brand/tokens";
 import { Background } from "../../components/Background";
 import { useNarration } from "../components/clock";
-import { ScreenCapture } from "../components/ScreenCapture";
+import { aim, LiveScreen } from "../components/LiveScreen";
+import { Particles, usePop } from "../components/motion";
 import { appear, Badge, SceneLabel, Tile } from "../components/ui";
 
 // Componentes e pesos da política de qualidade de demonstração (src/domain/risk/quality-policy.ts).
@@ -24,22 +25,36 @@ export const Scene06Score: React.FC = () => {
   const { frame, at } = useNarration("s06");
   const merge = interpolate(frame, [at(7), at(7) + 24], [0, 1], { ...clamp, easing: ease.inOut });
   const ext = frame >= at(6);
+  const pop = usePop();
   return (
     <AbsoluteFill>
       <Background grid={false} />
+      <Particles count={20} seed="s06" />
       <SceneLabel index={6} title="Score interno da carteira" />
       <AbsoluteFill style={{ opacity: 1 - merge * 0.85 }}>
         <Badge kind="real" from={10} />
-        <ScreenCapture
-          view={{ x: 70, y: 110, w: 820, h: 800 }}
-          images={[{ src: "proscore/screens/radar-score.jpg", at: 0 }]}
+        <LiveScreen
+          view={{ x: 60, y: 100, w: 820, h: 830 }}
+          shots={[
+            { at: 0, state: "home" },
+            { at: at(0) + 90, state: "home-score" },
+          ]}
           camera={[
-            { at: 0, rect: [1100, 110, 500, 780] },
-            { at: at(4), rect: [1180, 300, 420, 620] },
+            { at: 0, rect: [1000, 90, 600, 607] },
+            { at: at(0) + 110, rect: [1100, 120, 500, 506], dur: 1.0 },
+            { at: at(4), rect: [1150, 480, 450, 455], dur: 1.6 },
+            { at: at(5) + 20, rect: [1150, 900, 450, 455], dur: 4.5 },
+          ]}
+          cursor={[
+            { at: at(0) + 30, x: 1300, y: 420 },
+            { at: at(0) + 80, ...aim("home.tabScore"), click: true, dur: 1.0 },
+            { at: at(0) + 150, x: 1420, y: 400, dur: 1.0 },
+            { at: at(4) + 30, ...aim("home-score.rede", 0.5, 0.5), dur: 1.2 },
+            { at: at(5) + 60, x: 1400, y: 1060, dur: 3.5 },
           ]}
           marks={[
-            { at: at(0) + 30, end: at(4) - 4, rect: [1236, 334, 304, 120] },
-            { at: at(4) + 20, rect: [1236, 532, 304, 310] },
+            { at: at(0) + 130, end: at(4) - 4, rect: [1236, 334, 304, 120] },
+            { at: at(4) + 40, end: at(5) + 20, rect: [1236, 532, 304, 320] },
           ]}
         />
         <div style={{ position: "absolute", left: 950, top: 120, width: 880 }}>
@@ -55,7 +70,7 @@ export const Scene06Score: React.FC = () => {
               const w = interpolate(frame, [s, s + 24], [0, c.weight / 22], { ...clamp, easing: ease.out });
               const hl = c.external && ext;
               return (
-                <div key={c.label} style={{ display: "flex", alignItems: "center", gap: 16, ...appear(frame, s, 10, 0) }}>
+                <div key={c.label} style={{ display: "flex", alignItems: "center", gap: 16, ...pop(s, { dx: 60, dy: 0 }) }}>
                   <div style={{ width: 340, fontSize: 21, fontWeight: 600, color: hl ? "#E9D5FF" : colors.white }}>{c.label}</div>
                   <div style={{ flex: 1, height: 14, borderRadius: 7, background: "rgba(255,255,255,0.1)" }}>
                     <div
@@ -73,10 +88,12 @@ export const Scene06Score: React.FC = () => {
               );
             })}
           </div>
-          <Tile accent={PURPLE} style={{ marginTop: 26, ...appear(frame, at(6) + 10) }}>
-            <div style={{ fontSize: 17, color: "#E9D5FF", fontWeight: 700, letterSpacing: "0.1em" }}>COMPONENTES EXTERNOS JÁ PREVISTOS</div>
-            <div style={{ fontSize: 22, marginTop: 4 }}>Score de bureau e protestos aguardam um provedor de dados.</div>
-          </Tile>
+          <div style={{ marginTop: 26, ...pop(at(6) + 10) }}>
+            <Tile accent={PURPLE} style={{ boxShadow: `0 0 40px ${PURPLE}44` }}>
+              <div style={{ fontSize: 18, color: "#E9D5FF", fontWeight: 700, letterSpacing: "0.1em" }}>COMPONENTES EXTERNOS JÁ PREVISTOS</div>
+              <div style={{ fontSize: 24, marginTop: 4 }}>Score de bureau e protestos aguardam um provedor de dados.</div>
+            </Tile>
+          </div>
         </div>
       </AbsoluteFill>
       <AbsoluteFill style={{ opacity: merge }}>

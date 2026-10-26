@@ -1,8 +1,10 @@
-import { AbsoluteFill, Img, interpolate, staticFile } from "remotion";
+import { AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { clamp, colors } from "../../brand/tokens";
 import { Background } from "../../components/Background";
 import { useNarration } from "../components/clock";
+import { Particles } from "../components/motion";
 import { appear, Dot, SceneLabel } from "../components/ui";
+import states from "../data/states.json";
 
 type Stage = { label: string; img?: string; state: "existente" | "parcial" | "planejada" };
 const STATE = {
@@ -12,24 +14,33 @@ const STATE = {
 };
 // Estado verificado no sistema (relatório de evidências).
 const STAGES: Stage[] = [
-  { label: "Cadastro", img: "screens/cadastros.jpg", state: "existente" },
-  { label: "Crédito", img: "screens/operacao-risco.jpg", state: "existente" },
-  { label: "Operação", img: "screens/operacoes.jpg", state: "existente" },
-  { label: "Análise", img: "proscore/screens/motor-resultado.jpg", state: "existente" },
-  { label: "Aprovação", img: "screens/operacao-etapas.jpg", state: "existente" },
-  { label: "Formalização", img: "screens/controladoria.jpg", state: "parcial" },
-  { label: "Carteira", img: "screens/carteira.jpg", state: "existente" },
-  { label: "Cobrança", img: "proscore/screens/carteira-cedente.jpg", state: "parcial" },
+  { label: "Cadastro", img: "state:mod-cadastros", state: "existente" },
+  { label: "Crédito", img: "state:op-motor", state: "existente" },
+  { label: "Operação", img: "state:mod-operacoes", state: "existente" },
+  { label: "Análise", img: "state:op", state: "existente" },
+  { label: "Aprovação", img: "state:cfg-politicas", state: "existente" },
+  { label: "Formalização", img: "state:mod-auditoria", state: "parcial" },
+  { label: "Carteira", img: "state:mod-carteira", state: "existente" },
+  { label: "Cobrança", img: "state:mod-comercial", state: "parcial" },
   { label: "Encerramento", state: "planejada" },
 ];
 const SUPPORT: Stage[] = [
-  { label: "Conciliação", img: "screens/financeiro.jpg", state: "existente" },
-  { label: "Recompra", img: "proscore/screens/auditoria.jpg", state: "existente" },
+  { label: "Conciliação", img: "state:mod-financeiro", state: "existente" },
+  { label: "Recompra", img: "state:mod-auditoria", state: "existente" },
 ];
 
 const W = 186;
 const GAP = 20;
 const X0 = (1920 - (STAGES.length * W + (STAGES.length - 1) * GAP)) / 2;
+
+// Miniatura viva: a página real rola devagar dentro do cartão.
+const LiveThumb: React.FC<{ id: string; show: number }> = ({ id, show }) => {
+  const frame = useCurrentFrame();
+  const m = (states as Record<string, { src: string; height: number }>)[id];
+  const travel = Math.max(0, m.height * (W / 1600) - 116);
+  const y = ((Math.sin(frame / 70 + id.length) + 1) / 2) * travel * show;
+  return <Img src={staticFile(m.src)} style={{ width: W, translate: `0px ${-y}px` }} />;
+};
 
 const StageCard: React.FC<{ s: Stage; x: number; y: number; show: number }> = ({ s, x, y, show }) => (
   <div style={{ position: "absolute", left: x, top: y, width: W, opacity: show, translate: `0px ${(1 - show) * 20}px` }}>
@@ -48,7 +59,7 @@ const StageCard: React.FC<{ s: Stage; x: number; y: number; show: number }> = ({
         fontWeight: 600,
       }}
     >
-      {s.img ? <Img src={staticFile(s.img)} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top left" }} /> : "Visão de evolução"}
+      {s.img ? <LiveThumb id={s.img.replace("state:", "")} show={show} /> : "Visão de evolução"}
     </div>
     <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, color: colors.white, fontSize: 22, fontWeight: 700 }}>
       <Dot color={STATE[s.state].color} />
@@ -68,6 +79,7 @@ export const Scene03Platform: React.FC = () => {
   return (
     <AbsoluteFill>
       <Background />
+      <Particles count={22} seed="s03" />
       <SceneLabel index={3} title="A plataforma" />
       <div style={{ position: "absolute", top: 150, left: 0, right: 0, textAlign: "center", color: colors.white, fontSize: 46, fontWeight: 700, ...appear(frame, at(0)) }}>
         O ciclo completo de uma operação de recebíveis
@@ -86,6 +98,12 @@ export const Scene03Platform: React.FC = () => {
           />
         ))}
       </svg>
+      {(() => {
+        const t = ((frame - at(2)) % 150) / 150;
+        if (frame < at(2)) return null;
+        const x = X0 + W / 2 + t * (STAGES.length - 1) * (W + GAP);
+        return <div style={{ position: "absolute", left: x - 9, top: y + 168, width: 18, height: 18, borderRadius: "50%", background: colors.accent, boxShadow: `0 0 30px 10px ${colors.accent}88`, opacity: 0.9 }} />;
+      })()}
       {STAGES.map((s, i) => (
         <StageCard key={s.label} s={s} x={X0 + i * (W + GAP)} y={y} show={reveal(i)} />
       ))}

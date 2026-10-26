@@ -2,7 +2,8 @@ import { AbsoluteFill } from "remotion";
 import { colors } from "../../brand/tokens";
 import { Background } from "../../components/Background";
 import { useNarration } from "../components/clock";
-import { appear, Badge, Impact, SceneLabel, Tile } from "../components/ui";
+import { ImpactMoment, Particles, usePop } from "../components/motion";
+import { Badge, SceneLabel, Tile } from "../components/ui";
 
 const PURPLE = "#C084FC";
 // Caso totalmente sintético: nenhum dado real de cliente.
@@ -20,6 +21,7 @@ const STEPS: { title: string; detail: string; color: string; sentence: number; p
 // Cena 11: caso de uso sintético de ponta a ponta.
 export const Scene11UseCase: React.FC = () => {
   const { frame, at } = useNarration("s11");
+  const pop = usePop();
   const W = 395;
   const G = 32;
   const X0 = (1920 - (4 * W + 3 * G)) / 2;
@@ -27,6 +29,7 @@ export const Scene11UseCase: React.FC = () => {
     <AbsoluteFill>
       <Background />
       <SceneLabel index={11} title="Uma operação inteligente" />
+      <Particles count={24} seed="s11" />
       <Badge kind="simulation" from={10} />
       {STEPS.map((s, i) => {
         const row = Math.floor(i / 4);
@@ -44,7 +47,8 @@ export const Scene11UseCase: React.FC = () => {
               height: 200,
               boxSizing: "border-box",
               borderStyle: s.proposal ? "dashed" : "solid",
-              ...appear(frame, start, 16, 20),
+              ...pop(start, { dy: 50 }),
+              boxShadow: frame >= start && frame < start + 45 ? `0 0 0 3px ${s.color}88, 0 0 50px ${s.color}44` : undefined,
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -72,7 +76,7 @@ export const Scene11UseCase: React.FC = () => {
           );
         })}
       </svg>
-      <Impact lines={["Uma operação.", "Diferentes inteligências. Um único fluxo."]} at={at(8) + 20} />
+      <ImpactMoment at={at(8) + 20} lines={["Uma operação.", "Diferentes inteligências. Um único fluxo."]} />
     </AbsoluteFill>
   );
 };

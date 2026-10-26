@@ -17,7 +17,7 @@ const WORDS = ["Simplicidade", "Automação", "Inteligência"];
 // Cena 12: o STRATO em operação (telas reais) e os três conceitos de posicionamento.
 export const Scene12Positioning: React.FC = () => {
   const { frame, at } = useNarration("s12");
-  const dim = interpolate(frame, [at(2), at(3)], [1, 0.28], clamp);
+  const dim = interpolate(frame, [at(2), at(3)], [1, 0.12], clamp);
   return (
     <AbsoluteFill>
       <Background />
@@ -42,12 +42,12 @@ export const Scene12Positioning: React.FC = () => {
       </div>
       <div style={{ position: "absolute", left: 0, right: 0, top: 360, display: "flex", justifyContent: "center", gap: 70 }}>
         {WORDS.map((w, i) => (
-          <div key={w} style={{ fontSize: 76, fontWeight: 800, letterSpacing: "-0.02em", color: i === 1 ? colors.accent : colors.white, ...appear(frame, at(3) + i * 16, 18, 30) }}>
+          <div key={w} style={{ fontSize: 84, fontWeight: 800, letterSpacing: "-0.02em", textShadow: "0 6px 30px rgba(2,6,23,0.9)", color: i === 1 ? colors.accent : colors.white, ...appear(frame, at(3) + i * 16, 18, 30) }}>
             {w}
           </div>
         ))}
       </div>
-      <div style={{ position: "absolute", left: 0, right: 0, top: 500, textAlign: "center", fontSize: 32, color: colors.textSoft, ...appear(frame, at(5)) }}>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 510, textAlign: "center", fontSize: 34, color: colors.white, textShadow: "0 4px 20px rgba(2,6,23,0.9)", ...appear(frame, at(5)) }}>
         Competir pela capacidade de fazer a operação trabalhar melhor.
       </div>
       <Impact lines={["Tecnologia robusta.", "Operação descomplicada."]} at={at(6) + 60} />

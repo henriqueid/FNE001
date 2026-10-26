@@ -1,5 +1,10 @@
 # Changelog
 
+## 26/10/2026 · Vídeo STRATO × proScore
+
+- Nova composição Remotion `StratoProScore` (~11 min, 1080p): 14 cenas com narração ElevenLabs, trilha instrumental com ducking, legendas sincronizadas (SRT) e prints reais do modo demonstração com selos de veracidade (existente, parcial, visão de evolução, integração proposta, simulação).
+- Documentação de apoio em `video/docs/proscore/`: pesquisa pública da proScore, roteiro final, mapa técnico de integrações, relatório de evidências e score interno/agentes de IA.
+
 ## 25/10/2026 · Vídeos da marca (Remotion)
 
 - Skills oficiais do Remotion instaladas em `.claude/skills/` (v4.0.538).

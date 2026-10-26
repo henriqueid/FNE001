@@ -50,8 +50,8 @@ export const Scene08IntegrationMap: React.FC = () => {
         </div>
         {INTEGRATION_MAP.map((m, i) => {
           const a = (i / INTEGRATION_MAP.length) * Math.PI * 2 - Math.PI / 2;
-          const x = cx + Math.cos(a) * 640;
-          const y = cy + Math.sin(a) * 320;
+          const x = cx + Math.cos(a) * 650;
+          const y = cy + Math.sin(a) * 330;
           const start = at(i + 1);
           const current = frame >= start && frame < at(i + 2);
           return (
@@ -61,7 +61,7 @@ export const Scene08IntegrationMap: React.FC = () => {
                 position: "absolute",
                 left: x,
                 top: y,
-                width: 430,
+                width: 500,
                 transform: "translate(-50%, -50%)",
                 padding: "16px 20px",
                 borderRadius: 18,
@@ -72,9 +72,9 @@ export const Scene08IntegrationMap: React.FC = () => {
                 ...appear(frame, start, 14, 14),
               }}
             >
-              <div style={{ fontSize: 26, fontWeight: 800 }}>{m.module}</div>
-              <div style={{ fontSize: 19, color: "#E9D5FF", marginTop: 4 }}>{m.adds}</div>
-              <div style={{ fontSize: 17, color: colors.textSoft, marginTop: 8, display: "flex", gap: 8, alignItems: "baseline" }}>
+              <div style={{ fontSize: 30, fontWeight: 800 }}>{m.module}</div>
+              <div style={{ fontSize: 23, color: "#E9D5FF", marginTop: 4, lineHeight: 1.25 }}>{m.adds}</div>
+              <div style={{ fontSize: 20, color: colors.textSoft, marginTop: 8, display: "flex", gap: 8, alignItems: "baseline", lineHeight: 1.25 }}>
                 <Dot color={m.hookState === "existente" ? "#34D399" : m.hookState === "demonstração" ? "#F59E0B" : "#7AA7FF"} size={8} />
                 <span>
                   <b style={{ color: colors.white }}>Encaixe hoje:</b> {m.hook}

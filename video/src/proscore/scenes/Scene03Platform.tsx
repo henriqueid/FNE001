@@ -61,7 +61,7 @@ const StageCard: React.FC<{ s: Stage; x: number; y: number; show: number }> = ({
 export const Scene03Platform: React.FC = () => {
   const { frame, at } = useNarration("s03");
   const reveal = (i: number) => {
-    const start = i < 6 ? at(1) + i * 22 : at(2) + (i - 6) * 26;
+    const start = i < 6 ? at(0) + 45 + i * 24 : at(2) + (i - 6) * 26;
     return interpolate(frame, [start, start + 14], [0, 1], clamp);
   };
   const y = 290;

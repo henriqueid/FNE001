@@ -1,6 +1,6 @@
 # Churume — retomada das correções
 
-26/10/2026. **Novo lote local, não publicado.** Base funcional comparada à publicação `aa1aa8b`; alterações preexistentes do checkout preservadas. Sem migração produtiva, provedor pago, remessa real ou movimentação financeira real.
+26/10/2026. **Publicado com autorização em26/10: código `3b99d42`.** Base funcional comparada à publicação `aa1aa8b`; alterações preexistentes do checkout preservadas. Sem migração produtiva, provedor pago, remessa real ou movimentação financeira real.
 
 ## Correções concluídas
 
@@ -37,4 +37,4 @@ Testes novos executam componentes/handlers reais com hooks controlados e domíni
 - Nenhum botão do inventário é considerado aprovado apenas por pertencer a componente coberto. Inventário geral e pendências externas do dossiê anterior permanecem válidos; não declarar cobertura total.
 - Validação de agregado também recusa datas inválidas antigas. Não foram consultados nem corrigidos dados produtivos: se houver registro legado inválido, exige saneamento explícito e auditável antes de nova gravação; não normalizar silenciosamente.
 - Livre catálogo de departamentos e tetos de alçada por valor continuam no planejamento anterior; não implementados neste lote.
-- Publicação deste lote depende de nova autorização. Próximo bloco: homologação visual local das rotinas corrigidas, depois demais controles ainda sem execução individual.
+- Publicação concluída; saúde interna/pública conferida. Registro em `docs/deployments/2026-10-26-retomada-churume.md`. Próximo bloco: homologação visual local das rotinas corrigidas, depois demais controles ainda sem execução individual.

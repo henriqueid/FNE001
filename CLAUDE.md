@@ -1,8 +1,8 @@
 # STRATO — contexto de continuidade
 
-## Retomada Churume ·26/10/2026 · novo lote local
+## Retomada Churume ·26/10/2026 · publicado
 
-Após publicação aa1aa8b, corrigidos novos defeitos reproduzidos em conciliação/OFX/transferência, cobrança/checagem/contatos e entradas financeiras. Datas civis usam calendário canônico; parcelas inteiras preservam total. Gravação pendente, mudança de contexto e reabertura de modal recebem regressões. Acordos históricos preservados. Relatório: `docs/testing/churume/2026-10-26-retomada/resultado.md`. Revisão independente realizada; check, build e PostgreSQL descartável registrados no relatório. **Este novo lote não foi publicado.** Produção continua na publicação abaixo; seções locais anteriores à publicação são históricas. Cobertura de handlers não certifica telas completas no navegador.
+Após publicação aa1aa8b, corrigidos novos defeitos reproduzidos em conciliação/OFX/transferência, cobrança/checagem/contatos e entradas financeiras. Datas civis usam calendário canônico; parcelas inteiras preservam total. Gravação pendente, mudança de contexto e reabertura de modal recebem regressões. Acordos históricos preservados. Relatório: `docs/testing/churume/2026-10-26-retomada/resultado.md`. Revisão independente realizada; check, build e PostgreSQL descartável registrados no relatório. **Lote publicado: `3b99d42`.** Check exato 1.177 aprovados/30 ignorados; build local/remoto, PostgreSQL/recuperação e saúde interna/pública aprovados. Registro `docs/deployments/2026-10-26-retomada-churume.md`; seções locais anteriores à publicação são históricas. Cobertura de handlers não certifica telas completas no navegador.
 
 ## Publicação integral autorizada ·26/10/2026
 

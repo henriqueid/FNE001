@@ -33,11 +33,11 @@
 **Visual:** STRATO no centro; parceiros entram ao redor, cada um com seu papel. Todos com o selo “parceria em construção”.
 - **Operação:** FIDCs e securitizadoras parceiras — homologação, piloto e referência
 - **Dados e crédito:** bureaus como a proScore — cadastro, crédito, risco e compliance
-- **Formalização:** assinatura eletrônica [Clicksign?]
+- **Formalização:** plataformas especializadas em crédito estruturado, como a Flixsign — assinatura em lote de cessões, CCBs e duplicatas, validação de lastro
 - **Infraestrutura:** bancos, registradoras e custodiantes
 
 **Narração:**
-“Nossa estratégia é crescer em ecossistema. Estamos buscando parcerias com empresas de referência em cada etapa da operação: provedores de dados e crédito, como a proScore; assinatura eletrônica, como a [Clicksign]; e outros players de infraestrutura do mercado. E, no centro disso, estruturas que operam FIDC e securitização no dia a dia. Com os parceiros certos, nosso objetivo é ambicioso: levar o STRATO a ser a plataforma número um do mercado de recebíveis em pouco tempo.”
+“Nossa estratégia é crescer em ecossistema. Estamos buscando parcerias com empresas de referência em cada etapa da operação: provedores de dados e crédito, como a proScore; formalização e assinatura de operações de crédito, como a Flixsign; e outros players de infraestrutura do mercado. E, no centro disso, estruturas que operam FIDC e securitização no dia a dia. Com os parceiros certos, nosso objetivo é ambicioso: levar o STRATO a ser a plataforma número um do mercado de recebíveis em pouco tempo.”
 
 ## Cena 6 — Por que parceiros como vocês · 4:15–4:55
 **Visual:** três pilares animados: Expertise · Referência de mercado · Estratégia comercial.
@@ -78,9 +78,12 @@ A decisão vem depois de ver o sistema funcionando na própria operação.”
 ---
 
 ## Decisões antes de produzir
-1. Assinatura eletrônica: o parceiro citado é a **Clicksign**? (“flixsign” na mensagem.)
-2. Citar proScore e a empresa de assinatura nominalmente como “parcerias que estamos buscando”? (Sem logotipos.)
+1. ~~Parceiro de assinatura~~ — confirmado: **Flixsign** (flixsign.co), focada em crédito estruturado (FIDCs, securitizadoras, factorings): assinatura em lote, ICP-Brasil, CCB/duplicata, validação de lastro, API REST/webhooks e CNAB 444. A Financia Securitizadora aparece na lista de clientes do site da Flixsign — dá para citar que o STRATO busca se integrar a ferramentas que eles já usam? (Hoje não há integração com a Flixsign no STRATO; o vídeo trata como parceria buscada.)
+2. Citar proScore e Flixsign nominalmente como “parcerias que estamos buscando”? (Sem logotipos.)
 3. Prazo da Fase 1 (60–90 dias) e homologação sem custo de licença?
 4. Caminho A: ordem de grandeza da participação ou “a definir em conjunto”?
 5. Caminho B: benefício a citar (desconto permanente, carência, preço de fundador)?
 6. Voz: mesma narração sintética ou gravação própria?
+
+## Fonte pública — Flixsign (consultada em 26/10/2026)
+Site flixsign.co: plataforma de assinatura eletrônica e formalização para crédito estruturado (São Paulo, desde 2022). Assinatura em lote, ICP-Brasil com/sem certificado, envio por e-mail/WhatsApp, formalização de CCB e duplicatas, validação de lastro e monitoramento de NF-e, API REST + webhooks, SOAP/CNAB 444, integração Fromtis. Números divulgados (set/2026): +3,6 mi assinaturas, +R$ 5 bi em operações assinadas. Clientes citados incluem Financia Securitizadora. Números e clientes não serão usados no vídeo sem autorização.

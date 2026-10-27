@@ -6,6 +6,7 @@ import { StratoProScore } from "./proscore/StratoProScore";
 import { ProScoreThumbnail } from "./proscore/Thumbnail";
 import { TOTAL_FRAMES } from "./proscore/data/scenes";
 import { StratoPromo, totalFrames } from "./StratoPromo";
+import { LinkedInComingSoon } from "./LinkedInComingSoon";
 import { Thumbnail } from "./Thumbnail";
 
 export const RemotionRoot: React.FC = () => {
@@ -71,6 +72,7 @@ export const RemotionRoot: React.FC = () => {
         }}
       />
       <Still id="StratoThumbnail" component={Thumbnail} width={1920} height={1080} />
+      <Still id="StratoLinkedInEmBreve" component={LinkedInComingSoon} width={1200} height={1200} />
     </Folder>
     </>
   );

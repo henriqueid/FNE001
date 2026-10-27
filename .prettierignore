@@ -3,3 +3,5 @@ node_modules
 public/lastro.html
 package-lock.json
 app/styles/tokens.generated.css
+.claude/skills
+.claude/design-kit

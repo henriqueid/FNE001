@@ -39,3 +39,6 @@ _backup-v5/
 Claude outputs/
 FNE001-atualizado/
 FNE001-parametros/
+
+# Arquivos de trabalho do taste-skill (agente design-premium)
+.taste-skill/

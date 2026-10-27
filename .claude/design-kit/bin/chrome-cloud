@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+# Wrapper para o inspetor do taste-skill em containers que rodam como root (sessões na nuvem).
+# Uso: CHROME_PATH=.claude/design-kit/bin/chrome-cloud node .claude/skills/design-taste-frontend/scripts/inspect.mjs <página>
+for c in "$DESIGN_CHROME" /opt/pw-browsers/chromium-*/chrome-linux64/chrome /opt/pw-browsers/chromium-*/chrome-linux/chrome /usr/bin/chromium /usr/bin/google-chrome; do
+  [ -n "$c" ] && [ -x "$c" ] && exec "$c" --no-sandbox "$@"
+done
+echo "Chrome/Chromium não encontrado" >&2; exit 127

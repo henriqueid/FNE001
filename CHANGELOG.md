@@ -1,5 +1,11 @@
 # Changelog
 
+## Local · 27/10/2026 — Kit de design premium e agente `design-premium`
+
+- Skills de design versionadas em `.claude/skills/` (frontend-design, taste-skill e clássicos opt-in, UI UX Pro Max e derivados, web-animation-design) e biblioteca de referência em `.claude/design-kit/` (animation-principles, awesome-claude-design), com origens, commits e licenças no README do kit.
+- Agente `.claude/agents/design-premium.md` e comando `/designer`; o agente preserva o visual aprovado do STRATO e não altera regra de negócio, dependências ou publicação sem pedido.
+- `.taste-skill/` ignorado no git; kit fora do Prettier. Sem alteração de código da aplicação, migração ou publicação.
+
 ## Publicação · 26/10/2026 — Etapa1, validação financeira no navegador
 
 - Jornadas demonstrativas: lançamento, parcelas/centavos/fim de mês, importação mista, transferência, OFX, conciliação manual/automática/desfazer/diferença.

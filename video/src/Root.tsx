@@ -47,6 +47,15 @@ export const RemotionRoot: React.FC = () => {
         height={1920}
         defaultProps={{ music: true }}
       />
+      <Composition
+        id="StratoBemVindoNovoHorizontal"
+        component={BemVindoNovo}
+        durationInFrames={NOVO_FRAMES}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={{ music: true }}
+      />
     </Folder>
     <Folder name="STRATO">
       <Composition

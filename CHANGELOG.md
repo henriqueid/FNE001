@@ -1,9 +1,10 @@
 # Changelog
 
-## 27/10/2026 · Vídeo vertical "Bem-vindo ao novo"
+## 27/10/2026 · Vídeo "Bem-vindo ao novo" (9:16 e 16:9)
 
-- Nova composição `StratoBemVindoNovo` (1080×1920, 36 s) para redes sociais: mundo antigo em glitch, impacto "Bem-vindo ao novo", marca montada em camadas, capítulos Automação/Dados/Decisão em telas reais de celular, "Tudo na palma da sua mão", "Tudo a um só olhar" e assinatura com "Em breve". Cortes sincronizados à trilha (120 BPM, impacto em 4 s).
-- Telas capturadas no modo demonstração em viewport de celular (`video/public/novo/`), dados fictícios. Post de LinkedIn "em breve" (`StratoLinkedInEmBreve`).
+- Composições `StratoBemVindoNovo` (1080×1920) e `StratoBemVindoNovoHorizontal` (1920×1080), 36 s, mesmas cenas com layout responsivo. Linguagem premium: Inter Tight e Geist Mono (`public/fonts/`), revelação de texto por máscara, texto mono decodificado, fundo de luz com grão de filme, cartões de vidro, parede isométrica de telas e transições com desfoque.
+- Construção da marca traço a traço a partir do logotipo vetorizado (`scripts/trace-logo.py` → `src/novo/logo-paths.json`), camadas do símbolo que se encaixam e brilho final.
+- Apenas telas reais de computador (modo demonstração, dados fictícios), com mouse e destaques; cena "100% responsivo" com aparelhos em traço. Cortes na batida da trilha (120 BPM, impacto em 4 s). Post de LinkedIn "em breve" (`StratoLinkedInEmBreve`).
 
 ## 26/10/2026 · Vídeo STRATO × Financia
 

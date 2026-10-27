@@ -19,7 +19,7 @@ export const LinkedInComingSoon: React.FC = () => (
         <span style={{ color: colors.accent }}>Decida com precisão.</span>
       </div>
       <div style={{ marginTop: 30, color: colors.textSoft, fontSize: 32, fontWeight: 500, lineHeight: 1.35, maxWidth: 820 }}>
-        A operação inteira de crédito e recebíveis em uma única plataforma.
+        Uma plataforma. A operação inteira à vista.
       </div>
       <div style={{ marginTop: 34, color: colors.white, fontSize: 22, fontWeight: 700, letterSpacing: "0.18em" }}>FACTORING · FIDC · SECURITIZADORA</div>
     </div>

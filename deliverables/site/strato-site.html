@@ -1,0 +1,820 @@
+<title>STRATO Receivables OS</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: estratos. Cada etapa da operação é uma camada; o título atravessa todas e a carteira se sedimenta. */
+:root {
+  --paper: #eceeed;
+  --paper-2: #e2e5e4;
+  --ink: #121416;
+  --mute: #5a6266;
+  --line: rgba(18, 20, 22, 0.14);
+  --s1: #26323b;
+  --s2: #4f5e66;
+  --s3: #8e9b9c;
+  --s4: #c9bda6;
+  --s5: #a65c3a;
+  --signal: #e2602c;
+  --settled: #13a06e;
+  --card: #f7f8f7;
+  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0e1113; --paper-2: #151a1d; --ink: #e5e8e6; --mute: #8d979a;
+    --line: rgba(229, 232, 230, 0.13); --s1: #b9c6cc; --s2: #7f9099; --s3: #4d5a60;
+    --s4: #8a7c63; --s5: #d27a52; --signal: #f2773f; --settled: #2cc68d; --card: #161b1e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0e1113; --paper-2: #151a1d; --ink: #e5e8e6; --mute: #8d979a;
+  --line: rgba(229, 232, 230, 0.13); --s1: #b9c6cc; --s2: #7f9099; --s3: #4d5a60;
+  --s4: #8a7c63; --s5: #d27a52; --signal: #f2773f; --settled: #2cc68d; --card: #161b1e;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; overflow-x: clip; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 60; background: var(--paper);
+}
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; border-radius: 2px; }
+.wrap {
+  width: 100%; max-width: 1280px; margin-inline: auto;
+  padding-left: var(--gutter-l); padding-right: var(--gutter-r);
+}
+.eyebrow {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--mute);
+}
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h2 { font-size: clamp(34px, 5.4vw, 72px); line-height: 0.98; font-weight: 800; font-stretch: 112%; letter-spacing: -0.02em; }
+p { margin: 0; }
+.lede { font-size: clamp(17px, 1.5vw, 20px); color: var(--mute); max-width: 58ch; }
+
+/* ---------- progress + nav ---------- */
+.strata-progress {
+  position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; height: 4px; z-index: 70;
+  display: flex; pointer-events: none;
+}
+.strata-progress span { flex: 1; transform-origin: left; transform: scaleX(0); }
+.strata-progress span:nth-child(1) { background: var(--s1); }
+.strata-progress span:nth-child(2) { background: var(--s2); }
+.strata-progress span:nth-child(3) { background: var(--s3); }
+.strata-progress span:nth-child(4) { background: var(--s4); }
+.strata-progress span:nth-child(5) { background: var(--s5); }
+
+.nav {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50;
+  background: color-mix(in srgb, var(--paper) 82%, transparent);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.nav .wrap { display: flex; align-items: center; gap: 24px; height: 64px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-family: var(--font-display); font-weight: 800; font-stretch: 125%; letter-spacing: 0.04em; font-size: 18px; }
+.brand-mark { display: grid; gap: 2px; width: 22px; }
+.brand-mark i { display: block; height: 4px; border-radius: 1px; }
+.brand-mark i:nth-child(1) { background: var(--s1); width: 100%; }
+.brand-mark i:nth-child(2) { background: var(--s3); width: 72%; margin-left: 28%; }
+.brand-mark i:nth-child(3) { background: var(--signal); width: 86%; }
+.nav-links { display: flex; gap: 22px; margin-left: auto; font-size: 14px; }
+.nav-links a { text-decoration: none; color: var(--mute); transition: color .2s; }
+.nav-links a:hover { color: var(--ink); }
+.btn {
+  display: inline-flex; align-items: center; gap: 10px; text-decoration: none; cursor: pointer;
+  font: 600 14px/1 var(--font-body); padding: 13px 18px; border-radius: 999px;
+  background: var(--ink); color: var(--paper); border: 1px solid var(--ink);
+  transition: transform .25s cubic-bezier(.2,.8,.2,1), background .2s;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn .arrow { transition: transform .25s; }
+.btn:hover .arrow { transform: translateX(4px); }
+@media (max-width: 820px) { .nav-links { display: none; } .nav .btn { margin-left: auto; } .nav .btn .long { display: none; } }
+
+/* ---------- hero ---------- */
+.hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
+.hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.hero .wrap { position: relative; padding-block: clamp(48px, 8vw, 110px) clamp(40px, 6vw, 80px); display: grid; gap: 28px; }
+.hero-word {
+  font-family: var(--font-display); font-weight: 900; font-stretch: 125%;
+  font-size: clamp(64px, 17vw, 260px); line-height: 0.82; letter-spacing: -0.035em; margin: 0;
+  background: repeating-linear-gradient(180deg,
+    var(--s1) 0 0.11em, var(--s2) 0.11em 0.2em, var(--s3) 0.2em 0.27em,
+    var(--s4) 0.27em 0.36em, var(--s5) 0.36em 0.41em, var(--s1) 0.41em 0.52em);
+  background-size: 100% 0.52em;
+  background-position: 0 var(--shift, 0px);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  user-select: none;
+}
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 64px); align-items: end; }
+.hero-title { font-size: clamp(26px, 3.2vw, 44px); line-height: 1.08; font-weight: 700; font-stretch: 100%; letter-spacing: -0.01em; }
+.hero-title em { font-style: normal; color: var(--signal); }
+.hero-side { display: grid; gap: 22px; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.audience { display: flex; flex-wrap: wrap; gap: 8px; }
+.audience span { font-family: var(--font-mono); font-size: 12px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--paper) 70%, transparent); }
+@media (max-width: 820px) { .hero-grid { grid-template-columns: 1fr; } }
+
+/* ticker */
+.ticker { border-bottom: 1px solid var(--line); overflow: hidden; background: var(--paper-2); }
+.ticker-track { display: flex; gap: 48px; width: max-content; padding-block: 12px; animation: tick 60s linear infinite; font-family: var(--font-mono); font-size: 13px; color: var(--mute); white-space: nowrap; }
+.ticker-track b { color: var(--ink); font-weight: 500; }
+.ticker-track .ok { color: var(--settled); }
+.ticker-track .go { color: var(--signal); }
+@keyframes tick { to { transform: translateX(-50%); } }
+
+/* ---------- story (scroll-driven pipeline) ---------- */
+.story { position: relative; height: calc(8 * 85vh + 100vh); }
+.stage { position: sticky; top: 0; height: 100vh; height: 100svh; display: flex; align-items: center; }
+.stage .wrap { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr); gap: clamp(20px, 4vw, 64px); align-items: center; padding-top: 64px; }
+.story-copy { position: relative; min-height: 340px; }
+.story-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 18px; }
+.step-count { font-family: var(--font-display); font-weight: 900; font-stretch: 62%; font-size: clamp(64px, 9vw, 128px); line-height: .8; color: var(--signal); font-variant-numeric: tabular-nums; }
+.step-total { font-family: var(--font-mono); font-size: 13px; color: var(--mute); }
+.step-panel { position: absolute; inset: 120px 0 auto 0; display: grid; gap: 14px; opacity: 0; transform: translateY(18px); transition: opacity .45s ease, transform .55s cubic-bezier(.2,.8,.2,1); pointer-events: none; }
+.step-panel.on { opacity: 1; transform: none; pointer-events: auto; }
+.step-panel h3 { font-size: clamp(30px, 3.6vw, 52px); line-height: 1; font-weight: 800; font-stretch: 115%; letter-spacing: -0.015em; }
+.step-panel p { color: var(--mute); max-width: 46ch; }
+.step-panel ul { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.step-panel li { font-family: var(--font-mono); font-size: 12px; padding: 5px 9px; border-radius: 4px; background: var(--paper-2); border: 1px solid var(--line); }
+
+.stage-visual { display: grid; gap: 14px; min-width: 0; }
+.pipe { width: 100%; height: auto; max-height: 58vh; display: block; overflow: visible; }
+.pipe .rail { fill: none; stroke: var(--line); stroke-width: 2; stroke-dasharray: 3 7; }
+.pipe .drawn { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
+.pipe .flow { fill: none; stroke: var(--signal); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 2 16; animation: flow 1.1s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -18; } }
+.pipe .node circle.base { fill: var(--paper); stroke: var(--line); stroke-width: 2; transition: fill .35s, stroke .35s; }
+.pipe .node circle.ring { fill: none; stroke: var(--signal); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; }
+.pipe .node text { font-family: var(--font-mono); font-size: 13px; letter-spacing: .1em; fill: var(--mute); transition: fill .35s; }
+.pipe .node text.num { font-size: 11px; fill: var(--mute); }
+.pipe .node.done circle.base { fill: var(--ink); stroke: var(--ink); }
+.pipe .node.done text { fill: var(--ink); }
+.pipe .node.on circle.base { fill: var(--signal); stroke: var(--signal); }
+.pipe .node.on circle.ring { animation: ping 1.6s cubic-bezier(.2,.8,.2,1) infinite; }
+.pipe .node.final.done circle.base { fill: var(--settled); stroke: var(--settled); }
+@keyframes ping { 0% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(2.6); } }
+.pipe .token rect { fill: var(--card); stroke: var(--ink); stroke-width: 1.5; }
+.pipe .token line { stroke: var(--mute); stroke-width: 1.5; }
+.pipe .token .seal { fill: var(--signal); transition: fill .3s; }
+.pipe .token.settled .seal { fill: var(--settled); }
+
+.ticket {
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px 16px; display: grid; gap: 10px;
+  box-shadow: 0 18px 40px -28px rgba(0,0,0,.45);
+}
+.ticket-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ticket-id { font-family: var(--font-mono); font-size: 13px; }
+.chip { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; background: color-mix(in srgb, var(--signal) 16%, transparent); color: var(--signal); transition: background .3s, color .3s; }
+.chip.settled { background: color-mix(in srgb, var(--settled) 16%, transparent); color: var(--settled); }
+.ticket-value { margin-left: auto; font-family: var(--font-display); font-weight: 800; font-stretch: 110%; font-size: 22px; font-variant-numeric: tabular-nums; }
+.ticket-rows { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.ticket-rows div { font-size: 12px; padding: 8px 10px; border-radius: 6px; background: var(--paper-2); color: var(--mute); transition: opacity .35s, transform .35s, background .35s; opacity: .28; min-width: 0; }
+.ticket-rows div b { display: block; color: var(--ink); font-family: var(--font-mono); font-weight: 500; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ticket-rows div.lit { opacity: 1; }
+.ticket-rows div.fresh { background: color-mix(in srgb, var(--signal) 14%, var(--paper-2)); }
+
+@media (max-width: 900px) {
+  .story { height: calc(8 * 80vh + 100vh); }
+  .stage .wrap { grid-template-columns: 1fr; gap: 10px; padding-top: 70px; align-content: start; }
+  .stage { align-items: flex-start; }
+  .stage-visual { order: -1; }
+  .pipe { max-height: 34vh; }
+  .story-copy { min-height: 250px; }
+  .story-head { margin-bottom: 0; }
+  .step-count { font-size: 56px; }
+  .step-panel { inset: 64px 0 auto 0; gap: 8px; }
+  .step-panel h3 { font-size: 26px; }
+  .step-panel p { font-size: 14.5px; line-height: 1.5; }
+  .step-panel ul { display: none; }
+  .ticket-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ticket-rows div:nth-child(n+5) { display: none; }
+  .ticket { padding: 10px 12px; gap: 8px; }
+  .ticket-value { font-size: 18px; }
+}
+
+/* ---------- strata of modules ---------- */
+.layers { overflow: hidden; padding-block: clamp(80px, 10vw, 140px); border-top: 1px solid var(--line); }
+.layers-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: end; margin-bottom: 48px; }
+@media (max-width: 820px) { .layers-head { grid-template-columns: 1fr; } }
+.bed { display: grid; gap: 0; }
+.layer {
+  --c: var(--s1);
+  position: relative; display: grid; grid-template-columns: 64px minmax(0, 1.1fr) minmax(0, 1.4fr) auto; align-items: center; gap: 24px;
+  padding: 22px 24px; border-top: 1px solid var(--line);
+  transform: translateX(var(--x, 0px)); transition: background .3s;
+  overflow: hidden;
+}
+.layer::before { content: ""; position: absolute; inset: 0; background: var(--c); transform: scaleY(var(--fill, 0.08)); transform-origin: bottom; opacity: .9; transition: transform .5s cubic-bezier(.2,.8,.2,1); z-index: 0; }
+.layer > * { position: relative; z-index: 1; }
+.layer:hover::before { transform: scaleY(1); }
+.layer:hover, .layer:hover .layer-desc, .layer:hover .layer-idx { color: var(--paper); }
+.layer:hover .tags span { border-color: color-mix(in srgb, var(--paper) 40%, transparent); color: var(--paper); }
+.layer:last-child { border-bottom: 1px solid var(--line); }
+.layer-idx { font-family: var(--font-mono); font-size: 12px; color: var(--mute); }
+.layer-name { font-family: var(--font-display); font-weight: 800; font-stretch: 125%; font-size: clamp(24px, 3vw, 40px); letter-spacing: -0.01em; line-height: 1; }
+.layer-desc { color: var(--mute); font-size: 15px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; max-width: 300px; }
+.tags span { font-family: var(--font-mono); font-size: 11px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--mute); white-space: nowrap; }
+.layer:nth-child(1) { --c: var(--s1); }
+.layer:nth-child(2) { --c: var(--s2); }
+.layer:nth-child(3) { --c: var(--s5); }
+.layer:nth-child(4) { --c: var(--s3); }
+.layer:nth-child(5) { --c: var(--s4); }
+.layer:nth-child(6) { --c: var(--s2); }
+.layer:nth-child(7) { --c: var(--signal); }
+@media (max-width: 820px) {
+  .layer { grid-template-columns: 40px minmax(0, 1fr); gap: 8px 14px; padding: 18px 12px; }
+  .layer-desc, .tags { grid-column: 2; }
+  .tags { justify-content: flex-start; }
+}
+
+/* ---------- cnab ---------- */
+.cnab { background: var(--paper-2); border-block: 1px solid var(--line); padding-block: clamp(72px, 9vw, 130px); }
+.cnab-grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: clamp(24px, 4vw, 64px); align-items: center; }
+@media (max-width: 900px) { .cnab-grid { grid-template-columns: 1fr; } }
+.cnab-copy { display: grid; gap: 18px; }
+.banks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
+.banks div { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: var(--paper); }
+.banks b { display: block; font-family: var(--font-display); font-stretch: 110%; font-size: 18px; }
+.banks span { font-family: var(--font-mono); font-size: 12px; color: var(--mute); }
+.term { background: #0b0e10; color: #c9d1cf; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,.08); box-shadow: 0 30px 60px -36px rgba(0,0,0,.6); }
+.term-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.08); font-family: var(--font-mono); font-size: 12px; color: #7f8b8c; }
+.term-bar i { width: 9px; height: 9px; border-radius: 50%; background: #3a4246; display: inline-block; }
+.term-bar .file { margin-left: 8px; color: #c9d1cf; }
+.term-bar .state { margin-left: auto; color: #2cc68d; }
+.term-body { overflow-x: auto; padding: 14px 0; height: 300px; position: relative; }
+.term-lines { font-family: var(--font-mono); font-size: 12.5px; line-height: 1.85; white-space: pre; padding-inline: 14px; width: max-content; }
+.term-lines .ln { display: block; animation: lnIn .5s ease both; }
+.term-lines .no { color: #4f5a5d; margin-right: 14px; }
+.term-lines .h { color: #f2773f; }
+.term-lines .v { color: #2cc68d; }
+.term-lines .d { color: #8fb3c9; }
+@keyframes lnIn { from { opacity: 0; transform: translateX(-8px); } }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; padding: 10px 14px; border-top: 1px solid rgba(255,255,255,.08); font-family: var(--font-mono); font-size: 11px; color: #7f8b8c; }
+.legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+.legend .lh::before { background: #f2773f; } .legend .lv::before { background: #2cc68d; } .legend .ld::before { background: #8fb3c9; }
+
+/* ---------- copilot ---------- */
+.copilot { padding-block: clamp(80px, 10vw, 140px); }
+.copilot-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: clamp(24px, 4vw, 64px); align-items: center; }
+@media (max-width: 900px) { .copilot-grid { grid-template-columns: 1fr; } }
+.chat { border: 1px solid var(--line); border-radius: 14px; background: var(--card); padding: 18px; display: grid; gap: 14px; box-shadow: 0 30px 60px -44px rgba(0,0,0,.5); }
+.chat-head { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--mute); }
+.chat-head .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--settled); box-shadow: 0 0 0 4px color-mix(in srgb, var(--settled) 18%, transparent); }
+.chat-head .note { margin-left: auto; font-family: var(--font-mono); font-size: 11px; }
+.msg-q { justify-self: end; max-width: 85%; background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 14px 14px 4px 14px; font-size: 15px; }
+.msg-a { max-width: 95%; background: var(--paper-2); padding: 14px 16px; border-radius: 14px 14px 14px 4px; font-size: 15px; display: grid; gap: 12px; }
+.msg-a .typed { min-height: 4.8em; }
+.caret { display: inline-block; width: 7px; height: 1.05em; background: var(--signal); vertical-align: -2px; margin-left: 2px; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.bars { display: grid; gap: 6px; }
+.bar { display: grid; grid-template-columns: 120px minmax(0, 1fr) 52px; gap: 10px; align-items: center; font-size: 12.5px; }
+.bar span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar .track { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.bar .track i { display: block; height: 100%; width: var(--w); background: var(--s5); border-radius: 4px; transform-origin: left; transform: scaleX(var(--k, 1)); transition: transform 1.1s cubic-bezier(.2,.8,.2,1); }
+.bar b { font-family: var(--font-mono); font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
+.sources { display: flex; flex-wrap: wrap; gap: 6px; }
+.sources span { font-family: var(--font-mono); font-size: 11px; padding: 4px 8px; border: 1px dashed var(--line); border-radius: 4px; color: var(--mute); }
+.principles { display: grid; gap: 0; margin-top: 28px; }
+.principles div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 16px; padding: 14px 0; border-top: 1px solid var(--line); }
+.principles dt, .principles b { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--mute); font-weight: 500; }
+
+/* ---------- governance ---------- */
+.gov { background: var(--ink); color: var(--paper); padding-block: clamp(80px, 10vw, 140px); }
+.gov .eyebrow { color: color-mix(in srgb, var(--paper) 60%, transparent); }
+.gov .lede { color: color-mix(in srgb, var(--paper) 68%, transparent); }
+.gov-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: color-mix(in srgb, var(--paper) 14%, transparent); margin-top: 48px; border: 1px solid color-mix(in srgb, var(--paper) 14%, transparent); }
+.gov-grid article { background: var(--ink); padding: 26px 24px 30px; display: grid; gap: 10px; align-content: start; transition: background .3s; }
+.gov-grid article:hover { background: color-mix(in srgb, var(--paper) 6%, var(--ink)); }
+.gov-grid h3 { font-size: 21px; font-stretch: 105%; font-weight: 700; }
+.gov-grid p { font-size: 14.5px; color: color-mix(in srgb, var(--paper) 64%, transparent); }
+.gov-grid .k { font-family: var(--font-mono); font-size: 11px; color: var(--signal); letter-spacing: .08em; }
+@media (max-width: 900px) { .gov-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .gov-grid { grid-template-columns: 1fr; } }
+.figures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin-top: 64px; }
+.figures div { border-top: 2px solid var(--signal); padding-top: 14px; }
+.figures b { display: block; font-family: var(--font-display); font-weight: 900; font-stretch: 70%; font-size: clamp(48px, 6vw, 84px); line-height: .95; font-variant-numeric: tabular-nums; }
+.figures span { font-size: 14px; color: color-mix(in srgb, var(--paper) 64%, transparent); }
+@media (max-width: 820px) { .figures { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- cta ---------- */
+.cta { padding-block: clamp(90px, 12vw, 170px); position: relative; overflow: hidden; }
+.cta-word { font-family: var(--font-display); font-weight: 900; font-stretch: 125%; font-size: clamp(40px, 8.5vw, 132px); line-height: .9; letter-spacing: -0.03em; }
+.cta-word span { display: block; }
+.cta-word span:nth-child(2) { color: var(--s3); }
+.cta-word span:nth-child(3) { color: var(--signal); }
+.cta-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-top: 40px; }
+footer { border-top: 1px solid var(--line); }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; padding-block: 28px; font-size: 13px; color: var(--mute); }
+
+/* reveal (starts visible enough to read) */
+.rv { transition: opacity .8s ease, transform .9s cubic-bezier(.2,.8,.2,1), filter .8s; }
+.js .rv:not(.in) { opacity: .12; transform: translateY(28px); filter: blur(3px); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  .js .rv:not(.in) { opacity: 1; transform: none; filter: none; }
+}
+</style>
+
+<div class="strata-progress" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#topo" aria-label="STRATO, início"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>STRATO</a>
+    <nav class="nav-links" aria-label="Seções">
+      <a href="#fluxo">Fluxo</a>
+      <a href="#camadas">Módulos</a>
+      <a href="#cobranca">Cobrança</a>
+      <a href="#copiloto">Copiloto</a>
+      <a href="#governanca">Governança</a>
+    </nav>
+    <a class="btn" href="#contato"><span class="long">Agendar </span>demonstração <span class="arrow" aria-hidden="true">→</span></a>
+  </div>
+</header>
+
+<main id="topo">
+  <section class="hero">
+    <canvas id="sediment" aria-hidden="true"></canvas>
+    <div class="wrap">
+      <p class="eyebrow">Receivables OS · factoring · securitizadora · FIDC · ESC</p>
+      <h1 class="hero-word" id="heroWord" aria-label="STRATO">STRATO</h1>
+      <div class="hero-grid">
+        <p class="hero-title">Da entrada do título à conciliação no extrato, cada etapa vira uma camada <em>conectada</em>, auditável e calculada no servidor.</p>
+        <div class="hero-side">
+          <p class="lede">Operações, carteira, financeiro, cobrança e comercial no mesmo motor. A mesa enxerga o título andar. A gestão enxerga a carteira se formar.</p>
+          <div class="hero-actions">
+            <a class="btn" href="#fluxo">Ver o fluxo de uma operação <span class="arrow" aria-hidden="true">↓</span></a>
+            <a class="btn ghost" href="#camadas">Conhecer os módulos</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track" id="ticker"></div>
+  </div>
+
+  <!-- ===== scroll-driven pipeline ===== -->
+  <section class="story" id="fluxo" aria-label="Fluxo de uma operação">
+    <div class="stage">
+      <div class="wrap">
+        <div class="story-copy">
+          <div class="story-head">
+            <span class="step-count" id="stepCount">01</span>
+            <span class="step-total">de 08 · role para avançar o título</span>
+          </div>
+
+          <article class="step-panel on" data-step="0">
+            <p class="eyebrow">Operações · Entrada</p>
+            <h3>O título chega e já é lido.</h3>
+            <p>XML da NF-e, planilha ou arquivo do cedente entram na mesa. Sacado, vencimento e valor de face são extraídos e conferidos com o cadastro.</p>
+            <ul><li>XML NF-e</li><li>Planilha</li><li>Cadastro PF/PJ</li><li>Duplicata mercantil</li></ul>
+          </article>
+          <article class="step-panel" data-step="1">
+            <p class="eyebrow">Operações · Risco</p>
+            <h3>Risco medido antes de comprar.</h3>
+            <p>Score do cedente com componentes visíveis, concentração por sacado e histórico de liquidez da carteira, ponderados pela exposição.</p>
+            <ul><li>Score do cedente</li><li>Concentração</li><li>Limites</li><li>Histórico de atraso</li></ul>
+          </article>
+          <article class="step-panel" data-step="2">
+            <p class="eyebrow">Operações · Lastro</p>
+            <h3>Lastro confirmado na origem.</h3>
+            <p>A exigência de checagem vem do cadastro do cedente. Nenhuma operação é dispensada pelo motor sem regra explícita.</p>
+            <ul><li>Checagem com sacado</li><li>Canhoto</li><li>Documento com hash</li></ul>
+          </article>
+          <article class="step-panel" data-step="3">
+            <p class="eyebrow">Operações · Preço</p>
+            <h3>Preço determinístico, sem caixa-preta.</h3>
+            <p>Taxa, prazo e deságio calculados pelo motor. O mesmo título, com os mesmos parâmetros, sempre gera o mesmo valor líquido.</p>
+            <ul><li>Taxa a.m.</li><li>Prazo médio</li><li>Deságio</li><li>Valor líquido</li></ul>
+          </article>
+          <article class="step-panel" data-step="4">
+            <p class="eyebrow">Operações · Aprovação</p>
+            <h3>Alçada certa, decisão registrada.</h3>
+            <p>Permissões por departamento e módulo, conferidas no servidor. Quem aprovou, quando e com qual evidência fica na trilha da operação.</p>
+            <ul><li>Alçadas</li><li>Comitê</li><li>Trilha de auditoria</li></ul>
+          </article>
+          <article class="step-panel" data-step="5">
+            <p class="eyebrow">Financeiro · Liberação</p>
+            <h3>Dinheiro sai uma vez só.</h3>
+            <p>A ordem de pagamento segue para o financeiro com saldo projetado à vista. Versões e idempotência impedem pagamento em duplicidade.</p>
+            <ul><li>Ordem de pagamento</li><li>Saldo projetado</li><li>Idempotência</li></ul>
+          </article>
+          <article class="step-panel" data-step="6">
+            <p class="eyebrow">Carteira · Cobrança</p>
+            <h3>Na carteira, com boleto registrado.</h3>
+            <p>Remessa CNAB400 gerada e auditada por banco e carteira. O retorno atribui o nosso número e atualiza a posição do título.</p>
+            <ul><li>Remessa CNAB400</li><li>Retorno 02</li><li>Multa e juros</li></ul>
+          </article>
+          <article class="step-panel" data-step="7">
+            <p class="eyebrow">Financeiro · Liquidação</p>
+            <h3>Liquidado, conciliado, contabilizado.</h3>
+            <p>O retorno de liquidação encontra o crédito no OFX. A partida dobrada é lançada e permanece imutável; correções entram como estorno recíproco.</p>
+            <ul><li>Conciliação OFX</li><li>Partida dobrada</li><li>Estorno vinculado</li></ul>
+          </article>
+        </div>
+
+        <div class="stage-visual">
+          <svg class="pipe" id="pipe" viewBox="0 0 640 540" role="img" aria-label="Diagrama do caminho do título pelas oito etapas">
+            <defs>
+              <mask id="drawnMask" maskUnits="userSpaceOnUse" x="-40" y="-40" width="720" height="620">
+                <path id="maskPath" d="" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round"></path>
+              </mask>
+            </defs>
+            <path class="rail" id="rail" d="M100 60 H540 C610 60 610 200 540 200 H100 C30 200 30 340 100 340 H540 C610 340 610 480 540 480 H100"></path>
+            <path class="drawn" id="drawn" d=""></path>
+            <path class="flow" id="flowPath" d="" mask="url(#drawnMask)"></path>
+            <g id="nodes"></g>
+            <g class="token" id="token">
+              <rect x="-22" y="-15" width="44" height="30" rx="4"></rect>
+              <line x1="-14" y1="-5" x2="8" y2="-5"></line>
+              <line x1="-14" y1="3" x2="2" y2="3"></line>
+              <circle class="seal" cx="12" cy="6" r="5"></circle>
+            </g>
+          </svg>
+
+          <div class="ticket" aria-live="polite">
+            <div class="ticket-top">
+              <span class="ticket-id">DM 004812-3 · Metalúrgica Andrade Ltda</span>
+              <span class="chip" id="chip">Recebido</span>
+              <span class="ticket-value" id="ticketValue">R$ 48.320,00</span>
+            </div>
+            <div class="ticket-rows" id="ticketRows"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== modules as strata ===== -->
+  <section class="layers" id="camadas">
+    <div class="wrap">
+      <div class="layers-head">
+        <div class="rv">
+          <p class="eyebrow">Módulos</p>
+          <h2>Sete camadas, uma mesma base.</h2>
+        </div>
+        <p class="lede rv">Cada módulo grava no mesmo modelo de dados. A carteira nasce da operação, o caixa nasce da liberação e o resultado nasce da liquidação, sem reconciliar planilhas entre áreas.</p>
+      </div>
+      <div class="bed" id="bed">
+        <div class="layer"><span class="layer-idx">L1</span><span class="layer-name">Operações</span><p class="layer-desc">Central, nova operação e workspace com seis etapas, da entrada à liberação.</p><div class="tags"><span>Entrada</span><span>Risco</span><span>Lastro</span><span>Preço</span></div></div>
+        <div class="layer"><span class="layer-idx">L2</span><span class="layer-name">Carteira</span><p class="layer-desc">Títulos adquiridos, atraso, exposição por cedente e por comercial.</p><div class="tags"><span>Atraso</span><span>Exposição</span><span>Score</span></div></div>
+        <div class="layer"><span class="layer-idx">L3</span><span class="layer-name">Financeiro</span><p class="layer-desc">Caixa e fluxo, a pagar e a receber, liberações, extrato, conciliação e contábil.</p><div class="tags"><span>OFX</span><span>Liberações</span><span>Contábil</span></div></div>
+        <div class="layer"><span class="layer-idx">L4</span><span class="layer-name">Comercial</span><p class="layer-desc">Metas, negócios, visitas, funil, comitês e comissões por representante.</p><div class="tags"><span>Funil</span><span>Comitês</span><span>Comissões</span></div></div>
+        <div class="layer"><span class="layer-idx">L5</span><span class="layer-name">Cadastros</span><p class="layer-desc">Pessoas PF e PJ com papéis de cedente, sacado, fornecedor, avalista, cotista e outros.</p><div class="tags"><span>8 papéis</span><span>Auditoria</span></div></div>
+        <div class="layer"><span class="layer-idx">L6</span><span class="layer-name">Configurações</span><p class="layer-desc">Usuários, acessos, empresas, bancos e remessas, políticas e padrões operacionais.</p><div class="tags"><span>Permissões</span><span>Sessões</span><span>Bancos</span></div></div>
+        <div class="layer"><span class="layer-idx">L7</span><span class="layer-name">Copiloto</span><p class="layer-desc">Resumo diário, Central do Dia e consultas com resposta verificável.</p><div class="tags"><span>Central do Dia</span><span>Radar</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CNAB ===== -->
+  <section class="cnab" id="cobranca">
+    <div class="wrap cnab-grid">
+      <div class="cnab-copy rv">
+        <p class="eyebrow">Cobrança bancária</p>
+        <h2>Remessa que o banco entende na primeira vez.</h2>
+        <p class="lede">Arquivos CNAB400 gerados por comando próprio de cada banco e carteira, com multa, juros e instruções corretas. Cada arquivo fica auditado, e o retorno fecha o ciclo do título.</p>
+        <div class="banks">
+          <div><b>Itaú · 109</b><span>registro com nosso número</span></div>
+          <div><b>Itaú · 112</b><span>número atribuído no retorno</span></div>
+          <div><b>Bradesco · 09</b><span>cobrança com registro</span></div>
+          <div><b>Bradesco · 19</b><span>cobrança com registro</span></div>
+        </div>
+      </div>
+      <div class="term rv" role="img" aria-label="Exemplo de remessa CNAB400 sendo gerada linha a linha">
+        <div class="term-bar"><i></i><i></i><i></i><span class="file">CB261026.REM · 400 posições</span><span class="state" id="termState">gerando…</span></div>
+        <div class="term-body" id="termBody"><div class="term-lines" id="termLines"></div></div>
+        <div class="legend"><span class="lh">identificação</span><span class="ld">vencimento</span><span class="lv">valor</span><span>exemplo com dados fictícios</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Copilot ===== -->
+  <section class="copilot" id="copiloto">
+    <div class="wrap copilot-grid">
+      <div class="chat rv" id="chat">
+        <div class="chat-head"><span class="dot" aria-hidden="true"></span>Copiloto STRATO<span class="note">exemplo · dados fictícios</span></div>
+        <p class="msg-q">Quais cedentes concentram o atraso acima de 30 dias nesta semana?</p>
+        <div class="msg-a">
+          <p class="typed" id="typed">Três cedentes respondem por 61% do atraso acima de 30 dias. Fiação Serra Azul lidera com R$ 412 mil em 14 títulos, a maioria do mesmo sacado.</p>
+          <div class="bars" id="bars">
+            <div class="bar"><span>Fiação Serra Azul</span><span class="track"><i style="--w:100%"></i></span><b>31%</b></div>
+            <div class="bar"><span>Grão Norte Agro</span><span class="track"><i style="--w:58%"></i></span><b>18%</b></div>
+            <div class="bar"><span>Tecelagem Ipê</span><span class="track"><i style="--w:39%"></i></span><b>12%</b></div>
+          </div>
+          <div class="sources"><span>Fonte: carteira · posição 26/10</span><span>Cálculo determinístico</span><span>Ver mais</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="rv">
+          <p class="eyebrow">Copiloto</p>
+          <h2>Pergunta em português. Resposta com fonte.</h2>
+          <p class="lede" style="margin-top:18px">A IA interpreta a pergunta e resume o resultado. Os números vêm de consultas autorizadas ao próprio STRATO.</p>
+        </div>
+        <dl class="principles rv">
+          <div><dt>Calcula</dt><dd style="margin:0">Elegibilidade, preço, alçadas e movimentações continuam determinísticos.</dd></div>
+          <div><dt>Mostra</dt><dd style="margin:0">Cada resposta traz a origem do dado e a posição consultada.</dd></div>
+          <div><dt>Respeita</dt><dd style="margin:0">Só enxerga o que a sessão do usuário pode ver, com limite de uso por tenant e por pessoa.</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Governance ===== -->
+  <section class="gov" id="governanca">
+    <div class="wrap">
+      <div class="rv">
+        <p class="eyebrow">Governança</p>
+        <h2>Feito para quem responde por cada real.</h2>
+        <p class="lede" style="margin-top:18px">Toda regra que mexe em dinheiro roda no servidor. O navegador nunca recebe credenciais de banco de dados nem de IA.</p>
+      </div>
+      <div class="gov-grid">
+        <article class="rv"><span class="k">DADOS</span><h3>Schema privado</h3><p>Tabelas de negócio com RLS forçada e sem acesso público. O aplicativo fala com o banco somente pelo servidor.</p></article>
+        <article class="rv"><span class="k">ACESSO</span><h3>Sessão própria</h3><p>Cadastro, aprovação, login, suspensão e revogação de módulos controlados pelo STRATO, com auditoria.</p></article>
+        <article class="rv"><span class="k">DECISÃO</span><h3>Alçadas no servidor</h3><p>Tenant e usuário nunca vêm do formulário. A permissão é conferida a cada requisição.</p></article>
+        <article class="rv"><span class="k">CAIXA</span><h3>Sem pagamento duplo</h3><p>Liberação, pagamento e devolução usam coordenação transacional, versões e idempotência.</p></article>
+        <article class="rv"><span class="k">CONTÁBIL</span><h3>Lançamento imutável</h3><p>Partidas registradas não são reescritas. Correção entra como estorno recíproco, na mesma empresa.</p></article>
+        <article class="rv"><span class="k">DOCUMENTOS</span><h3>Evidência com hash</h3><p>Documentos privados guardados com hash e proveniência, prontos para auditoria.</p></article>
+      </div>
+      <div class="figures" id="figures">
+        <div><b data-count="6">6</b><span>etapas na mesa de operação</span></div>
+        <div><b data-count="8">8</b><span>papéis no cadastro de pessoas</span></div>
+        <div><b data-count="4">4</b><span>carteiras CNAB400 com comando próprio</span></div>
+        <div><b data-count="1181">1.181</b><span>testes automatizados na última publicação</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta" id="contato">
+    <div class="wrap">
+      <p class="cta-word rv"><span>Sua carteira,</span><span>camada por</span><span>camada.</span></p>
+      <div class="cta-row rv">
+        <a class="btn" href="https://strato.2.25.193.82.sslip.io" target="_blank" rel="noopener">Acessar a plataforma <span class="arrow" aria-hidden="true">→</span></a>
+        <a class="btn ghost" href="#fluxo">Rever o fluxo</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>STRATO · Receivables OS</span>
+    <span>Exemplos desta página usam dados fictícios.</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  document.documentElement.classList.add('js');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var css = function (n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); };
+
+  /* ---------- hero sediment canvas ---------- */
+  var cv = document.getElementById('sediment');
+  var ctx = cv.getContext('2d');
+  var W = 0, H = 0, dpr = 1, palette = [], dots = [];
+  function readPalette() { palette = ['--s1','--s2','--s3','--s4','--s5'].map(css); palette.signal = css('--signal'); palette.paper = css('--paper'); }
+  function size() {
+    var r = cv.getBoundingClientRect(); dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = r.width; H = r.height; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  var LINES = 16;
+  function yAt(k, x, t) {
+    var base = H * 0.5 + (k / LINES) * H * 0.62;
+    return base + Math.sin(x * 0.0042 + t * 0.35 + k * 0.6) * (18 + k * 1.6)
+      + Math.sin(x * 0.011 - t * 0.22 + k) * 7 + Math.sin(x * 0.0017 + k * 0.3) * 30;
+  }
+  for (var i = 0; i < 22; i++) dots.push({ k: 2 + Math.floor(Math.random() * (LINES - 3)), x: Math.random(), v: 0.0006 + Math.random() * 0.0012 });
+  var scrollY0 = 0;
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    var lift = scrollY0 * 0.25;
+    for (var k = LINES - 1; k >= 0; k--) {
+      ctx.beginPath();
+      for (var x = 0; x <= W + 20; x += 20) { var y = yAt(k, x, t) - lift * (k / LINES); x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+      ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+      ctx.globalAlpha = 0.035 + (k % 5) * 0.008;
+      ctx.fillStyle = palette[k % 5]; ctx.fill();
+      ctx.globalAlpha = 0.22; ctx.strokeStyle = palette[k % 5]; ctx.lineWidth = 1; ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    dots.forEach(function (d) {
+      d.x += reduce ? 0 : d.v; if (d.x > 1.05) d.x = -0.05;
+      var px = d.x * W, py = yAt(d.k, px, t) - lift * (d.k / LINES);
+      ctx.fillStyle = palette.signal; ctx.beginPath(); ctx.arc(px, py, 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.18; ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    });
+  }
+  var heroVisible = true;
+  new IntersectionObserver(function (e) { heroVisible = e[0].isIntersecting; }).observe(cv);
+  function loop(ms) { if (heroVisible) draw(ms / 1000); if (!reduce) requestAnimationFrame(loop); }
+  readPalette(); size(); requestAnimationFrame(loop);
+  window.addEventListener('resize', function () { size(); if (reduce) draw(0); });
+  var mq = window.matchMedia('(prefers-color-scheme: dark)');
+  var repaint = function () { readPalette(); if (reduce) draw(0); };
+  mq.addEventListener ? mq.addEventListener('change', repaint) : mq.addListener(repaint);
+  new MutationObserver(repaint).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  /* ---------- ticker ---------- */
+  var tick = [
+    ['OP 2026-1187', 'liberada', 'go'], ['DM 004812-3', 'lastro confirmado', ''], ['Remessa Itaú 109', 'aceita', 'ok'],
+    ['DM 003977-1', 'liquidado · OFX', 'ok'], ['Score Fiação Serra Azul', '742', ''], ['Comitê', '3 operações aprovadas', ''],
+    ['Retorno Bradesco 09', 'processado', 'ok'], ['OP 2026-1190', 'em preço', 'go'], ['Conciliação', '128 créditos casados', 'ok']
+  ];
+  var tHtml = tick.map(function (r) { return '<span><b>' + r[0] + '</b> · <span class="' + r[2] + '">' + r[1] + '</span></span>'; }).join('');
+  document.getElementById('ticker').innerHTML = tHtml + tHtml;
+
+  /* ---------- pipeline ---------- */
+  var steps = [
+    { name: 'ENTRADA', chip: 'Recebido', value: 'R$ 48.320,00', row: ['Valor de face', 'R$ 48.320,00'] },
+    { name: 'RISCO', chip: 'Em análise', value: 'R$ 48.320,00', row: ['Score cedente', '742 / 1000'] },
+    { name: 'LASTRO', chip: 'Lastro ok', value: 'R$ 48.320,00', row: ['Lastro', 'Confirmado'] },
+    { name: 'PREÇO', chip: 'Precificado', value: 'R$ 46.116,61', row: ['Taxa · prazo', '2,85% a.m. · 48d'] },
+    { name: 'APROVAÇÃO', chip: 'Aprovado', value: 'R$ 46.116,61', row: ['Alçada', 'Gerência · 1/1'] },
+    { name: 'LIBERAÇÃO', chip: 'Pago', value: 'R$ 46.116,61', row: ['Ordem', 'OP 2026-1187'] },
+    { name: 'COBRANÇA', chip: 'Em carteira', value: 'R$ 48.320,00', row: ['Remessa', 'Itaú 109 · 14/12'] },
+    { name: 'LIQUIDAÇÃO', chip: 'Liquidado', value: 'R$ 48.320,00', row: ['Conciliação', 'OFX · D/C'], final: true }
+  ];
+  var NS = 'http://www.w3.org/2000/svg';
+  var pts = [[100,60],[540,60],[540,200],[100,200],[100,340],[540,340],[540,480],[100,480]];
+  var rail = document.getElementById('rail'), drawn = document.getElementById('drawn');
+  var flowP = document.getElementById('flowPath'), maskP = document.getElementById('maskPath');
+  var d = rail.getAttribute('d'); drawn.setAttribute('d', d); flowP.setAttribute('d', d); maskP.setAttribute('d', d);
+  var total = rail.getTotalLength();
+  drawn.style.strokeDasharray = total + ' ' + total; maskP.style.strokeDasharray = total + ' ' + total;
+  var nodeLen = pts.map(function (p) {
+    var best = 0, bd = 1e9;
+    for (var l = 0; l <= total; l += 2) { var q = rail.getPointAtLength(l), dd = (q.x - p[0]) * (q.x - p[0]) + (q.y - p[1]) * (q.y - p[1]); if (dd < bd) { bd = dd; best = l; } }
+    return best;
+  });
+  var nodesG = document.getElementById('nodes'), nodeEls = [];
+  pts.forEach(function (p, i) {
+    var g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'node' + (steps[i].final ? ' final' : ''));
+    g.setAttribute('transform', 'translate(' + p[0] + ' ' + p[1] + ')');
+    var ring = document.createElementNS(NS, 'circle'); ring.setAttribute('class', 'ring'); ring.setAttribute('r', 11);
+    var c = document.createElementNS(NS, 'circle'); c.setAttribute('class', 'base'); c.setAttribute('r', 11);
+    var right = p[0] > 320;
+    var tx = document.createElementNS(NS, 'text'); tx.textContent = steps[i].name;
+    tx.setAttribute('x', right ? -22 : 22); tx.setAttribute('y', -20); tx.setAttribute('text-anchor', right ? 'end' : 'start');
+    var nm = document.createElementNS(NS, 'text'); nm.setAttribute('class', 'num'); nm.textContent = '0' + (i + 1);
+    nm.setAttribute('x', right ? -22 : 22); nm.setAttribute('y', 34); nm.setAttribute('text-anchor', right ? 'end' : 'start');
+    g.appendChild(ring); g.appendChild(c); g.appendChild(tx); g.appendChild(nm); nodesG.appendChild(g); nodeEls.push(g);
+  });
+  var rowsEl = document.getElementById('ticketRows'), rowEls = [];
+  [['Sacado', 'Metalúrgica Andrade']].concat(steps.slice(1).map(function (s) { return s.row; })).forEach(function (r) {
+    var el = document.createElement('div'); el.innerHTML = r[0] + '<b>' + r[1] + '</b>'; rowsEl.appendChild(el); rowEls.push(el);
+  });
+  var story = document.getElementById('fluxo');
+  var panels = [].slice.call(document.querySelectorAll('.step-panel'));
+  var stepCount = document.getElementById('stepCount'), chip = document.getElementById('chip'), tv = document.getElementById('ticketValue');
+  var token = document.getElementById('token');
+  var current = -1, shownL = 0;
+  function smooth(a, b, x) { x = Math.min(1, Math.max(0, (x - a) / (b - a))); return x * x * (3 - 2 * x); }
+  function setStep(i) {
+    if (i === current) return; current = i;
+    panels.forEach(function (p, k) { p.classList.toggle('on', k === i); });
+    stepCount.textContent = '0' + (i + 1);
+    chip.textContent = steps[i].chip; chip.classList.toggle('settled', !!steps[i].final);
+    tv.textContent = steps[i].value;
+    token.classList.toggle('settled', !!steps[i].final);
+    rowEls.forEach(function (r, k) { r.classList.toggle('lit', k <= i); r.classList.toggle('fresh', k === i && i > 0); });
+  }
+  function updateStory() {
+    var r = story.getBoundingClientRect(), vh = window.innerHeight;
+    var p = Math.min(1, Math.max(0, -r.top / (r.height - vh)));
+    var t = p * 7.999, i = Math.floor(t), f = smooth(0.3, 0.85, t - i);
+    var L = i >= 7 ? nodeLen[7] : nodeLen[i] + (nodeLen[i + 1] - nodeLen[i]) * f;
+    shownL = reduce ? L : shownL + (L - shownL) * 0.18;
+    if (Math.abs(L - shownL) < 0.3) shownL = L;
+    drawn.style.strokeDashoffset = total - shownL; maskP.style.strokeDashoffset = total - shownL;
+    var q = rail.getPointAtLength(shownL);
+    var tilt = Math.max(-14, Math.min(14, (L - shownL) * 0.25));
+    token.setAttribute('transform', 'translate(' + q.x + ' ' + q.y + ') rotate(' + tilt + ')');
+    var active = i >= 7 ? 7 : (f > 0.5 ? i + 1 : i);
+    nodeEls.forEach(function (n, k) { n.classList.toggle('done', nodeLen[k] <= shownL + 2); n.classList.toggle('on', k === active && k !== 7); });
+    setStep(active);
+    return Math.abs(L - shownL) > 0.3;
+  }
+
+  /* ---------- layers sediment + progress + hero shift ---------- */
+  var bed = document.getElementById('bed'), layers = [].slice.call(bed.children);
+  var progSpans = [].slice.call(document.querySelectorAll('.strata-progress span'));
+  var heroWord = document.getElementById('heroWord');
+  function updateLayers() {
+    var r = bed.getBoundingClientRect(), vh = window.innerHeight;
+    var p = Math.min(1, Math.max(0, (vh - r.top) / (vh * 0.9)));
+    layers.forEach(function (el, k) {
+      var local = smooth(k * 0.09, k * 0.09 + 0.4, p);
+      var dir = k % 2 ? 1 : -1;
+      el.style.setProperty('--x', reduce ? '0px' : (dir * (1 - local) * 120).toFixed(1) + 'px');
+      el.style.setProperty('--fill', (0.08 + (1 - local) * 0.5).toFixed(3));
+      el.style.opacity = (0.25 + local * 0.75).toFixed(3);
+    });
+  }
+  function updateProgress() {
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    var p = max > 0 ? window.scrollY / max : 0;
+    progSpans.forEach(function (s, k) { s.style.transform = 'scaleX(' + Math.min(1, Math.max(0, p * 5 - k)).toFixed(3) + ')'; });
+    scrollY0 = window.scrollY;
+    if (!reduce) heroWord.style.setProperty('--shift', (window.scrollY * -0.12).toFixed(1) + 'px');
+  }
+  var ticking = false;
+  function frame() {
+    ticking = false;
+    var moving = updateStory(); updateLayers(); updateProgress();
+    if (moving) request();
+  }
+  function request() { if (!ticking) { ticking = true; requestAnimationFrame(frame); } }
+  window.addEventListener('scroll', request, { passive: true });
+  window.addEventListener('resize', request);
+  frame();
+
+  /* ---------- reveals ---------- */
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.18 });
+  document.querySelectorAll('.rv').forEach(function (el, k) { el.style.transitionDelay = (k % 3) * 70 + 'ms'; io.observe(el); });
+
+  /* ---------- CNAB terminal ---------- */
+  function pad(s, n, c, left) { s = String(s); c = c || ' '; while (s.length < n) s = left ? c + s : s + c; return s.slice(0, n); }
+  var sacados = ['METALURGICA ANDRADE LTDA', 'DISTRIBUIDORA PALMARES SA', 'CONSTRUTORA VALE DO ACO', 'ATACADO LUZ DO NORTE LTDA', 'PLASTICOS RIO CLARO LTDA', 'TRANSPORTES MERIDIANO SA'];
+  var lines = [];
+  lines.push('<span class="h">01REMESSA01COBRANCA       </span>0912' + pad('', 2, '0') + '04821' + '3' + pad('', 8) + '<span class="h">STRATO DEMO SECURITIZADORA    </span>341BANCO ITAU SA  <span class="d">261026</span>' + pad('', 294) + '000001');
+  for (var n = 0; n < 6; n++) {
+    var nn = 10948312 + n * 7;
+    var val = [4832000, 1275040, 920018, 3310000, 584590, 2104475][n];
+    var venc = ['141226', '201226', '050127', '120127', '190127', '260127'][n];
+    lines.push('1020' + pad('', 14, '0') + '0912' + '00' + '048213' + pad('', 4) + pad('', 4, '0') + '<span class="h">' + pad('DM00481' + n, 25) + '</span>' + '<span class="h">' + nn + '</span>' + pad('', 13, '0') + '109' + pad('', 21) + 'I01' + pad('00481' + n, 10) + '<span class="d">' + venc + '</span><span class="v">' + pad(val, 13, '0', true) + '</span>341' + pad('', 5, '0') + '01N' + '261026' + '0000' + pad('', 13, '0') + pad(sacados[n], 30) + pad('', 120) + pad(n + 2, 6, '0', true));
+  }
+  lines.push('9' + pad('', 393) + '000008');
+  var termLines = document.getElementById('termLines'), termBody = document.getElementById('termBody'), termState = document.getElementById('termState');
+  function renderLine(k) {
+    var s = document.createElement('span'); s.className = 'ln';
+    s.innerHTML = '<span class="no">' + pad(k + 1, 3, '0', true) + '</span>' + lines[k];
+    termLines.appendChild(s); termBody.scrollTop = termBody.scrollHeight;
+  }
+  if (reduce) { lines.forEach(function (_, k) { renderLine(k); }); termState.textContent = '8 registros · auditado'; }
+  else {
+    lines.forEach(function (_, k) { renderLine(k); }); termState.textContent = '8 registros · auditado';
+    var started = false;
+    new IntersectionObserver(function (es, ob) {
+      if (!es[0].isIntersecting || started) return; started = true; ob.disconnect();
+      termLines.innerHTML = ''; termState.textContent = 'gerando…';
+      var k = 0; (function next() { renderLine(k++); if (k < lines.length) setTimeout(next, 380); else termState.textContent = '8 registros · auditado'; })();
+    }, { threshold: 0.4 }).observe(termBody);
+  }
+
+  /* ---------- copilot typing ---------- */
+  var typed = document.getElementById('typed'), full = typed.textContent, bars = [].slice.call(document.querySelectorAll('#bars .track i'));
+  if (!reduce) {
+    var typedStarted = false;
+    new IntersectionObserver(function (es, ob) {
+      if (!es[0].isIntersecting || typedStarted) return; typedStarted = true; ob.disconnect();
+      bars.forEach(function (b) { b.style.transition = 'none'; b.style.setProperty('--k', 0); });
+      typed.innerHTML = '<span></span><i class="caret"></i>'; var out = typed.firstChild, k = 0;
+      (function step() {
+        k += 2; out.textContent = full.slice(0, k);
+        if (k < full.length) setTimeout(step, 18);
+        else { typed.querySelector('.caret').remove(); bars.forEach(function (b, j) { b.style.transition = ''; setTimeout(function () { b.style.setProperty('--k', 1); }, 120 + j * 140); }); }
+      })();
+    }, { threshold: 0.5 }).observe(document.getElementById('chat'));
+  }
+
+  /* ---------- figure counters ---------- */
+  var figs = [].slice.call(document.querySelectorAll('#figures b'));
+  if (!reduce) new IntersectionObserver(function (es, ob) {
+    if (!es[0].isIntersecting) return; ob.disconnect();
+    var t0 = performance.now();
+    (function run(now) {
+      var x = Math.min(1, (now - t0) / 1400), e = 1 - Math.pow(1 - x, 3);
+      figs.forEach(function (b) { b.textContent = Math.round(+b.dataset.count * e).toLocaleString('pt-BR'); });
+      if (x < 1) requestAnimationFrame(run);
+    })(t0);
+  }, { threshold: 0.4 }).observe(document.getElementById('figures'));
+})();
+</script>

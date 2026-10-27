@@ -1,5 +1,10 @@
 # Changelog
 
+## 27/10/2026 · Vídeo vertical "Bem-vindo ao novo"
+
+- Nova composição `StratoBemVindoNovo` (1080×1920, 36 s) para redes sociais: mundo antigo em glitch, impacto "Bem-vindo ao novo", marca montada em camadas, capítulos Automação/Dados/Decisão em telas reais de celular, "Tudo na palma da sua mão", "Tudo a um só olhar" e assinatura com "Em breve". Cortes sincronizados à trilha (120 BPM, impacto em 4 s).
+- Telas capturadas no modo demonstração em viewport de celular (`video/public/novo/`), dados fictícios. Post de LinkedIn "em breve" (`StratoLinkedInEmBreve`).
+
 ## 26/10/2026 · Vídeo STRATO × Financia
 
 - Nova composição Remotion `StratoFinancia` (~5 min, 1080p): proposta de parceria em 11 cenas — problema, produto em telas reais, onde estamos, ecossistema de parceiros buscados (proScore, Flixsign, infraestrutura), por que a Financia, três fases (homologação de ~90 dias com licença gratuita e acesso completo, piloto, escala) e dois caminhos (sócio-investidor, com valores em segundo momento, ou cliente piloto sem custo de uso para sempre).

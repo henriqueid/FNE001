@@ -399,7 +399,7 @@ const Finale: React.FC = () => {
           <Scramble text="EM BREVE" at={40} dur={16} />
         </div>
         <div style={{ marginTop: 36 * u, fontSize: 22 * u, letterSpacing: "0.3em", color: "rgba(226,232,255,0.55)" }}>
-          <Scramble text="100% RESPONSIVO · WEB E MOBILE" at={50} dur={20} />
+          <Scramble text="WEB E MOBILE" at={50} dur={14} />
         </div>
         <div style={{ marginTop: 14 * u, fontSize: 22 * u, letterSpacing: "0.3em", color: "rgba(226,232,255,0.55)" }}>
           <Scramble text="FACTORING · FIDC · SECURITIZADORA" at={58} dur={24} />

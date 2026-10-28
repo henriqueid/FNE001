@@ -125,10 +125,15 @@ main, header, footer { position: relative; z-index: 2; }
 .cycle { height: calc(7 * 62vh + 100vh); position: relative; }
 .cycle-pin { position: sticky; top: 0; height: 100vh; height: 100svh; display: flex; align-items: center; pointer-events: none; }
 .cycle-pin .wrap { pointer-events: auto; }
-.cycle-pin .wrap { display: grid; grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr); gap: clamp(28px, 4vw, 64px); align-items: center; }
+.cycle-pin .wrap { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; }
 .cycle-panel { max-width: 460px; display: grid; gap: 18px; }
-.cycle-shot { position: relative; perspective: 1600px; display: grid; gap: 12px; }
-.cycle-shot .shot { transform: rotateY(-9deg) rotateX(3deg); transform-origin: 0 50%; transition: transform .8s cubic-bezier(.2,.8,.2,1); }
+.cycle-shot { position: fixed; left: 0; top: 0; z-index: 3; width: clamp(300px, 27vw, 420px); display: grid; gap: 10px; perspective: 1400px;
+  transform: translate3d(var(--cx, 70vw), var(--cy, 30vh), 0); opacity: var(--co, 0); pointer-events: none; will-change: transform, opacity; }
+.cycle-shot .shot { transform: rotateY(-7deg); transform-origin: 0 50%; box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 0 60px -10px rgba(0, 89, 250, .7), 0 30px 60px -30px rgba(0,0,0,.8); }
+.cycle-shot .bar { height: 26px; }
+.cycle-link { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; overflow: visible; }
+.cycle-link path { fill: none; stroke: url(#linkGrad); stroke-width: 2; stroke-dasharray: 1 0; filter: drop-shadow(0 0 4px rgba(47,134,255,.9)); }
+.cycle-link circle { fill: #bfe0ff; filter: drop-shadow(0 0 6px #2f86ff); }
 .cycle-shot .frames { position: relative; aspect-ratio: 16 / 10; background: #f4f5f6; }
 .cycle-shot .frames img { position: absolute; inset: 0; opacity: 0; transform: translateY(14px) scale(1.015); transition: opacity .55s ease, transform .7s cubic-bezier(.2,.8,.2,1); }
 .cycle-shot .frames img.on { opacity: 1; transform: none; }
@@ -151,10 +156,14 @@ main, header, footer { position: relative; z-index: 2; }
 .plate-labels span.on { color: #fff; text-shadow: 0 0 14px var(--blue); }
 .plate-labels span.done { color: var(--sky); }
 @media (max-width: 900px) {
-  .cycle-pin { align-items: flex-start; padding-top: 76px; }
-  .cycle-pin .wrap { grid-template-columns: 1fr; gap: 12px; }
-  .cycle-shot { order: -1; }
+  .cycle-pin { align-items: flex-end; padding-bottom: 14px; }
+  .cycle-pin .wrap { grid-template-columns: 1fr; gap: 10px; }
+  .cycle-link { display: none; }
+  .cycle-shot { position: relative; order: -1; width: auto; transform: none; opacity: 1; }
   .cycle-shot .shot { transform: none; }
+  .cycle-shot .frames { aspect-ratio: 16 / 7; }
+  .cycle-shot .frames img { object-fit: cover; object-position: top left; height: 100%; }
+  .cycle-shot .bar { height: 22px; }
   .cycle-shot .shot-note { display: none; }
   .cycle-panel { padding: 16px; margin-bottom: 0; border-radius: 16px; background: rgba(1, 8, 20, .78); backdrop-filter: blur(14px); border: 1px solid var(--line); gap: 12px; }
   .cycle-num { font-size: 56px; }
@@ -425,7 +434,8 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
             <article class="stage"><h3>Recompra e fechamento</h3><p>Recompra com escolha explícita de baixa e estorno coordenado. Lançamentos fechados não são reescritos: correção entra como estorno recíproco.</p><ul><li>Recompra</li><li>Estorno vinculado</li><li>Fechamento</li></ul></article>
           </div>
         </div>
-        <div class="cycle-shot">
+        <svg class="cycle-link" id="cycleLink" aria-hidden="true"><defs><linearGradient id="linkGrad" x1="0" x2="1"><stop offset="0" stop-color="#65adfd" stop-opacity=".9"/><stop offset="1" stop-color="#2f86ff" stop-opacity=".35"/></linearGradient></defs><path id="linkPath" d=""/><circle id="linkDot" r="3.5" cx="-10" cy="-10"/></svg>
+        <div class="cycle-shot" id="cycleShot">
           <figure class="shot">
             <div class="bar"><i></i><i></i><i></i><span id="shotTitle">STRATO · Cadastros</span></div>
             <div class="frames" id="frames">
@@ -870,6 +880,7 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
   addEventListener('resize', resize); resize();
 
   var cur = { x: 0, y: 0, z: 0, m: 0, s: 1, op: 1 }, smoothT = 0, lastActive = -1;
+  var cycleShot = document.getElementById('cycleShot'), linkPath = document.getElementById('linkPath'), linkDot = document.getElementById('linkDot'), cardPos = { x: innerWidth * 0.7, y: innerHeight * 0.3 };
   var v3 = new THREE.Vector3();
   var clock = new THREE.Clock(), elapsed = 0;
   var spacing = 0.95;
@@ -878,7 +889,7 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
     var wide = innerWidth > 900;
     var hero = { x: wide ? 3.2 : 0, y: wide ? 0.1 : 2.2, z: 0, m: 0, s: wide ? 1.25 : 0.95 };
     var center = { x: 0, y: wide ? 0 : 0.6, z: -3, m: 0, s: 1 };
-    var cyc = { x: wide ? 3.3 : 0, y: wide ? 0 : -1.2, z: wide ? -6.5 : -6, m: 1, s: wide ? 1.05 : .7 };
+    var ppu = innerHeight / 7.95; var cyc = { x: wide ? (innerWidth * 0.08) / ppu : 0, y: wide ? 0 : 1.75, z: wide ? -0.6 : -2.6, m: 1, s: wide ? 1 : .72 };
     var rest = { x: wide ? 3.4 : 0, y: 0, z: -6, m: 0, s: 1 };
     var end = { x: 0, y: wide ? 1.7 : 2.4, z: -0.5, m: 0, s: 1 };
     var t = hero, a, b, w;
@@ -969,6 +980,29 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
       lb.style.opacity = (smooth(0.4, 0.9, m)).toFixed(2);
       lb.classList.toggle('on', q === act); lb.classList.toggle('done', q < act);
     }
+
+    // floating screen card hangs off the active layer
+    if (innerWidth > 900) {
+      var activeY = (3 - clamp(activeF, 0, 6)) * spacing;
+      spin.localToWorld(v3.set(0, plates[Math.round(clamp(activeF, 0, 6))].g.position.y, 0)); v3.project(camera);
+      var ax = (v3.x * .5 + .5) * innerWidth, ay = (-v3.y * .5 + .5) * innerHeight;
+      var cw = cycleShot.offsetWidth, ch = cycleShot.offsetHeight;
+      var edge = ax + 175 * cur.s * group.scale.x / Math.max(.001, cur.s);
+      var tx = Math.min(innerWidth - cw - 28, edge + Math.max(60, innerWidth * 0.05));
+      var ty = clamp(ay - ch * 0.45, 84, innerHeight - ch - 24);
+      if (!isFinite(tx) || !isFinite(ty)) { tx = innerWidth - cw - 60; ty = innerHeight * 0.3; }
+      if (!isFinite(cardPos.x) || !isFinite(cardPos.y)) { cardPos.x = tx; cardPos.y = ty; }
+      cardPos.x = reduce ? tx : lerp(cardPos.x, tx, 0.14); cardPos.y = reduce ? ty : lerp(cardPos.y, ty, 0.14);
+      var vis = smooth(0.45, 0.9, m);
+      cycleShot.style.setProperty('--cx', cardPos.x.toFixed(1) + 'px');
+      cycleShot.style.setProperty('--cy', cardPos.y.toFixed(1) + 'px');
+      cycleShot.style.setProperty('--co', vis.toFixed(3));
+      if (!isFinite(edge) || !isFinite(ay)) { edge = cardPos.x - 80; ay = cardPos.y + ch * 0.5; }
+      var ex = cardPos.x + 2, ey = cardPos.y + ch * 0.5, sx0 = edge, mx = (sx0 + ex) / 2;
+      linkPath.setAttribute('d', 'M' + sx0.toFixed(1) + ' ' + ay.toFixed(1) + ' C' + mx.toFixed(1) + ' ' + ay.toFixed(1) + ' ' + mx.toFixed(1) + ' ' + ey.toFixed(1) + ' ' + ex.toFixed(1) + ' ' + ey.toFixed(1));
+      linkPath.style.opacity = vis; linkDot.style.opacity = vis;
+      if (vis > 0.01) { var L = linkPath.getTotalLength(), pt = linkPath.getPointAtLength(L * ((elapsed * 0.6) % 1)); linkDot.setAttribute('cx', pt.x); linkDot.setAttribute('cy', pt.y); }
+    } else { cycleShot.style.removeProperty('--co'); }
 
     if (bloom) bloom.strength = 0.8 + m * 0.5 + joinGlow * 0.6;
     if (cur.op > 0.02 && !document.hidden) { if (composer) composer.render(); else renderer.render(scene, camera); }

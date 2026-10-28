@@ -582,8 +582,8 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
   <section class="cta" id="contato">
     <div class="wrap">
       <span class="eyebrow rv">Plataforma operacional para crédito e recebíveis</span>
-      <h2 class="rv">Seu dia começa <span class="glow">com contexto.</span></h2>
-      <p class="lede rv">Carteira, tarefas, alçadas e o resumo inteligente do dia, em uma única entrada.</p>
+      <h2 class="rv">Veja o todo. <span class="glow">Decida com precisão.</span></h2>
+      <p class="lede rv">Carteira, caixa, risco e operação na mesma leitura, com regras determinísticas e evidência em cada decisão.</p>
       <div class="hero-actions rv" style="justify-content:center">
         <a class="btn" href="https://strato.2.25.193.82.sslip.io" target="_blank" rel="noopener">Solicitar acesso <span class="arr" aria-hidden="true">→</span></a>
         <a class="btn ghost" href="https://strato.2.25.193.82.sslip.io" target="_blank" rel="noopener">Entrar na plataforma</a>
@@ -891,7 +891,7 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
     var center = { x: 0, y: wide ? 0 : 0.6, z: -3, m: 0, s: 1 };
     var ppu = innerHeight / 7.95; var cyc = { x: wide ? (innerWidth * 0.08) / ppu : 0, y: wide ? 0 : 1.75, z: wide ? -0.6 : -2.6, m: 1, s: wide ? 1 : .72 };
     var rest = { x: wide ? 3.4 : 0, y: 0, z: -6, m: 0, s: 1 };
-    var end = { x: 0, y: wide ? 1.7 : 2.4, z: -0.5, m: 0, s: 1 };
+    var end = { x: 0, y: wide ? 2.05 : 2.4, z: -0.5, m: 0, s: wide ? .85 : 1 };
     var t = hero, a, b, w;
     function mix(A, B, k) { var o = {}; for (var key in A) o[key] = lerp(A[key], B[key], k); return o; }
     t = mix(hero, center, clamp(state.fragIn || 0, 0, 1) * (1 - (state.cycleIn || 0)));

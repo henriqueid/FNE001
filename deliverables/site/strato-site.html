@@ -104,7 +104,7 @@ main, header, footer { position: relative; z-index: 2; }
 .frag-heads { position: relative; z-index: 3; text-align: center; display: grid; justify-items: center; gap: 16px; padding-inline: 16px; pointer-events: none; }
 .frag-heads .h2 { max-width: 16ch; }
 .frag-heads .stack { display: grid; }
-.frag-heads .stack > * { grid-area: 1 / 1; transition: opacity .5s, transform .6s cubic-bezier(.2,.8,.2,1), filter .5s; }
+.frag-heads .stack > * { grid-area: 1 / 1; transition: opacity .8s cubic-bezier(.16,1,.3,1), transform 1s cubic-bezier(.16,1,.3,1), filter .8s; }
 .frag-heads .b { opacity: 0; transform: translateY(24px); filter: blur(6px); }
 .frag.joined .frag-heads .a { opacity: 0; transform: translateY(-24px); filter: blur(6px); }
 .frag.joined .frag-heads .b { opacity: 1; transform: none; filter: none; }
@@ -135,17 +135,20 @@ main, header, footer { position: relative; z-index: 2; }
 .cycle-link path { fill: none; stroke: url(#linkGrad); stroke-width: 2; stroke-dasharray: 1 0; filter: drop-shadow(0 0 4px rgba(47,134,255,.9)); }
 .cycle-link circle { fill: #bfe0ff; filter: drop-shadow(0 0 6px #2f86ff); }
 .cycle-shot .frames { position: relative; aspect-ratio: 16 / 10; background: #f4f5f6; }
-.cycle-shot .frames img { position: absolute; inset: 0; opacity: 0; transform: translateY(14px) scale(1.015); transition: opacity .55s ease, transform .7s cubic-bezier(.2,.8,.2,1); }
+.cycle-shot .frames img { position: absolute; inset: 0; opacity: 0; transform: scale(1.03); transition: opacity .8s cubic-bezier(.16,1,.3,1), transform 1.1s cubic-bezier(.16,1,.3,1); }
 .cycle-shot .frames img.on { opacity: 1; transform: none; }
 .cycle-top { display: flex; align-items: flex-end; gap: 16px; }
 .cycle-num { font-family: var(--font-serif); font-style: italic; font-weight: 400; font-size: clamp(80px, 11vw, 150px); line-height: .78; letter-spacing: -0.02em; padding-right: .06em; background: linear-gradient(180deg, var(--ice), var(--blue)); -webkit-background-clip: text; background-clip: text; color: transparent; font-variant-numeric: tabular-nums; }
 .cycle-meta { font-family: var(--font-mono); font-size: 12px; color: var(--mute); padding-bottom: 6px; display: grid; gap: 6px; }
 .dots { display: flex; gap: 5px; }
-.dots i { width: 22px; height: 3px; border-radius: 2px; background: rgba(101,173,253,.18); transition: background .3s, box-shadow .3s; }
+.dots i { width: 22px; height: 3px; border-radius: 2px; background: rgba(101,173,253,.18); transition: background .6s cubic-bezier(.16,1,.3,1), box-shadow .6s; }
 .dots i.on { background: var(--sky); box-shadow: 0 0 12px var(--blue); }
 .stage-copy { position: relative; min-height: 270px; }
-.stage { position: absolute; inset: 0 0 auto 0; display: grid; gap: 14px; opacity: 0; transform: translateY(26px); filter: blur(6px); transition: opacity .5s, transform .6s cubic-bezier(.2,.8,.2,1), filter .5s; }
-.stage.on { opacity: 1; transform: none; filter: none; }
+.stage { position: absolute; inset: 0 0 auto 0; display: grid; gap: 14px; opacity: 0; transform: translateY(22px); transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1); }
+.stage.up { transform: translateY(-22px); }
+.stage.on { opacity: 1; transform: none; transition-delay: .08s; }
+.cycle-num.roll { animation: roll .8s cubic-bezier(.16,1,.3,1); }
+@keyframes roll { from { opacity: 0; transform: translateY(.25em); } }
 .stage h3 { font-size: clamp(28px, 3.2vw, 44px); line-height: 1.04; font-weight: 500; letter-spacing: -0.04em; }
 .stage p { color: var(--mute); font-size: 16.5px; }
 .stage ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -187,15 +190,39 @@ main, header, footer { position: relative; z-index: 2; }
 .shot img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: top left; }
 .shot-note { font-family: var(--font-mono); font-size: 12px; color: var(--mute); }
 
-.reveal { padding-block: 20px clamp(64px, 8vw, 110px); }
-.reveal-head { display: grid; gap: 16px; max-width: 760px; margin-bottom: 44px; }
-.stage3d { position: relative; perspective: 1800px; padding-bottom: 6%; }
-.stage3d .front { position: relative; z-index: 2; transform: rotateX(var(--rx, 24deg)) scale(var(--sc, .9)); transform-origin: 50% 0%; will-change: transform; }
-.stage3d .back { position: absolute; z-index: 1; width: 78%; right: -4%; top: -9%; opacity: var(--bo, .0); transform: translateY(var(--by, 40px)) rotateX(var(--rx, 24deg)); transform-origin: 50% 0%; filter: saturate(.8) brightness(.75); }
-.stage3d .front::after { content: ""; position: absolute; inset: 30px 0 0; background: linear-gradient(180deg, transparent 55%, rgba(1,6,15,.85)); pointer-events: none; }
-.reveal-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; }
-.reveal-tags span { font-family: var(--font-mono); font-size: 12.5px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); color: #bcd7ff; background: rgba(0,89,250,.08); }
-@media (max-width: 700px) { .stage3d .back { display: none; } }
+.tour { position: relative; height: 380vh; }
+.tour-pin { position: sticky; top: 0; height: 100vh; height: 100svh; display: flex; align-items: center; }
+.tour-pin .wrap { display: grid; grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr); gap: clamp(28px, 4vw, 72px); align-items: center; padding-top: 56px; }
+.tour-copy { display: grid; gap: 18px; }
+.tour-copy .h2 { font-size: clamp(30px, 3.6vw, 54px); }
+.tour-steps { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 4px; }
+.tour-steps li { position: relative; padding: 14px 0 14px 22px; display: grid; gap: 4px; color: var(--mute); transition: color .6s cubic-bezier(.16,1,.3,1); }
+.tour-steps li::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 2px; border-radius: 2px; background: rgba(101,173,253,.16); }
+.tour-steps li::after { content: ""; position: absolute; left: 0; top: 14px; width: 2px; border-radius: 2px; height: calc((100% - 28px) * var(--f, 0)); background: linear-gradient(var(--sky), var(--blue)); box-shadow: 0 0 10px var(--blue); }
+.tour-steps strong { font-family: var(--font-serif); font-weight: 400; font-size: 24px; line-height: 1.1; color: var(--ice); opacity: .45; transition: opacity .6s cubic-bezier(.16,1,.3,1); }
+.tour-steps span { font-size: 15px; max-height: 0; overflow: hidden; opacity: 0; transition: max-height .7s cubic-bezier(.16,1,.3,1), opacity .6s ease; }
+.tour-steps li.on strong { opacity: 1; }
+.tour-steps li.on span { max-height: 80px; opacity: 1; }
+.tour-view { position: relative; perspective: 1600px; }
+.tour-view .shot { transform: rotateX(var(--rx, 0deg)) scale(var(--sc, 1)); transform-origin: 50% 100%; will-change: transform; }
+.tour-screen { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: #f4f5f6; }
+.tour-layer { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
+.tour-layer img { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity .9s cubic-bezier(.16,1,.3,1); }
+.tour-focus { position: absolute; left: 0; top: 0; border-radius: 12px; pointer-events: none; opacity: var(--fo, 0);
+  box-shadow: 0 0 0 2px rgba(47,134,255,.95), 0 0 0 6px rgba(47,134,255,.18), 0 0 0 9999px rgba(1,10,26,.32); }
+.tour-cap { position: absolute; left: 16px; bottom: 16px; font-family: var(--font-mono); font-size: 12px; color: #fff; background: rgba(1,14,32,.82); border: 1px solid rgba(101,173,253,.4); padding: 6px 10px; border-radius: 8px; opacity: var(--fo, 0); backdrop-filter: blur(6px); }
+.tour-note { margin-top: 12px; display: block; }
+@media (max-width: 900px) {
+  .tour { height: 320vh; }
+  .tour-pin { align-items: flex-start; padding-top: 72px; }
+  .tour-pin .wrap { grid-template-columns: 1fr; gap: 16px; padding-top: 0; }
+  .tour-view { order: -1; }
+  .tour-copy .h2 { font-size: 26px; }
+  .tour-copy .lede { display: none; }
+  .tour-steps li { padding-block: 8px; }
+  .tour-steps strong { font-size: 20px; }
+  .tour-note { display: none; }
+}
 
 /* segments */
 .seg { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
@@ -332,8 +359,8 @@ main, header, footer { position: relative; z-index: 2; }
 footer { border-top: 1px solid var(--line); background: rgba(1,6,15,.85); }
 footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; justify-content: space-between; padding-block: 26px; font-size: 13px; color: var(--mute); }
 
-.rv { transition: opacity .9s ease, transform 1s cubic-bezier(.2,.8,.2,1), filter .9s; }
-.js .rv:not(.in) { opacity: .1; transform: translateY(34px); filter: blur(6px); }
+.rv { transition: opacity 1.1s cubic-bezier(.16,1,.3,1), transform 1.3s cubic-bezier(.16,1,.3,1); }
+.js .rv:not(.in) { opacity: .12; transform: translateY(26px); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
@@ -382,18 +409,34 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
     </div>
   </section>
 
-  <section class="reveal" id="produto" aria-label="O sistema por dentro">
-    <div class="wrap">
-      <div class="reveal-head rv">
-        <span class="eyebrow">O sistema por dentro</span>
-        <h2 class="h2">Resultado, caixa e decisões do dia <span class="glow">na mesma tela.</span></h2>
-        <p class="lede">A Visão geral reúne posição, capacidade, pendências e contexto sem esconder a profundidade operacional.</p>
+  <section class="tour" id="produto" aria-label="O sistema por dentro">
+    <div class="tour-pin">
+      <div class="wrap">
+        <div class="tour-copy">
+          <span class="eyebrow">O sistema por dentro</span>
+          <h2 class="h2">Resultado, caixa e decisões do dia <span class="glow">na mesma tela.</span></h2>
+          <p class="lede">A operação começa pela decisão que exige atenção, sem esconder a profundidade operacional.</p>
+          <ol class="tour-steps" id="tourSteps">
+            <li><strong>Posição do dia</strong><span>Indicadores e data-base compartilham o mesmo recorte.</span></li>
+            <li><strong>Gestão por exceção</strong><span>A fila destaca impacto, urgência e próxima decisão.</span></li>
+            <li><strong>Contexto conectado</strong><span>Carteira, caixa, risco e operação aparecem na mesma leitura.</span></li>
+          </ol>
+        </div>
+        <div class="tour-view" id="tourView">
+          <figure class="shot">
+            <div class="bar"><i></i><i></i><i></i><span id="tourTitle">STRATO · Visão geral</span></div>
+            <div class="tour-screen" id="tourScreen">
+              <div class="tour-layer" id="tourLayer">
+                <img id="tourA" src="img/visao-geral.webp" alt="Tela Visão geral do STRATO com volume originado, receita, taxa média, caixa livre e decisões de maior impacto" width="1600" height="1000">
+                <img id="tourB" src="img/central-operacional.webp" alt="Tela Operações em andamento com fluxo atual e indicadores da esteira" width="1600" height="1000" style="opacity:0" loading="lazy">
+              </div>
+              <div class="tour-focus" id="tourFocus"></div>
+              <span class="tour-cap" id="tourCap">Posição do dia</span>
+            </div>
+          </figure>
+          <span class="shot-note tour-note">Telas reais em modo demonstração · dados fictícios</span>
+        </div>
       </div>
-      <div class="stage3d" id="stage3d">
-        <figure class="shot back" aria-hidden="true"><div class="bar"><i></i><i></i><i></i><span>STRATO · Operações em andamento</span></div><img src="img/central-operacional.webp" alt="" loading="lazy" width="1600" height="1000"></figure>
-        <figure class="shot front"><div class="bar"><i></i><i></i><i></i><span>STRATO · Visão geral</span></div><img src="img/visao-geral.webp" alt="Tela Visão geral do STRATO com volume originado, receita, taxa média, caixa livre e decisões de maior impacto" width="1600" height="1000"></figure>
-      </div>
-      <div class="reveal-tags rv"><span>Posição do dia</span><span>Gestão por exceção</span><span>Contexto conectado</span><span class="shot-note" style="border:0;background:none">Telas reais em modo demonstração, dados fictícios</span></div>
     </div>
   </section>
 
@@ -599,6 +642,7 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
@@ -609,6 +653,19 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
 <script>
 (function () {
   var root = document.documentElement; root.classList.add('js');
+  var lenis = null;
+  if (window.Lenis && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    try {
+      lenis = new Lenis({ duration: 1.15, easing: function (t) { return Math.min(1, 1.001 - Math.pow(2, -10 * t)); }, smoothWheel: true });
+      root.style.scrollBehavior = 'auto';
+      (function raf(t) { lenis.raf(t); requestAnimationFrame(raf); })(performance.now());
+      document.addEventListener('click', function (e) {
+        var a = e.target.closest && e.target.closest('a[href^="#"]'); if (!a) return;
+        var el = document.querySelector(a.getAttribute('href')); if (!el) return;
+        e.preventDefault(); lenis.scrollTo(el, { offset: a.getAttribute('href') === '#topo' ? 0 : -10, duration: 1.6 });
+      });
+    } catch (err) { lenis = null; }
+  }
   var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   var clamp = function (x, a, b) { return Math.min(b, Math.max(a, x)); };
   var smooth = function (a, b, x) { x = clamp((x - a) / (b - a), 0, 1); return x * x * (3 - 2 * x); };
@@ -641,7 +698,52 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
   var cycleNum = document.getElementById('cycleNum');
   var frameEls = [].slice.call(document.querySelectorAll('#frames img')), shotTitle = document.getElementById('shotTitle');
   var shotTitles = ['Cadastros', 'Operação · Preço e estrutura', 'Operação · Lastro e confirmação', 'Carteira · Títulos', 'Financeiro · Conciliação bancária', 'Carteira · Central de cobrança', 'Financeiro · Contabilidade'];
-  var stage3d = document.getElementById('stage3d');
+  // product tour: one screen, scroll-driven zoom into the regions that matter
+  var tour = document.getElementById('produto'), tourView = document.getElementById('tourView'), tourScreen = document.getElementById('tourScreen');
+  var tourLayer = document.getElementById('tourLayer'), tourA = document.getElementById('tourA'), tourB = document.getElementById('tourB');
+  var tourFocus = document.getElementById('tourFocus'), tourCap = document.getElementById('tourCap'), tourTitle = document.getElementById('tourTitle');
+  var tourItems = [].slice.call(document.querySelectorAll('#tourSteps li'));
+  var FULL = { x: 0, y: 0, w: 1, h: 1 };
+  var tourKeys = [
+    { img: 0, r: FULL, cap: '' },
+    { img: 0, r: { x: .015, y: .205, w: .745, h: .315 }, cap: 'Posição do dia' },
+    { img: 0, r: { x: .02, y: .525, w: .645, h: .45 }, cap: 'Gestão por exceção' },
+    { img: 1, r: { x: .015, y: .43, w: .62, h: .375 }, cap: 'Contexto conectado' }
+  ];
+  function view(r) { var z = Math.min(2.6, Math.min(1 / r.w, 1 / r.h) * 0.94); return { z: z, cx: r.x + r.w / 2, cy: r.y + r.h / 2 }; }
+  function easeIO(t) { return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  function updateTour(vh) {
+    var tr = tour.getBoundingClientRect(), tp = clamp(-tr.top / (tr.height - vh), 0, 1);
+    var enter = smooth(vh, 0, tr.top);
+    tourView.style.setProperty('--rx', (reduce ? 0 : (1 - enter) * 16).toFixed(2) + 'deg');
+    tourView.style.setProperty('--sc', (reduce ? 1 : 0.9 + enter * 0.1).toFixed(4));
+    // segments: hold at each key, glide between them
+    var n = tourKeys.length - 1, t = tp * n, k = Math.min(n - 1, Math.floor(t)), f = t - k;
+    var g = easeIO(smooth(0.28, 0.82, f));
+    var A = tourKeys[k], B = tourKeys[k + 1], va = view(A.r), vb = view(B.r), z, cx, cy, imgMix;
+    if (A.img !== B.img) {
+      var half = g < .5, h = half ? g * 2 : (g - .5) * 2, vf = view(FULL);
+      var from = half ? va : vf, to = half ? vf : vb, e = easeIO(h);
+      z = lerp(from.z, to.z, e); cx = lerp(from.cx, to.cx, e); cy = lerp(from.cy, to.cy, e); imgMix = smooth(0.42, 0.58, g);
+    } else { z = lerp(va.z, vb.z, g); cx = lerp(va.cx, vb.cx, g); cy = lerp(va.cy, vb.cy, g); imgMix = A.img; }
+    var W = tourScreen.clientWidth, H = tourScreen.clientHeight;
+    var tx = clamp(W / 2 - cx * W * z, W - W * z, 0), ty = clamp(H / 2 - cy * H * z, H - H * z, 0);
+    tourLayer.style.transform = 'translate3d(' + tx.toFixed(2) + 'px,' + ty.toFixed(2) + 'px,0) scale(' + z.toFixed(4) + ')';
+    tourB.style.opacity = imgMix.toFixed(3); tourA.style.opacity = (1 - imgMix).toFixed(3);
+    tourTitle.textContent = imgMix > .5 ? 'STRATO · Operações em andamento' : 'STRATO · Visão geral';
+    // focus ring sits on the region while holding
+    var near = g < .5 ? A : B, hold = 1 - Math.min(1, Math.abs(g - (g < .5 ? 0 : 1)) * 3.2), r = near.r;
+    var fo = near === tourKeys[0] ? 0 : hold;
+    tourFocus.style.width = (r.w * W * z).toFixed(1) + 'px'; tourFocus.style.height = (r.h * H * z).toFixed(1) + 'px';
+    tourFocus.style.transform = 'translate3d(' + (tx + r.x * W * z).toFixed(1) + 'px,' + (ty + r.y * H * z).toFixed(1) + 'px,0)';
+    tourScreen.style.setProperty('--fo', fo.toFixed(3));
+    if (near.cap) tourCap.textContent = near.cap;
+    var active = Math.max(0, Math.min(2, Math.round(t) - 1));
+    tourItems.forEach(function (li, j) {
+      li.classList.toggle('on', j === active && t > 0.5);
+      li.style.setProperty('--f', clamp(t - (j + 0.5), 0, 1).toFixed(3));
+    });
+  }
   var stageNames = stages.map(function (s) { return s.querySelector('h3').textContent; });
   var labelsBox = document.getElementById('plateLabels');
   var labels = stageNames.map(function (n, i) { var s = document.createElement('span'); s.textContent = '0' + (i + 1) + ' ' + n; labelsBox.appendChild(s); return s; });
@@ -653,8 +755,10 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
   var state = { active: 0, m: 0, p: 0 };
   var current = -1;
   function setStage(i) {
-    if (i === current) return; current = i;
-    stages.forEach(function (s, k) { s.classList.toggle('on', k === i); });
+    if (i === current) return;
+    var down = i > current; current = i;
+    stages.forEach(function (s, k) { s.classList.toggle('on', k === i); s.classList.toggle('up', k !== i && (down ? k < i : false)); });
+    cycleNum.classList.remove('roll'); void cycleNum.offsetWidth; cycleNum.classList.add('roll');
     dots.forEach(function (d, k) { d.classList.toggle('on', k <= i); });
     cycleNum.textContent = '0' + (i + 1);
     frameEls.forEach(function (f, k) { f.classList.toggle('on', k === i); });
@@ -692,12 +796,8 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
     setStage(Math.min(6, Math.round(t - 0.15 < 0 ? 0 : t - 0.15)));
     state.active = current;
 
-    // product reveal: the screen tilts up flat as it enters
-    var sr = stage3d.getBoundingClientRect(), rp = smooth(vh * 0.95, vh * 0.2, sr.top);
-    stage3d.style.setProperty('--rx', (reduce ? 0 : (1 - rp) * 26).toFixed(2) + 'deg');
-    stage3d.style.setProperty('--sc', (reduce ? 1 : 0.9 + rp * 0.1).toFixed(3));
-    stage3d.style.setProperty('--bo', (smooth(0.4, 1, rp) * 0.9).toFixed(3));
-    stage3d.style.setProperty('--by', ((1 - rp) * 60).toFixed(1) + 'px');
+    updateTour(vh);
+    var trr = tour.getBoundingClientRect(); state.tourIn = smooth(vh, vh * 0.25, trr.top) * (1 - smooth(-(trr.height - vh), -(trr.height - vh) - vh * 0.5, trr.top));
 
     // arch assemble
     var ar = arch.getBoundingClientRect(), ap = smooth(vh, vh * 0.35, ar.top);
@@ -879,7 +979,7 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
   }
   addEventListener('resize', resize); resize();
 
-  var cur = { x: 0, y: 0, z: 0, m: 0, s: 1, op: 1 }, smoothT = 0, lastActive = -1;
+  var cur = { x: 0, y: 0, z: 0, m: 0, s: 1, op: 1 }, smoothT = 0, lastActive = -1, sm = { x: 0, y: 0 };
   var cycleShot = document.getElementById('cycleShot'), linkPath = document.getElementById('linkPath'), linkDot = document.getElementById('linkDot'), cardPos = { x: innerWidth * 0.7, y: innerHeight * 0.3 };
   var v3 = new THREE.Vector3();
   var clock = new THREE.Clock(), elapsed = 0;
@@ -894,27 +994,31 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
     var end = { x: 0, y: wide ? 2.05 : 2.4, z: -0.5, m: 0, s: wide ? .85 : 1 };
     var t = hero, a, b, w;
     function mix(A, B, k) { var o = {}; for (var key in A) o[key] = lerp(A[key], B[key], k); return o; }
-    t = mix(hero, center, clamp(state.fragIn || 0, 0, 1) * (1 - (state.cycleIn || 0)));
+    var aside = { x: wide ? 3.8 : 0, y: wide ? 0 : 2.6, z: -9, m: 0, s: 1 };
+    t = mix(hero, aside, state.tourIn || 0);
+    t = mix(t, center, clamp(state.fragIn || 0, 0, 1) * (1 - (state.cycleIn || 0)));
     if ((state.cycleIn || 0) > 0) t = mix(t, cyc, state.cycleIn);
     var after = cycle.getBoundingClientRect().bottom < innerHeight * 0.9;
     if (after) { var k2 = smooth(innerHeight * 0.9, innerHeight * 0.1, cycle.getBoundingClientRect().bottom); t = mix(t, rest, k2); }
     if (state.cta > 0) t = mix(t, end, state.cta);
     var op = after ? lerp(1, 0, smooth(innerHeight * 0.9, 0, cycle.getBoundingClientRect().bottom)) : 1;
     op = lerp(op, 1, state.cta || 0);
+    op *= 1 - 0.75 * (state.tourIn || 0) * (1 - (state.fragIn || 0));
     t.op = op;
     return t;
   }
 
   function render() {
     var dt = Math.min(0.05, clock.getDelta()); elapsed += reduce ? 0 : dt;
-    var T = target(), e = reduce ? 1 : 1 - Math.pow(0.0015, dt);
+    var T = target(), e = reduce ? 1 : 1 - Math.pow(0.004, dt);
     for (var key in T) cur[key] = lerp(cur[key], T[key], e);
     canvas.style.opacity = cur.op.toFixed(3);
 
-    group.position.set(cur.x + mouse.x * 0.3, cur.y - mouse.y * 0.2, cur.z);
+    sm.x = lerp(sm.x, mouse.x, 1 - Math.pow(0.03, dt)); sm.y = lerp(sm.y, mouse.y, 1 - Math.pow(0.03, dt));
+    group.position.set(cur.x + sm.x * 0.2, cur.y - sm.y * 0.12, cur.z);
     group.scale.setScalar(cur.s);
-    spin.rotation.y = -0.78 + Math.sin(elapsed * 0.25) * 0.18 + mouse.x * 0.35 + (state.p || 0) * 0.9 * cur.m;
-    tilt.rotation.x = 0.52 + mouse.y * 0.12;
+    spin.rotation.y = -0.78 + sm.x * 0.3 + (state.p || 0) * 0.9 * cur.m;
+    tilt.rotation.x = 0.52 + sm.y * 0.1;
 
     // plate layout: logo (2 plates) → 7 stacked layers
     var m = cur.m;
@@ -924,7 +1028,7 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
     for (var i = 0; i < 7; i++) {
       var p = plates[i], yLogo = (3 - i) * 0.12, sLogo = 0.001;
       var yStack = (3 - i) * spacing;
-      var y = lerp(yLogo, yStack, m) + (reduce ? 0 : Math.sin(elapsed * 1.2 + i) * 0.04 * m);
+      var y = lerp(yLogo, yStack, m);
       var sc = lerp(sLogo, 1, smooth(0, 0.6, m));
       p.g.position.y = y; p.g.scale.setScalar(Math.max(0.001, sc));
       // colour
@@ -945,8 +1049,8 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
     logoG.visible = showLogo > 0.01;
     logoG.scale.setScalar(Math.max(0.001, 0.25 + 0.75 * showLogo));
     logoG.position.y = (1 - showLogo) * 1.5;
-    logoG.rotation.set(0.1 + mouse.y * 0.35 + (reduce ? 0 : Math.sin(elapsed * 0.33) * 0.06), (reduce ? 0 : Math.sin(elapsed * 0.4) * 0.28) + mouse.x * 0.6, 0);
-    topMat.emissiveIntensity = 0.55 + joinGlow * 0.9 + (reduce ? 0 : Math.sin(elapsed * 1.3) * 0.08);
+    logoG.rotation.set(0.1 + sm.y * 0.3, -0.12 + sm.x * 0.5 + (state.hero != null ? (1 - state.hero) * 0.35 : 0), 0);
+    topMat.emissiveIntensity = 0.55 + joinGlow * 0.9;
     botEdge.material.opacity = 0.7 + joinGlow * 0.3;
     tipLight.intensity = 1.5 + joinGlow * 3;
     spin.visible = m > 0.02;
@@ -954,20 +1058,20 @@ footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; j
     var py = lerp(0.34, (3 - Math.min(6, activeF)) * spacing, m);
     pulse.position.set(0, py + 0.32, 0);
     pulse.material.opacity = m;
-    var s = 0.9 + Math.sin(elapsed * 4) * 0.08 + m * 0.4; pulse.scale.set(s, s, 1);
+    var s = 0.9 + m * 0.4; pulse.scale.set(s, s, 1);
     var topY = 3 * spacing * m + 0.6;
     var bl = Math.max(0.01, topY - py); beam.scale.set(1, bl, 1); beam.position.y = py + bl / 2; beamMat.opacity = 0.75 * m;
     spin.localToWorld(v3.set(0, py, 0)); pulseLight.position.copy(v3); pulseLight.intensity = 1 + m * 3;
     // ring on stage change
     var act = Math.round(clamp(activeF, 0, 6));
     if (m > 0.6 && act !== lastActive) { lastActive = act; ringT = 0; ring.position.y = (3 - act) * spacing + 0.15; }
-    ringT = Math.min(1, ringT + dt * 0.9);
+    ringT = Math.min(1, ringT + dt * 0.6);
     ring.scale.setScalar(1 + ringT * 1.6); ringMat.opacity = (1 - ringT) * 0.9 * m;
     // orbit
     var arr = og.attributes.position.array;
     for (var k = 0; k < ON; k++) { var o = oSeed[k], a = o[0] + elapsed * o[3]; arr[k * 3] = Math.cos(a) * o[1]; arr[k * 3 + 1] = o[2] * (0.25 + m * 0.75); arr[k * 3 + 2] = Math.sin(a) * o[1]; }
-    og.attributes.position.needsUpdate = true; orbit.material.opacity = 0.25 + m * 0.5;
-    points.rotation.y = elapsed * 0.015; points.position.y = -scrollY * 0.0012;
+    og.attributes.position.needsUpdate = true; orbit.visible = false;
+    points.rotation.y = elapsed * 0.006; points.position.y = -scrollY * 0.0012;
 
     // html labels for the 7 layers
     var wide = innerWidth > 900;

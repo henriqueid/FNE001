@@ -1,6 +1,8 @@
 # Vídeo demonstrativo — operação de ponta a ponta (4:5)
 
-Composição Remotion `StratoOperacaoDemo` · 1080 × 1350 · 30 fps · H.264 · 36 s · sem áudio · legendas na tela.
+Composições Remotion · 1080 × 1350 · 30 fps · H.264 · legendas na tela:
+- `StratoOperacaoDemoV2` (versão 2, recomendada): 30 s, gancho de abertura, aproximações nos números das telas reais, pausas na aprovação e no pagamento e trilha discreta (trecho da trilha própria do vídeo proScore, `public/demo/music.mp3`).
+- `StratoOperacaoDemo` (versão 1): 36 s, sem áudio.
 
 ## Renderizar novamente
 
@@ -11,8 +13,9 @@ node video/scripts/demo/capture-operation.cjs
 
 # 2) renderizar o MP4 e extrair a capa
 cd video
-npx remotion render StratoOperacaoDemo out/strato-operacao-demo-4x5.mp4 --codec=h264 --crf=18
-ffmpeg -ss 25.6 -i out/strato-operacao-demo-4x5.mp4 -frames:v 1 out/strato-operacao-demo-capa.png
+npx remotion render StratoOperacaoDemoV2 out/strato-operacao-demo-4x5-v2-raw.mp4 --codec=h264 --crf=18
+ffmpeg -i out/strato-operacao-demo-4x5-v2-raw.mp4 -c:v copy -af loudnorm=I=-16:TP=-1.5 -ar 48000 -c:a aac -b:a 160k -movflags +faststart out/strato-operacao-demo-4x5-v2.mp4
+ffmpeg -ss 1.85 -i out/strato-operacao-demo-4x5-v2.mp4 -frames:v 1 out/strato-operacao-demo-v2-capa.png
 ```
 
 ## O que é do sistema e o que é simulado
@@ -23,6 +26,7 @@ ffmpeg -ss 25.6 -i out/strato-operacao-demo-4x5.mp4 -frames:v 1 out/strato-opera
 - Preço calculado pelo motor do sistema: face R$ 120.000,00, deságio R$ 3.456,06, tarifas R$ 144,00, líquido R$ 116.399,94, prazo médio de 35 dias.
 - Aprovação e formalização: botão “Aprovar operação”, alçadas, pacote de documentos e registro manual das assinaturas.
 - Liberação ao financeiro e baixa do pagamento no livro local da demonstração; carteira por cedente e trilha da decisão.
+- Telas capturadas em 3× para aproximações nítidas.
 - Identidade visual: logotipo, fonte Urbanist e tokens de cor de `app/globals.css`.
 
 **Simulado / fictício:**

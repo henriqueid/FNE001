@@ -7,6 +7,7 @@ import { ProScoreThumbnail } from "./proscore/Thumbnail";
 import { TOTAL_FRAMES } from "./proscore/data/scenes";
 import { StratoPromo, totalFrames } from "./StratoPromo";
 import { DEMO_FRAMES, OperacaoDemo } from "./demo/OperacaoDemo";
+import { DEMO2_FRAMES, OperacaoDemoV2 } from "./demo/OperacaoDemoV2";
 import { LinkedInComingSoon } from "./LinkedInComingSoon";
 import { BemVindoNovo, NOVO_FRAMES } from "./novo/BemVindoNovo";
 import { Thumbnail } from "./Thumbnail";
@@ -40,6 +41,7 @@ export const RemotionRoot: React.FC = () => {
     </Folder>
     <Folder name="STRATO-Demo">
       <Composition id="StratoOperacaoDemo" component={OperacaoDemo} durationInFrames={DEMO_FRAMES} fps={30} width={1080} height={1350} />
+      <Composition id="StratoOperacaoDemoV2" component={OperacaoDemoV2} durationInFrames={DEMO2_FRAMES} fps={30} width={1080} height={1350} defaultProps={{ music: true }} />
     </Folder>
     <Folder name="STRATO-Novo">
       <Composition

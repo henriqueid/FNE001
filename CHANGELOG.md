@@ -2,6 +2,8 @@
 
 ## 30/10/2026 · Vídeo demonstrativo 4:5 da operação de ponta a ponta
 
+- Versão 2 (`StratoOperacaoDemoV2`, 30 s): gancho de abertura, aproximações nos números reais das telas (capturas em 3×), sobreposições enxutas, pausas na aprovação e no pagamento e trilha discreta.
+
 - Composição `StratoOperacaoDemo` (1080×1350, 36 s, sem áudio): operação fictícia percorrendo o STRATO real em modo demonstração local — Copiloto, risco, preço, aprovação e formalização, liberação, pagamento simulado e carteira — com legendas e selo permanente "Simulação com dados fictícios".
 - `video/scripts/demo/capture-operation.cjs` refaz todas as capturas a partir do CSV fictício (`operacao-empresa-exemplo.csv`), com relógio fixo e sem serviços externos. Instruções e inventário do que é real ou simulado em `video/docs/demo/README.md`.
 

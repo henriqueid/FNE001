@@ -31,7 +31,7 @@ const captures = {};
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: VIEW, deviceScaleFactor: 2, timezoneId: "America/Sao_Paulo" });
+  const page = await browser.newPage({ viewport: VIEW, deviceScaleFactor: 3, timezoneId: "America/Sao_Paulo" });
   const p = page;
   // Relógio fixo: mesma data-base dos títulos fictícios (prazo médio de 35 dias) em qualquer execução.
   await p.clock.setFixedTime(new Date("2026-10-30T10:00:00-03:00"));
@@ -64,7 +64,7 @@ const captures = {};
       const b = await loc.first().boundingBox({ timeout: 2500 }).catch(() => null);
       boxes[k] = b ? [Math.round(b.x), Math.round(b.y), Math.round(b.width), Math.round(b.height)] : null;
     }
-    await p.screenshot({ path: `${OUT}/${name}.jpg`, type: "jpeg", quality: 90 });
+    await p.screenshot({ path: `${OUT}/${name}.jpg`, type: "jpeg", quality: 88 });
     captures[name] = { src: `demo/${name}.jpg`, width: VIEW.width, height: VIEW.height, boxes };
     console.log("✓", name, JSON.stringify(boxes));
   };
@@ -95,7 +95,7 @@ const captures = {};
       const b = await loc.first().boundingBox({ timeout: 2500 }).catch(() => null);
       boxes[k] = b ? [Math.round(b.x - d.x), Math.round(b.y - d.y), Math.round(b.width), Math.round(b.height)] : null;
     }
-    await dialog.screenshot({ path: `${OUT}/${name}.jpg`, type: "jpeg", quality: 92 });
+    await dialog.screenshot({ path: `${OUT}/${name}.jpg`, type: "jpeg", quality: 90 });
     captures[name] = { src: `demo/${name}.jpg`, width: Math.round(d.width), height: Math.round(d.height), boxes };
     console.log("✓", name, Math.round(d.width), Math.round(d.height), JSON.stringify(boxes));
   };
@@ -190,7 +190,7 @@ const captures = {};
   // 5) Liberação: favorecido fictício, conferências e envio ao financeiro.
   await p.evaluate(() => window.scrollTo(0, 0));
   await p.waitForTimeout(500);
-  await snap("l1-pronta", { status: p.getByText("Pronta para liberar"), stepper: p.getByText("ETAPA ATUAL").first() });
+  await snap("l1-pronta", { status: p.getByText("Pronta para liberar"), stepper: p.getByText("ETAPA ATUAL").first(), aprovacao: p.getByText("Orquestrador FNE001").first() });
   const inp = name => p.locator("main label", { hasText: new RegExp("^" + name) }).locator("input").first();
   await inp("Banco").fill("000");
   await inp("Agência").fill("0001");
@@ -199,7 +199,7 @@ const captures = {};
   await p.locator("main h1, main h2").first().click();
   await p.waitForTimeout(600);
   await scrollTo(p.getByText("VALOR A LIBERAR"), 120);
-  await snap("l2-liberacao", { valor: p.getByText("VALOR A LIBERAR"), composicao: p.getByText("COMPOSIÇÃO DO LÍQUIDO").first(), conferencia: p.getByText("CONFERÊNCIA E ENVIO") });
+  await snap("l2-liberacao", { liquido: p.getByText("LÍQUIDO DO BORDERÔ").first(), valor: p.getByText("VALOR A LIBERAR"), composicao: p.getByText("COMPOSIÇÃO DO LÍQUIDO").first(), conferencia: p.getByText("CONFERÊNCIA E ENVIO") });
   for (const nm of ["Concluir preparação", "Liberar para o financeiro"]) {
     const bt = p.getByRole("button", { name: new RegExp(nm) });
     if (await bt.count()) {
@@ -221,7 +221,7 @@ const captures = {};
   await p.getByRole("button", { name: /Confirmar pagamento/ }).click();
   await p.waitForTimeout(1800);
   await scrollTo(p.locator("tr", { hasText: "Empresa Exemplo" }).first(), 260);
-  await snap("f2-pago", { row: p.locator("tr", { hasText: "Empresa Exemplo" }).first() });
+  await snap("f2-pago", { row: p.locator("tr", { hasText: "Empresa Exemplo" }).first(), paid: p.getByText(/pagos de R\$/) });
 
   // 7) Carteira com os 12 títulos e a linha do tempo da operação.
   await p.getByRole("button", { name: /^Carteira/ }).first().click();
@@ -230,7 +230,7 @@ const captures = {};
   await p.waitForTimeout(1500);
   const ced = p.getByText("Empresa Exemplo Ltda").first();
   if (await ced.count()) await scrollTo(ced, 300);
-  await snap("k1-cedentes", { cedente: p.getByText("Empresa Exemplo Ltda") });
+  await snap("k1-cedentes", { cedente: p.getByText("Empresa Exemplo Ltda"), row: p.locator("tr", { hasText: "Empresa Exemplo Ltda" }) });
   if (await ced.count()) { await ced.click(); await p.waitForTimeout(1500); }
   await snap("k2-cedente", { cedente: p.getByText("Empresa Exemplo Ltda") });
   console.log("CARTEIRA>>", (await main()).slice(0, 2500).replace(/\n/g, " | "));

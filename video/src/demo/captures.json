@@ -1,0 +1,330 @@
+{
+  "c1-anexo": {
+    "src": "demo/c1-anexo.jpg",
+    "width": 476,
+    "height": 758,
+    "boxes": {
+      "file": [
+        89,
+        369,
+        214,
+        20
+      ],
+      "input": [
+        63,
+        575,
+        340,
+        27
+      ],
+      "analyze": [
+        34,
+        459,
+        408,
+        46
+      ]
+    }
+  },
+  "c2-pedido": {
+    "src": "demo/c2-pedido.jpg",
+    "width": 476,
+    "height": 758,
+    "boxes": {
+      "file": [
+        89,
+        369,
+        214,
+        20
+      ],
+      "input": [
+        63,
+        559,
+        340,
+        46
+      ],
+      "analyze": [
+        34,
+        459,
+        408,
+        46
+      ]
+    }
+  },
+  "c3-analise": {
+    "src": "demo/c3-analise.jpg",
+    "width": 476,
+    "height": 758,
+    "boxes": {
+      "extract": [
+        65,
+        482,
+        377,
+        38
+      ],
+      "policy": [
+        65,
+        537,
+        200,
+        17
+      ],
+      "received": [
+        65,
+        345,
+        121,
+        17
+      ]
+    }
+  },
+  "c4-resposta": {
+    "src": "demo/c4-resposta.jpg",
+    "width": 476,
+    "height": 758,
+    "boxes": {
+      "reply": [
+        35,
+        467,
+        388,
+        41
+      ],
+      "fast": [
+        47,
+        172,
+        382,
+        20
+      ]
+    }
+  },
+  "o1-risco": {
+    "src": "demo/o1-risco.jpg",
+    "width": 1200,
+    "height": 1500,
+    "boxes": {
+      "stepper": [
+        269,
+        248,
+        69,
+        15
+      ],
+      "header": [
+        34,
+        136,
+        344,
+        43
+      ]
+    }
+  },
+  "o2-motor": {
+    "src": "demo/o2-motor.jpg",
+    "width": 1200,
+    "height": 1500,
+    "boxes": {
+      "motor": [
+        85,
+        161,
+        604,
+        26
+      ],
+      "cedente": [
+        85,
+        520,
+        332,
+        16
+      ]
+    }
+  },
+  "a1-contexto": {
+    "src": "demo/a1-contexto.jpg",
+    "width": 1200,
+    "height": 1500,
+    "boxes": {
+      "final": [
+        88,
+        128,
+        405,
+        29
+      ],
+      "liquido": [
+        492,
+        222,
+        133,
+        12
+      ],
+      "score": [
+        268,
+        471,
+        139,
+        12
+      ],
+      "sacados": [
+        621,
+        369,
+        482,
+        17
+      ]
+    }
+  },
+  "a2-decisao": {
+    "src": "demo/a2-decisao.jpg",
+    "width": 1200,
+    "height": 1500,
+    "boxes": {
+      "approve": [
+        964,
+        318,
+        157,
+        39
+      ],
+      "alerts": [
+        97,
+        110,
+        192,
+        14
+      ]
+    }
+  },
+  "a3-aprovada": {
+    "src": "demo/a3-aprovada.jpg",
+    "width": 1200,
+    "height": 1500,
+    "boxes": {
+      "approve": [
+        964,
+        317,
+        157,
+        39
+      ],
+      "feedback": [
+        65,
+        3297,
+        1070,
+        40
+      ]
+    }
+  },
+  "a4-formalizacao": {
+    "src": "demo/a4-formalizacao.jpg",
+    "width": 1200,
+    "height": 1500,
+    "boxes": {
+      "strip": [
+        80,
+        110,
+        238,
+        15
+      ],
+      "docs": [
+        614,
+        155,
+        238,
+        15
+      ],
+      "signatures": [
+        788,
+        614,
+        146,
+        17
+      ]
+    }
+  },
+  "l1-pronta": {
+    "src": "demo/l1-pronta.jpg",
+    "width": 1200,
+    "height": 1500,
+    "boxes": {
+      "status": [
+        436,
+        146,
+        120,
+        23
+      ],
+      "stepper": [
+        999,
+        303,
+        69,
+        15
+      ]
+    }
+  },
+  "l2-liberacao": {
+    "src": "demo/l2-liberacao.jpg",
+    "width": 1200,
+    "height": 1500,
+    "boxes": {
+      "valor": [
+        79,
+        224,
+        162,
+        15
+      ],
+      "composicao": [
+        856,
+        402,
+        309,
+        40
+      ],
+      "conferencia": [
+        78,
+        645,
+        131,
+        15
+      ]
+    }
+  },
+  "f1-liberacoes": {
+    "src": "demo/f1-liberacoes.jpg",
+    "width": 1200,
+    "height": 1500,
+    "boxes": {
+      "row": [
+        61,
+        411,
+        1078,
+        57
+      ],
+      "pay": [
+        1076,
+        420,
+        53,
+        38
+      ]
+    }
+  },
+  "f2-pago": {
+    "src": "demo/f2-pago.jpg",
+    "width": 1200,
+    "height": 1500,
+    "boxes": {
+      "row": [
+        61,
+        466,
+        1078,
+        56
+      ]
+    }
+  },
+  "k1-cedentes": {
+    "src": "demo/k1-cedentes.jpg",
+    "width": 1200,
+    "height": 1500,
+    "boxes": {
+      "cedente": [
+        71,
+        1033,
+        131,
+        15
+      ]
+    }
+  },
+  "k2-cedente": {
+    "src": "demo/k2-cedente.jpg",
+    "width": 1200,
+    "height": 1500,
+    "boxes": {
+      "cedente": [
+        71,
+        1033,
+        131,
+        15
+      ]
+    }
+  }
+}

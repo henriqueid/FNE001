@@ -6,6 +6,7 @@ import { StratoProScore } from "./proscore/StratoProScore";
 import { ProScoreThumbnail } from "./proscore/Thumbnail";
 import { TOTAL_FRAMES } from "./proscore/data/scenes";
 import { StratoPromo, totalFrames } from "./StratoPromo";
+import { DEMO_FRAMES, OperacaoDemo } from "./demo/OperacaoDemo";
 import { LinkedInComingSoon } from "./LinkedInComingSoon";
 import { BemVindoNovo, NOVO_FRAMES } from "./novo/BemVindoNovo";
 import { Thumbnail } from "./Thumbnail";
@@ -36,6 +37,9 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{ subtitles: true, musicVolume: 0.5 }}
       />
       <Still id="StratoFinanciaThumbnail" component={FinanciaThumbnail} width={1920} height={1080} />
+    </Folder>
+    <Folder name="STRATO-Demo">
+      <Composition id="StratoOperacaoDemo" component={OperacaoDemo} durationInFrames={DEMO_FRAMES} fps={30} width={1080} height={1350} />
     </Folder>
     <Folder name="STRATO-Novo">
       <Composition

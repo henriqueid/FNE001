@@ -1,5 +1,10 @@
 # Changelog
 
+## 30/10/2026 · Vídeo demonstrativo 4:5 da operação de ponta a ponta
+
+- Composição `StratoOperacaoDemo` (1080×1350, 36 s, sem áudio): operação fictícia percorrendo o STRATO real em modo demonstração local — Copiloto, risco, preço, aprovação e formalização, liberação, pagamento simulado e carteira — com legendas e selo permanente "Simulação com dados fictícios".
+- `video/scripts/demo/capture-operation.cjs` refaz todas as capturas a partir do CSV fictício (`operacao-empresa-exemplo.csv`), com relógio fixo e sem serviços externos. Instruções e inventário do que é real ou simulado em `video/docs/demo/README.md`.
+
 ## 27/10/2026 · Vídeo "Bem-vindo ao novo" (9:16 e 16:9)
 
 - Composições `StratoBemVindoNovo` (1080×1920) e `StratoBemVindoNovoHorizontal` (1920×1080), 36 s, mesmas cenas com layout responsivo. Linguagem premium: Inter Tight e Geist Mono (`public/fonts/`), revelação de texto por máscara, texto mono decodificado, fundo de luz com grão de filme, cartões de vidro, parede isométrica de telas e transições com desfoque.

@@ -1,65 +1,74 @@
-# Série "Alívio" — vídeos do STRATO pela lógica de venda
+# Série "O fim dos sistemas complexos" — vídeos do STRATO pela lógica de venda
 
-**Público:** FIDCs, securitizadoras e factorings que **já usam sistemas**, mas sistemas que não centralizam a operação: um para cadastro, outro para operação, outro para cobrança, portal do banco e planilha no meio de tudo.
-**Princípio:** o cliente não compra solução, compra **alívio** (facilidade + tranquilidade).
-**Inimigo do vídeo:** a fragmentação — nunca um concorrente nomeado.
+**Público:** FIDCs, securitizadoras e factorings que já usam sistemas "que fazem quase tudo", mas são complexos: 10, 15, 20 abas para concluir uma operação, instalação com servidor local, checagens espalhadas por várias telas.
+**Tese:** sistemas complexos tendem a morrer. Chegou o tempo de sistemas ágeis, que se adaptam ao usuário e entregam **visibilidade do negócio e praticidade**.
+**Princípio de venda:** o cliente não compra solução, compra **alívio** (facilidade + tranquilidade).
+**Inimigo:** a complexidade — nunca um concorrente nomeado.
 
 **Estrutura de cada vídeo (30–40 s, 4:5 ou 9:16, narração + legendas + telas reais):**
 
 | Passo | Função | Tempo |
 |---|---|---|
-| 1. Dor | Expor a dor de usar sistemas que não se falam | 0–6 s |
-| 2. Agravar | Fazer sentir o custo: retrabalho, erro, demora, risco | 6–14 s |
-| 3. Resolver | No STRATO real: tudo no mesmo lugar, prático, menos esforço | 14–28 s |
-| 4. Valor | O alívio + assinatura | 28–35 s |
+| 1. Dor | Expor a complexidade do dia a dia | 0–6 s |
+| 2. Agravar | Fazer sentir o custo: tempo, erro, dependência, treinamento | 6–14 s |
+| 3. Resolver | No STRATO real: menos telas, mais clareza | 14–28 s |
+| 4. Valor | O alívio + "Veja o todo. Decida com precisão." | 28–35 s |
 
 Regras: telas reais em modo demonstração com dados fictícios; selo "Simulação com dados fictícios"; sem números de resultado, clientes ou integrações que não existam; fechamento "Em homologação. Novidades em breve."
 
 ---
 
-## Vídeo 1 — "Cinco sistemas para uma operação"
-**Alívio:** digitar uma vez só
-1. **Dor:** "Uma operação, cinco sistemas. Cadastro num, operação no outro, cobrança no terceiro… e o portal do banco no meio."
-2. **Agravar:** "O mesmo dado é digitado várias vezes. Um erro numa tela vira divergência em todas as outras — e alguém passa a tarde conferindo."
-3. **Resolver:** "No STRATO, a operação entra uma vez e segue sozinha: cadastro, risco, preço, aprovação, liberação e carteira usam o mesmo dado."
-   *Telas:* esteira com as seis etapas → resumo financeiro → carteira por cedente.
-4. **Valor:** "Digite uma vez. Confie sempre. STRATO."
+## Vídeo 0 — Manifesto: "Sistemas complexos vão morrer"
+**Papel:** vídeo-âncora da série · **Alívio:** simplicidade sem perder controle
+1. **Dor:** "O sistema faz quase tudo. O problema é que, para fazer qualquer coisa, você passa por vinte abas."
+2. **Agravar:** "Cada tela nova é mais um treinamento, mais um clique errado, mais uma operação esperando. A complexidade virou o custo escondido da sua operação."
+3. **Resolver:** "O STRATO foi construído para o novo tempo: a operação inteira em poucos passos, a informação que importa na frente e um copiloto para encontrar o resto."
+   *Telas:* esteira de seis etapas → Visão geral → Copiloto.
+4. **Valor:** "Sistemas complexos vão ficar para trás. Veja o todo. Decida com precisão. STRATO."
 
-## Vídeo 2 — "Exportar para o Excel"
-**Alívio:** enxergar sem montar relatório
-1. **Dor:** "Seu sistema registra tudo… mas para entender a carteira, você exporta para o Excel."
-2. **Agravar:** "Quando a planilha fica pronta, o número já mudou. E a decisão foi tomada olhando o retrovisor."
-3. **Resolver:** "No STRATO, a visão geral junta carteira, risco e caixa em tempo real, e mostra primeiro as decisões de maior impacto."
-   *Telas:* Visão geral (volume, receita, taxa, caixa) → decisões de maior impacto → carteira por cedente.
+## Vídeo 1 — "Vinte abas para uma operação"
+**Alívio:** saber sempre o próximo passo
+1. **Dor:** "Para concluir uma operação, você abre aba, fecha aba, volta, confere… e já perdeu a conta."
+2. **Agravar:** "Quem é novo na equipe leva semanas para aprender o caminho. E quem já sabe, perde tempo navegando em vez de decidir."
+3. **Resolver:** "No STRATO, a operação segue uma esteira única — entrada, risco, lastro, preço, aprovação e liberação — e cada etapa mostra o que falta."
+   *Telas:* stepper da operação → "Concluir etapa e avançar" → "Pronta para liberar".
+4. **Valor:** "Menos navegação. Mais operação. STRATO."
+
+## Vídeo 2 — "O servidor na sala"
+**Alívio:** acessar de onde estiver, sem infraestrutura própria
+1. **Dor:** "Seu sistema depende de um servidor na sala ao lado."
+2. **Agravar:** "Atualização é projeto, acesso de fora é gambiarra e, se o servidor para, a operação para junto."
+3. **Resolver:** "O STRATO roda na web: abre no navegador, no computador ou no celular, com permissões por usuário e por empresa."
+   *Telas:* Visão geral no computador → aparelhos em traço (monitor, notebook, tablet, celular) → controle de acesso.
+4. **Valor:** "Sua operação onde você estiver. STRATO."
+
+## Vídeo 3 — "A checagem em quinze lugares"
+**Alívio:** uma checagem, um resultado
+1. **Dor:** "Para checar uma operação, você confere cadastro numa tela, limite em outra, concentração num relatório e lastro em mais uma."
+2. **Agravar:** "Basta pular uma etapa para o risco passar despercebido. E ninguém consegue provar depois o que foi conferido."
+3. **Resolver:** "No STRATO, a política roda num motor: cadastro, limite, concentração e elegibilidade numa única execução, versionada e com trilha."
+   *Telas:* motor de elegibilidade → avaliações e alertas → prontidão (alçadas, documentos, assinaturas).
+4. **Valor:** "Uma checagem. Um resultado. Tudo registrado. STRATO."
+
+## Vídeo 4 — "O sistema que se adapta a você"
+**Alívio:** o sistema trabalha do seu jeito
+1. **Dor:** "Todo mundo usa o mesmo sistema do mesmo jeito: o gestor, o analista, o financeiro."
+2. **Agravar:** "O gestor se perde em detalhe operacional; o analista não acha o que precisa. O sistema obriga cada um a se adaptar a ele."
+3. **Resolver:** "No STRATO, cada perfil tem sua perspectiva — gestão, operação, risco e cobrança — e o dia começa com o que pede sua atenção."
+   *Telas:* seletor de perspectiva → "Bom dia" com as prioridades do dia → decisões de maior impacto.
+4. **Valor:** "O sistema se adapta a você. Não o contrário. STRATO."
+
+## Vídeo 5 — "Muito dado, pouca visão"
+**Alívio:** visibilidade do negócio
+1. **Dor:** "Seu sistema tem todos os dados. Só não mostra o seu negócio."
+2. **Agravar:** "Para responder uma pergunta simples — quanto tenho em risco hoje? — você monta relatório, exporta e cruza planilha."
+3. **Resolver:** "No STRATO, a visão geral reúne volume, receita, caixa e carteira, e o copiloto responde em linguagem natural, com fonte."
+   *Telas:* Visão geral → score e concentração da carteira → Copiloto respondendo.
 4. **Valor:** "Veja o todo. Decida com precisão. STRATO."
-
-## Vídeo 3 — "Cada sistema, um número"
-**Alívio:** um número só, com origem
-1. **Dor:** "O líquido no sistema da operação é um. No financeiro, é outro."
-2. **Agravar:** "Antes de pagar, alguém precisa descobrir qual está certo. Se ninguém descobre, o dinheiro sai errado."
-3. **Resolver:** "No STRATO, o valor nasce no motor de preço e é o mesmo da aprovação ao pagamento: deságio, tarifas e líquido com memória de cálculo."
-   *Telas:* composição do líquido → resumo para a decisão → liberação no financeiro com o mesmo valor.
-4. **Valor:** "Um número. Uma origem. Zero dúvida na hora de pagar. STRATO."
-
-## Vídeo 4 — "O sistema que só registra"
-**Alívio:** apoio para decidir, não só cadastro
-1. **Dor:** "Seu sistema guarda dados. Mas na hora de decidir, você está sozinho."
-2. **Agravar:** "Score num lugar, concentração em outro, histórico do cedente num relatório que ninguém abre. A análise depende de quem lembra."
-3. **Resolver:** "No STRATO, a política roda num motor e o copiloto organiza o que precisa de atenção. A decisão chega com contexto: score, limite e concentração."
-   *Telas:* Copiloto (etapas da análise) → motor de elegibilidade → contexto completo para a decisão humana.
-4. **Valor:** "IA para apoiar. Política para orientar. Você para decidir. STRATO."
-
-## Vídeo 5 — "Quem aprovou isso?"
-**Alívio:** tranquilidade na auditoria
-1. **Dor:** "Quem aprovou essa operação? A resposta está em três sistemas, num e-mail e num grupo de mensagens."
-2. **Agravar:** "Na auditoria, juntar esse rastro leva dias. E basta um elo perdido para virar problema."
-3. **Resolver:** "No STRATO, política aplicada, alçadas, documentos e assinaturas ficam na mesma operação, com quem fez o quê e quando."
-   *Telas:* resultado da política (execução versionada) → alçadas 3/3 e documentos 6/6 → trilha da decisão.
-4. **Valor:** "Auditoria sem caça ao tesouro. STRATO."
 
 ---
 
 ## Produção
-- Mesmo padrão visual da demonstração 4:5 (telas de `video/scripts/demo/capture-operation.cjs`).
+- Mesmo padrão visual da demonstração 4:5 (telas de `video/scripts/demo/capture-operation.cjs` e `video/public/proscore/states`).
 - Narração: voz "Davi Menegon – Calm & Professional" (ElevenLabs), ≈ 450–600 créditos por vídeo.
-- Ordem sugerida: 1 → 2 → 3 → 5 → 4 (da dor mais universal à mais específica).
+- Ordem sugerida: 0 (manifesto) → 1 → 3 → 4 → 5 → 2.
